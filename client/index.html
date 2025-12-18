@@ -7,11 +7,20 @@
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <h1>Hand Gesture Recognition using MediaPipe</h1>
-    <div id="container">
+    <h1>화상회의 + 제스처 인식</h1>
+
+    <!-- 컨트롤 버튼 -->
+    <div id="controls">
+      <button id="joinButton">회의 참가</button>
+      <button id="webcamButton" disabled>웹캠 활성화</button>
+      <button id="leaveButton" disabled>회의 나가기</button>
+    </div>
+
+    <!-- 본인 비디오 (제스처 인식용) -->
+    <div id="local-container">
+      <h2>내 화면</h2>
       <div id="liveView" class="videoView">
-        <button id="webcamButton">웹캠 활성화</button>
-        <video id="webcam" autoplay playsinline></video>
+        <video id="webcam" autoplay playsinline muted></video>
         <canvas id="output_canvas"></canvas>
       </div>
       <div id="gesture_output" class="output">감지된 제스처 없음</div>
@@ -21,8 +30,14 @@
     <div id="timer-container">
       <div id="gesture-icon"></div>
       <div id="progress-bar-container">
-          <div id="progress-bar"></div>
+        <div id="progress-bar"></div>
       </div>
+    </div>
+
+    <!-- 원격 참가자 비디오 그리드 -->
+    <div id="remote-container">
+      <h2>참가자들</h2>
+      <div id="remote-videos"></div>
     </div>
 
     <script type="module" src="script.js"></script>

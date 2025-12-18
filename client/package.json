@@ -1,0 +1,26 @@
+{
+  "name": "web-test",
+  "version": "1.0.0",
+  "description": "A simple one-page web application for hand gesture recognition using MediaPipe.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "start": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^5.2.11"
+  },
+  "main": "script.js",
+  "keywords": [
+    "mediapipe",
+    "gesture-recognition",
+    "vercel"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@mediapipe/tasks-vision": "^0.10.22-rc.20250304",
+    "mediasoup-client": "^3.7.0",
+    "socket.io-client": "^4.6.1"
+  }
+}

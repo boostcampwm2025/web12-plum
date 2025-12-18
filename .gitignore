@@ -1,3 +1,27 @@
+# Dependencies
 node_modules
+*/node_modules
+
+# Build outputs
+dist
+*/dist
+build
+*/build
+
+# IDE
 .idea
 .vscode
+
+# Environment
+.env
+.env.local
+
+# OS
+.DS_Store
+
+# Logs
+*.log
+npm-debug.log*
+
+# Old backup
+server-old
