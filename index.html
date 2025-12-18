@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hand Gesture Recognition</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <h1>Hand Gesture Recognition using MediaPipe</h1>
+    <div id="container">
+      <div id="liveView" class="videoView">
+        <button id="webcamButton">웹캠 활성화</button>
+        <video id="webcam" autoplay playsinline></video>
+        <canvas id="output_canvas"></canvas>
+      </div>
+      <div id="gesture_output" class="output">감지된 제스처 없음</div>
+    </div>
+
+    <!-- 제스처 인식 타이머 UI -->
+    <div id="timer-container">
+      <div id="gesture-icon"></div>
+      <div id="progress-bar-container">
+          <div id="progress-bar"></div>
+      </div>
+    </div>
+
+    <script type="module" src="script.js"></script>
+  </body>
+</html>
