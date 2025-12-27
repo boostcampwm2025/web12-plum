@@ -1,0 +1,16 @@
+# Dependencies
+node_modules
+
+# Production
+dist
+build
+.turbo
+
+# IDE and Editor files
+.DS_Store
+.idea/
+.vscode/
+
+# Local env files
+.env
+.env.local
