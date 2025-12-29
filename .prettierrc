@@ -6,5 +6,8 @@
   "tabWidth": 2,
   "useTabs": false,
   "arrowParens": "always",
-  "endOfLine": "lf"
+  "endOfLine": "lf",
+  "bracketSpacing": true,
+  "jsxSingleQuote": false,
+  "singleAttributePerLine": true
 }
