@@ -5,6 +5,7 @@ node_modules
 dist
 build
 .turbo
+.vercel
 
 # IDE and Editor files
 .DS_Store
