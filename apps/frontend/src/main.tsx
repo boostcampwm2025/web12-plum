@@ -1,4 +1,4 @@
-import './globals.css';
+import '@/app/styles/index.css';
 import { StrictMode, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Analytics } from '@vercel/analytics/react';
