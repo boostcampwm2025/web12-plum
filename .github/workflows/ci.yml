@@ -1,0 +1,58 @@
+# CI Pipeline - 코드 품질 검증
+name: CI Pipeline
+
+on:
+  pull_request:
+    branches:
+      - develop
+      - main
+
+  push:
+    branches:
+      - develop 
+      - main
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'       # pnpm 캐시로 설치 속도 향상
+
+      # 의존성 설치 (pnpm-lock.yaml 기반)
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # 코드 스타일 검사
+      - name: Lint
+        run: pnpm run lint
+
+      # STEP 6: 프로젝트 빌드 (ts → js)
+      - name: Build
+        run: pnpm run build
+
+      # STEP 7: 단위/통합 테스트 실행
+      - name: Run Unit/Integration Tests
+        run: pnpm run test
+
+      # STEP 8: Playwright 브라우저 설치 (Frontend E2E 테스트용)
+      - name: Install Playwright Browsers
+        run: pnpm --filter @plum/frontend exec playwright install --with-deps chromium
+
+      # STEP 9: E2E 테스트 실행
+      - name: Run E2E Tests
+        run: pnpm run test:e2e

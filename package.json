@@ -10,7 +10,7 @@
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
-    "prepare": "husky"
+    "prepare": "husky || true"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",
