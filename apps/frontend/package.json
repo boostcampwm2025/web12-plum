@@ -5,12 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "prebuild": "vite-node src/scripts/generateIconMap.ts",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "lint": "eslint .",
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "test:run": "vitest run"
+    "test:run": "vitest run",
+    "generate:icons": "vite-node src/scripts/generateIconMap.ts"
   },
   "dependencies": {
     "@plum/shared-interfaces": "workspace:*",
