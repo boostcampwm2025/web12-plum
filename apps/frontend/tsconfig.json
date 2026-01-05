@@ -18,8 +18,9 @@
     "noUncheckedSideEffectImports": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"],
+      "@/*": ["src/*"]
     }
   },
-  "include": ["src", "vite-env.d.ts", "vite.config.ts"]
+  "include": ["src", "vite-env.d.ts", "vite.config.ts"],
+  "exclude": ["**/*.spec.ts", "**/*.spec.tsx", "**/*.test.ts", "**/*.test.tsx", "e2e"]
 }
