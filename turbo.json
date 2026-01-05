@@ -17,7 +17,7 @@
       "dependsOn": ["^build"]
     },
     "test:e2e": {
-      "dependsOn": ["^build"]
+      "dependsOn": ["build", "^build"]
     },
     "format": {
       "cache": false
