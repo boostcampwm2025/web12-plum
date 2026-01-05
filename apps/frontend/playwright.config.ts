@@ -8,7 +8,7 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: 'html',
   use: {
-    baseURL: 'http://127.0.0.1:5173',
+    baseURL: process.env.CI ? 'http://127.0.0.1:4173' : 'http://127.0.0.1:5173',
     trace: 'on-first-retry',
   },
 
@@ -20,8 +20,9 @@ export default defineConfig({
   ],
 
   webServer: {
-    command: 'pnpm run dev',
-    url: 'http://127.0.0.1:5173',
+    command: process.env.CI ? 'pnpm run preview' : 'pnpm run dev',
+    url: process.env.CI ? 'http://127.0.0.1:4173' : 'http://127.0.0.1:5173',
     reuseExistingServer: !process.env.CI,
+    timeout: 120000, // 타이임아웃 시간 연장
   },
 });
