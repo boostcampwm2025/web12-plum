@@ -84,16 +84,16 @@ export const collectIconData = () => {
  * iconMap.ts 파일의 내용을 생성
  */
 export const generateFileContent = (imports: string[], mapEntries: string[]): string => {
-  const content = `${imports.join('\n')}
+  const content = `${imports.join(';\n')}${imports.length > 0 ? ';' : ''}
 
-import type { ComponentType, SVGProps } from 'react'
+import type { ComponentType, SVGProps } from 'react';
 
 export const iconMap = {
 ${mapEntries.join('\n')}
-}
+};
 
-export type IconName = keyof typeof iconMap
-export type IconComponent = ComponentType<SVGProps<SVGSVGElement>>
+export type IconName = keyof typeof iconMap;
+export type IconComponent = ComponentType<SVGProps<SVGSVGElement>>;
 `;
   return content;
 };
