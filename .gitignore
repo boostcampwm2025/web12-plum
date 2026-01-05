@@ -5,6 +5,7 @@ node_modules
 dist
 build
 .turbo
+.vercel
 
 # IDE and Editor files
 .DS_Store
@@ -14,4 +15,3 @@ build
 # Local env files
 .env
 .env.local
-.vercel
