@@ -3,18 +3,23 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/shared/lib/utils';
 import { iconMap, type IconName } from '@/shared/components/icon/iconMap';
 
-const buttonVariants = cva('flex items-center justify-center gap-2 rounded-lg font-bold', {
-  variants: {
-    variant: {
-      default: 'bg-primary text-text px-4 py-3',
-      ghost: 'text-primary bg-transparent px-4 py-2',
-      icon: 'text-text p-1',
+const buttonVariants = cva(
+  'disable:cursor-not-allowed relative flex cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-lg font-bold transition-all duration-150',
+  {
+    variants: {
+      variant: {
+        default:
+          'bg-primary text-text px-4 py-3 before:absolute before:inset-0 before:bg-white before:opacity-0 before:transition-opacity before:duration-150 hover:before:opacity-5 active:before:opacity-10 disabled:cursor-not-allowed disabled:before:bg-black disabled:before:opacity-50',
+        ghost:
+          'text-primary disabled:text-primary/50 bg-transparent px-4 py-2 hover:bg-gray-200/20 active:bg-gray-200/30 disabled:cursor-not-allowed',
+        icon: 'text-text disabled:text-text/50 p-2 hover:bg-gray-200/20 active:bg-gray-200/30 disabled:cursor-not-allowed',
+      },
+    },
+    defaultVariants: {
+      variant: 'default',
     },
   },
-  defaultVariants: {
-    variant: 'default',
-  },
-});
+);
 
 const iconSizeMap = {
   xs: { className: 'h-3 w-3', strokeWidth: 1.125 },
@@ -50,7 +55,7 @@ export default function Button({
     >
       {Icon && (
         <Icon
-          className={iconConfig.className}
+          className={cn(iconConfig.className)}
           strokeWidth={iconConfig.strokeWidth}
         />
       )}
