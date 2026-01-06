@@ -20,3 +20,4 @@ build
 test-results
 playwright-report
 coverage
+reports
