@@ -40,7 +40,8 @@ jobs:
         run: |
           SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
 
-          # PR 이벤트일 때는 base_ref (타겟 브랜치), push 이벤트일 때는 ref_name 사용
+          # PR: base_ref로 환경 결정 (어디로 머지될지)
+          # Push: ref_name으로 환경 결정
           if [ "${{ github.event_name }}" == "pull_request" ]; then
             BRANCH="${{ github.base_ref }}"
           else
@@ -91,9 +92,11 @@ jobs:
           port: ${{ secrets.NCP_DEV_PORT || 22 }}
           envs: DOCKER_USERNAME,TAG
           script: |
-            # 배포할 브랜치 결정 (PR은 base_ref, push는 ref_name)
+            # 배포할 브랜치 결정
+            # PR: head_ref (소스 브랜치, 변경사항이 있는 브랜치)
+            # Push: ref_name (현재 브랜치)
             if [ "${{ github.event_name }}" == "pull_request" ]; then
-              DEPLOY_BRANCH="${{ github.base_ref }}"
+              DEPLOY_BRANCH="${{ github.head_ref }}"
             else
               DEPLOY_BRANCH="${{ github.ref_name }}"
             fi
@@ -164,9 +167,11 @@ jobs:
           port: ${{ secrets.NCP_PROD_PORT || 22 }}
           envs: DOCKER_USERNAME,TAG
           script: |
-            # 배포할 브랜치 결정 (PR은 base_ref, push는 ref_name)
+            # 배포할 브랜치 결정
+            # PR: head_ref (소스 브랜치, 변경사항이 있는 브랜치)
+            # Push: ref_name (현재 브랜치)
             if [ "${{ github.event_name }}" == "pull_request" ]; then
-              DEPLOY_BRANCH="${{ github.base_ref }}"
+              DEPLOY_BRANCH="${{ github.head_ref }}"
             else
               DEPLOY_BRANCH="${{ github.ref_name }}"
             fi
