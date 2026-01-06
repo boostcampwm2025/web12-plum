@@ -50,6 +50,7 @@ export default function Button({
   tooltipPosition = 'top',
   className,
   'aria-label': ariaLabel,
+  type = 'button',
   ...props
 }: ButtonProps) {
   const iconConfig = iconSizeMap[iconSize];
@@ -62,6 +63,7 @@ export default function Button({
     <button
       className={cn(buttonVariants({ variant }), className)}
       aria-label={finalAriaLabel}
+      type={type}
       {...props}
     >
       {icon && (
