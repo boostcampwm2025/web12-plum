@@ -2,10 +2,18 @@
 name: CD Pipeline
 
 on:
-  workflow_run:
-    workflows: ["CI Pipeline"]
+  # PR 이벤트로 트리거 (테스트 목적)
+  pull_request:
+    branches:
+      - develop
+      - main
     types:
-      - completed
+      - opened
+      - synchronize
+      - reopened
+
+  # Push 이벤트로 트리거 (실제 배포)
+  push:
     branches:
       - develop
       - main
@@ -13,9 +21,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    if: |
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.event == 'push'
 
     steps:
       - name: Checkout code
@@ -34,7 +39,17 @@ jobs:
         id: vars
         run: |
           SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
-          if [ "${{ github.ref }}" == "refs/heads/main" ]; then
+
+          # PR 이벤트일 때는 base_ref (타겟 브랜치), push 이벤트일 때는 ref_name 사용
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            BRANCH="${{ github.base_ref }}"
+          else
+            BRANCH="${{ github.ref_name }}"
+          fi
+
+          echo "BRANCH=${BRANCH}" >> $GITHUB_OUTPUT
+
+          if [ "${BRANCH}" == "main" ]; then
             echo "ENV=production" >> $GITHUB_OUTPUT
             echo "TAG=latest" >> $GITHUB_OUTPUT
             echo "SHA_TAG=prod-${SHORT_SHA}" >> $GITHUB_OUTPUT
@@ -59,7 +74,9 @@ jobs:
   deploy-dev:
     needs: build
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/develop'
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/develop') ||
+      (github.event_name == 'pull_request' && github.base_ref == 'develop')
 
     steps:
       - name: Deploy to Development Server
@@ -120,7 +137,10 @@ jobs:
   deploy-prod:
     needs: build
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    # 임시: develop PR도 prod 서버에 배포 (테스트 목적)
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'pull_request' && (github.base_ref == 'main' || github.base_ref == 'develop'))
 
     steps:
       - name: Deploy to Production Server
