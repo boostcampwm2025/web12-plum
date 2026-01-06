@@ -1,4 +1,4 @@
-import { ButtonHTMLAttributes, ReactNode } from 'react';
+import { ReactNode } from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/shared/lib/utils';
 import { type IconName } from '@/shared/components/icon/iconMap';
@@ -6,7 +6,7 @@ import { Icon } from '@/shared/components/icon/Icon';
 import Tooltip from '@/shared/components/Tooltip';
 
 const buttonVariants = cva(
-  'disable:cursor-not-allowed relative flex cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-lg font-bold transition-all duration-150 focus-visible:ring-2 focus-visible:outline-none',
+  'disable:cursor-not-allowed relative flex shrink-0 cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-lg font-bold transition-all duration-150 focus-visible:ring-2 focus-visible:outline-none',
   {
     variants: {
       variant: {
@@ -32,8 +32,7 @@ const iconSizeMap = {
 
 type IconSize = keyof typeof iconSizeMap;
 
-interface ButtonProps
-  extends ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof buttonVariants> {
+interface ButtonProps extends React.ComponentProps<'button'>, VariantProps<typeof buttonVariants> {
   icon?: IconName;
   iconSize?: IconSize;
   children?: ReactNode;
