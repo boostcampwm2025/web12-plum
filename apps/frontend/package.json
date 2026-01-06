@@ -27,15 +27,16 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.40.1",
+    "@sentry/vite-plugin": "^4.6.1",
     "@testing-library/jest-dom": "^6.1.5",
     "@testing-library/react": "^14.1.2",
     "@testing-library/user-event": "^14.5.1",
-    "@sentry/vite-plugin": "^4.6.1",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
     "@vitejs/plugin-react": "^4.3.4",
     "@vitest/ui": "^1.1.0",
     "happy-dom": "^12.10.3",
+    "prettier-plugin-tailwindcss": "^0.7.2",
     "typescript": "^5.7.2",
     "vite": "^6.0.5",
     "vitest": "^1.1.0"
