@@ -4,7 +4,8 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**", "build/**"]
+      "outputs": ["dist/**", "build/**"],
+      "passThroughEnv": ["ORG_NAME", "PROJECT_NAME", "SENTRY_AUTH_TOKEN"]
     },
     "dev": {
       "cache": false,
