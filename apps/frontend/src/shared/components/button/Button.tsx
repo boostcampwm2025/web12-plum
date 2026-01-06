@@ -1,7 +1,8 @@
 import { ButtonHTMLAttributes, ReactNode } from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/shared/lib/utils';
-import { iconMap, type IconName } from '@/shared/components/icon/iconMap';
+import { type IconName } from '@/shared/components/icon/iconMap';
+import { Icon } from '@/shared/components/icon/Icon';
 import Tooltip from '@/shared/components/Tooltip';
 
 const buttonVariants = cva(
@@ -23,10 +24,10 @@ const buttonVariants = cva(
 );
 
 const iconSizeMap = {
-  xs: { className: 'h-3 w-3', strokeWidth: 1.125 },
-  sm: { className: 'h-4 w-4', strokeWidth: 1.5 },
-  md: { className: 'h-5 w-5', strokeWidth: 1.875 },
-  lg: { className: 'h-6 w-6', strokeWidth: 2.25 },
+  xs: { size: 12, strokeWidth: 1.125 },
+  sm: { size: 16, strokeWidth: 1.5 },
+  md: { size: 20, strokeWidth: 1.875 },
+  lg: { size: 24, strokeWidth: 2.25 },
 } as const;
 
 type IconSize = keyof typeof iconSizeMap;
@@ -51,7 +52,6 @@ export default function Button({
   'aria-label': ariaLabel,
   ...props
 }: ButtonProps) {
-  const Icon = icon ? iconMap[icon] : null;
   const iconConfig = iconSizeMap[iconSize];
 
   // 아이콘만 있고 children이 없으면 aria-label 필요
@@ -64,10 +64,12 @@ export default function Button({
       aria-label={finalAriaLabel}
       {...props}
     >
-      {Icon && (
+      {icon && (
         <Icon
-          className={cn(iconConfig.className)}
+          name={icon}
+          size={iconConfig.size}
           strokeWidth={iconConfig.strokeWidth}
+          decorative={!!children}
         />
       )}
       {children && <span>{children}</span>}
