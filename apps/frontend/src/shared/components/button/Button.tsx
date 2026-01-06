@@ -5,7 +5,7 @@ import { iconMap, type IconName } from '@/shared/components/icon/iconMap';
 import Tooltip from '@/shared/components/Tooltip';
 
 const buttonVariants = cva(
-  'disable:cursor-not-allowed relative flex cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-lg font-bold transition-all duration-150',
+  'disable:cursor-not-allowed relative flex cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-lg font-bold transition-all duration-150 focus-visible:ring-2 focus-visible:outline-none',
   {
     variants: {
       variant: {
@@ -48,14 +48,20 @@ export default function Button({
   tooltip,
   tooltipPosition = 'top',
   className,
+  'aria-label': ariaLabel,
   ...props
 }: ButtonProps) {
   const Icon = icon ? iconMap[icon] : null;
   const iconConfig = iconSizeMap[iconSize];
 
+  // 아이콘만 있고 children이 없으면 aria-label 필요
+  const needsAriaLabel = icon && !children;
+  const finalAriaLabel = ariaLabel || (needsAriaLabel ? tooltip : undefined);
+
   const button = (
     <button
       className={cn(buttonVariants({ variant }), className)}
+      aria-label={finalAriaLabel}
       {...props}
     >
       {Icon && (
