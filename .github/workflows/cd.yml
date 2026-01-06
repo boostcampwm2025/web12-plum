@@ -21,6 +21,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.vars.outputs.TAG }}
+      sha_tag: ${{ steps.vars.outputs.SHA_TAG }}
 
     steps:
       - name: Checkout code
@@ -84,7 +87,7 @@ jobs:
         uses: appleboy/ssh-action@v1.0.0
         env:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-          TAG: staging
+          TAG: ${{ needs.build.outputs.tag }}
         with:
           host: ${{ secrets.NCP_DEV_HOST }}
           username: ${{ secrets.NCP_DEV_USERNAME }}
@@ -159,7 +162,7 @@ jobs:
         uses: appleboy/ssh-action@v1.0.0
         env:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-          TAG: latest
+          TAG: ${{ needs.build.outputs.tag }}
         with:
           host: ${{ secrets.NCP_PROD_HOST }}
           username: ${{ secrets.NCP_PROD_USERNAME }}
@@ -187,6 +190,9 @@ jobs:
 
             # 프로젝트 폴더로 이동
             cd ~/plum
+
+            # Git remote URL 확인 및 수정 (올바른 repository 사용)
+            git remote set-url origin git@github.com:${{ github.repository }}.git
 
             # 최신 코드 가져오기
             GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy_key -o StrictHostKeyChecking=no" \
