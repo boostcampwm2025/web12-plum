@@ -2,6 +2,7 @@ import { ButtonHTMLAttributes, ReactNode } from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/shared/lib/utils';
 import { iconMap, type IconName } from '@/shared/components/icon/iconMap';
+import Tooltip from '@/shared/components/Tooltip';
 
 const buttonVariants = cva(
   'disable:cursor-not-allowed relative flex cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-lg font-bold transition-all duration-150',
@@ -35,6 +36,8 @@ interface ButtonProps
   icon?: IconName;
   iconSize?: IconSize;
   children?: ReactNode;
+  tooltip?: string;
+  tooltipPosition?: 'top' | 'bottom' | 'left' | 'right';
 }
 
 export default function Button({
@@ -42,13 +45,15 @@ export default function Button({
   icon,
   iconSize = 'md',
   children,
+  tooltip,
+  tooltipPosition = 'top',
   className,
   ...props
 }: ButtonProps) {
   const Icon = icon ? iconMap[icon] : null;
   const iconConfig = iconSizeMap[iconSize];
 
-  return (
+  const button = (
     <button
       className={cn(buttonVariants({ variant }), className)}
       {...props}
@@ -62,4 +67,17 @@ export default function Button({
       {children && <span>{children}</span>}
     </button>
   );
+
+  if (tooltip) {
+    return (
+      <Tooltip
+        content={tooltip}
+        position={tooltipPosition}
+      >
+        {button}
+      </Tooltip>
+    );
+  }
+
+  return button;
 }
