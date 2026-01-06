@@ -15,3 +15,8 @@ build
 # Local env files
 .env
 .env.local
+
+# Test results
+test-results
+playwright-report
+coverage
