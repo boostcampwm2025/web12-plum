@@ -1,4 +1,4 @@
-import { MouseEvent, useEffect, useRef, type ReactNode } from 'react';
+import { MouseEvent, useEffect, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 
 /**
@@ -47,8 +47,6 @@ interface ModalOverlayProps {
  * @returns 모달 오버레이 JSX 요소
  */
 const ModalOverlay = ({ onClose, children }: ModalOverlayProps) => {
-  const modalRef = useRef<HTMLDivElement>(null);
-
   const handleBackdropClick = (e: MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) onClose();
   };
@@ -60,7 +58,7 @@ const ModalOverlay = ({ onClose, children }: ModalOverlayProps) => {
       role="dialog"
       aria-modal="true"
     >
-      <div ref={modalRef}>{children}</div>
+      <div>{children}</div>
     </div>,
     document.body,
   );
