@@ -2,17 +2,6 @@
 name: CD Pipeline
 
 on:
-  # PR 이벤트로 트리거 (테스트 목적)
-  pull_request:
-    branches:
-      - develop
-      - main
-    types:
-      - opened
-      - synchronize
-      - reopened
-
-  # Push 이벤트로 트리거 (실제 배포)
   push:
     branches:
       - develop
@@ -42,16 +31,7 @@ jobs:
         id: vars
         run: |
           SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
-
-          # PR: base_ref로 환경 결정 (어디로 머지될지)
-          # Push: ref_name으로 환경 결정
-          if [ "${{ github.event_name }}" == "pull_request" ]; then
-            BRANCH="${{ github.base_ref }}"
-          else
-            BRANCH="${{ github.ref_name }}"
-          fi
-
-          echo "BRANCH=${BRANCH}" >> $GITHUB_OUTPUT
+          BRANCH="${{ github.ref_name }}"
 
           if [ "${BRANCH}" == "main" ]; then
             echo "ENV=production" >> $GITHUB_OUTPUT
@@ -78,9 +58,7 @@ jobs:
   deploy-dev:
     needs: build
     runs-on: ubuntu-latest
-    if: |
-      (github.event_name == 'push' && github.ref == 'refs/heads/develop') ||
-      (github.event_name == 'pull_request' && github.base_ref == 'develop')
+    if: github.ref == 'refs/heads/develop'
 
     steps:
       - name: Deploy to Development Server
@@ -95,18 +73,9 @@ jobs:
           port: ${{ secrets.NCP_DEV_PORT || 22 }}
           envs: DOCKER_USERNAME,TAG
           script: |
-            # 배포할 브랜치 결정
-            # PR: head_ref (소스 브랜치, 변경사항이 있는 브랜치)
-            # Push: ref_name (현재 브랜치)
-            if [ "${{ github.event_name }}" == "pull_request" ]; then
-              DEPLOY_BRANCH="${{ github.head_ref }}"
-            else
-              DEPLOY_BRANCH="${{ github.ref_name }}"
-            fi
-
+            DEPLOY_BRANCH="${{ github.ref_name }}"
             echo "배포 브랜치: ${DEPLOY_BRANCH}"
 
-            # 프로젝트 폴더 확인 및 생성
             if [ ! -d ~/plum ]; then
               echo "프로젝트 폴더 생성 중..."
               GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy_key -o StrictHostKeyChecking=no" \
@@ -123,11 +92,19 @@ jobs:
             GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy_key -o StrictHostKeyChecking=no" \
               git pull origin ${DEPLOY_BRANCH}
 
-            # 환경 변수 설정
-            export DOCKER_USERNAME=$DOCKER_USERNAME
-            export TAG=$TAG
+            # .env 파일에 DOCKER_USERNAME과 TAG 값 업데이트
+            if grep -q "^DOCKER_USERNAME=" .env; then
+              sed -i 's/^DOCKER_USERNAME=.*/DOCKER_USERNAME='"${DOCKER_USERNAME}"'/' .env
+            else
+              echo "DOCKER_USERNAME=${DOCKER_USERNAME}" >> .env
+            fi
 
-            # Backend 배포 (개발 환경 설정 사용)
+            if grep -q "^TAG=" .env; then
+              sed -i 's/^TAG=.*/TAG='"${TAG}"'/' .env
+            else
+              echo "TAG=${TAG}" >> .env
+            fi
+
             docker compose -f docker-compose.yml -f docker-compose.develop.yml pull backend
             docker compose -f docker-compose.yml -f docker-compose.develop.yml up -d backend
 
@@ -136,7 +113,7 @@ jobs:
             if timeout 30 bash -c 'until curl -f http://localhost:3000/health 2>/dev/null; do sleep 2; done'; then
               echo "✅ 헬스체크 성공"
             else
-              echo "⚠️  헬스체크 타임아웃 (컨테이너 로그 확인 필요)"
+              echo "⚠️  헬스체크 타임아웃"
             fi
 
             # 사용하지 않는 이미지 정리
@@ -152,10 +129,7 @@ jobs:
   deploy-prod:
     needs: build
     runs-on: ubuntu-latest
-    # 임시: develop PR도 prod 서버에 배포 (테스트 목적)
-    if: |
-      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
-      (github.event_name == 'pull_request' && (github.base_ref == 'main' || github.base_ref == 'develop'))
+    if: github.ref == 'refs/heads/main'
 
     steps:
       - name: Deploy to Production Server
@@ -170,15 +144,7 @@ jobs:
           port: ${{ secrets.NCP_PROD_PORT || 22 }}
           envs: DOCKER_USERNAME,TAG
           script: |
-            # 배포할 브랜치 결정
-            # PR: head_ref (소스 브랜치, 변경사항이 있는 브랜치)
-            # Push: ref_name (현재 브랜치)
-            if [ "${{ github.event_name }}" == "pull_request" ]; then
-              DEPLOY_BRANCH="${{ github.head_ref }}"
-            else
-              DEPLOY_BRANCH="${{ github.ref_name }}"
-            fi
-
+            DEPLOY_BRANCH="${{ github.ref_name }}"
             echo "배포 브랜치: ${DEPLOY_BRANCH}"
 
             # 프로젝트 폴더 확인 및 생성
@@ -191,21 +157,25 @@ jobs:
             # 프로젝트 폴더로 이동
             cd ~/plum
 
-            # Git remote URL 확인 및 수정 (올바른 repository 사용)
-            git remote set-url origin git@github.com:${{ github.repository }}.git
-
-            # 최신 코드 가져오기
             GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy_key -o StrictHostKeyChecking=no" \
               git fetch origin
             git checkout ${DEPLOY_BRANCH}
             GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy_key -o StrictHostKeyChecking=no" \
               git pull origin ${DEPLOY_BRANCH}
 
-            # 환경 변수 설정
-            export DOCKER_USERNAME=$DOCKER_USERNAME
-            export TAG=$TAG
+            # .env 파일에 DOCKER_USERNAME과 TAG 값 업데이트
+            if grep -q "^DOCKER_USERNAME=" .env; then
+              sed -i 's/^DOCKER_USERNAME=.*/DOCKER_USERNAME='"${DOCKER_USERNAME}"'/' .env
+            else
+              echo "DOCKER_USERNAME=${DOCKER_USERNAME}" >> .env
+            fi
 
-            # Backend 배포 (운영 환경 설정 사용)
+            if grep -q "^TAG=" .env; then
+              sed -i 's/^TAG=.*/TAG='"${TAG}"'/' .env
+            else
+              echo "TAG=${TAG}" >> .env
+            fi
+
             docker compose -f docker-compose.yml -f docker-compose.prod.yml pull backend
             docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d backend
 
