@@ -14,7 +14,7 @@ import iconsMaximize from '@/assets/icons/maximize.svg?react';
 import iconsMegaphone from '@/assets/icons/megaphone.svg?react';
 import iconsMenu from '@/assets/icons/menu.svg?react';
 import iconsMic from '@/assets/icons/mic.svg?react';
-import iconsMic_disabled from '@/assets/icons/mic_disabled.svg?react';
+import iconsMicDisabled from '@/assets/icons/mic-disabled.svg?react';
 import iconsMinimize from '@/assets/icons/minimize.svg?react';
 import iconsMinus from '@/assets/icons/minus.svg?react';
 import iconsPencil from '@/assets/icons/pencil.svg?react';
@@ -22,7 +22,7 @@ import iconsPip from '@/assets/icons/pip.svg?react';
 import iconsPlus from '@/assets/icons/plus.svg?react';
 import iconsQna from '@/assets/icons/qna.svg?react';
 import iconsRanking from '@/assets/icons/ranking.svg?react';
-import iconsScreen_share from '@/assets/icons/screen_share.svg?react';
+import iconsScreenShare from '@/assets/icons/screen-share.svg?react';
 import iconsSend from '@/assets/icons/send.svg?react';
 import iconsSideOpen from '@/assets/icons/side-open.svg?react';
 import iconsSiren from '@/assets/icons/siren.svg?react';
@@ -55,7 +55,7 @@ export const iconMap = {
   megaphone: iconsMegaphone,
   menu: iconsMenu,
   mic: iconsMic,
-  mic_disabled: iconsMic_disabled,
+  'mic-disabled': iconsMicDisabled,
   minimize: iconsMinimize,
   minus: iconsMinus,
   pencil: iconsPencil,
@@ -63,7 +63,7 @@ export const iconMap = {
   plus: iconsPlus,
   qna: iconsQna,
   ranking: iconsRanking,
-  screen_share: iconsScreen_share,
+  'screen-share': iconsScreenShare,
   send: iconsSend,
   'side-open': iconsSideOpen,
   siren: iconsSiren,
