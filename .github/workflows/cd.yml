@@ -91,6 +91,15 @@ jobs:
           port: ${{ secrets.NCP_DEV_PORT || 22 }}
           envs: DOCKER_USERNAME,TAG
           script: |
+            # 배포할 브랜치 결정 (PR은 base_ref, push는 ref_name)
+            if [ "${{ github.event_name }}" == "pull_request" ]; then
+              DEPLOY_BRANCH="${{ github.base_ref }}"
+            else
+              DEPLOY_BRANCH="${{ github.ref_name }}"
+            fi
+
+            echo "배포 브랜치: ${DEPLOY_BRANCH}"
+
             # 프로젝트 폴더 확인 및 생성
             if [ ! -d ~/plum ]; then
               echo "프로젝트 폴더 생성 중..."
@@ -104,9 +113,9 @@ jobs:
             # 최신 코드 가져오기
             GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy_key -o StrictHostKeyChecking=no" \
               git fetch origin
-            git checkout develop
+            git checkout ${DEPLOY_BRANCH}
             GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy_key -o StrictHostKeyChecking=no" \
-              git pull origin develop
+              git pull origin ${DEPLOY_BRANCH}
 
             # 환경 변수 설정
             export DOCKER_USERNAME=$DOCKER_USERNAME
@@ -155,6 +164,15 @@ jobs:
           port: ${{ secrets.NCP_PROD_PORT || 22 }}
           envs: DOCKER_USERNAME,TAG
           script: |
+            # 배포할 브랜치 결정 (PR은 base_ref, push는 ref_name)
+            if [ "${{ github.event_name }}" == "pull_request" ]; then
+              DEPLOY_BRANCH="${{ github.base_ref }}"
+            else
+              DEPLOY_BRANCH="${{ github.ref_name }}"
+            fi
+
+            echo "배포 브랜치: ${DEPLOY_BRANCH}"
+
             # 프로젝트 폴더 확인 및 생성
             if [ ! -d ~/plum ]; then
               echo "프로젝트 폴더 생성 중..."
@@ -168,9 +186,9 @@ jobs:
             # 최신 코드 가져오기
             GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy_key -o StrictHostKeyChecking=no" \
               git fetch origin
-            git checkout main
+            git checkout ${DEPLOY_BRANCH}
             GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy_key -o StrictHostKeyChecking=no" \
-              git pull origin main
+              git pull origin ${DEPLOY_BRANCH}
 
             # 환경 변수 설정
             export DOCKER_USERNAME=$DOCKER_USERNAME
