@@ -23,13 +23,6 @@ const FILE_FORMATS = [
 export const ALLOWED_FILE_MIME_TYPES = FILE_FORMATS.map((type) => type.mime);
 
 /**
- * 허용되는 파일 확장자
- */
-export const ALLOWED_FILE_EXTENSIONS = FILE_FORMATS;
-
-/**
  * 허용되는 파일 확장자 문자열
  */
-export const ALLOWED_FILE_EXTENSIONS_STRING = ALLOWED_FILE_EXTENSIONS.map(
-  (type) => type.accept,
-).join(', ');
+export const ALLOWED_FILE_EXTENSIONS_STRING = FILE_FORMATS.map((type) => type.accept).join(', ');
