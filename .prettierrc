@@ -10,5 +10,6 @@
   "bracketSpacing": true,
   "jsxSingleQuote": false,
   "singleAttributePerLine": true,
-  "plugins": ["prettier-plugin-tailwindcss"]
+  "plugins": ["prettier-plugin-tailwindcss"],
+  "tailwindFunctions": ["cva", "cn", "clsx"]
 }
