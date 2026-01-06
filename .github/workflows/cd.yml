@@ -1,0 +1,182 @@
+# CD Pipeline - Backend Docker 빌드 및 배포
+name: CD Pipeline
+
+on:
+  workflow_run:
+    workflows: ["CI Pipeline"]
+    types:
+      - completed
+    branches:
+      - develop
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    if: |
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Set environment variables
+        id: vars
+        run: |
+          SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
+          if [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            echo "ENV=production" >> $GITHUB_OUTPUT
+            echo "TAG=latest" >> $GITHUB_OUTPUT
+            echo "SHA_TAG=prod-${SHORT_SHA}" >> $GITHUB_OUTPUT
+          else
+            echo "ENV=staging" >> $GITHUB_OUTPUT
+            echo "TAG=staging" >> $GITHUB_OUTPUT
+            echo "SHA_TAG=dev-${SHORT_SHA}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build and push Backend Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./apps/backend/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/plum-backend:${{ steps.vars.outputs.TAG }}
+            ${{ secrets.DOCKER_USERNAME }}/plum-backend:${{ steps.vars.outputs.SHA_TAG }}
+          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/plum-backend:buildcache
+          cache-to: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/plum-backend:buildcache,mode=max
+
+  deploy-dev:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/develop'
+
+    steps:
+      - name: Deploy to Development Server
+        uses: appleboy/ssh-action@v1.0.0
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          TAG: staging
+        with:
+          host: ${{ secrets.NCP_DEV_HOST }}
+          username: ${{ secrets.NCP_DEV_USERNAME }}
+          key: ${{ secrets.NCP_DEV_SSH_KEY }}
+          port: ${{ secrets.NCP_DEV_PORT || 22 }}
+          envs: DOCKER_USERNAME,TAG
+          script: |
+            # 프로젝트 폴더 확인 및 생성
+            if [ ! -d ~/plum ]; then
+              echo "프로젝트 폴더 생성 중..."
+              GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy_key -o StrictHostKeyChecking=no" \
+                git clone git@github.com:${{ github.repository }}.git ~/plum
+            fi
+
+            # 프로젝트 폴더로 이동
+            cd ~/plum
+
+            # 최신 코드 가져오기
+            GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy_key -o StrictHostKeyChecking=no" \
+              git fetch origin
+            git checkout develop
+            GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy_key -o StrictHostKeyChecking=no" \
+              git pull origin develop
+
+            # 환경 변수 설정
+            export DOCKER_USERNAME=$DOCKER_USERNAME
+            export TAG=$TAG
+
+            # Backend 배포 (개발 환경 설정 사용)
+            docker compose -f docker-compose.yml -f docker-compose.develop.yml pull backend
+            docker compose -f docker-compose.yml -f docker-compose.develop.yml up -d backend
+
+            # 헬스체크 (30초 타임아웃)
+            echo "헬스체크 중..."
+            if timeout 30 bash -c 'until curl -f http://localhost:3000/health 2>/dev/null; do sleep 2; done'; then
+              echo "✅ 헬스체크 성공"
+            else
+              echo "⚠️  헬스체크 타임아웃 (컨테이너 로그 확인 필요)"
+            fi
+
+            # 사용하지 않는 이미지 정리
+            docker image prune -f
+
+            # 배포 상태 확인
+            echo "==== 배포 완료 ===="
+            echo "환경: Development"
+            echo "태그: $TAG"
+            echo "컨테이너 상태:"
+            docker ps --filter "name=plum-backend-develop"
+
+  deploy-prod:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Deploy to Production Server
+        uses: appleboy/ssh-action@v1.0.0
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          TAG: latest
+        with:
+          host: ${{ secrets.NCP_PROD_HOST }}
+          username: ${{ secrets.NCP_PROD_USERNAME }}
+          key: ${{ secrets.NCP_PROD_SSH_KEY }}
+          port: ${{ secrets.NCP_PROD_PORT || 22 }}
+          envs: DOCKER_USERNAME,TAG
+          script: |
+            # 프로젝트 폴더 확인 및 생성
+            if [ ! -d ~/plum ]; then
+              echo "프로젝트 폴더 생성 중..."
+              GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy_key -o StrictHostKeyChecking=no" \
+                git clone git@github.com:${{ github.repository }}.git ~/plum
+            fi
+
+            # 프로젝트 폴더로 이동
+            cd ~/plum
+
+            # 최신 코드 가져오기
+            GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy_key -o StrictHostKeyChecking=no" \
+              git fetch origin
+            git checkout main
+            GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy_key -o StrictHostKeyChecking=no" \
+              git pull origin main
+
+            # 환경 변수 설정
+            export DOCKER_USERNAME=$DOCKER_USERNAME
+            export TAG=$TAG
+
+            # Backend 배포 (운영 환경 설정 사용)
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml pull backend
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d backend
+
+            # 헬스체크 (60초 타임아웃, 운영 환경은 더 긴 시간)
+            echo "헬스체크 중..."
+            if timeout 60 bash -c 'until curl -f http://localhost:3000/health 2>/dev/null; do sleep 3; done'; then
+              echo "✅ 헬스체크 성공"
+            else
+              echo "❌ 헬스체크 실패!"
+              echo "컨테이너 로그:"
+              docker logs --tail 50 plum-backend-prod
+              exit 1
+            fi
+
+            # 사용하지 않는 이미지 정리
+            docker image prune -f
+
+            # 배포 상태 확인
+            echo "==== 배포 완료 ===="
+            echo "환경: Production"
+            echo "태그: $TAG"
+            echo "컨테이너 상태:"
+            docker ps --filter "name=plum-backend-prod"
