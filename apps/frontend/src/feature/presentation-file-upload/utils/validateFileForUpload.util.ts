@@ -1,7 +1,8 @@
 import {
   ALLOWED_FILE_EXTENSIONS_STRING,
   ALLOWED_FILE_MIME_TYPES,
-  FILE_MAX_SIZE,
+  FILE_MAX_SIZE_BYTES,
+  FILE_MAX_SIZE_MB,
 } from '@/feature/presentation-file-upload/constants/presentationFileUpload.constant';
 
 type AllowedMimeType = (typeof ALLOWED_FILE_MIME_TYPES)[number];
@@ -11,7 +12,7 @@ type AllowedMimeType = (typeof ALLOWED_FILE_MIME_TYPES)[number];
  */
 const ERROR_MESSAGES = {
   invalidMimeType: `허용되지 않는 파일 형식입니다. ${ALLOWED_FILE_EXTENSIONS_STRING} 파일만 업로드 가능합니다.`,
-  tooLargeFile: `파일 크기가 너무 큽니다. 최대 ${FILE_MAX_SIZE}MB까지 업로드 가능합니다.`,
+  tooLargeFile: `파일 크기가 너무 큽니다. 최대 ${FILE_MAX_SIZE_MB}MB까지 업로드 가능합니다.`,
 };
 
 /**
@@ -35,7 +36,7 @@ export const validateFileForUpload = (file: File): string | null => {
     return errorMessage;
   }
 
-  if (file.size > FILE_MAX_SIZE) {
+  if (file.size > FILE_MAX_SIZE_BYTES) {
     const errorMessage = ERROR_MESSAGES.tooLargeFile;
     return errorMessage;
   }

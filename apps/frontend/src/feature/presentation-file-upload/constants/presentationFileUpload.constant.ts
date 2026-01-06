@@ -2,7 +2,8 @@
  * TODO: 최대 크기 논의하기
  * 발표 자료 최대 파일 크기: 50MB
  */
-export const FILE_MAX_SIZE = 50 * 1024 * 1024;
+export const FILE_MAX_SIZE_MB = 50;
+export const FILE_MAX_SIZE_BYTES = FILE_MAX_SIZE_MB * 1024 * 1024;
 
 /**
  * 허용되는 파일 형식과 MIME 타입
