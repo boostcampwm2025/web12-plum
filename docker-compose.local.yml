@@ -1,9 +1,0 @@
-# streaming/docker-compose.local.yml
-# 로컬 개발 환경용 설정: Base 파일(docker-compose.yml) 오버라이드 및 추가 정의
-#
-# 현재 백엔드만 배포 중이므로 모니터링 서비스는 주석처리
-# 추후 별도 모니터링 서버에서 사용 예정
-
-# version: '3.8'
-
-# services:

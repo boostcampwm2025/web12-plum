@@ -1,4 +1,3 @@
-# streaming/docker-compose.prod.yml
 # 운영 서버 배포 환경 설정: Base 파일 오버라이드/서비스 추가
 
 # version: '3.8'
@@ -15,6 +14,8 @@ services:
     restart: always # 운영에서는 항상 재시작 (unless-stopped보다 강함)
     networks:
       - plum-network
+    volumes:
+      - ./apps/backend/logs:/app/apps/backend/logs # Winston 로그 파일 (Promtail이 읽음)
     deploy: # 운영에서는 리소스 제한 및 헬스체크 필수!
       resources:
         limits: # 최대 사용 제한
@@ -29,4 +30,40 @@ services:
       timeout: 10s  # 10초 내 응답 없으면 실패
       retries: 3    # 3번 실패 시 unhealthy
       start_period: 5s # 컨테이너 시작 후 5초 동안은 실패해도 무시
+
+  # Node Exporter - 시스템 메트릭 수집
+  node-exporter:
+    image: prom/node-exporter:v1.6.1
+    container_name: plum-backend-prod-node-exporter
+    restart: always
+    ports:
+      - "9100:9100"
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--path.rootfs=/host'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/host:ro
+    networks:
+      - plum-network
+
+  # Promtail - 로그 수집 및 Loki로 전송
+  promtail:
+    image: grafana/promtail:2.9.0
+    container_name: plum-backend-prod-promtail
+    restart: always
+    volumes:
+      - ./apps/backend/logs:/app/logs:ro # Winston 로그 파일 읽기
+      - ./apps/backend/promtail.yaml:/etc/promtail/config.yml:ro # Promtail 설정
+    environment:
+      - LOKI_URL=http://101.79.11.160:3100 # Prod 모니터링 서버 Loki 주소
+      - NODE_ENV=production
+    command: -config.file=/etc/promtail/config.yml
+    networks:
+      - plum-network
+    depends_on:
+      - backend
 
