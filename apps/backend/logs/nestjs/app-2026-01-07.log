@@ -16,3 +16,105 @@
 {"context":"Bootstrap","level":"info","message":"Application is running on: http://localhost:3000","timestamp":"2026-01-07 17:20:51"}
 {"level":"warn","message":"[Exception] GET /healthno 404 - Cannot GET /healthno","timestamp":"2026-01-07 17:20:56"}
 {"level":"warn","message":"[Exception] GET /error 404 - Cannot GET /error","timestamp":"2026-01-07 17:25:10"}
+{"context":"NestFactory","level":"info","message":"Starting Nest application...","timestamp":"2026-01-07 17:33:13"}
+{"context":"InstanceLoader","level":"info","message":"WinstonModule dependencies initialized","timestamp":"2026-01-07 17:33:13"}
+{"context":"InstanceLoader","level":"info","message":"AppModule dependencies initialized","timestamp":"2026-01-07 17:33:13"}
+{"context":"InstanceLoader","level":"info","message":"HealthModule dependencies initialized","timestamp":"2026-01-07 17:33:13"}
+{"context":"RoutesResolver","level":"info","message":"HealthController {/health}:","timestamp":"2026-01-07 17:33:13"}
+{"context":"RouterExplorer","level":"info","message":"Mapped {/health, GET} route","timestamp":"2026-01-07 17:33:13"}
+{"context":"NestApplication","level":"info","message":"Nest application successfully started","timestamp":"2026-01-07 17:33:13"}
+{"context":"Bootstrap","level":"info","message":"Application is running on: http://localhost:3000","timestamp":"2026-01-07 17:33:13"}
+{"context":"NestFactory","level":"info","message":"Starting Nest application...","timestamp":"2026-01-07 17:54:40"}
+{"context":"InstanceLoader","level":"info","message":"WinstonModule dependencies initialized","timestamp":"2026-01-07 17:54:40"}
+{"context":"InstanceLoader","level":"info","message":"AppModule dependencies initialized","timestamp":"2026-01-07 17:54:40"}
+{"context":"InstanceLoader","level":"info","message":"HealthModule dependencies initialized","timestamp":"2026-01-07 17:54:40"}
+{"context":"RoutesResolver","level":"info","message":"HealthController {/health}:","timestamp":"2026-01-07 17:54:40"}
+{"context":"RouterExplorer","level":"info","message":"Mapped {/health, GET} route","timestamp":"2026-01-07 17:54:40"}
+{"context":"NestApplication","level":"info","message":"Nest application successfully started","timestamp":"2026-01-07 17:54:40"}
+{"context":"Bootstrap","level":"info","message":"Application is running on: http://localhost:3000","timestamp":"2026-01-07 17:54:40"}
+{"context":"NestFactory","level":"info","message":"Starting Nest application...","timestamp":"2026-01-07 17:54:49"}
+{"context":"InstanceLoader","level":"info","message":"WinstonModule dependencies initialized","timestamp":"2026-01-07 17:54:49"}
+{"context":"InstanceLoader","level":"info","message":"AppModule dependencies initialized","timestamp":"2026-01-07 17:54:49"}
+{"context":"InstanceLoader","level":"info","message":"HealthModule dependencies initialized","timestamp":"2026-01-07 17:54:49"}
+{"context":"RoutesResolver","level":"info","message":"HealthController {/health}:","timestamp":"2026-01-07 17:54:49"}
+{"context":"RouterExplorer","level":"info","message":"Mapped {/health, GET} route","timestamp":"2026-01-07 17:54:49"}
+{"context":"NestApplication","level":"info","message":"Nest application successfully started","timestamp":"2026-01-07 17:54:49"}
+{"context":"Bootstrap","level":"info","message":"Application is running on: http://localhost:3000","timestamp":"2026-01-07 17:54:49"}
+{"context":"NestFactory","level":"info","message":"Starting Nest application...","timestamp":"2026-01-07 17:55:07"}
+{"context":"InstanceLoader","level":"info","message":"WinstonModule dependencies initialized","timestamp":"2026-01-07 17:55:07"}
+{"context":"InstanceLoader","level":"info","message":"AppModule dependencies initialized","timestamp":"2026-01-07 17:55:07"}
+{"context":"InstanceLoader","level":"info","message":"HealthModule dependencies initialized","timestamp":"2026-01-07 17:55:07"}
+{"context":"RoutesResolver","level":"info","message":"HealthController {/health}:","timestamp":"2026-01-07 17:55:07"}
+{"context":"RouterExplorer","level":"info","message":"Mapped {/health, GET} route","timestamp":"2026-01-07 17:55:07"}
+{"context":"NestApplication","level":"info","message":"Nest application successfully started","timestamp":"2026-01-07 17:55:07"}
+{"context":"Bootstrap","level":"info","message":"Application is running on: http://localhost:3000","timestamp":"2026-01-07 17:55:07"}
+{"context":"NestFactory","level":"info","message":"Starting Nest application...","timestamp":"2026-01-07 17:55:25"}
+{"context":"InstanceLoader","level":"info","message":"WinstonModule dependencies initialized","timestamp":"2026-01-07 17:55:25"}
+{"context":"InstanceLoader","level":"info","message":"AppModule dependencies initialized","timestamp":"2026-01-07 17:55:25"}
+{"context":"InstanceLoader","level":"info","message":"HealthModule dependencies initialized","timestamp":"2026-01-07 17:55:25"}
+{"context":"RoutesResolver","level":"info","message":"HealthController {/health}:","timestamp":"2026-01-07 17:55:25"}
+{"context":"RouterExplorer","level":"info","message":"Mapped {/health, GET} route","timestamp":"2026-01-07 17:55:25"}
+{"context":"NestApplication","level":"info","message":"Nest application successfully started","timestamp":"2026-01-07 17:55:25"}
+{"context":"Bootstrap","level":"info","message":"Application is running on: http://localhost:3000","timestamp":"2026-01-07 17:55:25"}
+{"level":"warn","message":"[Exception] GET / 404 - Cannot GET /","timestamp":"2026-01-07 17:55:32"}
+{"context":"NestFactory","level":"info","message":"Starting Nest application...","timestamp":"2026-01-07 17:58:04"}
+{"context":"InstanceLoader","level":"info","message":"WinstonModule dependencies initialized","timestamp":"2026-01-07 17:58:04"}
+{"context":"InstanceLoader","level":"info","message":"AppModule dependencies initialized","timestamp":"2026-01-07 17:58:04"}
+{"context":"InstanceLoader","level":"info","message":"HealthModule dependencies initialized","timestamp":"2026-01-07 17:58:04"}
+{"context":"RoutesResolver","level":"info","message":"HealthController {/health}:","timestamp":"2026-01-07 17:58:04"}
+{"context":"RouterExplorer","level":"info","message":"Mapped {/health, GET} route","timestamp":"2026-01-07 17:58:04"}
+{"context":"NestApplication","level":"info","message":"Nest application successfully started","timestamp":"2026-01-07 17:58:04"}
+{"context":"Bootstrap","level":"info","message":"Application is running on: http://localhost:3000","timestamp":"2026-01-07 17:58:04"}
+{"context":"NestFactory","level":"info","message":"Starting Nest application...","timestamp":"2026-01-07 18:00:46"}
+{"context":"InstanceLoader","level":"info","message":"WinstonModule dependencies initialized","timestamp":"2026-01-07 18:00:46"}
+{"context":"InstanceLoader","level":"info","message":"AppModule dependencies initialized","timestamp":"2026-01-07 18:00:46"}
+{"context":"InstanceLoader","level":"info","message":"HealthModule dependencies initialized","timestamp":"2026-01-07 18:00:46"}
+{"context":"RoutesResolver","level":"info","message":"HealthController {/health}:","timestamp":"2026-01-07 18:00:46"}
+{"context":"RouterExplorer","level":"info","message":"Mapped {/health, GET} route","timestamp":"2026-01-07 18:00:46"}
+{"context":"NestApplication","level":"info","message":"Nest application successfully started","timestamp":"2026-01-07 18:00:46"}
+{"context":"Bootstrap","level":"info","message":"Application is running on: http://localhost:3000","timestamp":"2026-01-07 18:00:46"}
+{"context":"NestFactory","level":"info","message":"Starting Nest application...","timestamp":"2026-01-07 18:01:17"}
+{"context":"InstanceLoader","level":"info","message":"WinstonModule dependencies initialized","timestamp":"2026-01-07 18:01:17"}
+{"context":"InstanceLoader","level":"info","message":"AppModule dependencies initialized","timestamp":"2026-01-07 18:01:17"}
+{"context":"InstanceLoader","level":"info","message":"HealthModule dependencies initialized","timestamp":"2026-01-07 18:01:17"}
+{"context":"RoutesResolver","level":"info","message":"HealthController {/health}:","timestamp":"2026-01-07 18:01:17"}
+{"context":"RouterExplorer","level":"info","message":"Mapped {/health, GET} route","timestamp":"2026-01-07 18:01:17"}
+{"context":"NestApplication","level":"info","message":"Nest application successfully started","timestamp":"2026-01-07 18:01:17"}
+{"context":"Bootstrap","level":"info","message":"Application is running on: http://localhost:3000","timestamp":"2026-01-07 18:01:17"}
+{"context":"NestFactory","level":"info","message":"Starting Nest application...","timestamp":"2026-01-07 18:09:13"}
+{"context":"InstanceLoader","level":"info","message":"WinstonModule dependencies initialized","timestamp":"2026-01-07 18:09:13"}
+{"context":"InstanceLoader","level":"info","message":"AppModule dependencies initialized","timestamp":"2026-01-07 18:09:13"}
+{"context":"InstanceLoader","level":"info","message":"HealthModule dependencies initialized","timestamp":"2026-01-07 18:09:13"}
+{"context":"RoutesResolver","level":"info","message":"HealthController {/health}:","timestamp":"2026-01-07 18:09:13"}
+{"context":"RouterExplorer","level":"info","message":"Mapped {/health, GET} route","timestamp":"2026-01-07 18:09:13"}
+{"context":"NestApplication","level":"info","message":"Nest application successfully started","timestamp":"2026-01-07 18:09:13"}
+{"context":"Bootstrap","level":"info","message":"Application is running on: http://localhost:3000","timestamp":"2026-01-07 18:09:13"}
+{"context":"NestFactory","level":"info","message":"Starting Nest application...","timestamp":"2026-01-07 18:10:45"}
+{"context":"InstanceLoader","level":"info","message":"WinstonModule dependencies initialized","timestamp":"2026-01-07 18:10:45"}
+{"context":"InstanceLoader","level":"info","message":"HealthModule dependencies initialized","timestamp":"2026-01-07 18:10:45"}
+{"context":"InstanceLoader","level":"info","message":"AppModule dependencies initialized","timestamp":"2026-01-07 18:10:45"}
+{"context":"RoutesResolver","level":"info","message":"HealthController {/health}:","timestamp":"2026-01-07 18:10:45"}
+{"context":"RouterExplorer","level":"info","message":"Mapped {/health, GET} route","timestamp":"2026-01-07 18:10:45"}
+{"context":"NestApplication","level":"info","message":"Nest application successfully started","timestamp":"2026-01-07 18:10:45"}
+{"context":"Bootstrap","level":"info","message":"Application is running on: http://localhost:3000","timestamp":"2026-01-07 18:10:45"}
+{"context":"NestFactory","level":"info","message":"Starting Nest application...","timestamp":"2026-01-07 18:10:54"}
+{"context":"InstanceLoader","level":"info","message":"WinstonModule dependencies initialized","timestamp":"2026-01-07 18:10:54"}
+{"context":"InstanceLoader","level":"info","message":"HealthModule dependencies initialized","timestamp":"2026-01-07 18:10:54"}
+{"context":"InstanceLoader","level":"info","message":"AppModule dependencies initialized","timestamp":"2026-01-07 18:10:54"}
+{"context":"RoutesResolver","level":"info","message":"HealthController {/health}:","timestamp":"2026-01-07 18:10:54"}
+{"context":"RouterExplorer","level":"info","message":"Mapped {/health, GET} route","timestamp":"2026-01-07 18:10:54"}
+{"context":"NestApplication","level":"info","message":"Nest application successfully started","timestamp":"2026-01-07 18:10:54"}
+{"context":"Bootstrap","level":"info","message":"Application is running on: http://localhost:3000","timestamp":"2026-01-07 18:10:54"}
+{"context":"NestFactory","level":"info","message":"Starting Nest application...","timestamp":"2026-01-07 18:11:34"}
+{"context":"InstanceLoader","level":"info","message":"WinstonModule dependencies initialized","timestamp":"2026-01-07 18:11:34"}
+{"context":"InstanceLoader","level":"info","message":"HealthModule dependencies initialized","timestamp":"2026-01-07 18:11:34"}
+{"context":"InstanceLoader","level":"info","message":"AppModule dependencies initialized","timestamp":"2026-01-07 18:11:34"}
+{"context":"RoutesResolver","level":"info","message":"HealthController {/health}:","timestamp":"2026-01-07 18:11:34"}
+{"context":"RouterExplorer","level":"info","message":"Mapped {/health, GET} route","timestamp":"2026-01-07 18:11:34"}
+{"context":"NestApplication","level":"info","message":"Nest application successfully started","timestamp":"2026-01-07 18:11:34"}
+{"context":"Bootstrap","level":"info","message":"Application is running on: http://localhost:3000","timestamp":"2026-01-07 18:11:34"}
+{"context":"HTTP","level":"info","message":"[Request] GET /health - User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36 - IP: ::1","timestamp":"2026-01-07 18:11:35"}
+{"context":"HealthController","level":"info","message":"Health check endpoint called","timestamp":"2026-01-07 18:11:35"}
+{"context":"HealthController","level":"info","message":"Health check response: ok","timestamp":"2026-01-07 18:11:35"}
+{"context":"HTTP","level":"info","message":"[Response] GET /health 200 - 2ms","timestamp":"2026-01-07 18:11:35"}
+{"context":"ExceptionFilter","level":"warn","message":"[Exception] GET /healthno 404 - Cannot GET /healthno","timestamp":"2026-01-07 18:11:50"}

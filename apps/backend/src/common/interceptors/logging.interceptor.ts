@@ -4,15 +4,15 @@ import {
   ExecutionContext,
   CallHandler,
   Inject,
-  Logger,
+  LoggerService,
 } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { tap, catchError } from 'rxjs/operators';
-import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Injectable()
 export class LoggingInterceptor implements NestInterceptor {
-  constructor(@Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger) {}
+  constructor(@Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const request = context.switchToHttp().getRequest();

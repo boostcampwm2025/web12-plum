@@ -1,9 +1,10 @@
 import { Module } from '@nestjs/common';
-import { APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_INTERCEPTOR, APP_FILTER } from '@nestjs/core';
 import { HealthModule } from './health/health.module.js';
 import { WinstonModule } from 'nest-winston';
 import { winstonConfig } from './config/logger.config.js';
 import { LoggingInterceptor } from './common/interceptors/index.js';
+import { HttpExceptionFilter } from './common/filters/index.js';
 
 @Module({
   imports: [HealthModule, WinstonModule.forRoot(winstonConfig)],
@@ -13,6 +14,12 @@ import { LoggingInterceptor } from './common/interceptors/index.js';
     {
       provide: APP_INTERCEPTOR,
       useClass: LoggingInterceptor,
+    },
+
+    // 전역 예외 필터 (404 에러 등 로깅)
+    {
+      provide: APP_FILTER,
+      useClass: HttpExceptionFilter,
     },
   ],
 })

@@ -1,14 +1,16 @@
-import { Controller, Get, Inject, Logger } from '@nestjs/common';
-import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
+import { Controller, Get, Inject, LoggerService } from '@nestjs/common';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Controller('health')
 export class HealthController {
-  constructor(@Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger) {}
+  constructor(@Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService) {}
 
   @Get()
   getHealth() {
-    // 비즈니스 로직 로그
-    this.logger.debug('Health check endpoint called', 'HealthController');
+    // 비즈니스 로직 로그 (개발 환경에서만 출력)
+    if (process.env.NODE_ENV !== 'production') {
+      this.logger.log('Health check endpoint called', 'HealthController');
+    }
 
     const healthData = {
       status: 'ok',
