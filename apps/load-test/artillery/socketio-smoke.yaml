@@ -1,0 +1,27 @@
+config:
+  target: "http://localhost:3000" # 테스트할 서버(백엔드) 주소
+  phases:
+    - duration: 60    # Warm up
+      arrivalRate: 2   # 1초당 2명 → 120명
+      maxVusers: 150
+    - duration: 300   # Sustained 150명
+      arrivalRate: 0
+      maxVusers: 150
+
+# 실제 테스트 로직으로 변경
+scenarios:
+ - name: "Join room and emit gesture"
+   engine: socketio
+   flow:
+     - emit:
+         channel: "join-room"
+         data: { roomId: "test-room", userId: "{{ $randomString() }}" }
+         response:
+           channel: "joined-room"
+     - think: 1
+     - loop:
+         - emit:
+             channel: "gesture"
+             data: { type: "heart", timestamp: "{{ $timestamp }}" }
+         - think: 2
+       count: 10
