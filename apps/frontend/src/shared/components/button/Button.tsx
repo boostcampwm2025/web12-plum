@@ -1,8 +1,6 @@
 import { ReactNode } from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/shared/lib/utils';
-import { type IconName } from '@/shared/components/icon/iconMap';
-import { Icon } from '@/shared/components/icon/Icon';
 import Tooltip from '@/shared/components/Tooltip';
 
 const buttonVariants = cva(
@@ -23,18 +21,7 @@ const buttonVariants = cva(
   },
 );
 
-const iconSizeMap = {
-  xs: { size: 12, strokeWidth: 1.125 },
-  sm: { size: 16, strokeWidth: 1.5 },
-  md: { size: 20, strokeWidth: 1.875 },
-  lg: { size: 24, strokeWidth: 2.25 },
-} as const;
-
-type IconSize = keyof typeof iconSizeMap;
-
 interface ButtonProps extends React.ComponentProps<'button'>, VariantProps<typeof buttonVariants> {
-  icon?: IconName;
-  iconSize?: IconSize;
   children?: ReactNode;
   tooltip?: string;
   tooltipPosition?: 'top' | 'bottom' | 'left' | 'right';
@@ -42,38 +29,20 @@ interface ButtonProps extends React.ComponentProps<'button'>, VariantProps<typeo
 
 export default function Button({
   variant,
-  icon,
-  iconSize = 'md',
   children,
   tooltip,
   tooltipPosition = 'top',
   className,
-  'aria-label': ariaLabel,
   type = 'button',
   ...props
 }: ButtonProps) {
-  const iconConfig = iconSizeMap[iconSize];
-
-  // 아이콘만 있고 children이 없으면 aria-label 필요
-  const needsAriaLabel = icon && !children;
-  const finalAriaLabel = ariaLabel || (needsAriaLabel ? tooltip : undefined);
-
   const button = (
     <button
       className={cn(buttonVariants({ variant }), className)}
-      aria-label={finalAriaLabel}
       type={type}
       {...props}
     >
-      {icon && (
-        <Icon
-          name={icon}
-          size={iconConfig.size}
-          strokeWidth={iconConfig.strokeWidth}
-          decorative={!!children}
-        />
-      )}
-      {children && <span>{children}</span>}
+      {children}
     </button>
   );
 
