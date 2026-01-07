@@ -1,6 +1,7 @@
 import { cn } from '@/shared/lib/utils';
 import RoomButton from './RoomButton';
 import type { IconName } from '@/shared/components/icon/iconMap';
+import type { Dialog, SidePanel } from '../types';
 
 interface MenuButton {
   icon: IconName;
@@ -9,21 +10,18 @@ interface MenuButton {
   onClick?: () => void;
 }
 
-type Overlay = 'vote' | 'qna' | 'ranking';
-type SidePanel = 'chat' | 'info' | 'menu';
-
 interface RoomMenuBarProps {
   className?: string;
   roomTitle?: string;
   isMicOn?: boolean;
   isCameraOn?: boolean;
   isScreenSharing?: boolean;
-  activeOverlay?: Overlay | null;
+  activeDialog?: Dialog | null;
   activeSidePanel?: SidePanel | null;
   onMicToggle?: () => void;
   onCameraToggle?: () => void;
   onScreenShareToggle?: () => void;
-  onOverlayChange?: (overlay: Overlay | null) => void;
+  onDialogChange?: (Dialog: Dialog | null) => void;
   onSidePanelChange?: (panel: SidePanel | null) => void;
   onExit?: () => void;
 }
@@ -34,18 +32,18 @@ export default function RoomMenuBar({
   isMicOn = false,
   isCameraOn = false,
   isScreenSharing = false,
-  activeOverlay = null,
+  activeDialog = null,
   activeSidePanel = null,
   onMicToggle,
   onCameraToggle,
   onScreenShareToggle,
-  onOverlayChange,
+  onDialogChange,
   onSidePanelChange,
   onExit,
 }: RoomMenuBarProps) {
-  const handleOverlayClick = (overlay: Overlay) => () => {
-    if (!onOverlayChange) return;
-    onOverlayChange(activeOverlay === overlay ? null : overlay);
+  const handleDialogClick = (Dialog: Dialog) => () => {
+    if (!onDialogChange) return;
+    onDialogChange(activeDialog === Dialog ? null : Dialog);
   };
 
   const handleSidePanelClick = (panel: SidePanel) => () => {
@@ -75,20 +73,20 @@ export default function RoomMenuBar({
     {
       icon: 'vote',
       tooltip: '투표',
-      isActive: activeOverlay === 'vote',
-      onClick: handleOverlayClick('vote'),
+      isActive: activeDialog === 'vote',
+      onClick: handleDialogClick('vote'),
     },
     {
       icon: 'qna',
       tooltip: 'Q&A',
-      isActive: activeOverlay === 'qna',
-      onClick: handleOverlayClick('qna'),
+      isActive: activeDialog === 'qna',
+      onClick: handleDialogClick('qna'),
     },
     {
       icon: 'ranking',
       tooltip: '랭킹',
-      isActive: activeOverlay === 'ranking',
-      onClick: handleOverlayClick('ranking'),
+      isActive: activeDialog === 'ranking',
+      onClick: handleDialogClick('ranking'),
     },
   ];
 
