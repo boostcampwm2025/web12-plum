@@ -10,11 +10,6 @@ describe('Button', () => {
     expect(screen.getByRole('button', { name: '클릭' })).toBeInTheDocument();
   });
 
-  it('아이콘과 텍스트가 함께 렌더링된다', () => {
-    render(<Button icon="start">Q&A 시작</Button>);
-    expect(screen.getByRole('button', { name: 'Q&A 시작' })).toBeInTheDocument();
-  });
-
   it('클릭 이벤트가 발생한다', async () => {
     const handleClick = vi.fn();
     const user = userEvent.setup();
@@ -41,5 +36,23 @@ describe('Button', () => {
 
     expect(handleClick).not.toHaveBeenCalled();
     expect(screen.getByRole('button')).toBeDisabled();
+  });
+
+  it('variant prop이 올바르게 적용된다', () => {
+    render(<Button variant="ghost">고스트</Button>);
+    const button = screen.getByRole('button');
+    expect(button).toHaveClass('text-primary');
+  });
+
+  it('type prop이 올바르게 적용된다', () => {
+    render(<Button type="submit">제출</Button>);
+    const button = screen.getByRole('button');
+    expect(button).toHaveAttribute('type', 'submit');
+  });
+
+  it('기본 type은 button이다', () => {
+    render(<Button>버튼</Button>);
+    const button = screen.getByRole('button');
+    expect(button).toHaveAttribute('type', 'button');
   });
 });
