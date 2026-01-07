@@ -2,7 +2,7 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/shared/lib/utils';
 
 const inputVariants = cva(
-  'text-text placeholder:text-subtext-light w-full min-w-0 rounded-lg bg-gray-400 outline-none',
+  'text-text placeholder:text-subtext-light w-full min-w-0 rounded-lg bg-gray-400 outline-none disabled:cursor-not-allowed disabled:bg-gray-400/30',
   {
     variants: {
       size: {
