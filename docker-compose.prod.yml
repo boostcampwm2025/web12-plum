@@ -1,0 +1,32 @@
+# streaming/docker-compose.prod.yml
+# 운영 서버 배포 환경 설정: Base 파일 오버라이드/서비스 추가
+
+# version: '3.8'
+
+services:
+  # Backend 애플리케이션 서비스
+  backend:
+    image: ${DOCKER_USERNAME}/plum-backend:${TAG:-latest} # 운영용 이미지는 latest
+    container_name: plum-backend-prod
+    ports:
+      - "${BACKEND_PORT:-3000}:3000" # 호스트 포트를 환경변수로 관리 (기본값: 3000)
+    environment:
+      - NODE_ENV=production
+    restart: always # 운영에서는 항상 재시작 (unless-stopped보다 강함)
+    networks:
+      - plum-network
+    deploy: # 운영에서는 리소스 제한 및 헬스체크 필수!
+      resources:
+        limits: # 최대 사용 제한
+          cpus: '1.0' # 1개 CPU 코어 제한
+          memory: 2GB # 2GB 메모리 제한
+        reservations: # 최소 보장 리소스
+          cpus: '0.5' # 0.5개 CPU 코어 보장
+          memory: 1GB # 1GB 메모리 보장
+    healthcheck: # 헬스체크 추가하여 컨테이너 상태 모니터링 및 자동 재시작
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s # 30초마다 체크
+      timeout: 10s  # 10초 내 응답 없으면 실패
+      retries: 3    # 3번 실패 시 unhealthy
+      start_period: 5s # 컨테이너 시작 후 5초 동안은 실패해도 무시
+
