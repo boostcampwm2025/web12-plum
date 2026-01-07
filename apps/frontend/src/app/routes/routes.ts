@@ -3,4 +3,5 @@
  */
 export const ROUTES = {
   HOME: '/',
+  CREATE_LECTURE: '/create-lecture',
 };

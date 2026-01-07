@@ -1,6 +1,7 @@
 import { Link } from 'react-router';
 
 import logoImg from '@/assets/logo/logo.svg';
+import { ROUTES } from '@/app/routes/routes';
 
 /**
  * 현재 연도 가져오기
@@ -10,7 +11,7 @@ const currentYear = new Date().getFullYear();
 /**
  * 사이트맵 링크 배열
  */
-const SITEMAP_LINKS = [{ label: '강의 생성하기', to: '/create-lecture' }];
+const SITEMAP_LINKS = [{ label: '강의 생성하기', to: ROUTES.CREATE_LECTURE }];
 
 /**
  * 푸터 링크 배열
