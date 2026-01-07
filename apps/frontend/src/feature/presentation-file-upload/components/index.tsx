@@ -3,6 +3,7 @@ import { ChangeEvent, ReactNode, useRef } from 'react';
 import { ALLOWED_FILE_EXTENSIONS_STRING } from '@/feature/presentation-file-upload/constants';
 import { useDragAndDrop } from '@/feature/presentation-file-upload/hooks/useDragAndDrop';
 import { validateFileForUpload } from '@/feature/presentation-file-upload/utils';
+import { cn } from '@/shared/lib/utils';
 
 interface PresentationFileUploaderProps {
   className?: string;
@@ -64,11 +65,13 @@ export const PresentationFileUploader = ({
         aria-label="파일 선택 또는 드래그하여 업로드"
         onClick={handleButtonClick}
         {...dragHandlers}
-        className={`cursor-pointer rounded-xl border-2 border-dashed px-6 py-8 transition-colors ${
+        className={cn(
+          'cursor-pointer rounded-xl border-2 border-dashed px-6 py-8 transition-colors',
           isDragging
             ? 'border-primary bg-primary/20'
-            : 'hover:border-primary hover:bg-primary/20 border-gray-300'
-        } ${className}`}
+            : 'hover:border-primary hover:bg-primary/20 border-gray-300',
+          className,
+        )}
       >
         {children}
       </button>
