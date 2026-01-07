@@ -14,14 +14,19 @@ const labelVariants = cva('text-text mb-2 block font-bold', {
 });
 
 interface LabelProps
-  extends Omit<React.ComponentProps<'label'>, 'size'>, VariantProps<typeof labelVariants> {}
+  extends Omit<React.ComponentProps<'label'>, 'size'>, VariantProps<typeof labelVariants> {
+  required?: boolean;
+}
 
-function Label({ className, size, ...props }: LabelProps) {
+function Label({ className, size, required, children, ...props }: LabelProps) {
   return (
     <label
       className={cn(labelVariants({ size, className }))}
       {...props}
-    />
+    >
+      {children}
+      {required && <span className="text-primary ml-1">*</span>}
+    </label>
   );
 }
 
