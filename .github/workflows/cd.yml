@@ -199,3 +199,235 @@ jobs:
             echo "태그: $TAG"
             echo "컨테이너 상태:"
             docker ps --filter "name=plum-backend-prod"
+
+  deploy-dev-redis:
+    name: Deploy to Dev Redis Server
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/develop'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy Redis to Dev Server
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.NCP_DEV_REDIS_HOST }}
+          username: ${{ secrets.NCP_DEV_USERNAME }}
+          key: ${{ secrets.NCP_DEV_SSH_KEY }}
+          port: ${{ secrets.NCP_DEV_PORT || 22 }}
+          script: |
+            cd ~/redis || mkdir -p ~/redis && cd ~/redis
+
+            # Git이 없으면 설치
+            if ! command -v git &> /dev/null; then
+              apt-get update && apt-get install -y git
+            fi
+
+            # 최초 실행 시 git clone, 이후엔 pull
+            if [ ! -d ".git" ]; then
+              GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy_key -o StrictHostKeyChecking=no" \
+                git clone git@github.com:${{ github.repository }}.git .
+            else
+              GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy_key -o StrictHostKeyChecking=no" \
+                git fetch origin
+              git checkout develop
+              GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy_key -o StrictHostKeyChecking=no" \
+                git pull origin develop
+            fi
+
+            # docker-compose 파일 복사
+            cp .github/deployments/redis/docker-compose.yml ./docker-compose.yml
+
+            # 환경 변수 설정
+            echo "CONTAINER_PREFIX=plum-dev" > .env
+            echo "REDIS_MAXMEMORY=1gb" >> .env
+
+            # 컨테이너 재시작
+            docker compose pull
+            docker compose up -d
+
+            # 헬스체크
+            sleep 5
+            docker exec plum-dev-redis redis-cli ping || echo "Redis health check failed"
+
+            # 상태 확인
+            docker compose ps
+
+  deploy-dev-monitoring:
+    name: Deploy to Dev Monitoring Server
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/develop'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy Monitoring to Dev Server
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.NCP_DEV_MONITORING_HOST }}
+          username: ${{ secrets.NCP_DEV_USERNAME }}
+          key: ${{ secrets.NCP_DEV_SSH_KEY }}
+          port: ${{ secrets.NCP_DEV_PORT || 22 }}
+          script: |
+            cd ~/monitoring || mkdir -p ~/monitoring && cd ~/monitoring
+
+            # Git 설치
+            if ! command -v git &> /dev/null; then
+              apt-get update && apt-get install -y git
+            fi
+
+            # 최초 실행 시 git clone
+            if [ ! -d ".git" ]; then
+              GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy_key -o StrictHostKeyChecking=no" \
+                git clone git@github.com:${{ github.repository }}.git .
+            else
+              GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy_key -o StrictHostKeyChecking=no" \
+                git fetch origin
+              git checkout develop
+              GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy_key -o StrictHostKeyChecking=no" \
+                git pull origin develop
+            fi
+
+            # 설정 파일 복사
+            cp .github/deployments/monitoring/docker-compose.yml ./docker-compose.yml
+            mkdir -p prometheus loki
+            cp .github/deployments/monitoring/prometheus/prometheus-dev.yml ./prometheus/prometheus.yml
+            cp .github/deployments/monitoring/loki/loki-config.yaml ./loki/loki-config.yaml
+
+            # 환경 변수 설정
+            echo "CONTAINER_PREFIX=plum-dev" > .env
+            echo "PROMETHEUS_RETENTION=15d" >> .env
+            echo "GRAFANA_ADMIN_USER=admin" >> .env
+            echo "GRAFANA_ADMIN_PASSWORD=plum2025" >> .env
+            echo "GRAFANA_URL=http://211.188.50.8:3000" >> .env
+
+            # 데이터 디렉토리 권한 설정
+            mkdir -p prometheus/data loki/data grafana/data
+            chown -R 472:472 grafana/data
+            chmod -R 755 prometheus/data loki/data
+
+            # 컨테이너 재시작
+            docker compose pull
+            docker compose up -d
+
+            # 헬스체크
+            sleep 10
+            curl -f http://localhost:9090/-/healthy || echo "Prometheus health check failed"
+            curl -f http://localhost:3100/ready || echo "Loki health check failed"
+
+            # 상태 확인
+            docker compose ps
+
+  deploy-prod-redis:
+    name: Deploy to Prod Redis Server
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy Redis to Prod Server
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.NCP_PROD_REDIS_HOST }}
+          username: ${{ secrets.NCP_PROD_USERNAME }}
+          key: ${{ secrets.NCP_PROD_SSH_KEY }}
+          port: ${{ secrets.NCP_PROD_PORT || 22 }}
+          script: |
+            cd ~/redis || mkdir -p ~/redis && cd ~/redis
+
+            if ! command -v git &> /dev/null; then
+              apt-get update && apt-get install -y git
+            fi
+
+            if [ ! -d ".git" ]; then
+              GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy_key -o StrictHostKeyChecking=no" \
+                git clone git@github.com:${{ github.repository }}.git .
+            else
+              GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy_key -o StrictHostKeyChecking=no" \
+                git fetch origin
+              git checkout main
+              GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy_key -o StrictHostKeyChecking=no" \
+                git pull origin main
+            fi
+
+            cp .github/deployments/redis/docker-compose.yml ./docker-compose.yml
+
+            # 환경 변수 설정 (Prod는 메모리 2GB)
+            echo "CONTAINER_PREFIX=plum-prod" > .env
+            echo "REDIS_MAXMEMORY=2gb" >> .env
+
+            docker compose pull
+            docker compose up -d
+
+            sleep 5
+            docker exec plum-prod-redis redis-cli ping || echo "Redis health check failed"
+
+            docker compose ps
+
+  deploy-prod-monitoring:
+    name: Deploy to Prod Monitoring Server
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy Monitoring to Prod Server
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.NCP_PROD_MONITORING_HOST }}
+          username: ${{ secrets.NCP_PROD_USERNAME }}
+          key: ${{ secrets.NCP_PROD_SSH_KEY }}
+          port: ${{ secrets.NCP_PROD_PORT || 22 }}
+          script: |
+            cd ~/monitoring || mkdir -p ~/monitoring && cd ~/monitoring
+
+            if ! command -v git &> /dev/null; then
+              apt-get update && apt-get install -y git
+            fi
+
+            if [ ! -d ".git" ]; then
+              GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy_key -o StrictHostKeyChecking=no" \
+                git clone git@github.com:${{ github.repository }}.git .
+            else
+              GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy_key -o StrictHostKeyChecking=no" \
+                git fetch origin
+              git checkout main
+              GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy_key -o StrictHostKeyChecking=no" \
+                git pull origin main
+            fi
+
+            cp .github/deployments/monitoring/docker-compose.yml ./docker-compose.yml
+            mkdir -p prometheus loki
+            cp .github/deployments/monitoring/prometheus/prometheus-prod.yml ./prometheus/prometheus.yml
+            cp .github/deployments/monitoring/loki/loki-config.yaml ./loki/loki-config.yaml
+
+            # 환경 변수 설정
+            echo "CONTAINER_PREFIX=plum-prod" > .env
+            echo "PROMETHEUS_RETENTION=30d" >> .env
+            echo "GRAFANA_ADMIN_USER=admin" >> .env
+            echo "GRAFANA_ADMIN_PASSWORD=plum2025!prod" >> .env
+            echo "GRAFANA_URL=http://101.79.11.160:3000" >> .env
+
+            # 데이터 디렉토리 권한 설정
+            mkdir -p prometheus/data loki/data grafana/data
+            chown -R 472:472 grafana/data
+            chmod -R 755 prometheus/data loki/data
+
+            docker compose pull
+            docker compose up -d
+
+            sleep 10
+            curl -f http://localhost:9090/-/healthy || echo "Prometheus health check failed"
+            curl -f http://localhost:3100/ready || echo "Loki health check failed"
+
+            docker compose ps
