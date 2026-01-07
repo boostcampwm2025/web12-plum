@@ -1,0 +1,36 @@
+# Dependencies
+node_modules
+npm-debug.log
+pnpm-debug.log
+yarn-error.log
+
+# Build outputs
+dist
+build
+.turbo
+
+# Development
+.git
+.gitignore
+.env
+.env.local
+*.md
+docs
+
+# IDE
+.vscode
+.idea
+.DS_Store
+
+# Test
+test-results
+playwright-report
+coverage
+*.spec.ts
+*.spec.tsx
+*.test.ts
+*.test.tsx
+e2e
+
+# CI/CD
+.github
