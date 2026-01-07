@@ -1,0 +1,18 @@
+{"context":"NestFactory","level":"info","message":"Starting Nest application...","timestamp":"2026-01-07 17:10:48"}
+{"context":"InstanceLoader","level":"info","message":"WinstonModule dependencies initialized","timestamp":"2026-01-07 17:10:48"}
+{"context":"InstanceLoader","level":"info","message":"AppModule dependencies initialized","timestamp":"2026-01-07 17:10:48"}
+{"context":"InstanceLoader","level":"info","message":"HealthModule dependencies initialized","timestamp":"2026-01-07 17:10:48"}
+{"context":"RoutesResolver","level":"info","message":"HealthController {/health}:","timestamp":"2026-01-07 17:10:48"}
+{"context":"RouterExplorer","level":"info","message":"Mapped {/health, GET} route","timestamp":"2026-01-07 17:10:48"}
+{"context":"NestApplication","level":"info","message":"Nest application successfully started","timestamp":"2026-01-07 17:10:48"}
+{"context":"Bootstrap","level":"info","message":"Application is running on: http://localhost:3000","timestamp":"2026-01-07 17:10:48"}
+{"context":"NestFactory","level":"info","message":"Starting Nest application...","timestamp":"2026-01-07 17:20:51"}
+{"context":"InstanceLoader","level":"info","message":"WinstonModule dependencies initialized","timestamp":"2026-01-07 17:20:51"}
+{"context":"InstanceLoader","level":"info","message":"AppModule dependencies initialized","timestamp":"2026-01-07 17:20:51"}
+{"context":"InstanceLoader","level":"info","message":"HealthModule dependencies initialized","timestamp":"2026-01-07 17:20:51"}
+{"context":"RoutesResolver","level":"info","message":"HealthController {/health}:","timestamp":"2026-01-07 17:20:51"}
+{"context":"RouterExplorer","level":"info","message":"Mapped {/health, GET} route","timestamp":"2026-01-07 17:20:51"}
+{"context":"NestApplication","level":"info","message":"Nest application successfully started","timestamp":"2026-01-07 17:20:51"}
+{"context":"Bootstrap","level":"info","message":"Application is running on: http://localhost:3000","timestamp":"2026-01-07 17:20:51"}
+{"level":"warn","message":"[Exception] GET /healthno 404 - Cannot GET /healthno","timestamp":"2026-01-07 17:20:56"}
+{"level":"warn","message":"[Exception] GET /error 404 - Cannot GET /error","timestamp":"2026-01-07 17:25:10"}

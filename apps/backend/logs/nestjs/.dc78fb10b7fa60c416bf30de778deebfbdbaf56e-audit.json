@@ -1,0 +1,15 @@
+{
+  "keep": {
+    "days": true,
+    "amount": 2
+  },
+  "auditLog": "logs/nestjs/.dc78fb10b7fa60c416bf30de778deebfbdbaf56e-audit.json",
+  "files": [
+    {
+      "date": 1767773447857,
+      "name": "logs/nestjs/error-2026-01-07.log",
+      "hash": "3d0ec1ea459ba2db867cb812b32d6ae22300c5a44bb526043b161dcc855fb58c"
+    }
+  ],
+  "hashType": "sha256"
+}
