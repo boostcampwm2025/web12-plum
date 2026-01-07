@@ -2,6 +2,10 @@
 name: CD Pipeline
 
 on:
+  pull_request:
+    branches:
+      - develop
+      - main
   push:
     branches:
       - develop
@@ -204,7 +208,7 @@ jobs:
     name: Deploy to Dev Redis Server
     runs-on: ubuntu-latest
     needs: build
-    if: github.ref == 'refs/heads/develop'
+    if: github.ref == 'refs/heads/develop' || github.base_ref == 'develop'
 
     steps:
       - name: Checkout code
@@ -226,15 +230,16 @@ jobs:
             fi
 
             # 최초 실행 시 git clone, 이후엔 pull
+            BRANCH="${{ github.head_ref || 'develop' }}"
             if [ ! -d ".git" ]; then
               GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy_key -o StrictHostKeyChecking=no" \
-                git clone git@github.com:${{ github.repository }}.git .
+                git clone --branch ${BRANCH} git@github.com:${{ github.repository }}.git .
             else
               GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy_key -o StrictHostKeyChecking=no" \
                 git fetch origin
-              git checkout develop
+              git checkout ${BRANCH}
               GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy_key -o StrictHostKeyChecking=no" \
-                git pull origin develop
+                git pull origin ${BRANCH}
             fi
 
             # docker-compose 파일 복사
@@ -259,7 +264,7 @@ jobs:
     name: Deploy to Dev Monitoring Server
     runs-on: ubuntu-latest
     needs: build
-    if: github.ref == 'refs/heads/develop'
+    if: github.ref == 'refs/heads/develop' || github.base_ref == 'develop'
 
     steps:
       - name: Checkout code
@@ -281,15 +286,16 @@ jobs:
             fi
 
             # 최초 실행 시 git clone
+            BRANCH="${{ github.head_ref || 'develop' }}"
             if [ ! -d ".git" ]; then
               GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy_key -o StrictHostKeyChecking=no" \
-                git clone git@github.com:${{ github.repository }}.git .
+                git clone --branch ${BRANCH} git@github.com:${{ github.repository }}.git .
             else
               GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy_key -o StrictHostKeyChecking=no" \
                 git fetch origin
-              git checkout develop
+              git checkout ${BRANCH}
               GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy_key -o StrictHostKeyChecking=no" \
-                git pull origin develop
+                git pull origin ${BRANCH}
             fi
 
             # 설정 파일 복사
