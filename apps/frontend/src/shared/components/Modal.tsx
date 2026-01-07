@@ -1,6 +1,8 @@
 import { MouseEvent, useEffect, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 
+import { cn } from '@/shared/lib/utils';
+
 /**
  * ESC 키로 모달 닫기 기능을 제공하는 커스텀 훅
  * @param isOpen 모달 열림 상태
@@ -88,7 +90,10 @@ export const Modal = ({ isOpen, onClose, children, className }: ModalProps) => {
   return (
     <ModalOverlay onClose={onClose}>
       <section
-        className={`flex max-h-[90vh] min-w-105 flex-col overflow-y-auto rounded-lg bg-gray-500 p-4 ${className}`}
+        className={cn(
+          'flex max-h-[90vh] min-w-105 flex-col overflow-y-auto rounded-lg bg-gray-500 p-4',
+          className,
+        )}
       >
         {children}
       </section>
