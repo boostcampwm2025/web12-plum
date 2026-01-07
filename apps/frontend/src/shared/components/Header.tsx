@@ -10,7 +10,7 @@ import logoImg from '@/assets/logo/logo.svg';
  */
 export const Header = () => {
   return (
-    <header className="mx-auto w-full max-w-7xl px-4 pt-12.5">
+    <header className="mx-auto w-full max-w-7xl px-4 pt-5">
       <Link
         to={ROUTES.HOME}
         className="grid h-25.25 w-fit place-items-center"
