@@ -8,6 +8,7 @@ interface RoomButtonProps extends Omit<React.ComponentProps<'button'>, 'children
   isActive?: boolean;
   hasAlarm?: boolean;
   tooltip?: string;
+  variant?: 'default' | 'ghost';
 }
 
 export default function RoomButton({
@@ -15,16 +16,19 @@ export default function RoomButton({
   isActive = false,
   hasAlarm = false,
   tooltip,
+  variant = 'default',
   className,
   ...props
 }: RoomButtonProps) {
+  const isGhost = variant === 'ghost';
+
   return (
     <div className="relative inline-block">
       <Button
         tooltip={tooltip}
         className={cn(
-          'h-12 w-12 rounded-full p-3',
-          isActive ? 'bg-primary' : 'bg-gray-200',
+          'rounded-full p-3',
+          isGhost ? 'bg-transparent' : isActive ? 'bg-primary' : 'bg-gray-200',
           className,
         )}
         {...props}
@@ -32,7 +36,8 @@ export default function RoomButton({
         <Icon
           name={icon}
           size={24}
-        />
+          className={cn(isGhost && isActive && 'text-primary fill-primary')}
+        />{' '}
       </Button>
       {hasAlarm && <span className="bg-error absolute top-0 right-0 h-3 w-3 rounded-full" />}
     </div>
