@@ -234,14 +234,15 @@ jobs:
             if [ -d ~/redis/.git ]; then
               # Git 저장소가 있으면 업데이트
               cd ~/redis
-              GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy_key -o StrictHostKeyChecking=no" \
+              GIT_SSH_COMMAND="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ~/.ssh/github_deploy_key" \
                 git fetch origin
               git checkout ${BRANCH}
-              GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy_key -o StrictHostKeyChecking=no" \
+              GIT_SSH_COMMAND="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ~/.ssh/github_deploy_key" \
                 git pull origin ${BRANCH}
             else
               # Git 저장소가 없으면 완전히 정리 후 새로 클론
               rm -rf ~/redis
+              export GIT_SSH_COMMAND="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ~/.ssh/github_deploy_key"
               git clone --branch ${BRANCH} \
                 git@github.com:${{ github.repository }}.git ~/redis
               cd ~/redis
@@ -295,14 +296,15 @@ jobs:
             if [ -d ~/monitoring/.git ]; then
               # Git 저장소가 있으면 업데이트
               cd ~/monitoring
-              GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy_key -o StrictHostKeyChecking=no" \
+              GIT_SSH_COMMAND="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ~/.ssh/github_deploy_key" \
                 git fetch origin
               git checkout ${BRANCH}
-              GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy_key -o StrictHostKeyChecking=no" \
+              GIT_SSH_COMMAND="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ~/.ssh/github_deploy_key" \
                 git pull origin ${BRANCH}
             else
               # Git 저장소가 없으면 완전히 정리 후 새로 클론
               rm -rf ~/monitoring
+              export GIT_SSH_COMMAND="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ~/.ssh/github_deploy_key"
               git clone --branch ${BRANCH} \
                 git@github.com:${{ github.repository }}.git ~/monitoring
               cd ~/monitoring
