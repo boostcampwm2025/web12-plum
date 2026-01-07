@@ -222,24 +222,29 @@ jobs:
           key: ${{ secrets.NCP_DEV_SSH_KEY }}
           port: ${{ secrets.NCP_DEV_PORT || 22 }}
           script: |
-            cd ~/redis || mkdir -p ~/redis && cd ~/redis
-
             # Git이 없으면 설치
             if ! command -v git &> /dev/null; then
               apt-get update && apt-get install -y git
             fi
 
-            # 최초 실행 시 git clone, 이후엔 pull
+            # 배포 브랜치 설정
             BRANCH="${{ github.head_ref || 'develop' }}"
-            if [ ! -d ".git" ]; then
-              GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy_key -o StrictHostKeyChecking=no" \
-                git clone --branch ${BRANCH} git@github.com:${{ github.repository }}.git .
-            else
+
+            # Git 저장소 확인 및 클론/업데이트
+            if [ -d ~/redis/.git ]; then
+              # Git 저장소가 있으면 업데이트
+              cd ~/redis
               GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy_key -o StrictHostKeyChecking=no" \
                 git fetch origin
               git checkout ${BRANCH}
               GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy_key -o StrictHostKeyChecking=no" \
                 git pull origin ${BRANCH}
+            else
+              # Git 저장소가 없으면 완전히 정리 후 새로 클론
+              rm -rf ~/redis
+              git clone --branch ${BRANCH} \
+                git@github.com:${{ github.repository }}.git ~/redis
+              cd ~/redis
             fi
 
             # docker-compose 파일 복사
@@ -278,24 +283,29 @@ jobs:
           key: ${{ secrets.NCP_DEV_SSH_KEY }}
           port: ${{ secrets.NCP_DEV_PORT || 22 }}
           script: |
-            cd ~/monitoring || mkdir -p ~/monitoring && cd ~/monitoring
-
             # Git 설치
             if ! command -v git &> /dev/null; then
               apt-get update && apt-get install -y git
             fi
 
-            # 최초 실행 시 git clone
+            # 배포 브랜치 설정
             BRANCH="${{ github.head_ref || 'develop' }}"
-            if [ ! -d ".git" ]; then
-              GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy_key -o StrictHostKeyChecking=no" \
-                git clone --branch ${BRANCH} git@github.com:${{ github.repository }}.git .
-            else
+
+            # Git 저장소 확인 및 클론/업데이트
+            if [ -d ~/monitoring/.git ]; then
+              # Git 저장소가 있으면 업데이트
+              cd ~/monitoring
               GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy_key -o StrictHostKeyChecking=no" \
                 git fetch origin
               git checkout ${BRANCH}
               GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy_key -o StrictHostKeyChecking=no" \
                 git pull origin ${BRANCH}
+            else
+              # Git 저장소가 없으면 완전히 정리 후 새로 클론
+              rm -rf ~/monitoring
+              git clone --branch ${BRANCH} \
+                git@github.com:${{ github.repository }}.git ~/monitoring
+              cd ~/monitoring
             fi
 
             # 설정 파일 복사
