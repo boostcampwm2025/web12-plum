@@ -3,7 +3,7 @@ import {
   ALLOWED_FILE_MIME_TYPES,
   FILE_MAX_SIZE_BYTES,
   FILE_MAX_SIZE_MB,
-} from '@/feature/presentation-file-upload/constants/presentationFileUpload.constant';
+} from '@/feature/presentation-file-upload/constants';
 
 type AllowedMimeType = (typeof ALLOWED_FILE_MIME_TYPES)[number];
 

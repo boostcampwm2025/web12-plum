@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { PresentationFileUploader } from './PresentationFileUploader';
+import { PresentationFileUploader } from '.';
 
 describe('PresentationFileUploader Component', () => {
   const mockOnFileSelect = vi.fn();

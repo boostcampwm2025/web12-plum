@@ -1,8 +1,8 @@
 import { ChangeEvent, ReactNode, useRef } from 'react';
 
-import { ALLOWED_FILE_EXTENSIONS_STRING } from '@/feature/presentation-file-upload/constants/presentationFileUpload.constant';
+import { ALLOWED_FILE_EXTENSIONS_STRING } from '@/feature/presentation-file-upload/constants';
 import { useDragAndDrop } from '@/feature/presentation-file-upload/hooks/useDragAndDrop';
-import { validateFileForUpload } from '@/feature/presentation-file-upload/utils/validateFileForUpload.util';
+import { validateFileForUpload } from '@/feature/presentation-file-upload/utils';
 
 interface PresentationFileUploaderProps {
   className?: string;

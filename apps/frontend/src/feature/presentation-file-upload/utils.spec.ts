@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { validateFileForUpload } from './validateFileForUpload.util';
-import { FILE_MAX_SIZE_BYTES } from '../constants/presentationFileUpload.constant';
+import { validateFileForUpload } from './utils';
+import { FILE_MAX_SIZE_BYTES } from './constants';
 
 describe('validateFileForUpload', () => {
   describe('유효한 파일 형식', () => {
