@@ -1,9 +1,10 @@
+import { type ComponentProps } from 'react';
 import { cn } from '@/shared/lib/utils';
 import { type IconName } from '@/shared/components/icon/iconMap';
 import { Icon } from '@/shared/components/icon/Icon';
 import Button from '../../../shared/components/Button';
 
-interface RoomButtonProps extends Omit<React.ComponentProps<'button'>, 'children'> {
+interface RoomButtonProps extends Omit<ComponentProps<'button'>, 'children'> {
   icon: IconName;
   isActive?: boolean;
   hasAlarm?: boolean;
@@ -11,7 +12,7 @@ interface RoomButtonProps extends Omit<React.ComponentProps<'button'>, 'children
   variant?: 'default' | 'ghost';
 }
 
-export default function RoomButton({
+export function RoomButton({
   icon,
   isActive = false,
   hasAlarm = false,

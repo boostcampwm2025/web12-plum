@@ -1,5 +1,5 @@
 import { cn } from '@/shared/lib/utils';
-import RoomButton from './RoomButton';
+import { RoomButton } from './RoomButton';
 import type { IconName } from '@/shared/components/icon/iconMap';
 import { useMediaStore } from '../stores/useMediaStore';
 import { useRoomUIStore } from '../stores/useRoomUIStore';
@@ -17,7 +17,7 @@ interface RoomMenuBarProps {
   onExit?: () => void;
 }
 
-export default function RoomMenuBar({ className, roomTitle = '강의실', onExit }: RoomMenuBarProps) {
+export function RoomMenuBar({ className, roomTitle = '강의실', onExit }: RoomMenuBarProps) {
   const { isMicOn, isCameraOn, isScreenSharing, toggleMic, toggleCamera, toggleScreenShare } =
     useMediaStore();
   const { activeDialog, activeSidePanel, setActiveDialog, setActiveSidePanel } = useRoomUIStore();
