@@ -10,7 +10,7 @@ interface MediaState {
   initialize: (mic: boolean, camera: boolean) => void;
 }
 
-const initialState = {
+const initialState: Pick<MediaState, 'isMicOn' | 'isCameraOn' | 'isScreenSharing'> = {
   isMicOn: false,
   isCameraOn: false,
   isScreenSharing: false,
