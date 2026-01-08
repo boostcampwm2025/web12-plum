@@ -21,9 +21,12 @@
     "@nestjs/platform-socket.io": "^10.4.20",
     "@nestjs/websockets": "^10.4.20",
     "@plum/shared-interfaces": "workspace:*",
+    "nest-winston": "^1.10.2",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
-    "socket.io": "^4.8.1"
+    "socket.io": "^4.8.1",
+    "winston": "^3.19.0",
+    "winston-daily-rotate-file": "^5.0.0"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.4.9",

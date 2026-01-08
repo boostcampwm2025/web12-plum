@@ -6,9 +6,14 @@ describe('WsExceptionFilter', () => {
   let filter: WsExceptionFilter;
   let mockClient: any;
   let mockArgumentsHost: any;
+  let mockLogger: any;
 
   beforeEach(() => {
-    filter = new WsExceptionFilter();
+    mockLogger = {
+      error: jest.fn(),
+    };
+
+    filter = new WsExceptionFilter(mockLogger);
 
     // 소켓 클라이언트 Mocking
     mockClient = {
@@ -25,7 +30,7 @@ describe('WsExceptionFilter', () => {
   });
 
   it('객체로 WsException 발생 시 정의된 에러 객체를 emit 해야 한다', () => {
-    const errorData = { message: '잘못된 요청입니다', code: 400 };
+    const errorData = { message: '잘못된 요청입니다' };
     const exception = new WsException(errorData);
 
     filter.catch(exception, mockArgumentsHost as ArgumentsHost);
@@ -54,7 +59,7 @@ describe('WsExceptionFilter', () => {
     );
   });
 
-  it('일반 Error 발생 시 status: error 메시지를 emit 해야 한다', () => {
+  it('일반 Error 발생 시 internal server error를 emit 해야 한다', () => {
     const exception = new Error('서버 에러 발생');
 
     filter.catch(exception, mockArgumentsHost as ArgumentsHost);
@@ -63,7 +68,7 @@ describe('WsExceptionFilter', () => {
       'error_occurred',
       expect.objectContaining({
         status: 'error',
-        message: '서버 에러 발생',
+        message: 'internal server error',
       }),
     );
   });

@@ -3,7 +3,7 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { io, Socket as ClientSocket } from 'socket.io-client';
 import { AppModule } from '../src/app.module.js';
-import { SOCKET_CONFIG } from '../src/shared/constants/socket.constants.js';
+import { SOCKET_CONFIG } from '../src/common/constants/socket.constants.js';
 
 describe('AppController (e2e)', () => {
   let app: INestApplication;

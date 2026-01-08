@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { MediaGateway } from './media.gateway.js';
 
 describe('MediaGateway', () => {
@@ -6,7 +7,16 @@ describe('MediaGateway', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [MediaGateway],
+      providers: [
+        MediaGateway,
+        {
+          provide: WINSTON_MODULE_NEST_PROVIDER,
+          useValue: {
+            log: jest.fn(),
+            error: jest.fn(),
+          },
+        },
+      ],
     }).compile();
 
     gateway = module.get<MediaGateway>(MediaGateway);

@@ -1,13 +1,27 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { HealthModule } from './health.module.js';
 import { HealthController } from './health.controller.js';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 describe('HealthModule', () => {
   let module: TestingModule;
 
+  const mockLogger = {
+    log: jest.fn(),
+    error: jest.fn(),
+    warn: jest.fn(),
+    debug: jest.fn(),
+    verbose: jest.fn(),
+  };
+
   beforeEach(async () => {
     module = await Test.createTestingModule({
-      imports: [HealthModule],
+      controllers: [HealthController],
+      providers: [
+        {
+          provide: WINSTON_MODULE_NEST_PROVIDER,
+          useValue: mockLogger,
+        },
+      ],
     }).compile();
   });
 
