@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston'
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { InteractionGateway } from './interaction.gateway.js';
 
 describe('InteractionGateway', () => {

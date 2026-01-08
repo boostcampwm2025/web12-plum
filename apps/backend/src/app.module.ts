@@ -10,7 +10,13 @@ import { InteractionModule } from './interaction/interaction.module.js';
 import { RoomModule } from './room/room.module.js';
 
 @Module({
-  imports: [HealthModule, WinstonModule.forRoot(winstonConfig), MediaModule, InteractionModule, RoomModule],
+  imports: [
+    HealthModule,
+    WinstonModule.forRoot(winstonConfig),
+    MediaModule,
+    InteractionModule,
+    RoomModule,
+  ],
   controllers: [],
   providers: [
     // 전역 HTTP 로깅 인터셉터

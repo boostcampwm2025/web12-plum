@@ -1,4 +1,4 @@
-import { ArgumentsHost, Catch, Inject, LoggerService } from '@nestjs/common'
+import { ArgumentsHost, Catch, Inject, LoggerService } from '@nestjs/common';
 import { BaseWsExceptionFilter, WsException } from '@nestjs/websockets';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Socket } from 'socket.io';
@@ -20,7 +20,7 @@ export class WsExceptionFilter extends BaseWsExceptionFilter {
       status: 'error',
       message,
       timestamp: new Date().toISOString(),
-    }
+    };
 
     this.logger.error(
       `[WsException] ${event} - ${message}`,
