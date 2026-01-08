@@ -1,7 +1,8 @@
 import { cn } from '@/shared/lib/utils';
 import RoomButton from './RoomButton';
 import type { IconName } from '@/shared/components/icon/iconMap';
-import type { Dialog, SidePanel } from '../types';
+import { useMediaStore } from '../stores/useMediaStore';
+import { useRoomUIStore } from '../stores/useRoomUIStore';
 
 interface MenuButton {
   icon: IconName;
@@ -13,80 +14,50 @@ interface MenuButton {
 interface RoomMenuBarProps {
   className?: string;
   roomTitle?: string;
-  isMicOn?: boolean;
-  isCameraOn?: boolean;
-  isScreenSharing?: boolean;
-  activeDialog?: Dialog | null;
-  activeSidePanel?: SidePanel | null;
-  onMicToggle?: () => void;
-  onCameraToggle?: () => void;
-  onScreenShareToggle?: () => void;
-  onDialogChange?: (Dialog: Dialog | null) => void;
-  onSidePanelChange?: (panel: SidePanel | null) => void;
   onExit?: () => void;
 }
 
-export default function RoomMenuBar({
-  className,
-  roomTitle = '강의실',
-  isMicOn = false,
-  isCameraOn = false,
-  isScreenSharing = false,
-  activeDialog = null,
-  activeSidePanel = null,
-  onMicToggle,
-  onCameraToggle,
-  onScreenShareToggle,
-  onDialogChange,
-  onSidePanelChange,
-  onExit,
-}: RoomMenuBarProps) {
-  const handleDialogClick = (Dialog: Dialog) => () => {
-    if (!onDialogChange) return;
-    onDialogChange(activeDialog === Dialog ? null : Dialog);
-  };
-
-  const handleSidePanelClick = (panel: SidePanel) => () => {
-    if (!onSidePanelChange) return;
-    onSidePanelChange(activeSidePanel === panel ? null : panel);
-  };
+export default function RoomMenuBar({ className, roomTitle = '강의실', onExit }: RoomMenuBarProps) {
+  const { isMicOn, isCameraOn, isScreenSharing, toggleMic, toggleCamera, toggleScreenShare } =
+    useMediaStore();
+  const { activeDialog, activeSidePanel, setActiveDialog, setActiveSidePanel } = useRoomUIStore();
 
   const menuButtons: MenuButton[] = [
     {
       icon: isMicOn ? 'mic' : 'mic-disabled',
       tooltip: isMicOn ? '마이크 끄기' : '마이크 켜기',
       isActive: isMicOn,
-      onClick: onMicToggle,
+      onClick: toggleMic,
     },
     {
       icon: isCameraOn ? 'cam' : 'cam-disabled',
       tooltip: isCameraOn ? '카메라 끄기' : '카메라 켜기',
       isActive: isCameraOn,
-      onClick: onCameraToggle,
+      onClick: toggleCamera,
     },
     {
       icon: 'screen-share',
       tooltip: isScreenSharing ? '화면공유 중지' : '화면공유',
       isActive: isScreenSharing,
-      onClick: onScreenShareToggle,
+      onClick: toggleScreenShare,
     },
     {
       icon: 'vote',
       tooltip: '투표',
       isActive: activeDialog === 'vote',
-      onClick: handleDialogClick('vote'),
+      onClick: () => setActiveDialog('vote'),
     },
     {
       icon: 'qna',
       tooltip: 'Q&A',
       isActive: activeDialog === 'qna',
-      onClick: handleDialogClick('qna'),
+      onClick: () => setActiveDialog('qna'),
     },
     {
       icon: 'ranking',
       tooltip: '랭킹',
       isActive: activeDialog === 'ranking',
-      onClick: handleDialogClick('ranking'),
+      onClick: () => setActiveDialog('ranking'),
     },
   ];
 
@@ -95,19 +66,19 @@ export default function RoomMenuBar({
       icon: 'chat',
       tooltip: '채팅',
       isActive: activeSidePanel === 'chat',
-      onClick: handleSidePanelClick('chat'),
+      onClick: () => setActiveSidePanel('chat'),
     },
     {
       icon: 'info',
       tooltip: '정보',
       isActive: activeSidePanel === 'info',
-      onClick: handleSidePanelClick('info'),
+      onClick: () => setActiveSidePanel('info'),
     },
     {
       icon: 'menu',
       tooltip: '메뉴',
       isActive: activeSidePanel === 'menu',
-      onClick: handleSidePanelClick('menu'),
+      onClick: () => setActiveSidePanel('menu'),
     },
   ];
 
