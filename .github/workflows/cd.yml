@@ -105,6 +105,13 @@ jobs:
               echo "TAG=${TAG}" >> .env
             fi
 
+            # Loki 호스트 환경변수 추가
+            if grep -q "^LOKI_HOST=" .env; then
+              sed -i 's/^LOKI_HOST=.*/LOKI_HOST=${{ secrets.NCP_DEV_MONITORING_HOST }}/' .env
+            else
+              echo "LOKI_HOST=${{ secrets.NCP_DEV_MONITORING_HOST }}" >> .env
+            fi
+
             docker compose -f docker-compose.yml -f docker-compose.develop.yml pull backend
             docker compose -f docker-compose.yml -f docker-compose.develop.yml up -d backend
 
@@ -174,6 +181,13 @@ jobs:
               sed -i 's/^TAG=.*/TAG='"${TAG}"'/' .env
             else
               echo "TAG=${TAG}" >> .env
+            fi
+
+            # Loki 호스트 환경변수 추가
+            if grep -q "^LOKI_HOST=" .env; then
+              sed -i 's/^LOKI_HOST=.*/LOKI_HOST=${{ secrets.NCP_PROD_MONITORING_HOST }}/' .env
+            else
+              echo "LOKI_HOST=${{ secrets.NCP_PROD_MONITORING_HOST }}" >> .env
             fi
 
             docker compose -f docker-compose.yml -f docker-compose.prod.yml pull backend
@@ -312,6 +326,10 @@ jobs:
             cp .github/deployments/monitoring/prometheus/prometheus-dev.yml ./prometheus/prometheus.yml
             cp .github/deployments/monitoring/loki/loki-config.yaml ./loki/loki-config.yaml
 
+            # Prometheus 설정 파일의 IP 플레이스홀더 치환
+            sed -i "s/BACKEND_HOST_PLACEHOLDER/${{ secrets.NCP_DEV_HOST }}/g" ./prometheus/prometheus.yml
+            sed -i "s/REDIS_HOST_PLACEHOLDER/${{ secrets.NCP_DEV_REDIS_HOST }}/g" ./prometheus/prometheus.yml
+
             # 환경 변수 설정
             echo "CONTAINER_PREFIX=plum-dev" > .env
             echo "PROMETHEUS_RETENTION=15d" >> .env
@@ -442,6 +460,10 @@ jobs:
             mkdir -p prometheus loki
             cp .github/deployments/monitoring/prometheus/prometheus-prod.yml ./prometheus/prometheus.yml
             cp .github/deployments/monitoring/loki/loki-config.yaml ./loki/loki-config.yaml
+
+            # Prometheus 설정 파일의 IP 플레이스홀더 치환
+            sed -i "s/BACKEND_HOST_PLACEHOLDER/${{ secrets.NCP_PROD_HOST }}/g" ./prometheus/prometheus.yml
+            sed -i "s/REDIS_HOST_PLACEHOLDER/${{ secrets.NCP_PROD_REDIS_HOST }}/g" ./prometheus/prometheus.yml
 
             # 환경 변수 설정
             echo "CONTAINER_PREFIX=plum-prod" > .env

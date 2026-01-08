@@ -59,7 +59,7 @@ services:
       - ./apps/backend/logs:/app/logs:ro # Winston 로그 파일 읽기
       - ./apps/backend/promtail.yaml:/etc/promtail/config.yml:ro # Promtail 설정
     environment:
-      - LOKI_URL=http://101.79.11.160:3100 # Prod 모니터링 서버 Loki 주소
+      - LOKI_URL=http://${LOKI_HOST}:3100 # Prod 모니터링 서버 Loki 주소 (환경변수 필수)
       - NODE_ENV=production
     command: -config.file=/etc/promtail/config.yml
     networks:

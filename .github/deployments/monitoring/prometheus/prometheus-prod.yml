@@ -26,14 +26,14 @@ scrape_configs:
   # 백엔드 서버 시스템 메트릭 (Node Exporter)
   - job_name: 'backend-node'
     static_configs:
-      - targets: ['49.50.133.9:9100']
+      - targets: ['BACKEND_HOST_PLACEHOLDER:9100']
         labels:
           server: 'plum-prod'
 
   # 백엔드 애플리케이션 메트릭 (prom-client)
   - job_name: 'backend-app'
     static_configs:
-      - targets: ['49.50.133.9:3000']
+      - targets: ['BACKEND_HOST_PLACEHOLDER:3000']
         labels:
           server: 'plum-prod'
     metrics_path: '/metrics'
@@ -41,13 +41,13 @@ scrape_configs:
   # Redis 서버 시스템 메트릭 (Node Exporter)
   - job_name: 'redis-node'
     static_configs:
-      - targets: ['211.188.51.190:9100']
+      - targets: ['REDIS_HOST_PLACEHOLDER:9100']
         labels:
           server: 'plum-prod-redis'
 
   # Redis 메트릭 (Redis Exporter)
   - job_name: 'redis'
     static_configs:
-      - targets: ['211.188.51.190:9121']
+      - targets: ['REDIS_HOST_PLACEHOLDER:9121']
         labels:
           server: 'plum-prod-redis'
