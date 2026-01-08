@@ -1,5 +1,6 @@
 import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/shared/lib/utils';
+import { ComponentProps } from 'react';
 
 const helpTextVariants = cva('mt-1 text-sm', {
   variants: {
@@ -15,11 +16,11 @@ const helpTextVariants = cva('mt-1 text-sm', {
 });
 
 interface HelpTextProps
-  extends Omit<React.ComponentProps<'p'>, 'children'>, VariantProps<typeof helpTextVariants> {
+  extends Omit<ComponentProps<'p'>, 'children'>, VariantProps<typeof helpTextVariants> {
   children: string;
 }
 
-function HelpText({ className, variant, children, ...props }: HelpTextProps) {
+export function HelpText({ className, variant, children, ...props }: HelpTextProps) {
   if (!children) return null;
 
   return (
@@ -31,5 +32,3 @@ function HelpText({ className, variant, children, ...props }: HelpTextProps) {
     </p>
   );
 }
-
-export default HelpText;

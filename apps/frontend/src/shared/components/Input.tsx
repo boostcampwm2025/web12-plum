@@ -1,5 +1,6 @@
 import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/shared/lib/utils';
+import { ComponentProps } from 'react';
 
 const inputVariants = cva(
   'text-text placeholder:text-subtext-light w-full min-w-0 rounded-lg bg-gray-400 outline-none disabled:cursor-not-allowed disabled:bg-gray-400/30',
@@ -17,9 +18,9 @@ const inputVariants = cva(
 );
 
 interface InputProps
-  extends Omit<React.ComponentProps<'input'>, 'size'>, VariantProps<typeof inputVariants> {}
+  extends Omit<ComponentProps<'input'>, 'size'>, VariantProps<typeof inputVariants> {}
 
-function Input({ className, size, type = 'text', ...props }: InputProps) {
+export function Input({ className, size, type = 'text', ...props }: InputProps) {
   return (
     <input
       type={type}
@@ -28,5 +29,3 @@ function Input({ className, size, type = 'text', ...props }: InputProps) {
     />
   );
 }
-
-export default Input;

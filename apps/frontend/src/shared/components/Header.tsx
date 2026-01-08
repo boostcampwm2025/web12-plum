@@ -8,7 +8,7 @@ import logoImg from '@/assets/logo/logo.svg';
  * 헤더 컴포넌트
  * @returns 헤더 JSX 요소
  */
-export const Header = () => {
+export function Header() {
   return (
     <header className="mx-auto w-full px-20 pt-5">
       <Link
@@ -26,4 +26,4 @@ export const Header = () => {
       </Link>
     </header>
   );
-};
+}

@@ -18,7 +18,7 @@ interface LabelProps
   required?: boolean;
 }
 
-function Label({ className, size, required, children, ...props }: LabelProps) {
+export function Label({ className, size, required, children, ...props }: LabelProps) {
   return (
     <label
       className={cn(labelVariants({ size, className }))}
@@ -29,5 +29,3 @@ function Label({ className, size, required, children, ...props }: LabelProps) {
     </label>
   );
 }
-
-export default Label;

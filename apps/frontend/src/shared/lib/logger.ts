@@ -37,12 +37,12 @@ const CATEGORY_COLORS: Record<LogCategory, string> = {
 /**
  * 로그 메시지를 포맷팅하고 콘솔에 출력
  */
-const formatMessage = (
+function formatMessage(
   level: LogLevel,
   category: LogCategory | undefined,
   message: string,
   ...args: unknown[]
-): void => {
+): void {
   if (!isDev) return;
 
   const label = LEVEL_LABEL[level];
@@ -92,53 +92,57 @@ const formatMessage = (
         break;
     }
   }
-};
+}
 
-const debug = (message: string, ...args: unknown[]): void => {
+function debug(message: string, ...args: unknown[]): void {
   formatMessage('debug', undefined, message, ...args);
-};
-const info = (message: string, ...args: unknown[]): void => {
+}
+function info(message: string, ...args: unknown[]): void {
   formatMessage('info', undefined, message, ...args);
-};
-const warn = (message: string, ...args: unknown[]): void => {
+}
+function warn(message: string, ...args: unknown[]): void {
   formatMessage('warn', undefined, message, ...args);
-};
-const error = (message: string, ...args: unknown[]): void => {
+}
+function error(message: string, ...args: unknown[]): void {
   formatMessage('error', undefined, message, ...args);
-};
+}
 
-const group = (label: string): void => {
+function group(label: string): void {
   if (!isDev) return;
   console.group(label);
-};
-const groupEnd = (): void => {
+}
+function groupEnd(): void {
   if (!isDev) return;
   console.groupEnd();
-};
-const table = (data: unknown): void => {
+}
+function table(data: unknown): void {
   if (!isDev) return;
   console.table(data);
-};
-const time = (label: string): void => {
+}
+function time(label: string): void {
   if (!isDev) return;
   console.time(label);
-};
-const timeEnd = (label: string): void => {
+}
+function timeEnd(label: string): void {
   if (!isDev) return;
   console.timeEnd(label);
-};
+}
 
 /**
  * 카테고리별 로거
  */
-const createCategoryLogger = (category: LogCategory) => ({
-  debug: (message: string, ...args: unknown[]) =>
-    formatMessage('debug', category, message, ...args),
-  info: (message: string, ...args: unknown[]) => formatMessage('info', category, message, ...args),
-  warn: (message: string, ...args: unknown[]) => formatMessage('warn', category, message, ...args),
-  error: (message: string, ...args: unknown[]) =>
-    formatMessage('error', category, message, ...args),
-});
+function createCategoryLogger(category: LogCategory) {
+  return {
+    debug: (message: string, ...args: unknown[]) =>
+      formatMessage('debug', category, message, ...args),
+    info: (message: string, ...args: unknown[]) =>
+      formatMessage('info', category, message, ...args),
+    warn: (message: string, ...args: unknown[]) =>
+      formatMessage('warn', category, message, ...args),
+    error: (message: string, ...args: unknown[]) =>
+      formatMessage('error', category, message, ...args),
+  };
+}
 
 /**
  * 통합 로거 객체

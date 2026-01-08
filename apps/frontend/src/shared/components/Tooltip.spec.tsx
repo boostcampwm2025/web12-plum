@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
-import Tooltip from './Tooltip';
+import { Tooltip } from './Tooltip';
 
 describe('Tooltip', () => {
   it('children이 렌더링된다', () => {

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import Label from './Label';
+import { Label } from './Label';
 
 describe('Label', () => {
   it('children이 렌더링된다', () => {
