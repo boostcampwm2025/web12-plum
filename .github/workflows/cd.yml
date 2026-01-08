@@ -1,0 +1,487 @@
+# CD Pipeline - Backend Docker 빌드 및 배포
+name: CD Pipeline
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.vars.outputs.TAG }}
+      sha_tag: ${{ steps.vars.outputs.SHA_TAG }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Set environment variables
+        id: vars
+        run: |
+          SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
+          BRANCH="${{ github.ref_name }}"
+
+          if [ "${BRANCH}" == "main" ]; then
+            echo "ENV=production" >> $GITHUB_OUTPUT
+            echo "TAG=latest" >> $GITHUB_OUTPUT
+            echo "SHA_TAG=prod-${SHORT_SHA}" >> $GITHUB_OUTPUT
+          else
+            echo "ENV=staging" >> $GITHUB_OUTPUT
+            echo "TAG=staging" >> $GITHUB_OUTPUT
+            echo "SHA_TAG=dev-${SHORT_SHA}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build and push Backend Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./apps/backend/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/plum-backend:${{ steps.vars.outputs.TAG }}
+            ${{ secrets.DOCKER_USERNAME }}/plum-backend:${{ steps.vars.outputs.SHA_TAG }}
+          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/plum-backend:buildcache
+          cache-to: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/plum-backend:buildcache,mode=max
+
+  deploy-dev:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/develop'
+
+    steps:
+      - name: Deploy to Development Server
+        uses: appleboy/ssh-action@v1.0.0
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          TAG: ${{ needs.build.outputs.tag }}
+        with:
+          host: ${{ secrets.NCP_DEV_HOST }}
+          username: ${{ secrets.NCP_DEV_USERNAME }}
+          key: ${{ secrets.NCP_DEV_SSH_KEY }}
+          port: ${{ secrets.NCP_DEV_PORT || 22 }}
+          envs: DOCKER_USERNAME,TAG
+          script: |
+            DEPLOY_BRANCH="${{ github.ref_name }}"
+            echo "배포 브랜치: ${DEPLOY_BRANCH}"
+
+            if [ ! -d ~/plum ]; then
+              echo "프로젝트 폴더 생성 중..."
+              GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy_key -o StrictHostKeyChecking=no" \
+                git clone git@github.com:${{ github.repository }}.git ~/plum
+            fi
+
+            # 프로젝트 폴더로 이동
+            cd ~/plum
+
+            # 최신 코드 가져오기
+            GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy_key -o StrictHostKeyChecking=no" \
+              git fetch origin
+            git checkout ${DEPLOY_BRANCH}
+            GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy_key -o StrictHostKeyChecking=no" \
+              git pull origin ${DEPLOY_BRANCH}
+
+            # .env 파일에 DOCKER_USERNAME과 TAG 값 업데이트
+            if grep -q "^DOCKER_USERNAME=" .env; then
+              sed -i 's/^DOCKER_USERNAME=.*/DOCKER_USERNAME='"${DOCKER_USERNAME}"'/' .env
+            else
+              echo "DOCKER_USERNAME=${DOCKER_USERNAME}" >> .env
+            fi
+
+            if grep -q "^TAG=" .env; then
+              sed -i 's/^TAG=.*/TAG='"${TAG}"'/' .env
+            else
+              echo "TAG=${TAG}" >> .env
+            fi
+
+            # Loki 호스트 환경변수 추가
+            if grep -q "^LOKI_HOST=" .env; then
+              sed -i 's/^LOKI_HOST=.*/LOKI_HOST=${{ secrets.NCP_DEV_MONITORING_HOST }}/' .env
+            else
+              echo "LOKI_HOST=${{ secrets.NCP_DEV_MONITORING_HOST }}" >> .env
+            fi
+
+            docker compose -f docker-compose.yml -f docker-compose.develop.yml pull backend
+            docker compose -f docker-compose.yml -f docker-compose.develop.yml up -d backend
+
+            # 헬스체크 (30초 타임아웃)
+            echo "헬스체크 중..."
+            if timeout 30 bash -c 'until curl -f http://localhost:3000/health 2>/dev/null; do sleep 2; done'; then
+              echo "✅ 헬스체크 성공"
+            else
+              echo "⚠️  헬스체크 타임아웃"
+            fi
+
+            # 사용하지 않는 이미지 정리
+            docker image prune -f
+
+            # 배포 상태 확인
+            echo "==== 배포 완료 ===="
+            echo "환경: Development"
+            echo "태그: $TAG"
+            echo "컨테이너 상태:"
+            docker ps --filter "name=plum-backend-develop"
+
+  deploy-prod:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Deploy to Production Server
+        uses: appleboy/ssh-action@v1.0.0
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          TAG: ${{ needs.build.outputs.tag }}
+        with:
+          host: ${{ secrets.NCP_PROD_HOST }}
+          username: ${{ secrets.NCP_PROD_USERNAME }}
+          key: ${{ secrets.NCP_PROD_SSH_KEY }}
+          port: ${{ secrets.NCP_PROD_PORT || 22 }}
+          envs: DOCKER_USERNAME,TAG
+          script: |
+            DEPLOY_BRANCH="${{ github.ref_name }}"
+            echo "배포 브랜치: ${DEPLOY_BRANCH}"
+
+            # 프로젝트 폴더 확인 및 생성
+            if [ ! -d ~/plum ]; then
+              echo "프로젝트 폴더 생성 중..."
+              GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy_key -o StrictHostKeyChecking=no" \
+                git clone git@github.com:${{ github.repository }}.git ~/plum
+            fi
+
+            # 프로젝트 폴더로 이동
+            cd ~/plum
+
+            GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy_key -o StrictHostKeyChecking=no" \
+              git fetch origin
+            git checkout ${DEPLOY_BRANCH}
+            GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy_key -o StrictHostKeyChecking=no" \
+              git pull origin ${DEPLOY_BRANCH}
+
+            # .env 파일에 DOCKER_USERNAME과 TAG 값 업데이트
+            if grep -q "^DOCKER_USERNAME=" .env; then
+              sed -i 's/^DOCKER_USERNAME=.*/DOCKER_USERNAME='"${DOCKER_USERNAME}"'/' .env
+            else
+              echo "DOCKER_USERNAME=${DOCKER_USERNAME}" >> .env
+            fi
+
+            if grep -q "^TAG=" .env; then
+              sed -i 's/^TAG=.*/TAG='"${TAG}"'/' .env
+            else
+              echo "TAG=${TAG}" >> .env
+            fi
+
+            # Loki 호스트 환경변수 추가
+            if grep -q "^LOKI_HOST=" .env; then
+              sed -i 's/^LOKI_HOST=.*/LOKI_HOST=${{ secrets.NCP_PROD_MONITORING_HOST }}/' .env
+            else
+              echo "LOKI_HOST=${{ secrets.NCP_PROD_MONITORING_HOST }}" >> .env
+            fi
+
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml pull backend
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d backend
+
+            # 헬스체크 (60초 타임아웃, 운영 환경은 더 긴 시간)
+            echo "헬스체크 중..."
+            if timeout 60 bash -c 'until curl -f http://localhost:3000/health 2>/dev/null; do sleep 3; done'; then
+              echo "✅ 헬스체크 성공"
+            else
+              echo "❌ 헬스체크 실패!"
+              echo "컨테이너 로그:"
+              docker logs --tail 50 plum-backend-prod
+              exit 1
+            fi
+
+            # 사용하지 않는 이미지 정리
+            docker image prune -f
+
+            # 배포 상태 확인
+            echo "==== 배포 완료 ===="
+            echo "환경: Production"
+            echo "태그: $TAG"
+            echo "컨테이너 상태:"
+            docker ps --filter "name=plum-backend-prod"
+
+  deploy-dev-redis:
+    name: Deploy to Dev Redis Server
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/develop'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy Redis to Dev Server
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.NCP_DEV_REDIS_HOST }}
+          username: ${{ secrets.NCP_DEV_USERNAME }}
+          key: ${{ secrets.NCP_DEV_SSH_KEY }}
+          port: ${{ secrets.NCP_DEV_PORT || 22 }}
+          script: |
+            # Git이 없으면 설치
+            if ! command -v git &> /dev/null; then
+              apt-get update && apt-get install -y git
+            fi
+
+            # 배포 브랜치 설정
+            BRANCH="${{ github.head_ref || 'develop' }}"
+
+            # Git 저장소 확인 및 클론/업데이트
+            if [ -d ~/redis/.git ]; then
+              # Git 저장소가 있으면 업데이트
+              cd ~/redis
+              GIT_SSH_COMMAND="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ~/.ssh/github_deploy_key" \
+                git fetch origin
+              git checkout ${BRANCH}
+              GIT_SSH_COMMAND="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ~/.ssh/github_deploy_key" \
+                git pull origin ${BRANCH}
+            else
+              # Git 저장소가 없으면 완전히 정리 후 새로 클론
+              rm -rf ~/redis
+              export GIT_SSH_COMMAND="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ~/.ssh/github_deploy_key"
+              git clone --branch ${BRANCH} \
+                git@github.com:${{ github.repository }}.git ~/redis
+              cd ~/redis
+            fi
+
+            # docker-compose 파일 복사
+            cp .github/deployments/redis/docker-compose.yml ./docker-compose.yml
+
+            # 환경 변수 설정
+            echo "CONTAINER_PREFIX=plum-dev" > .env
+            echo "REDIS_MAXMEMORY=1gb" >> .env
+
+            # 컨테이너 재시작
+            docker compose pull
+            docker compose up -d
+
+            # 헬스체크
+            sleep 5
+            docker exec plum-dev-redis redis-cli ping || echo "Redis health check failed"
+
+            # 상태 확인
+            docker compose ps
+
+  deploy-dev-monitoring:
+    name: Deploy to Dev Monitoring Server
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/develop'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy Monitoring to Dev Server
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.NCP_DEV_MONITORING_HOST }}
+          username: ${{ secrets.NCP_DEV_USERNAME }}
+          key: ${{ secrets.NCP_DEV_SSH_KEY }}
+          port: ${{ secrets.NCP_DEV_PORT || 22 }}
+          script: |
+            # Git 설치
+            if ! command -v git &> /dev/null; then
+              apt-get update && apt-get install -y git
+            fi
+
+            # 배포 브랜치 설정
+            BRANCH="${{ github.head_ref || 'develop' }}"
+
+            # Git 저장소 확인 및 클론/업데이트
+            if [ -d ~/monitoring/.git ]; then
+              # Git 저장소가 있으면 업데이트
+              cd ~/monitoring
+              GIT_SSH_COMMAND="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ~/.ssh/github_deploy_key" \
+                git fetch origin
+              git checkout ${BRANCH}
+              GIT_SSH_COMMAND="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ~/.ssh/github_deploy_key" \
+                git pull origin ${BRANCH}
+            else
+              # Git 저장소가 없으면 완전히 정리 후 새로 클론
+              rm -rf ~/monitoring
+              export GIT_SSH_COMMAND="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ~/.ssh/github_deploy_key"
+              git clone --branch ${BRANCH} \
+                git@github.com:${{ github.repository }}.git ~/monitoring
+              cd ~/monitoring
+            fi
+
+            # 설정 파일 복사
+            cp .github/deployments/monitoring/docker-compose.yml ./docker-compose.yml
+            mkdir -p prometheus loki
+            cp .github/deployments/monitoring/prometheus/prometheus-dev.yml ./prometheus/prometheus.yml
+            cp .github/deployments/monitoring/loki/loki-config.yaml ./loki/loki-config.yaml
+
+            # Prometheus 설정 파일의 IP 플레이스홀더 치환
+            sed -i "s/BACKEND_HOST_PLACEHOLDER/${{ secrets.NCP_DEV_HOST }}/g" ./prometheus/prometheus.yml
+            sed -i "s/REDIS_HOST_PLACEHOLDER/${{ secrets.NCP_DEV_REDIS_HOST }}/g" ./prometheus/prometheus.yml
+
+            # 환경 변수 설정
+            echo "CONTAINER_PREFIX=plum-dev" > .env
+            echo "PROMETHEUS_RETENTION=15d" >> .env
+            echo "GRAFANA_ADMIN_USER=admin" >> .env
+            echo "GRAFANA_ADMIN_PASSWORD=${{ secrets.GRAFANA_ADMIN_PASSWORD_DEV }}" >> .env
+            echo "GRAFANA_URL=http://211.188.50.8:3000" >> .env
+
+            # 데이터 디렉토리 권한 설정
+            mkdir -p prometheus/data loki/data grafana/data
+            chown -R 472:472 grafana/data
+            chmod -R 755 prometheus/data loki/data
+
+            # 컨테이너 재시작
+            docker compose pull
+            docker compose up -d
+
+            # 헬스체크
+            sleep 10
+            curl -f http://localhost:9090/-/healthy || echo "Prometheus health check failed"
+            curl -f http://localhost:3100/ready || echo "Loki health check failed"
+
+            # 상태 확인
+            docker compose ps
+
+  deploy-prod-redis:
+    name: Deploy to Prod Redis Server
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy Redis to Prod Server
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.NCP_PROD_REDIS_HOST }}
+          username: ${{ secrets.NCP_PROD_USERNAME }}
+          key: ${{ secrets.NCP_PROD_SSH_KEY }}
+          port: ${{ secrets.NCP_PROD_PORT || 22 }}
+          script: |
+            # Git이 없으면 설치
+            if ! command -v git &> /dev/null; then
+              apt-get update && apt-get install -y git
+            fi
+
+            # 배포 브랜치 설정
+            BRANCH="main"
+
+            # Git 저장소 확인 및 클론/업데이트
+            if [ -d ~/redis/.git ]; then
+              # Git 저장소가 있으면 업데이트
+              cd ~/redis
+              GIT_SSH_COMMAND="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ~/.ssh/github_deploy_key" \
+                git fetch origin
+              git checkout ${BRANCH}
+              GIT_SSH_COMMAND="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ~/.ssh/github_deploy_key" \
+                git pull origin ${BRANCH}
+            else
+              # Git 저장소가 없으면 완전히 정리 후 새로 클론
+              rm -rf ~/redis
+              export GIT_SSH_COMMAND="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ~/.ssh/github_deploy_key"
+              git clone --branch ${BRANCH} \
+                git@github.com:${{ github.repository }}.git ~/redis
+              cd ~/redis
+            fi
+
+            cp .github/deployments/redis/docker-compose.yml ./docker-compose.yml
+
+            # 환경 변수 설정 (Prod는 메모리 2GB)
+            echo "CONTAINER_PREFIX=plum-prod" > .env
+            echo "REDIS_MAXMEMORY=2gb" >> .env
+
+            docker compose pull
+            docker compose up -d
+
+            sleep 5
+            docker exec plum-prod-redis redis-cli ping || echo "Redis health check failed"
+
+            docker compose ps
+
+  deploy-prod-monitoring:
+    name: Deploy to Prod Monitoring Server
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy Monitoring to Prod Server
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.NCP_PROD_MONITORING_HOST }}
+          username: ${{ secrets.NCP_PROD_USERNAME }}
+          key: ${{ secrets.NCP_PROD_SSH_KEY }}
+          port: ${{ secrets.NCP_PROD_PORT || 22 }}
+          script: |
+            # Git 설치
+            if ! command -v git &> /dev/null; then
+              apt-get update && apt-get install -y git
+            fi
+
+            # 배포 브랜치 설정
+            BRANCH="main"
+
+            # Git 저장소 확인 및 클론/업데이트
+            if [ -d ~/monitoring/.git ]; then
+              # Git 저장소가 있으면 업데이트
+              cd ~/monitoring
+              GIT_SSH_COMMAND="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ~/.ssh/github_deploy_key" \
+                git fetch origin
+              git checkout ${BRANCH}
+              GIT_SSH_COMMAND="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ~/.ssh/github_deploy_key" \
+                git pull origin ${BRANCH}
+            else
+              # Git 저장소가 없으면 완전히 정리 후 새로 클론
+              rm -rf ~/monitoring
+              export GIT_SSH_COMMAND="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ~/.ssh/github_deploy_key"
+              git clone --branch ${BRANCH} \
+                git@github.com:${{ github.repository }}.git ~/monitoring
+              cd ~/monitoring
+            fi
+
+            cp .github/deployments/monitoring/docker-compose.yml ./docker-compose.yml
+            mkdir -p prometheus loki
+            cp .github/deployments/monitoring/prometheus/prometheus-prod.yml ./prometheus/prometheus.yml
+            cp .github/deployments/monitoring/loki/loki-config.yaml ./loki/loki-config.yaml
+
+            # Prometheus 설정 파일의 IP 플레이스홀더 치환
+            sed -i "s/BACKEND_HOST_PLACEHOLDER/${{ secrets.NCP_PROD_HOST }}/g" ./prometheus/prometheus.yml
+            sed -i "s/REDIS_HOST_PLACEHOLDER/${{ secrets.NCP_PROD_REDIS_HOST }}/g" ./prometheus/prometheus.yml
+
+            # 환경 변수 설정
+            echo "CONTAINER_PREFIX=plum-prod" > .env
+            echo "PROMETHEUS_RETENTION=30d" >> .env
+            echo "GRAFANA_ADMIN_USER=admin" >> .env
+            echo "GRAFANA_ADMIN_PASSWORD=${{ secrets.GRAFANA_ADMIN_PASSWORD_PROD }}" >> .env
+            echo "GRAFANA_URL=http://101.79.11.160:3000" >> .env
+
+            # 데이터 디렉토리 권한 설정
+            mkdir -p prometheus/data loki/data grafana/data
+            chown -R 472:472 grafana/data
+            chmod -R 755 prometheus/data loki/data
+
+            docker compose pull
+            docker compose up -d
+
+            sleep 10
+            curl -f http://localhost:9090/-/healthy || echo "Prometheus health check failed"
+            curl -f http://localhost:3100/ready || echo "Loki health check failed"
+
+            docker compose ps

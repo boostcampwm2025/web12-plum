@@ -1,0 +1,28 @@
+# Dependencies
+node_modules
+
+# Production
+dist
+build
+.turbo
+.vercel
+
+# IDE and Editor files
+.DS_Store
+.idea/
+.vscode/
+
+# Local env files
+.env
+.env.local
+
+# Test results
+test-results
+playwright-report
+coverage
+reports
+
+# Logs
+*.log
+logs/
+apps/backend/logs/

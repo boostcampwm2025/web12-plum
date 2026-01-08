@@ -1,0 +1,67 @@
+# Loki Configuration
+# 로그 수집 및 저장 설정
+
+# 인증 비활성화 (내부 네트워크용)
+auth_enabled: false
+
+server:
+  http_listen_port: 3100
+  grpc_listen_port: 9096
+
+common:
+  path_prefix: /loki
+  storage:
+    filesystem:
+      chunks_directory: /loki/chunks
+      rules_directory: /loki/rules
+  replication_factor: 1
+  ring:
+    instance_addr: 127.0.0.1
+    kvstore:
+      store: inmemory
+
+# 스키마 설정
+schema_config:
+  configs:
+    - from: 2026-01-01
+      store: boltdb-shipper
+      object_store: filesystem
+      schema: v11
+      index:
+        prefix: index_
+        period: 24h
+
+# 저장소 설정
+storage_config:
+  boltdb_shipper:
+    active_index_directory: /loki/boltdb-shipper-active
+    cache_location: /loki/boltdb-shipper-cache
+    cache_ttl: 24h
+    shared_store: filesystem
+  filesystem:
+    directory: /loki/chunks
+
+# 제한 설정
+limits_config:
+  retention_period: 168h  # 7일 보관
+  ingestion_rate_mb: 16
+  ingestion_burst_size_mb: 32
+  max_query_length: 721h  # 30일 쿼리 가능
+
+# 청크 저장소 설정
+chunk_store_config:
+  max_look_back_period: 168h  # 7일
+
+# 테이블 관리자 (데이터 보관 기간)
+table_manager:
+  retention_deletes_enabled: true
+  retention_period: 168h  # 7일
+
+# 압축기 설정
+compactor:
+  working_directory: /loki/compactor
+  shared_store: filesystem
+  compaction_interval: 10m
+  retention_enabled: true
+  retention_delete_delay: 2h
+  retention_delete_worker_count: 150

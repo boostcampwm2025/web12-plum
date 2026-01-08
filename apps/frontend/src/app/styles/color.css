@@ -1,0 +1,14 @@
+@theme {
+  --color-primary: #7b4cfe;
+  --color-text: #f8f6ff;
+  --color-subtext: #7c7c90;
+  --color-subtext-light: #9191a1;
+  --color-success: #26d97f;
+  --color-error: #ff5858;
+  --color-gray-200: #404064;
+  --color-gray-300: #383856;
+  --color-gray-400: #30304a;
+  --color-gray-500: #26263a;
+  --color-gray-600: #202031;
+  --color-gray-700: #181825;
+}

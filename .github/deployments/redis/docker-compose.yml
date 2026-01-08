@@ -1,0 +1,72 @@
+# Redis Server Docker Compose 파일
+# Redis 캐시 서버 + 모니터링 구성 (Prometheus용 Exporter 포함)
+# 환경 변수: CONTAINER_PREFIX, REDIS_MAXMEMORY (.env 파일에서 설정)
+
+version: '3.8'
+
+services:
+  # Redis 캐시 서버 - 세션 및 데이터 캐싱
+  redis:
+    image: redis:7.2-alpine
+    container_name: ${CONTAINER_PREFIX:-plum}-redis # Dev: plum-dev-redis, Prod: plum-prod-redis
+    restart: always
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis-data:/data
+    command: >
+      redis-server
+      --appendonly yes
+      --appendfsync everysec
+      --maxmemory ${REDIS_MAXMEMORY:-256mb}
+      --maxmemory-policy allkeys-lru
+    networks:
+      - redis-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"] # redis-cli ping 명령으로 상태 확인 (응답: PONG)
+      interval: 10s  # 10초마다 체크
+      timeout: 3s    # 3초 내 응답 없으면 실패
+      retries: 3     # 3번 연속 실패 시 unhealthy
+
+  # Redis Exporter - Redis 메트릭 수집 및 Prometheus로 노출
+  # Prometheus가 스크래핑할 Redis 전용 메트릭 제공 (명령 수, 메모리 사용량, 키 개수 등)
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.55.0-alpine # Redis 메트릭 수집 전용 Exporter
+    container_name: ${CONTAINER_PREFIX:-plum}-redis-exporter
+    restart: always
+    ports:
+      - "${REDIS_EXPORTER_PORT:-9121}:9121"
+    environment:
+      - REDIS_ADDR=redis:6379
+    depends_on:
+      - redis # Redis 컨테이너가 먼저 시작되어야 함
+    networks:
+      - redis-network
+
+  # Node Exporter - 시스템 메트릭 수집 (CPU, 메모리, 디스크, 네트워크)
+  # Prometheus가 호스트 서버의 하드웨어/OS 메트릭을 수집하기 위한 Exporter
+  node-exporter:
+    image: prom/node-exporter:v1.6.1
+    container_name: ${CONTAINER_PREFIX:-plum}-redis-node-exporter
+    restart: always
+    ports:
+      - "${NODE_EXPORTER_PORT:-9100}:9100"
+    command: # 호스트 시스템 정보 수집을 위한 경로 설정
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--path.rootfs=/host'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    volumes:
+      - /proc:/host/proc:ro   # CPU, 메모리, 네트워크 통계
+      - /sys:/host/sys:ro     # 하드웨어 정보
+      - /:/host:ro            # 전체 파일시스템
+    networks:
+      - redis-network
+
+volumes:
+  redis-data:
+    driver: local # 로컬 디스크에 저장 (호스트 서버의 /var/lib/docker/volumes/)
+
+networks:
+  redis-network:
+    driver: bridge
