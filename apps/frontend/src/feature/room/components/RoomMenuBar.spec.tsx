@@ -1,11 +1,43 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 
 import RoomMenuBar from './RoomMenuBar';
+import { useMediaStore } from '../stores/useMediaStore';
+import { useRoomUIStore } from '../stores/useRoomUIStore';
+
+vi.mock('../stores/useMediaStore');
+vi.mock('../stores/useRoomUIStore');
 
 describe('RoomMenuBar', () => {
+  const mockToggleMic = vi.fn();
+  const mockToggleCamera = vi.fn();
+  const mockToggleScreenShare = vi.fn();
+  const mockSetActiveDialog = vi.fn();
+  const mockSetActiveSidePanel = vi.fn();
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    vi.mocked(useMediaStore).mockReturnValue({
+      isMicOn: false,
+      isCameraOn: false,
+      isScreenSharing: false,
+      toggleMic: mockToggleMic,
+      toggleCamera: mockToggleCamera,
+      toggleScreenShare: mockToggleScreenShare,
+      initialize: vi.fn(),
+    });
+
+    vi.mocked(useRoomUIStore).mockReturnValue({
+      activeDialog: null,
+      activeSidePanel: null,
+      setActiveDialog: mockSetActiveDialog,
+      setActiveSidePanel: mockSetActiveSidePanel,
+    });
+  });
+
   it('강의실 제목이 렌더링된다', () => {
     render(<RoomMenuBar roomTitle="네부캠 마스터 클래스" />);
 
@@ -21,50 +53,39 @@ describe('RoomMenuBar', () => {
 
   it('미디어(mic, cam, screen-share) 버튼 클릭 시 각 핸들러가 호출된다', async () => {
     const user = userEvent.setup();
-    const onMicToggle = vi.fn();
-    const onCameraToggle = vi.fn();
-    const onScreenShareToggle = vi.fn();
 
-    render(
-      <RoomMenuBar
-        onMicToggle={onMicToggle}
-        onCameraToggle={onCameraToggle}
-        onScreenShareToggle={onScreenShareToggle}
-      />,
-    );
+    render(<RoomMenuBar />);
 
     const buttons = screen.getAllByRole('button');
-    await user.click(buttons[0]);
-    await user.click(buttons[1]);
-    await user.click(buttons[2]);
+    await user.click(buttons[0]); // 마이크
+    await user.click(buttons[1]); // 카메라
+    await user.click(buttons[2]); // 화면 공유
 
-    expect(onMicToggle).toHaveBeenCalledTimes(1);
-    expect(onCameraToggle).toHaveBeenCalledTimes(1);
-    expect(onScreenShareToggle).toHaveBeenCalledTimes(1);
+    expect(mockToggleMic).toHaveBeenCalledTimes(1);
+    expect(mockToggleCamera).toHaveBeenCalledTimes(1);
+    expect(mockToggleScreenShare).toHaveBeenCalledTimes(1);
   });
 
-  it('다이어로그 버튼(vote) 클릭 시 onDialogChange가 호출된다', async () => {
+  it('다이어로그 버튼(vote) 클릭 시 setActiveDialog가 호출된다', async () => {
     const user = userEvent.setup();
-    const onDialogChange = vi.fn();
 
-    render(<RoomMenuBar onDialogChange={onDialogChange} />);
+    render(<RoomMenuBar />);
 
     const buttons = screen.getAllByRole('button');
-    await user.click(buttons[3]);
+    await user.click(buttons[3]); // 투표
 
-    expect(onDialogChange).toHaveBeenNthCalledWith(1, 'vote');
+    expect(mockSetActiveDialog).toHaveBeenCalledWith('vote');
   });
 
-  it('사이드패널 버튼(chat) 클릭 시 onSidePanelChange가 호출된다', async () => {
+  it('사이드패널 버튼(chat) 클릭 시 setActiveSidePanel이 호출된다', async () => {
     const user = userEvent.setup();
-    const onSidePanelChange = vi.fn();
 
-    render(<RoomMenuBar onSidePanelChange={onSidePanelChange} />);
+    render(<RoomMenuBar />);
 
     const buttons = screen.getAllByRole('button');
-    await user.click(buttons[7]);
+    await user.click(buttons[7]); // 채팅
 
-    expect(onSidePanelChange).toHaveBeenCalledWith('chat');
+    expect(mockSetActiveSidePanel).toHaveBeenCalledWith('chat');
   });
 
   it('나가기 버튼 클릭 시 onExit이 호출된다', async () => {
@@ -74,7 +95,7 @@ describe('RoomMenuBar', () => {
     render(<RoomMenuBar onExit={onExit} />);
 
     const buttons = screen.getAllByRole('button');
-    await user.click(buttons[6]);
+    await user.click(buttons[6]); // 나가기
     expect(onExit).toHaveBeenCalledTimes(1);
   });
 });
