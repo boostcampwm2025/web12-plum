@@ -25,7 +25,7 @@ type IconProps = {
  * @param decorative 장식용 아이콘 여부 (기본값: false)
  * @returns 아이콘 SVG 컴포넌트
  */
-export const Icon = ({
+export function Icon({
   name,
   size,
   width,
@@ -34,7 +34,7 @@ export const Icon = ({
   label,
   decorative = false,
   ...props
-}: IconProps) => {
+}: IconProps) {
   const SvgIcon: IconComponent | undefined = iconMap[name];
 
   if (!SvgIcon) {
@@ -59,4 +59,4 @@ export const Icon = ({
       {...props}
     />
   );
-};
+}

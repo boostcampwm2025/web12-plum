@@ -1,5 +1,6 @@
 import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/shared/lib/utils';
+import { ComponentProps } from 'react';
 
 const labelVariants = cva('text-text mb-2 block font-bold', {
   variants: {
@@ -14,11 +15,11 @@ const labelVariants = cva('text-text mb-2 block font-bold', {
 });
 
 interface LabelProps
-  extends Omit<React.ComponentProps<'label'>, 'size'>, VariantProps<typeof labelVariants> {
+  extends Omit<ComponentProps<'label'>, 'size'>, VariantProps<typeof labelVariants> {
   required?: boolean;
 }
 
-function Label({ className, size, required, children, ...props }: LabelProps) {
+export function Label({ className, size, required, children, ...props }: LabelProps) {
   return (
     <label
       className={cn(labelVariants({ size, className }))}
@@ -29,5 +30,3 @@ function Label({ className, size, required, children, ...props }: LabelProps) {
     </label>
   );
 }
-
-export default Label;

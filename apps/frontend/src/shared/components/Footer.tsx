@@ -48,7 +48,7 @@ interface InternalLinkSectionProps {
  * @param links 내부 링크 배열
  * @returns 내부 링크 섹션 JSX 요소
  */
-const InternalLinkSection = ({ title, links }: InternalLinkSectionProps) => {
+function InternalLinkSection({ title, links }: InternalLinkSectionProps) {
   return (
     <div>
       <h4 className="text-primary text-center text-sm font-bold">{title}</h4>
@@ -66,7 +66,7 @@ const InternalLinkSection = ({ title, links }: InternalLinkSectionProps) => {
       </ul>
     </div>
   );
-};
+}
 
 interface ExternalLinkSectionProps {
   section: FooterSection;
@@ -77,7 +77,7 @@ interface ExternalLinkSectionProps {
  * @param section 푸터 섹션 데이터
  * @returns 외부 링크 섹션 JSX 요소
  */
-const ExternalLinkSection = ({ section }: ExternalLinkSectionProps) => {
+function ExternalLinkSection({ section }: ExternalLinkSectionProps) {
   return (
     <div className="mb-3">
       <h4 className="text-primary text-center text-sm font-bold">{section.label}</h4>
@@ -98,13 +98,13 @@ const ExternalLinkSection = ({ section }: ExternalLinkSectionProps) => {
       </ul>
     </div>
   );
-};
+}
 
 /**
  * 푸터 컴포넌트
  * @returns 푸터 JSX 요소
  */
-export const Footer = () => {
+export function Footer() {
   return (
     <footer className="flex items-center justify-between gap-8 bg-gray-400 px-18.5 py-20">
       <div className="flex-1">
@@ -138,4 +138,4 @@ export const Footer = () => {
       </nav>
     </footer>
   );
-};
+}

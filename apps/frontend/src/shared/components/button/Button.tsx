@@ -1,7 +1,7 @@
-import { ReactNode } from 'react';
+import { ComponentProps, ReactNode } from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/shared/lib/utils';
-import Tooltip from '@/shared/components/Tooltip';
+import { Tooltip } from '@/shared/components/Tooltip';
 
 const buttonVariants = cva(
   'disable:cursor-not-allowed relative flex shrink-0 cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-lg font-bold transition-all duration-150 focus-visible:ring-2 focus-visible:outline-none',
@@ -21,13 +21,13 @@ const buttonVariants = cva(
   },
 );
 
-interface ButtonProps extends React.ComponentProps<'button'>, VariantProps<typeof buttonVariants> {
+interface ButtonProps extends ComponentProps<'button'>, VariantProps<typeof buttonVariants> {
   children?: ReactNode;
   tooltip?: string;
   tooltipPosition?: 'top' | 'bottom' | 'left' | 'right';
 }
 
-export default function Button({
+export function Button({
   variant,
   children,
   tooltip,

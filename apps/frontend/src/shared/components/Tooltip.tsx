@@ -7,7 +7,7 @@ interface TooltipProps {
   position?: 'top' | 'bottom' | 'left' | 'right';
 }
 
-export default function Tooltip({ content, children, position = 'top' }: TooltipProps) {
+export function Tooltip({ content, children, position = 'top' }: TooltipProps) {
   const positionStyles = {
     top: 'bottom-full left-1/2 mb-2 -translate-x-1/2',
     bottom: 'top-full left-1/2 mt-2 -translate-x-1/2',

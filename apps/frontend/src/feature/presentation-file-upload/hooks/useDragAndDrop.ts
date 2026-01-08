@@ -9,7 +9,7 @@ interface UseDragAndDropProps {
  * @param onFileDrop 파일이 드롭되었을 때 호출될 콜백
  * @returns 드래그 상태 및 이벤트 핸들러들
  */
-export const useDragAndDrop = ({ onFileDrop }: UseDragAndDropProps) => {
+export function useDragAndDrop({ onFileDrop }: UseDragAndDropProps) {
   const [isDragging, setIsDragging] = useState(false);
 
   const handleDragEnter = (e: DragEvent<HTMLButtonElement>) => {
@@ -50,4 +50,4 @@ export const useDragAndDrop = ({ onFileDrop }: UseDragAndDropProps) => {
       onDrop: handleDrop,
     },
   };
-};
+}

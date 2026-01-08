@@ -20,12 +20,12 @@ interface PresentationFileUploaderProps {
  * @param onValidationError 유효성 검사 에러가 발생했을 때 호출될 콜백
  * @returns 발표 자료 업로드 JSX 요소
  */
-export const PresentationFileUploader = ({
+export function PresentationFileUploader({
   className,
   children,
   onFileSelect,
   onValidationError,
-}: PresentationFileUploaderProps) => {
+}: PresentationFileUploaderProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   // 파일 선택 버튼 클릭 핸들러
@@ -77,4 +77,4 @@ export const PresentationFileUploader = ({
       </button>
     </div>
   );
-};
+}
