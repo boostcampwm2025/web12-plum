@@ -14,7 +14,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 export class LoggingInterceptor implements NestInterceptor {
   constructor(@Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService) {}
 
-  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+  intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const request = context.switchToHttp().getRequest();
     const response = context.switchToHttp().getResponse();
 

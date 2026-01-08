@@ -21,3 +21,8 @@ test-results
 playwright-report
 coverage
 reports
+
+# Logs
+*.log
+logs/
+apps/backend/logs/
