@@ -2,24 +2,7 @@ import { MouseEvent, useEffect, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 
 import { cn } from '@/shared/lib/utils';
-
-/**
- * ESC 키로 모달 닫기 기능을 제공하는 커스텀 훅
- * @param isOpen 모달 열림 상태
- * @param onClose 모달 닫기 함수
- */
-const useModalEscapeClose = (isOpen: boolean, onClose: () => void) => {
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) onClose();
-    };
-
-    if (isOpen) {
-      document.addEventListener('keydown', handleEscape);
-      return () => document.removeEventListener('keydown', handleEscape);
-    }
-  }, [isOpen, onClose]);
-};
+import { useEscapeKey } from '@/shared/hooks/useEscapeKey';
 
 /**
  * 모달 열림 시 body 스크롤 방지 기능을 제공하는 커스텀 훅
@@ -82,7 +65,7 @@ interface ModalProps {
  * @returns 모달 JSX 요소
  */
 export const Modal = ({ isOpen, onClose, children, className }: ModalProps) => {
-  useModalEscapeClose(isOpen, onClose);
+  useEscapeKey(isOpen, onClose);
   useModalBodyScrollLock(isOpen);
 
   if (!isOpen) return null;
