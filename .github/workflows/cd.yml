@@ -316,7 +316,7 @@ jobs:
             echo "CONTAINER_PREFIX=plum-dev" > .env
             echo "PROMETHEUS_RETENTION=15d" >> .env
             echo "GRAFANA_ADMIN_USER=admin" >> .env
-            echo "GRAFANA_ADMIN_PASSWORD=plum2025" >> .env
+            echo "GRAFANA_ADMIN_PASSWORD=${{ secrets.GRAFANA_ADMIN_PASSWORD_DEV }}" >> .env
             echo "GRAFANA_URL=http://211.188.50.8:3000" >> .env
 
             # 데이터 디렉토리 권한 설정
@@ -447,7 +447,7 @@ jobs:
             echo "CONTAINER_PREFIX=plum-prod" > .env
             echo "PROMETHEUS_RETENTION=30d" >> .env
             echo "GRAFANA_ADMIN_USER=admin" >> .env
-            echo "GRAFANA_ADMIN_PASSWORD=plum2025!prod" >> .env
+            echo "GRAFANA_ADMIN_PASSWORD=${{ secrets.GRAFANA_ADMIN_PASSWORD_PROD }}" >> .env
             echo "GRAFANA_URL=http://101.79.11.160:3000" >> .env
 
             # 데이터 디렉토리 권한 설정
