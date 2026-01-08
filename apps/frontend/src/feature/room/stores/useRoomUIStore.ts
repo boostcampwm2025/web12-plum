@@ -1,5 +1,7 @@
 import { create } from 'zustand';
-import type { Dialog, SidePanel } from '../types';
+
+export type Dialog = 'vote' | 'qna' | 'ranking';
+export type SidePanel = 'chat' | 'info' | 'menu';
 
 interface RoomUIState {
   activeDialog: Dialog | null;
