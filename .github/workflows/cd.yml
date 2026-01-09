@@ -112,8 +112,8 @@ jobs:
               echo "LOKI_HOST=${{ secrets.NCP_DEV_MONITORING_HOST }}" >> .env
             fi
 
-            docker compose -f docker-compose.yml -f docker-compose.develop.yml pull backend
-            docker compose -f docker-compose.yml -f docker-compose.develop.yml up -d backend
+            docker compose -f docker-compose.yml -f docker-compose.develop.yml pull
+            docker compose -f docker-compose.yml -f docker-compose.develop.yml up -d
 
             # 헬스체크 (30초 타임아웃)
             echo "헬스체크 중..."
@@ -190,8 +190,8 @@ jobs:
               echo "LOKI_HOST=${{ secrets.NCP_PROD_MONITORING_HOST }}" >> .env
             fi
 
-            docker compose -f docker-compose.yml -f docker-compose.prod.yml pull backend
-            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d backend
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 
             # 헬스체크 (60초 타임아웃, 운영 환경은 더 긴 시간)
             echo "헬스체크 중..."
@@ -322,9 +322,10 @@ jobs:
 
             # 설정 파일 복사
             cp .github/deployments/monitoring/docker-compose.yml ./docker-compose.yml
-            mkdir -p prometheus loki
+            mkdir -p prometheus loki promtail
             cp .github/deployments/monitoring/prometheus/prometheus-dev.yml ./prometheus/prometheus.yml
             cp .github/deployments/monitoring/loki/loki-config.yaml ./loki/loki-config.yaml
+            cp .github/deployments/monitoring/promtail/promtail-config.yaml ./promtail/promtail-config.yaml
 
             # Prometheus 설정 파일의 IP 플레이스홀더 치환
             sed -i "s/BACKEND_HOST_PLACEHOLDER/${{ secrets.NCP_DEV_HOST }}/g" ./prometheus/prometheus.yml
@@ -457,9 +458,10 @@ jobs:
             fi
 
             cp .github/deployments/monitoring/docker-compose.yml ./docker-compose.yml
-            mkdir -p prometheus loki
+            mkdir -p prometheus loki promtail
             cp .github/deployments/monitoring/prometheus/prometheus-prod.yml ./prometheus/prometheus.yml
             cp .github/deployments/monitoring/loki/loki-config.yaml ./loki/loki-config.yaml
+            cp .github/deployments/monitoring/promtail/promtail-config.yaml ./promtail/promtail-config.yaml
 
             # Prometheus 설정 파일의 IP 플레이스홀더 치환
             sed -i "s/BACKEND_HOST_PLACEHOLDER/${{ secrets.NCP_PROD_HOST }}/g" ./prometheus/prometheus.yml

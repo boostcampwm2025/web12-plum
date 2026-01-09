@@ -22,6 +22,7 @@
     "@nestjs/websockets": "^10.4.20",
     "@plum/shared-interfaces": "workspace:*",
     "nest-winston": "^1.10.2",
+    "prom-client": "^15.1.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "socket.io": "^4.8.1",

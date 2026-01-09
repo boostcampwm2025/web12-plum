@@ -10,7 +10,7 @@ positions:
 
 clients:
   # Loki 서버 주소 (환경변수로 설정)
-  - url: ${LOKI_URL:-http://localhost:3100}/loki/api/v1/push
+  - url: ${LOKI_URL}/loki/api/v1/push
 
 scrape_configs:
   # 일반 로그 파일 (app-*.log)
@@ -20,31 +20,18 @@ scrape_configs:
           - localhost
         labels:
           job: plum-backend
-          env: ${NODE_ENV:-development}
+          env: ${NODE_ENV}
           __path__: /app/logs/nestjs/app-*.log
 
+    # JSON 파싱과 타임스탬프만 처리 (동적 labels 제거)
     pipeline_stages:
-      # JSON 파싱
       - json:
           expressions:
             timestamp: timestamp
-            level: level
             message: message
-            context: context
-            trace: trace
-            span: span
-
-      # 타임스탬프 파싱
       - timestamp:
           source: timestamp
-          format: '2006-01-02 15:04:05'
-
-      # 레이블 추가
-      - labels:
-          level:
-          context:
-
-      # 출력 포맷
+          format: '2026-01-02 15:04:05' 
       - output:
           source: message
 
@@ -54,31 +41,18 @@ scrape_configs:
       - targets:
           - localhost
         labels:
-          job: plum-backend
-          env: ${NODE_ENV:-development}
-          level: error
+          job: plum-backend-error
+          env: ${NODE_ENV}
           __path__: /app/logs/nestjs/error-*.log
 
+    # JSON 파싱과 타임스탬프만 처리 (동적 labels 제거)
     pipeline_stages:
-      # JSON 파싱
       - json:
           expressions:
             timestamp: timestamp
             message: message
-            context: context
-            stack: stack
-            trace: trace
-            span: span
-
-      # 타임스탬프 파싱
       - timestamp:
           source: timestamp
-          format: '2006-01-02 15:04:05'
-
-      # 레이블 추가
-      - labels:
-          context:
-
-      # 출력 포맷
+          format: '2026-01-02 15:04:05'
       - output:
           source: message

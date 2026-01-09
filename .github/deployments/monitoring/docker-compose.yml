@@ -47,6 +47,7 @@ services:
       - GF_ANALYTICS_REPORTING_ENABLED=false
     volumes:
       - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
     depends_on:
       - prometheus
       - loki
@@ -70,6 +71,21 @@ services:
       - /:/host:ro
     networks:
       - monitoring-network
+
+  promtail:
+    image: grafana/promtail:2.9.0
+    container_name: ${CONTAINER_PREFIX:-plum}-promtail
+    restart: always
+    volumes:
+      - ./promtail/promtail-config.yaml:/etc/promtail/promtail-config.yaml:ro
+      - /var/log:/var/log:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command: -config.file=/etc/promtail/promtail-config.yaml
+    networks:
+      - monitoring-network
+    depends_on:
+      - loki
 
 volumes:
   prometheus-data:

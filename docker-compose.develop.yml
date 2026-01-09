@@ -47,7 +47,7 @@ services:
     environment:
       - LOKI_URL=http://${LOKI_HOST}:3100 # Dev 모니터링 서버 Loki 주소 (환경변수 필수)
       - NODE_ENV=development
-    command: -config.file=/etc/promtail/config.yml
+    command: -config.file=/etc/promtail/config.yml -config.expand-env=true
     networks:
       - plum-network
     depends_on:
