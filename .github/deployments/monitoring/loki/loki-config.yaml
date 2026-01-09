@@ -43,7 +43,11 @@ storage_config:
 
 # 제한 설정
 limits_config:
-  retention_period: 168h  # 7일 보관
+  reject_old_samples: false              # 과거 샘플 거부 비활성화
+  reject_old_samples_max_age: 168h       # 7일 이전 데이터도 허용
+  creation_grace_period: 12h             # 미래 타임스탬프 12시간까지 허용 (KST +9시간 커버)
+  unordered_writes: true                 # 순서 없는 쓰기 허용
+  retention_period: 168h                 # 7일 보관
   ingestion_rate_mb: 16
   ingestion_burst_size_mb: 32
   max_query_length: 721h  # 30일 쿼리 가능
