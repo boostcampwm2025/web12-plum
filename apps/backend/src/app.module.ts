@@ -8,11 +8,13 @@ import { HttpExceptionFilter } from './common/filters/index.js';
 import { MediaModule } from './media/media.module.js';
 import { InteractionModule } from './interaction/interaction.module.js';
 import { RoomModule } from './room/room.module.js';
+import { PrometheusModule, MetricsInterceptor } from './prometheus/index.js';
 
 @Module({
   imports: [
     HealthModule,
     WinstonModule.forRoot(winstonConfig),
+    PrometheusModule,
     MediaModule,
     InteractionModule,
     RoomModule,
@@ -23,6 +25,12 @@ import { RoomModule } from './room/room.module.js';
     {
       provide: APP_INTERCEPTOR,
       useClass: LoggingInterceptor,
+    },
+
+    // 전역 메트릭 수집 인터셉터
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: MetricsInterceptor,
     },
 
     // 전역 예외 필터 (404 에러 등 로깅)
