@@ -116,8 +116,8 @@ jobs:
               echo "LOKI_HOST=${{ secrets.NCP_DEV_MONITORING_HOST }}" >> .env
             fi
 
-            docker compose -f docker-compose.yml -f docker-compose.develop.yml pull backend
-            docker compose -f docker-compose.yml -f docker-compose.develop.yml up -d backend
+            docker compose -f docker-compose.yml -f docker-compose.develop.yml pull
+            docker compose -f docker-compose.yml -f docker-compose.develop.yml up -d
 
             # 헬스체크 (30초 타임아웃)
             echo "헬스체크 중..."
@@ -194,8 +194,8 @@ jobs:
               echo "LOKI_HOST=${{ secrets.NCP_PROD_MONITORING_HOST }}" >> .env
             fi
 
-            docker compose -f docker-compose.yml -f docker-compose.prod.yml pull backend
-            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d backend
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 
             # 헬스체크 (60초 타임아웃, 운영 환경은 더 긴 시간)
             echo "헬스체크 중..."

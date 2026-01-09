@@ -23,6 +23,18 @@ scrape_configs:
           env: ${NODE_ENV:-development}
           __path__: /app/logs/nestjs/app-*.log
 
+    # JSON 파싱과 타임스탬프만 처리 (동적 labels 제거)
+    pipeline_stages:
+      - json:
+          expressions:
+            timestamp: timestamp
+            message: message
+      - timestamp:
+          source: timestamp
+          format: '2026-01-02 15:04:05' 
+      - output:
+          source: message
+
   # 에러 로그 파일 (error-*.log)
   - job_name: plum-backend-error
     static_configs:
@@ -32,3 +44,15 @@ scrape_configs:
           job: plum-backend-error
           env: ${NODE_ENV:-development}
           __path__: /app/logs/nestjs/error-*.log
+
+    # JSON 파싱과 타임스탬프만 처리 (동적 labels 제거)
+    pipeline_stages:
+      - json:
+          expressions:
+            timestamp: timestamp
+            message: message
+      - timestamp:
+          source: timestamp
+          format: '2006-01-02 15:04:05'
+      - output:
+          source: message
