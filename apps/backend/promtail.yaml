@@ -10,7 +10,7 @@ positions:
 
 clients:
   # Loki 서버 주소 (환경변수로 설정)
-  - url: ${LOKI_URL:-http://localhost:3100}/loki/api/v1/push
+  - url: ${LOKI_URL}/loki/api/v1/push
 
 scrape_configs:
   # 일반 로그 파일 (app-*.log)
@@ -20,7 +20,7 @@ scrape_configs:
           - localhost
         labels:
           job: plum-backend
-          env: ${NODE_ENV:-development}
+          env: ${NODE_ENV}
           __path__: /app/logs/nestjs/app-*.log
 
     # JSON 파싱과 타임스탬프만 처리 (동적 labels 제거)
@@ -42,7 +42,7 @@ scrape_configs:
           - localhost
         labels:
           job: plum-backend-error
-          env: ${NODE_ENV:-development}
+          env: ${NODE_ENV}
           __path__: /app/logs/nestjs/error-*.log
 
     # JSON 파싱과 타임스탬프만 처리 (동적 labels 제거)
