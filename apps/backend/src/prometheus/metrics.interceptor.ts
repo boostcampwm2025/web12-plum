@@ -32,7 +32,7 @@ export class MetricsInterceptor implements NestInterceptor {
    * @param next - 다음 핸들러 (실제 Controller 로직)
    * @returns Observable - RxJS 스트림 (비동기 처리)
    */
-  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+  intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     // 1. 요청 정보 추출
     const request = context.switchToHttp().getRequest();
     const method = request.method; // GET, POST, PUT, DELETE 등
