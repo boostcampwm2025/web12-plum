@@ -53,6 +53,6 @@ scrape_configs:
             message: message
       - timestamp:
           source: timestamp
-          format: '2006-01-02 15:04:05'
+          format: '2026-01-02 15:04:05'
       - output:
           source: message
