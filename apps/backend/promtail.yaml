@@ -23,62 +23,12 @@ scrape_configs:
           env: ${NODE_ENV:-development}
           __path__: /app/logs/nestjs/app-*.log
 
-    pipeline_stages:
-      # JSON 파싱
-      - json:
-          expressions:
-            timestamp: timestamp
-            level: level
-            message: message
-            context: context
-            trace: trace
-            span: span
-
-      # 타임스탬프 파싱
-      - timestamp:
-          source: timestamp
-          format: '2006-01-02 15:04:05'
-
-      # 레이블 추가
-      - labels:
-          level:
-          context:
-
-      # 출력 포맷
-      - output:
-          source: message
-
   # 에러 로그 파일 (error-*.log)
   - job_name: plum-backend-error
     static_configs:
       - targets:
           - localhost
         labels:
-          job: plum-backend
+          job: plum-backend-error
           env: ${NODE_ENV:-development}
-          level: error
           __path__: /app/logs/nestjs/error-*.log
-
-    pipeline_stages:
-      # JSON 파싱
-      - json:
-          expressions:
-            timestamp: timestamp
-            message: message
-            context: context
-            stack: stack
-            trace: trace
-            span: span
-
-      # 타임스탬프 파싱
-      - timestamp:
-          source: timestamp
-          format: '2006-01-02 15:04:05'
-
-      # 레이블 추가
-      - labels:
-          context:
-
-      # 출력 포맷
-      - output:
-          source: message
