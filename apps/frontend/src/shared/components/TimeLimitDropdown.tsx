@@ -70,7 +70,7 @@ interface TimeLimitDropdownListProps {
  * @returns 시간 제한 드롭다운 리스트 JSX 요소
  */
 
-const TimeLimitDropdownList = ({ selectedTime, handleSelectTime }: TimeLimitDropdownListProps) => {
+function TimeLimitDropdownList({ selectedTime, handleSelectTime }: TimeLimitDropdownListProps) {
   return (
     <ul
       role="listbox"
@@ -92,7 +92,7 @@ const TimeLimitDropdownList = ({ selectedTime, handleSelectTime }: TimeLimitDrop
       })}
     </ul>
   );
-};
+}
 
 interface TimeLimitDropdownProps extends VariantProps<typeof dropdownButtonVariants> {
   onChange: (time: number) => void;
