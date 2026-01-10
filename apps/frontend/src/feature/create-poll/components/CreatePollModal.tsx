@@ -49,7 +49,7 @@ interface CreatePollModalProps {
 export function CreatePollModal({ isOpen, onClose }: CreatePollModalProps) {
   const [title, setTitle] = useState('');
   const [timeLimit, setTimeLimit] = useState(DEFAULT_TIME_LIMIT);
-  const { options, addOption, deleteOption, updateOption, canAddMore, canDelete } =
+  const { options, addOption, deleteOption, updateOption, canAddMore, canDelete, resetOptions } =
     usePollOptions();
 
   // 폼 유효성 검사기 설정
@@ -68,6 +68,13 @@ export function CreatePollModal({ isOpen, onClose }: CreatePollModalProps) {
     const isValid = validator.isValid({ title, options, timeLimit });
     return isValid;
   }, [title, options, timeLimit, validator]);
+
+  // 폼 초기화 핸들러
+  const resetForm = () => {
+    setTitle('');
+    setTimeLimit(DEFAULT_TIME_LIMIT);
+    resetOptions();
+  };
 
   // 폼 제출 핸들러
   const handleFormSubmit = (e: FormEvent) => {
@@ -88,13 +95,20 @@ export function CreatePollModal({ isOpen, onClose }: CreatePollModalProps) {
 
     // TODO: 투표 생성 API 호출
     logger.ui.info('투표 생성 데이터', submitData);
+    resetForm();
+    onClose();
+  };
+
+  // 모달 닫기 핸들러
+  const handleClose = () => {
+    resetForm();
     onClose();
   };
 
   return (
     <Modal
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={handleClose}
       className="max-w-181.5"
     >
       <form
@@ -106,7 +120,7 @@ export function CreatePollModal({ isOpen, onClose }: CreatePollModalProps) {
           <Button
             variant="icon"
             aria-label="모달 닫기"
-            onClick={onClose}
+            onClick={handleClose}
           >
             <Icon
               name="x"
