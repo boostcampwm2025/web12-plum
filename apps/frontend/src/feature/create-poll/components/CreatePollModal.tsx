@@ -1,40 +1,14 @@
 import { Modal } from '@/shared/components/Modal';
 import { usePollOptions } from '../hooks/usePollOptions';
 
-import { FormEvent, ReactNode, useMemo, useState } from 'react';
+import { FormEvent, useMemo, useState } from 'react';
 import { Icon } from '@/shared/components/icon/Icon';
 import { Button } from '@/shared/components/Button';
-import { Input } from '@/shared/components/Input';
-import { Label } from '@/shared/components/Label';
+import { FormField } from '@/shared/components/FormField';
 import { PollOptionList } from './PollOptionList';
 import { DEFAULT_TIME_LIMIT, TimeLimitDropdown } from './common';
 import { logger } from '@/shared/lib/logger';
 import { CreatePollFormValidator } from '../lib/formValidator';
-
-interface FormSectionProps {
-  required: boolean;
-  title: string;
-  children: ReactNode;
-}
-
-/**
- * 폼 섹션 컴포넌트
- * @param required 필수 입력 여부
- * @param title 섹션 제목
- */
-function FormSection({ required, title, children }: FormSectionProps) {
-  return (
-    <section>
-      <Label
-        required={required}
-        className="font-extrabold"
-      >
-        {title}
-      </Label>
-      {children}
-    </section>
-  );
-}
 
 interface CreatePollModalProps {
   isOpen: boolean;
@@ -134,22 +108,18 @@ export function CreatePollModal({ isOpen, onClose }: CreatePollModalProps) {
 
         <div className="flex min-h-0 flex-1 flex-col">
           <main className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto pt-4">
-            <FormSection
-              required
-              title="투표 제목"
-            >
-              <Input
+            <FormField required>
+              <FormField.Label className="mb-2 font-extrabold">투표 제목</FormField.Label>
+              <FormField.Input
                 size="md"
                 placeholder="무엇을 묻고 싶으신가요?"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
               />
-            </FormSection>
+            </FormField>
 
-            <FormSection
-              required
-              title="투표 선택지"
-            >
+            <FormField required>
+              <FormField.Label className="mb-2 font-extrabold">투표 선택지</FormField.Label>
               <div className="flex flex-col gap-3">
                 <PollOptionList
                   options={options}
@@ -159,7 +129,7 @@ export function CreatePollModal({ isOpen, onClose }: CreatePollModalProps) {
                 />
                 <Button
                   variant="ghost"
-                  className="text-primary mx-auto flex items-center gap-2"
+                  className="text-primary mx-auto flex items-center gap-2 text-sm"
                   onClick={addOption}
                   disabled={!canAddMore}
                 >
@@ -171,17 +141,15 @@ export function CreatePollModal({ isOpen, onClose }: CreatePollModalProps) {
                   <span>선택지 추가</span>
                 </Button>
               </div>
-            </FormSection>
+            </FormField>
 
-            <FormSection
-              required
-              title="제한 시간"
-            >
+            <FormField required>
+              <FormField.Label className="mb-2 font-extrabold">제한 시간</FormField.Label>
               <TimeLimitDropdown
                 selectedTime={timeLimit}
                 onChange={setTimeLimit}
               />
-            </FormSection>
+            </FormField>
           </main>
 
           <footer className="mt-4">
