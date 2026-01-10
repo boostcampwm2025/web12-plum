@@ -5,7 +5,6 @@ import '@testing-library/jest-dom';
 import { CreatePollModal } from './CreatePollModal';
 import * as usePollOptionsModule from '../hooks/usePollOptions';
 
-// usePollOptions 훅 모킹
 const mockUsePollOptions = vi.fn();
 vi.spyOn(usePollOptionsModule, 'usePollOptions').mockImplementation(mockUsePollOptions);
 
@@ -14,6 +13,7 @@ describe('CreatePollModal', () => {
   const mockAddOption = vi.fn();
   const mockDeleteOption = vi.fn();
   const mockUpdateOption = vi.fn();
+  const mockResetOptions = vi.fn();
 
   const defaultUsePollOptionsReturn = {
     options: [
@@ -23,6 +23,7 @@ describe('CreatePollModal', () => {
     addOption: mockAddOption,
     deleteOption: mockDeleteOption,
     updateOption: mockUpdateOption,
+    resetOptions: mockResetOptions,
     canAddMore: true,
     canDelete: false,
   };
@@ -287,8 +288,45 @@ describe('CreatePollModal', () => {
     });
   });
 
-  describe('FormSection 컴포넌트', () => {
-    it('모든 FormSection이 required 표시를 가진다', () => {
+  describe('폼 초기화', () => {
+    it('모달을 닫을 때 폼이 초기화된다', async () => {
+      const user = userEvent.setup();
+
+      const { rerender } = render(
+        <CreatePollModal
+          isOpen={true}
+          onClose={mockOnClose}
+        />,
+      );
+
+      const titleInput = screen.getByPlaceholderText('무엇을 묻고 싶으신가요?');
+      await user.type(titleInput, '테스트 제목');
+
+      const closeButton = screen.getByRole('button', { name: '모달 닫기' });
+      await user.click(closeButton);
+
+      rerender(
+        <CreatePollModal
+          isOpen={true}
+          onClose={mockOnClose}
+        />,
+      );
+
+      const newTitleInput = screen.getByPlaceholderText('무엇을 묻고 싶으신가요?');
+      expect(newTitleInput).toHaveValue('');
+    });
+
+    it('폼 제출 후 폼이 초기화된다', async () => {
+      const user = userEvent.setup();
+
+      mockUsePollOptions.mockReturnValue({
+        ...defaultUsePollOptionsReturn,
+        options: [
+          { id: 'option-1', value: '사과' },
+          { id: 'option-2', value: '바나나' },
+        ],
+      });
+
       render(
         <CreatePollModal
           isOpen={true}
@@ -296,8 +334,15 @@ describe('CreatePollModal', () => {
         />,
       );
 
-      const labels = screen.getAllByText(/투표 제목|투표 선택지|제한 시간/);
-      expect(labels.length).toBeGreaterThan(0);
+      const titleInput = screen.getByPlaceholderText('무엇을 묻고 싶으신가요?');
+      await user.type(titleInput, '좋아하는 과일은?');
+
+      const submitButton = screen.getByRole('button', { name: '추가하기' });
+      await user.click(submitButton);
+
+      await waitFor(() => {
+        expect(mockResetOptions).toHaveBeenCalled();
+      });
     });
   });
 
@@ -323,17 +368,12 @@ describe('CreatePollModal', () => {
         />,
       );
 
-      // 1. 제목 입력
       const titleInput = screen.getByPlaceholderText('무엇을 묻고 싶으신가요?');
       await user.type(titleInput, '좋아하는 과일은?');
 
-      // 2. 선택지는 이미 값이 있는 상태 (mockUsePollOptions에서 설정)
-
-      // 3. 폼 제출
       const submitButton = screen.getByRole('button', { name: '추가하기' });
       await user.click(submitButton);
 
-      // 4. 결과 검증
       await waitFor(() => {
         expect(mockOnClose).toHaveBeenCalledTimes(1);
       });
