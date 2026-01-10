@@ -55,12 +55,10 @@ function ModalOverlay({ onClose, children }: ModalOverlayProps) {
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 grid place-items-center bg-gray-700/75"
+      className="fixed inset-0 z-50 grid place-items-center bg-gray-700/75 px-4"
       onClick={handleBackdropClick}
-      role="dialog"
-      aria-modal="true"
     >
-      <div>{children}</div>
+      {children}
     </div>,
     document.body,
   );
@@ -89,14 +87,13 @@ export function Modal({ isOpen, onClose, children, className }: ModalProps) {
 
   return (
     <ModalOverlay onClose={onClose}>
-      <section
-        className={cn(
-          'flex max-h-[90vh] min-w-105 flex-col overflow-y-auto rounded-lg bg-gray-500 p-4',
-          className,
-        )}
+      <div
+        role="dialog"
+        aria-modal="true"
+        className={cn('max-h-[90vh] w-full rounded-lg bg-gray-500 p-4', className)}
       >
         {children}
-      </section>
+      </div>
     </ModalOverlay>
   );
 }
