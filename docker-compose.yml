@@ -1,20 +1,7 @@
 # Base Docker Compose 파일
-# 베이스 설정으로, 환경별 오버라이드 파일(local, develop, prod)과 함께 사용됩니다.
+# 로컬, Dev, Prod 환경에서 공통으로 사용되는 네트워크 설정
 
 version: '3.8'
-
-services:
-  # Backend 애플리케이션 서비스
-  backend:
-    image: ${DOCKER_USERNAME}/plum-backend:${TAG:-latest} # Docker Hub 이미지 사용 (환경 변수로 설정)
-    container_name: plum-backend
-    ports:
-      - "${BACKEND_PORT:-3000}:3000" # 호스트 포트를 환경변수로 관리 (기본값: 3000)
-    environment:
-      - NODE_ENV=production # 기본 환경은 프로덕션
-    restart: unless-stopped # 컨테이너가 중지되면 자동 재시작
-    networks:
-      - plum-network
 
 # 네트워크 설정
 networks:

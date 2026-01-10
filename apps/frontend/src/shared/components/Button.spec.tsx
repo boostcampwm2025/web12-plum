@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
-import Button from './Button';
+import { Button } from './Button';
 
 describe('Button', () => {
   it('children이 렌더링된다', () => {

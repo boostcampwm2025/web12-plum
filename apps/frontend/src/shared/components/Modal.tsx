@@ -8,7 +8,7 @@ import { useEscapeKey } from '@/shared/hooks/useEscapeKey';
  * 모달 열림 시 body 스크롤 방지 기능을 제공하는 커스텀 훅
  * @param isOpen 모달 열림 상태
  */
-const useModalBodyScrollLock = (isOpen: boolean) => {
+function useModalBodyScrollLock(isOpen: boolean) {
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -17,7 +17,7 @@ const useModalBodyScrollLock = (isOpen: boolean) => {
       };
     }
   }, [isOpen]);
-};
+}
 
 interface ModalOverlayProps {
   onClose: () => void;
@@ -31,7 +31,7 @@ interface ModalOverlayProps {
  * @param children 모달 내용
  * @returns 모달 오버레이 JSX 요소
  */
-const ModalOverlay = ({ onClose, children }: ModalOverlayProps) => {
+function ModalOverlay({ onClose, children }: ModalOverlayProps) {
   const handleBackdropClick = (e: MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) onClose();
   };
@@ -47,7 +47,7 @@ const ModalOverlay = ({ onClose, children }: ModalOverlayProps) => {
     </div>,
     document.body,
   );
-};
+}
 
 interface ModalProps {
   isOpen: boolean;

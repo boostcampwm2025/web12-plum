@@ -1,9 +1,140 @@
-# streaming/docker-compose.local.yml
-# 로컬 개발 환경용 설정: Base 파일(docker-compose.yml) 오버라이드 및 추가 정의
-#
-# 현재 백엔드만 배포 중이므로 모니터링 서비스는 주석처리
-# 추후 별도 모니터링 서버에서 사용 예정
+# 백엔드: 로컬 직접 실행 (pnpm dev) - Hot Reload
+# 나머지: Docker 컨테이너
 
-# version: '3.8'
+version: '3.8'
 
-# services:
+services:
+  # Redis - 백엔드가 사용하는 캐시
+  redis:
+    image: redis:7.2-alpine
+    container_name: redis-local
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    networks:
+      - plum-local
+    restart: unless-stopped
+
+  # Redis Exporter - Redis 메트릭 수집
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.55.0
+    container_name: redis-exporter-local
+    ports:
+      - "9121:9121"
+    environment:
+      - REDIS_ADDR=redis:6379
+    networks:
+      - plum-local
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  # Node Exporter - 호스트 시스템 메트릭
+  node-exporter:
+    image: prom/node-exporter:v1.6.1
+    container_name: node-exporter-local
+    ports:
+      - "9100:9100"
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--path.rootfs=/host'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/host:ro
+    networks:
+      - plum-local
+    restart: unless-stopped
+
+  # Prometheus - 메트릭 수집
+  prometheus:
+    image: prom/prometheus:v2.45.0
+    container_name: prometheus-local
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus-local.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time=7d'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.enable-lifecycle'
+    networks:
+      - plum-local
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - node-exporter
+      - redis-exporter
+    restart: unless-stopped
+
+  # Loki - 로그 저장소
+  loki:
+    image: grafana/loki:2.9.0
+    container_name: loki-local
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./loki-local-config.yaml:/etc/loki/loki-config.yaml:ro
+      - loki-data:/loki
+    command: -config.file=/etc/loki/loki-config.yaml
+    networks:
+      - plum-local
+    restart: unless-stopped
+
+  # Promtail - 로그 수집 (백엔드 로그 → Loki)
+  promtail:
+    image: grafana/promtail:2.9.0
+    container_name: promtail-local
+    volumes:
+      - ./apps/backend/logs:/app/logs:ro
+      - ./apps/backend/promtail.yaml:/etc/promtail/config.yml:ro
+    environment:
+      - LOKI_URL=http://loki:3100
+      - NODE_ENV=development
+    command: -config.file=/etc/promtail/config.yml -config.expand-env=true
+    networks:
+      - plum-local
+    depends_on:
+      - loki
+    restart: unless-stopped
+
+  # Grafana - 시각화 대시보드
+  grafana:
+    image: grafana/grafana:10.2.0
+    container_name: grafana-local
+    ports:
+      - "3001:3000"  # 백엔드가 3000 사용중이라 3001로
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=http://localhost:3001
+      - GF_ANALYTICS_REPORTING_ENABLED=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+    networks:
+      - plum-local
+    depends_on:
+      - prometheus
+      - loki
+    restart: unless-stopped
+
+volumes:
+  redis-data:
+    driver: local
+  prometheus-data:
+    driver: local
+  loki-data:
+    driver: local
+  grafana-data:
+    driver: local
+
+networks:
+  plum-local:
+    driver: bridge
