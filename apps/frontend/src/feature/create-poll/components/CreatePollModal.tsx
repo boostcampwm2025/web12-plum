@@ -98,7 +98,7 @@ export function CreatePollModal({ isOpen, onClose }: CreatePollModalProps) {
       className="max-w-181.5"
     >
       <form
-        className="flex flex-col"
+        className="flex min-h-0 flex-1 flex-col"
         onSubmit={handleFormSubmit}
       >
         <header className="flex items-center justify-between gap-2 pb-4">
@@ -118,66 +118,68 @@ export function CreatePollModal({ isOpen, onClose }: CreatePollModalProps) {
           </Button>
         </header>
 
-        <main className="flex grow flex-col gap-6 overflow-y-auto pt-4">
-          <FormSection
-            required
-            title="투표 제목"
-          >
-            <Input
-              size="md"
-              placeholder="무엇을 묻고 싶으신가요?"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-            />
-          </FormSection>
-
-          <FormSection
-            required
-            title="투표 선택지"
-          >
-            <div className="flex flex-col gap-3">
-              <PollOptionList
-                options={options}
-                onDeleteOption={deleteOption}
-                onUpdateOption={updateOption}
-                canDelete={canDelete}
+        <div className="flex min-h-0 flex-1 flex-col">
+          <main className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto pt-4">
+            <FormSection
+              required
+              title="투표 제목"
+            >
+              <Input
+                size="md"
+                placeholder="무엇을 묻고 싶으신가요?"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
               />
-              <Button
-                variant="ghost"
-                className="text-primary mx-auto flex items-center gap-2"
-                onClick={addOption}
-                disabled={!canAddMore}
-              >
-                <Icon
-                  name="plus"
-                  size={14}
-                  decorative
+            </FormSection>
+
+            <FormSection
+              required
+              title="투표 선택지"
+            >
+              <div className="flex flex-col gap-3">
+                <PollOptionList
+                  options={options}
+                  onDeleteOption={deleteOption}
+                  onUpdateOption={updateOption}
+                  canDelete={canDelete}
                 />
-                <span>선택지 추가</span>
-              </Button>
-            </div>
-          </FormSection>
+                <Button
+                  variant="ghost"
+                  className="text-primary mx-auto flex items-center gap-2"
+                  onClick={addOption}
+                  disabled={!canAddMore}
+                >
+                  <Icon
+                    name="plus"
+                    size={14}
+                    decorative
+                  />
+                  <span>선택지 추가</span>
+                </Button>
+              </div>
+            </FormSection>
 
-          <FormSection
-            required
-            title="제한 시간"
-          >
-            <TimeLimitDropdown
-              selectedTime={timeLimit}
-              onChange={setTimeLimit}
-            />
-          </FormSection>
-        </main>
+            <FormSection
+              required
+              title="제한 시간"
+            >
+              <TimeLimitDropdown
+                selectedTime={timeLimit}
+                onChange={setTimeLimit}
+              />
+            </FormSection>
+          </main>
 
-        <footer className="mt-4">
-          <Button
-            type="submit"
-            className="mx-auto w-full max-w-38.5"
-            disabled={!isFormValid}
-          >
-            추가하기
-          </Button>
-        </footer>
+          <footer className="mt-4">
+            <Button
+              type="submit"
+              className="mx-auto w-full max-w-38.5"
+              disabled={!isFormValid}
+            >
+              추가하기
+            </Button>
+          </footer>
+        </div>
       </form>
     </Modal>
   );

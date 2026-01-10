@@ -126,7 +126,7 @@ export function TimeLimitDropdownList({
   return (
     <ul
       role="listbox"
-      className="absolute top-full right-0 left-0 z-10 mt-1 overflow-y-auto rounded-lg bg-gray-400 shadow-lg"
+      className="z-10 mt-1 overflow-y-auto rounded-lg bg-gray-400 shadow-lg"
     >
       {TIME_LIMIT_OPTIONS.map((option) => {
         const isSelected = option.value === selectedTime;

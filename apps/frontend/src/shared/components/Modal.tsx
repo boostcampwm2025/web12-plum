@@ -90,7 +90,7 @@ export function Modal({ isOpen, onClose, children, className }: ModalProps) {
       <div
         role="dialog"
         aria-modal="true"
-        className={cn('max-h-[90vh] w-full rounded-lg bg-gray-500 p-4', className)}
+        className={cn('flex max-h-[90vh] w-full flex-col rounded-lg bg-gray-500 p-4', className)}
       >
         {children}
       </div>
