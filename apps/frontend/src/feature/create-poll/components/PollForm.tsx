@@ -5,7 +5,7 @@ import { Icon } from '@/shared/components/icon/Icon';
 import { TimeLimitDropdown } from './common';
 import { PollOptionList } from './PollOptionList';
 import { MAX_POLL_OPTIONS } from '../constants';
-import { PollFormValues } from '../lib/pollFormSchema';
+import { PollFormValues } from '../schema';
 
 interface PollFormProps {
   formMethods: UseFormReturn<PollFormValues>;

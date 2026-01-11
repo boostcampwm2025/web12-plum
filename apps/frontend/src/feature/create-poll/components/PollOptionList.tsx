@@ -4,7 +4,7 @@ import { Input } from '@/shared/components/Input';
 import { FieldArrayWithId, UseFormRegister } from 'react-hook-form';
 
 import { MIN_POLL_OPTIONS } from '../constants';
-import { PollFormValues } from '../lib/pollFormSchema';
+import { PollFormValues } from '../schema';
 
 interface PollOptionItemProps {
   index: number;

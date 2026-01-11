@@ -1,8 +1,9 @@
 import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { Modal } from '@/shared/components/Modal';
 import { PollForm } from './PollForm';
 import { logger } from '@/shared/lib/logger';
-import { PollFormValues } from '../lib/pollFormSchema';
+import { PollFormValues, pollFormSchema } from '../schema';
 
 interface UpdatePollModalProps {
   isOpen: boolean;
@@ -21,6 +22,7 @@ interface UpdatePollModalProps {
  */
 export function UpdatePollModal({ isOpen, onClose, initialData, onUpdate }: UpdatePollModalProps) {
   const formMethods = useForm<PollFormValues>({
+    resolver: zodResolver(pollFormSchema),
     defaultValues: initialData,
     mode: 'onChange',
   });

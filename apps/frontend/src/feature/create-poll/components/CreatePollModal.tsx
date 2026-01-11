@@ -1,7 +1,8 @@
 import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { Modal } from '@/shared/components/Modal';
 import { PollForm } from './PollForm';
-import { pollFormDefaultValues, PollFormValues } from '../lib/pollFormSchema';
+import { pollFormDefaultValues, PollFormValues, pollFormSchema } from '../schema';
 import { logger } from '@/shared/lib/logger';
 
 interface CreatePollModalProps {
@@ -19,6 +20,7 @@ interface CreatePollModalProps {
  */
 export function CreatePollModal({ isOpen, onClose, onCreate }: CreatePollModalProps) {
   const formMethods = useForm<PollFormValues>({
+    resolver: zodResolver(pollFormSchema),
     defaultValues: pollFormDefaultValues,
     mode: 'onChange',
   });
