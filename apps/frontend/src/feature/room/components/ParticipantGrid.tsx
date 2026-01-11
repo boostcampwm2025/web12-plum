@@ -9,14 +9,10 @@ import { type Participant } from '../types';
 interface ParticipantGridProps {
   currentUser: Participant;
   participants: Array<Participant>;
-  onCurrentUserModeChange?: (mode: VideoDisplayMode) => void;
+  onModeChange?: (mode: VideoDisplayMode) => void;
 }
 
-export function ParticipantGrid({
-  currentUser,
-  participants,
-  onCurrentUserModeChange,
-}: ParticipantGridProps) {
+export function ParticipantGrid({ currentUser, participants, onModeChange }: ParticipantGridProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   const itemsPerPage = useItemsPerPage(containerRef, {
@@ -44,7 +40,7 @@ export function ParticipantGrid({
         name={currentUser.name}
         mode="side"
         isCurrentUser={true}
-        onModeChange={onCurrentUserModeChange}
+        onModeChange={onModeChange}
       />
 
       <Button
