@@ -1,4 +1,5 @@
 import { useRef, useCallback, useEffect } from 'react';
+import type { MouseEvent as ReactMouseEvent } from 'react';
 
 const MARGIN = 16;
 
@@ -44,6 +45,23 @@ export function useDraggable() {
       cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
     }
+
+    if (dragStateRef.current) {
+      const { element, container } = dragStateRef.current;
+      const containerRect = container.getBoundingClientRect();
+      const elementRect = element.getBoundingClientRect();
+
+      const isLeft =
+        elementRect.left + elementRect.width / 2 < containerRect.left + containerRect.width / 2;
+      const isTop =
+        elementRect.top + elementRect.height / 2 < containerRect.top + containerRect.height / 2;
+
+      element.style.left = isLeft ? `${MARGIN}px` : 'auto';
+      element.style.right = isLeft ? 'auto' : `${MARGIN}px`;
+      element.style.top = isTop ? `${MARGIN}px` : 'auto';
+      element.style.bottom = isTop ? 'auto' : `${MARGIN}px`;
+    }
+
     dragStateRef.current = null;
 
     document.removeEventListener('mousemove', handleMouseMove);
@@ -51,7 +69,7 @@ export function useDraggable() {
   }, [handleMouseMove]);
 
   const handleMouseDown = useCallback(
-    (e: React.MouseEvent<HTMLElement>) => {
+    (e: ReactMouseEvent<HTMLElement>) => {
       if ((e.target as HTMLElement).closest('button')) {
         return;
       }
