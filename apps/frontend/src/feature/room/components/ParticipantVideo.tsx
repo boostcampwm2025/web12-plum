@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { cn } from '@/shared/lib/utils';
 import { Icon } from '@/shared/components/icon/Icon';
 import { Button } from '@/shared/components/Button';
@@ -19,19 +18,16 @@ export function ParticipantVideo({
   isCurrentUser = false,
   onModeChange,
 }: ParticipantVideoProps) {
-  const [isHovered, setIsHovered] = useState(false);
-
   return (
     <div
       className={cn(
         'relative w-50.5 overflow-hidden rounded-lg transition-[height] duration-300 ease-in-out',
+        isCurrentUser && 'group',
         mode === 'minimize'
           ? 'flex h-9 items-center justify-between bg-gray-500 px-2 shadow-md'
           : 'h-28.5',
         mode === 'pip' && 'shadow-md',
       )}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
     >
       {/* 비디오 영역 */}
       {mode !== 'minimize' && <div className="h-full w-full bg-gray-200" />}
@@ -55,8 +51,13 @@ export function ParticipantVideo({
       )}
 
       {/* 호버 컨트롤 (pip, side 모드) */}
-      {mode !== 'minimize' && isHovered && isCurrentUser && (
-        <div className={cn('absolute inset-0 bg-gray-700/40')}>
+      {mode !== 'minimize' && isCurrentUser && (
+        <div
+          className={cn(
+            'absolute inset-0 bg-gray-700/40 transition-opacity duration-300',
+            'pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100',
+          )}
+        >
           {mode === 'pip' && (
             <>
               <Button
