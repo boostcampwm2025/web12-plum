@@ -1,4 +1,4 @@
-import { createContext, useContext, useId, ReactNode } from 'react';
+import { createContext, useContext, useId, ReactNode, forwardRef } from 'react';
 import { Label } from './Label';
 import { Input, InputProps } from './Input';
 import { HelpText } from './HelpText';
@@ -90,18 +90,21 @@ type FormFieldInputProps = Omit<InputProps, 'id'>;
  * @param props Input 컴포넌트에 전달할 속성들
  * @returns FormField Input JSX 요소
  */
-function FormFieldInput(props: FormFieldInputProps) {
+const FormFieldInput = forwardRef<HTMLInputElement, FormFieldInputProps>((props, ref) => {
   const { id, error } = useFormFieldContext();
 
   return (
     <Input
       {...props}
       id={id}
+      ref={ref}
       aria-invalid={error ? 'true' : 'false'}
       aria-describedby={error ? `${id}-error` : undefined}
     />
   );
-}
+});
+
+FormFieldInput.displayName = 'FormFieldInput';
 
 interface FormFieldHelpTextProps {
   children: string;
