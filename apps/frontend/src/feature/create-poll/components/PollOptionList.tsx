@@ -1,39 +1,34 @@
 import { Button } from '@/shared/components/Button';
 import { Icon } from '@/shared/components/icon/Icon';
 import { Input } from '@/shared/components/Input';
-import type { PollOption } from '../types';
+import { FieldArrayWithId, UseFormRegister } from 'react-hook-form';
+
+import { MIN_POLL_OPTIONS } from '../constants';
+import { PollFormValues } from '../lib/pollFormSchema';
 
 interface PollOptionItemProps {
-  option: PollOption;
   index: number;
   canDelete: boolean;
-  onUpdate: (value: string) => void;
+  register: UseFormRegister<PollFormValues>;
   onDelete: () => void;
 }
 
 /**
- * 투표 선택지 아이템 컴포넌트
- * @param option 선택지 데이터
- * @param index 선택지 순서 (placeholder용)
- * @param canDelete 삭제 가능 여부
- * @param onUpdate 선택지 값 변경 핸들러
- * @param onDelete 선택지 삭제 핸들러
+ * PollOptionItem 컴포넌트
+ * @param index - 선택지의 인덱스
+ * @param canDelete - 선택지를 삭제할 수 있는지 여부
+ * @param register - react-hook-form의 register 함수
+ * @param onDelete - 선택지 삭제 핸들러
+ * @returns 투표 선택지 아이템 JSX 요소
  */
-export function PollOptionItem({
-  option,
-  index,
-  canDelete,
-  onUpdate,
-  onDelete,
-}: PollOptionItemProps) {
+export function PollOptionItem({ index, canDelete, register, onDelete }: PollOptionItemProps) {
   return (
     <li className="flex items-center gap-2">
       <Input
         size="md"
         className="grow"
         placeholder={`선택지 ${index + 1}`}
-        value={option.value}
-        onChange={(e) => onUpdate(e.target.value)}
+        {...register(`options.${index}.value` as const, { required: true })}
       />
       <Button
         variant="icon"
@@ -54,35 +49,30 @@ export function PollOptionItem({
   );
 }
 
-interface PollOptionListSectionProps {
-  options: PollOption[];
-  onDeleteOption: (id: string) => void;
-  onUpdateOption: (id: string, value: string) => void;
-  canDelete: boolean;
+interface PollOptionListProps {
+  fields: FieldArrayWithId<PollFormValues, 'options', 'id'>[];
+  register: UseFormRegister<PollFormValues>;
+  onDelete: (index: number) => void;
 }
 
 /**
- * 투표 선택지 목록 섹션 컴포넌트
- * @param options 선택지 배열
- * @param onDeleteOption 선택지 삭제 핸들러
- * @param onUpdateOption 선택지 업데이트 핸들러
- * @param canDelete 삭제 가능 여부
+ * PollOptionList 컴포넌트
+ * @param fields - 선택지 필드 배열
+ * @param register - react-hook-form의 register 함수
+ * @param onDelete - 선택지 삭제 핸들러
+ * @returns 투표 선택지 리스트 JSX 요소
  */
-export function PollOptionList({
-  options,
-  onDeleteOption,
-  onUpdateOption,
-  canDelete,
-}: PollOptionListSectionProps) {
+export function PollOptionList({ fields, register, onDelete }: PollOptionListProps) {
+  const canDelete = fields.length > MIN_POLL_OPTIONS;
+
   return (
     <ul className="flex flex-col gap-3">
-      {options.map((option, index) => (
+      {fields.map((field, index) => (
         <PollOptionItem
-          key={option.id}
-          option={option}
+          key={field.id}
           index={index}
-          onUpdate={(value) => onUpdateOption(option.id, value)}
-          onDelete={() => onDeleteOption(option.id)}
+          register={register}
+          onDelete={() => onDelete(index)}
           canDelete={canDelete}
         />
       ))}
