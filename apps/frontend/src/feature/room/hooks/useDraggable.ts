@@ -1,45 +1,49 @@
-import { useRef, useState, useCallback } from 'react';
+import { useRef, useCallback, useEffect } from 'react';
+
+const MARGIN = 16;
 
 export function useDraggable() {
-  const [isDragging, setIsDragging] = useState(false);
   const dragStateRef = useRef<{
-    element: HTMLElement | null;
-    container: HTMLElement | null;
+    element: HTMLElement;
+    container: HTMLElement;
     startX: number;
     startY: number;
     elementStartX: number;
     elementStartY: number;
+    maxX: number;
+    maxY: number;
+    minX: number;
+    minY: number;
   } | null>(null);
+  const rafRef = useRef<number | null>(null);
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
     if (!dragStateRef.current) return;
 
-    const { startX, startY, elementStartX, elementStartY, element, container } =
+    const { startX, startY, elementStartX, elementStartY, element, minX, minY, maxX, maxY } =
       dragStateRef.current;
 
-    if (!element || !container) return;
+    if (rafRef.current !== null) {
+      cancelAnimationFrame(rafRef.current);
+    }
 
-    const containerRect = container.getBoundingClientRect();
-    const elementRect = element.getBoundingClientRect();
-    const MARGIN = 32;
+    rafRef.current = requestAnimationFrame(() => {
+      const viewportX = elementStartX + (e.clientX - startX);
+      const viewportY = elementStartY + (e.clientY - startY);
 
-    const viewportX = elementStartX + (e.clientX - startX);
-    const viewportY = elementStartY + (e.clientY - startY);
+      const relativeX = Math.max(MARGIN, Math.min(viewportX - minX, maxX - minX));
+      const relativeY = Math.max(MARGIN, Math.min(viewportY - minY, maxY - minY));
 
-    const minX = containerRect.left;
-    const minY = containerRect.top;
-    const maxX = containerRect.right - elementRect.width - MARGIN;
-    const maxY = containerRect.bottom - elementRect.height - MARGIN;
-
-    const relativeX = Math.max(0, Math.min(viewportX - minX, maxX - minX));
-    const relativeY = Math.max(0, Math.min(viewportY - minY, maxY - minY));
-
-    element.style.left = `${relativeX}px`;
-    element.style.top = `${relativeY}px`;
+      element.style.left = `${relativeX}px`;
+      element.style.top = `${relativeY}px`;
+    });
   }, []);
 
   const handleMouseUp = useCallback(() => {
-    setIsDragging(false);
+    if (rafRef.current !== null) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
     dragStateRef.current = null;
 
     document.removeEventListener('mousemove', handleMouseMove);
@@ -55,30 +59,36 @@ export function useDraggable() {
       e.preventDefault();
       e.stopPropagation();
 
-      const element = e.currentTarget;
+      const element = e.currentTarget as HTMLElement;
       const container = element.parentElement;
-      const rect = element.getBoundingClientRect();
-      const containerRect = container?.getBoundingClientRect();
+      if (!container) return;
 
-      const initialLeft = rect.left;
-      const initialTop = rect.top;
+      const rect = element.getBoundingClientRect();
+      const containerRect = container.getBoundingClientRect();
 
       element.style.position = 'absolute';
-      element.style.left = `${initialLeft - (containerRect?.left || 0)}px`;
-      element.style.top = `${initialTop - (containerRect?.top || 0)}px`;
+      element.style.left = `${rect.left - containerRect.left}px`;
+      element.style.top = `${rect.top - containerRect.top}px`;
       element.style.right = 'auto';
       element.style.bottom = 'auto';
+
+      const minX = containerRect.left;
+      const minY = containerRect.top;
+      const maxX = containerRect.right - rect.width - MARGIN;
+      const maxY = containerRect.bottom - rect.height - MARGIN;
 
       dragStateRef.current = {
         element,
         container,
         startX: e.clientX,
         startY: e.clientY,
-        elementStartX: initialLeft,
-        elementStartY: initialTop,
+        elementStartX: rect.left,
+        elementStartY: rect.top,
+        minX,
+        minY,
+        maxX,
+        maxY,
       };
-
-      setIsDragging(true);
 
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
@@ -86,8 +96,15 @@ export function useDraggable() {
     [handleMouseMove, handleMouseUp],
   );
 
+  useEffect(() => {
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [handleMouseMove, handleMouseUp]);
+
   return {
-    isDragging,
     handlers: {
       onMouseDown: handleMouseDown,
     },
