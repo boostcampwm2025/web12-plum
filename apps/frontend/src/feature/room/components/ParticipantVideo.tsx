@@ -21,43 +21,41 @@ export function ParticipantVideo({
 }: ParticipantVideoProps) {
   const [isHovered, setIsHovered] = useState(false);
 
-  // Minimize 모드
-  if (mode === 'minimize') {
-    return (
-      <div className="relative flex w-50.5 items-center justify-between overflow-hidden rounded-lg bg-gray-500 px-2 shadow-md">
-        <span className="px-1 text-sm font-medium text-white">{name}</span>
-
-        {isCurrentUser && (
-          <Button
-            variant="icon"
-            onClick={() => onModeChange?.('pip')}
-            aria-label="확대"
-          >
-            <Icon
-              name="maximize"
-              size={16}
-            />
-          </Button>
-        )}
-      </div>
-    );
-  }
-
-  // PIP, Side 모드
   return (
     <div
       className={cn(
-        'relative h-28.5 w-50.5 overflow-hidden rounded-lg',
+        'relative w-50.5 overflow-hidden rounded-lg transition-[height] duration-300 ease-in-out',
+        mode === 'minimize'
+          ? 'flex h-9 items-center justify-between bg-gray-500 px-2 shadow-md'
+          : 'h-28.5',
         mode === 'pip' && 'shadow-md',
       )}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <div className="flex h-full w-full items-center justify-center bg-gray-200" />
+      {/* 비디오 영역 */}
+      {mode !== 'minimize' && <div className="h-full w-full bg-gray-200" />}
 
+      {/* 이름 표시 */}
       <div className="absolute bottom-2 left-2 rounded px-1 text-sm text-white">{name}</div>
 
-      {isHovered && isCurrentUser && (
+      {/* minimize 모드 확대 버튼 */}
+      {mode === 'minimize' && isCurrentUser && (
+        <Button
+          variant="icon"
+          className="absolute top-1/2 right-2 -translate-y-1/2"
+          onClick={() => onModeChange?.('pip')}
+          aria-label="확대"
+        >
+          <Icon
+            name="maximize"
+            size={16}
+          />
+        </Button>
+      )}
+
+      {/* 호버 컨트롤 (pip, side 모드) */}
+      {mode !== 'minimize' && isHovered && isCurrentUser && (
         <div className={cn('absolute inset-0 bg-gray-700/40')}>
           {mode === 'pip' && (
             <>
