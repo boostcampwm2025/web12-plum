@@ -35,7 +35,7 @@ export function PollForm({ formMethods, onSubmit, submitLabel }: PollFormProps) 
 
   return (
     <form
-      className="flex flex-col gap-6"
+      className="flex h-full min-h-0 flex-col gap-6 overflow-y-scroll"
       onSubmit={handleSubmit(onSubmit)}
     >
       <FormField required>
