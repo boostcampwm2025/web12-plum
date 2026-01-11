@@ -66,6 +66,11 @@ export const pollFormSchema = z.object({
 });
 
 /**
+ * 투표 폼 키 열거형
+ */
+export const POLL_FORM_KEYS = pollFormSchema.keyof().enum;
+
+/**
  * 투표 폼 타입
  */
 export type PollFormValues = z.infer<typeof pollFormSchema>;

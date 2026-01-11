@@ -5,7 +5,7 @@ import { Icon } from '@/shared/components/icon/Icon';
 import { TimeLimitDropdown } from './common';
 import { PollOptionList } from './PollOptionList';
 import { MAX_POLL_OPTIONS } from '../constants';
-import { PollFormValues } from '../schema';
+import { POLL_FORM_KEYS, PollFormValues } from '../schema';
 
 interface PollFormProps {
   formMethods: UseFormReturn<PollFormValues>;
@@ -30,7 +30,7 @@ export function PollForm({ formMethods, onSubmit, submitLabel }: PollFormProps) 
 
   const { fields, append, remove } = useFieldArray({
     control,
-    name: 'options',
+    name: POLL_FORM_KEYS.options,
   });
 
   return (
@@ -41,7 +41,7 @@ export function PollForm({ formMethods, onSubmit, submitLabel }: PollFormProps) 
       <FormField required>
         <FormField.Label className="mb-2 font-extrabold">투표 제목</FormField.Label>
         <FormField.Input
-          {...register('title', { required: true, minLength: 2 })}
+          {...register(POLL_FORM_KEYS.title, { required: true, minLength: 2 })}
           placeholder="무엇을 묻고 싶으신가요?"
         />
       </FormField>
@@ -73,7 +73,7 @@ export function PollForm({ formMethods, onSubmit, submitLabel }: PollFormProps) 
         <FormField.Label className="mb-2 font-extrabold">제한 시간</FormField.Label>
         <Controller
           control={control}
-          name="timeLimit"
+          name={POLL_FORM_KEYS.timeLimit}
           render={({ field: { onChange, value } }) => (
             <TimeLimitDropdown
               selectedTime={value}
