@@ -2,20 +2,23 @@ import { useRef, useCallback, useEffect } from 'react';
 import type { MouseEvent as ReactMouseEvent } from 'react';
 
 const MARGIN = 16;
+const SNAP_DURATION = 300;
+
+interface DragState {
+  element: HTMLElement;
+  container: HTMLElement;
+  startX: number;
+  startY: number;
+  elementStartX: number;
+  elementStartY: number;
+  maxX: number;
+  maxY: number;
+  minX: number;
+  minY: number;
+}
 
 export function useDraggable() {
-  const dragStateRef = useRef<{
-    element: HTMLElement;
-    container: HTMLElement;
-    startX: number;
-    startY: number;
-    elementStartX: number;
-    elementStartY: number;
-    maxX: number;
-    maxY: number;
-    minX: number;
-    minY: number;
-  } | null>(null);
+  const dragStateRef = useRef<DragState | null>(null);
   const rafRef = useRef<number | null>(null);
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
@@ -47,7 +50,7 @@ export function useDraggable() {
     }
 
     if (dragStateRef.current) {
-      const { element, container } = dragStateRef.current;
+      const { element, container, maxX, maxY, minX, minY } = dragStateRef.current;
       const containerRect = container.getBoundingClientRect();
       const elementRect = element.getBoundingClientRect();
 
@@ -56,44 +59,54 @@ export function useDraggable() {
       const isTop =
         elementRect.top + elementRect.height / 2 < containerRect.top + containerRect.height / 2;
 
-      element.style.left = isLeft ? `${MARGIN}px` : 'auto';
-      element.style.right = isLeft ? 'auto' : `${MARGIN}px`;
-      element.style.top = isTop ? `${MARGIN}px` : 'auto';
-      element.style.bottom = isTop ? 'auto' : `${MARGIN}px`;
+      const targetLeft = isLeft ? MARGIN : maxX - minX;
+      const targetTop = isTop ? MARGIN : maxY - minY;
+
+      element.style.transition = `all ${SNAP_DURATION}ms cubic-bezier(0.25, 1, 0.5, 1)`;
+      element.style.left = `${targetLeft}px`;
+      element.style.top = `${targetTop}px`;
+
+      setTimeout(() => {
+        if (!dragStateRef.current) {
+          element.style.transition = 'none';
+          if (!isLeft) {
+            element.style.left = 'auto';
+            element.style.right = `${MARGIN}px`;
+          }
+          if (!isTop) {
+            element.style.top = 'auto';
+            element.style.bottom = `${MARGIN}px`;
+          }
+        }
+      }, SNAP_DURATION);
     }
 
     dragStateRef.current = null;
-
     document.removeEventListener('mousemove', handleMouseMove);
     document.removeEventListener('mouseup', handleMouseUp);
   }, [handleMouseMove]);
 
   const handleMouseDown = useCallback(
     (e: ReactMouseEvent<HTMLElement>) => {
-      if ((e.target as HTMLElement).closest('button')) {
-        return;
-      }
+      if ((e.target as HTMLElement).closest('button')) return;
 
       e.preventDefault();
       e.stopPropagation();
 
-      const element = e.currentTarget as HTMLElement;
+      const element = e.currentTarget;
       const container = element.parentElement;
       if (!container) return;
 
       const rect = element.getBoundingClientRect();
       const containerRect = container.getBoundingClientRect();
 
+      element.style.transition = 'none';
+
       element.style.position = 'absolute';
       element.style.left = `${rect.left - containerRect.left}px`;
       element.style.top = `${rect.top - containerRect.top}px`;
       element.style.right = 'auto';
       element.style.bottom = 'auto';
-
-      const minX = containerRect.left;
-      const minY = containerRect.top;
-      const maxX = containerRect.right - rect.width - MARGIN;
-      const maxY = containerRect.bottom - rect.height - MARGIN;
 
       dragStateRef.current = {
         element,
@@ -102,10 +115,10 @@ export function useDraggable() {
         startY: e.clientY,
         elementStartX: rect.left,
         elementStartY: rect.top,
-        minX,
-        minY,
-        maxX,
-        maxY,
+        minX: containerRect.left,
+        minY: containerRect.top,
+        maxX: containerRect.right - rect.width - MARGIN,
+        maxY: containerRect.bottom - rect.height - MARGIN,
       };
 
       document.addEventListener('mousemove', handleMouseMove);
