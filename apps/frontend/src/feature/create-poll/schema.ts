@@ -38,6 +38,7 @@ const pollOptionSchema = z.object({
 export const pollFormSchema = z.object({
   title: z
     .string()
+    .trim()
     .min(1, '투표 제목을 입력해주세요')
     .max(
       VALIDATION_CONSTRAINTS.TITLE.MAX_LENGTH,

@@ -70,6 +70,22 @@ describe('PollForm', () => {
     expect(addButton).toBeDisabled();
   });
 
+  it('제목에 공백만 입력할 경우, 다른 필드가 유효하더라도 제출 버튼이 비활성화되어야 한다', async () => {
+    render(<TestWrapper onSubmit={mockSubmit} />);
+    const submitButton = screen.getByRole('button', { name: '제출하기' });
+    const titleInput = screen.getByPlaceholderText(/무엇을 묻고 싶으신가요/);
+    const optionInputs = screen.getAllByPlaceholderText(/선택지 \d/);
+
+    await user.type(optionInputs[0], '사과');
+    await user.type(optionInputs[1], '바나나');
+
+    await user.type(titleInput, '   ');
+
+    await waitFor(() => {
+      expect(submitButton).toBeDisabled();
+    });
+  });
+
   it('제출 시 입력된 데이터가 올바른 구조로 onSubmit 핸들러에 전달되어야 한다', async () => {
     render(<TestWrapper onSubmit={mockSubmit} />);
 
