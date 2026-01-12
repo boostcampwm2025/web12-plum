@@ -39,7 +39,7 @@ export function PollForm({ formMethods, onSubmit, submitLabel }: PollFormProps) 
       onSubmit={handleSubmit(onSubmit)}
     >
       <FormField required>
-        <FormField.Label className="mb-2 font-extrabold">투표 제목</FormField.Label>
+        <FormField.Legend className="mb-2 font-extrabold">투표 제목</FormField.Legend>
         <FormField.Input
           {...register(POLL_FORM_KEYS.title, { required: true, minLength: 2 })}
           placeholder="무엇을 묻고 싶으신가요?"
@@ -47,7 +47,7 @@ export function PollForm({ formMethods, onSubmit, submitLabel }: PollFormProps) 
       </FormField>
 
       <FormField required>
-        <FormField.Label className="mb-2 font-extrabold">투표 선택지</FormField.Label>
+        <FormField.Legend className="mb-2 font-extrabold">투표 선택지</FormField.Legend>
         <div className="flex flex-col gap-3">
           <PollOptionList
             fields={fields}
@@ -70,7 +70,7 @@ export function PollForm({ formMethods, onSubmit, submitLabel }: PollFormProps) 
       </FormField>
 
       <FormField required>
-        <FormField.Label className="mb-2 font-extrabold">제한 시간</FormField.Label>
+        <FormField.Legend className="mb-2 font-extrabold">제한 시간</FormField.Legend>
         <Controller
           control={control}
           name={POLL_FORM_KEYS.timeLimit}
