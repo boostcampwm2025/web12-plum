@@ -6,10 +6,10 @@ import { FormField } from './FormField';
 
 describe('FormField', () => {
   describe('기본 렌더링', () => {
-    it('Label과 Input이 함께 렌더링된다', () => {
+    it('Legend과 Input이 함께 렌더링된다', () => {
       render(
         <FormField>
-          <FormField.Label>이메일</FormField.Label>
+          <FormField.Legend>이메일</FormField.Legend>
           <FormField.Input placeholder="email@example.com" />
         </FormField>,
       );
@@ -38,16 +38,16 @@ describe('FormField', () => {
 
     it('Root 없이 하위 컴포넌트를 사용하면 에러가 발생한다', () => {
       expect(() => {
-        render(<FormField.Label>라벨</FormField.Label>);
+        render(<FormField.Legend>Form Legend</FormField.Legend>);
       }).toThrow('FormField 하위 컴포넌트는 FormField 내부에서 사용되어야 합니다');
     });
   });
 
   describe('required 속성', () => {
-    it('required가 true일 때 Label에 별표가 표시된다', () => {
+    it('required가 true일 때 Legend에 별표가 표시된다', () => {
       render(
         <FormField required>
-          <FormField.Label>필수 항목</FormField.Label>
+          <FormField.Legend>필수 항목</FormField.Legend>
           <FormField.Input />
         </FormField>,
       );
@@ -55,10 +55,10 @@ describe('FormField', () => {
       expect(screen.getByText('*')).toBeInTheDocument();
     });
 
-    it('required가 false일 때 Label에 별표가 표시되지 않는다', () => {
+    it('required가 false일 때 Legend에 별표가 표시되지 않는다', () => {
       render(
         <FormField>
-          <FormField.Label>선택 항목</FormField.Label>
+          <FormField.Legend>선택 항목</FormField.Legend>
           <FormField.Input />
         </FormField>,
       );
@@ -71,7 +71,7 @@ describe('FormField', () => {
     it('error prop이 있을 때 에러 메시지가 표시된다', () => {
       render(
         <FormField error="이메일 형식이 올바르지 않습니다">
-          <FormField.Label>이메일</FormField.Label>
+          <FormField.Legend>이메일</FormField.Legend>
           <FormField.Input />
           <FormField.Error />
         </FormField>,
@@ -83,7 +83,7 @@ describe('FormField', () => {
     it('error가 없을 때 Error 컴포넌트는 렌더링되지 않는다', () => {
       render(
         <FormField>
-          <FormField.Label>입력</FormField.Label>
+          <FormField.Legend>입력</FormField.Legend>
           <FormField.Input />
           <FormField.Error />
         </FormField>,
@@ -95,7 +95,7 @@ describe('FormField', () => {
     it('Error 컴포넌트에 children을 전달하면 우선적으로 표시된다', () => {
       render(
         <FormField error="기본 에러">
-          <FormField.Label>입력</FormField.Label>
+          <FormField.Legend>입력</FormField.Legend>
           <FormField.Input />
           <FormField.Error>커스텀 에러 메시지</FormField.Error>
         </FormField>,
@@ -110,7 +110,7 @@ describe('FormField', () => {
     it('HelpText가 렌더링된다', () => {
       render(
         <FormField>
-          <FormField.Label>비밀번호</FormField.Label>
+          <FormField.Legend>비밀번호</FormField.Legend>
           <FormField.Input type="password" />
           <FormField.HelpText>8자 이상 입력해주세요</FormField.HelpText>
         </FormField>,
@@ -122,7 +122,7 @@ describe('FormField', () => {
     it('HelpText에 고유 id가 설정된다', () => {
       render(
         <FormField>
-          <FormField.Label>입력</FormField.Label>
+          <FormField.Legend>입력</FormField.Legend>
           <FormField.Input />
           <FormField.HelpText>도움말</FormField.HelpText>
         </FormField>,
@@ -142,7 +142,7 @@ describe('FormField', () => {
 
       render(
         <FormField>
-          <FormField.Label>이름</FormField.Label>
+          <FormField.Legend>이름</FormField.Legend>
           <FormField.Input onChange={handleChange} />
         </FormField>,
       );
@@ -156,7 +156,7 @@ describe('FormField', () => {
     it('Input의 모든 props가 정상적으로 전달된다', () => {
       render(
         <FormField>
-          <FormField.Label>검색</FormField.Label>
+          <FormField.Legend>검색</FormField.Legend>
           <FormField.Input
             placeholder="검색어 입력"
             type="search"
@@ -178,7 +178,7 @@ describe('FormField', () => {
           required
           error="필수 항목입니다"
         >
-          <FormField.Label>이메일</FormField.Label>
+          <FormField.Legend>이메일</FormField.Legend>
           <FormField.Input
             type="email"
             placeholder="email@example.com"
