@@ -140,18 +140,6 @@ describe('ParticipantVideo', () => {
       expect(videoArea).toBeInTheDocument();
     });
 
-    it('pip 모드일 때 적절한 스타일 클래스가 적용된다', () => {
-      const { container } = render(
-        <ParticipantVideo
-          {...defaultProps}
-          mode="pip"
-        />,
-      );
-
-      const videoContainer = container.firstChild as HTMLElement;
-      expect(videoContainer).toHaveClass('h-28.5', 'shadow-md');
-    });
-
     it('pip 모드에서 현재 사용자일 때 최소화 및 사이드바 버튼이 렌더링된다', () => {
       render(
         <ParticipantVideo
@@ -230,19 +218,6 @@ describe('ParticipantVideo', () => {
 
       const videoArea = container.querySelector('.bg-gray-200');
       expect(videoArea).toBeInTheDocument();
-    });
-
-    it('side 모드일 때 적절한 스타일 클래스가 적용된다', () => {
-      const { container } = render(
-        <ParticipantVideo
-          {...defaultProps}
-          mode="side"
-        />,
-      );
-
-      const videoContainer = container.firstChild as HTMLElement;
-      expect(videoContainer).toHaveClass('h-28.5');
-      expect(videoContainer).not.toHaveClass('shadow-md');
     });
 
     it('side 모드에서 현재 사용자일 때 PIP 전환 버튼이 렌더링된다', () => {

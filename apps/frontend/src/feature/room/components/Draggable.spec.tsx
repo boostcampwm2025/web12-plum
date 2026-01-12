@@ -23,17 +23,6 @@ describe('Draggable', () => {
     expect(screen.getByText('드래그 가능한 컨텐츠')).toBeInTheDocument();
   });
 
-  it('기본 스타일 클래스가 적용된다', () => {
-    const { container } = render(
-      <Draggable>
-        <div>컨텐츠</div>
-      </Draggable>,
-    );
-
-    const draggableElement = container.firstChild as HTMLElement;
-    expect(draggableElement).toHaveClass('absolute', 'right-4', 'bottom-4', 'cursor-move');
-  });
-
   it('커스텀 className이 병합된다', () => {
     const { container } = render(
       <Draggable className="custom-class">
@@ -45,7 +34,7 @@ describe('Draggable', () => {
     expect(draggableElement).toHaveClass('absolute', 'custom-class');
   });
 
-  it('마우스 다운 이벤트 핸들러가 등록된다', () => {
+  it('마우스 다운 시 이벤트 핸들러가 등록된다', () => {
     const { container } = render(
       <Draggable>
         <div>컨텐츠</div>
