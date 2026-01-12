@@ -2,10 +2,10 @@ import { Controller, useFieldArray, UseFormReturn } from 'react-hook-form';
 import { FormField } from '@/shared/components/FormField';
 import { Button } from '@/shared/components/Button';
 import { Icon } from '@/shared/components/icon/Icon';
-import { TimeLimitDropdown } from './common';
 import { PollOptionList } from './PollOptionList';
 import { MAX_POLL_OPTIONS } from '../constants';
 import { POLL_FORM_KEYS, PollFormValues } from '../schema';
+import { TimeLimitDropdown } from '@/shared/components/TimeLimitDropdown';
 
 interface PollFormProps {
   formMethods: UseFormReturn<PollFormValues>;
