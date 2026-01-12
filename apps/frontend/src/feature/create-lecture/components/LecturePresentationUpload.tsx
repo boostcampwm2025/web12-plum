@@ -1,31 +1,26 @@
-import { ChangeEvent, ReactNode, useRef } from 'react';
+import { ChangeEvent, useRef } from 'react';
 
-import { ALLOWED_FILE_EXTENSIONS_STRING } from '@/feature/presentation-file-upload/constants';
-import { useDragAndDrop } from '@/feature/presentation-file-upload/hooks/useDragAndDrop';
-import { validateFileForUpload } from '@/feature/presentation-file-upload/utils';
+import { useDragAndDrop } from '@/shared/hooks/useDragAndDrop';
+import { ALLOWED_FILE_EXTENSIONS_STRING } from '@/shared/constants/presentation';
+import { Icon } from '@/shared/components/icon/Icon';
+import { validateFileForUpload } from '@/shared/lib/presentation';
 import { cn } from '@/shared/lib/utils';
 
-interface PresentationFileUploaderProps {
-  className?: string;
-  children: ReactNode;
+interface LecturePresentationUploadProps {
   onFileSelect: (file: File) => void;
   onValidationError: (error: string) => void;
 }
 
 /**
  * 발표 자료 파일 업로드 컴포넌트
- * @param className 추가적인 CSS 클래스
- * @param children 버튼 내부에 렌더링될 요소
  * @param onFileSelect 파일이 선택되었을 때 호출될 콜백
  * @param onValidationError 유효성 검사 에러가 발생했을 때 호출될 콜백
  * @returns 발표 자료 업로드 JSX 요소
  */
-export function PresentationFileUploader({
-  className,
-  children,
+export function LecturePresentationUpload({
   onFileSelect,
   onValidationError,
-}: PresentationFileUploaderProps) {
+}: LecturePresentationUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   // 파일 선택 버튼 클릭 핸들러
@@ -66,14 +61,25 @@ export function PresentationFileUploader({
         onClick={handleButtonClick}
         {...dragHandlers}
         className={cn(
-          'cursor-pointer rounded-xl border-2 border-dashed px-6 py-8 transition-colors',
+          'w-full cursor-pointer rounded-xl border-2 border-dashed px-6 py-8 transition-all duration-200',
           isDragging
             ? 'border-primary bg-primary/20'
             : 'hover:border-primary hover:bg-primary/20 border-gray-300',
-          className,
         )}
       >
-        {children}
+        <Icon
+          name="upload"
+          size={24}
+          strokeWidth={2}
+          className="text-subtext-light mx-auto"
+          decorative
+        />
+        <p className="text-subtext-light mt-3 text-base font-bold">
+          파일을 선택하거나 드래그하세요
+        </p>
+        <p className="text-subtext-light mt-2 text-xs font-normal">
+          {ALLOWED_FILE_EXTENSIONS_STRING}
+        </p>
       </button>
     </div>
   );
