@@ -51,7 +51,7 @@ export function ParticipantGrid({ currentUser, participants, onModeChange }: Par
       >
         <Icon
           name="chevron"
-          size={16}
+          size={24}
           className="rotate-180"
         />
       </Button>
