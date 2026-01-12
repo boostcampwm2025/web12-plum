@@ -26,50 +26,51 @@ export function QnAForm({ formMethods, onSubmit, submitLabel }: QnAFormProps) {
   } = formMethods;
 
   return (
-    <>
-      <form className="flex h-full min-h-0 flex-col gap-6 overflow-y-scroll">
-        <FormField required>
-          <FormField.Legend className="mb-2 font-extrabold">QnA 제목</FormField.Legend>
-          <FormField.Input
-            {...register(QNA_FORM_KEYS.title, { required: true, minLength: 2 })}
-            placeholder="무엇을 묻고 싶으신가요?"
-          />
-        </FormField>
+    <form
+      className="flex h-full min-h-0 flex-col gap-6 overflow-y-scroll"
+      onSubmit={handleSubmit(onSubmit)}
+    >
+      <FormField required>
+        <FormField.Legend className="mb-2 font-extrabold">QnA 제목</FormField.Legend>
+        <FormField.Input
+          {...register(QNA_FORM_KEYS.title)}
+          placeholder="무엇을 묻고 싶으신가요?"
+        />
+      </FormField>
 
-        <FormField required>
-          <FormField.Legend className="mb-2 font-extrabold">제한 시간</FormField.Legend>
-          <Controller
-            control={control}
-            name={QNA_FORM_KEYS.timeLimit}
-            render={({ field: { onChange, value } }) => (
-              <TimeLimitDropdown
-                selectedTime={value}
-                onChange={onChange}
-              />
-            )}
-          />
-        </FormField>
-
-        <FormField>
-          <div className="flex items-center gap-3">
-            <FormField.CheckboxInput
-              {...register(QNA_FORM_KEYS.isPublic)}
-              checked={formMethods.watch(QNA_FORM_KEYS.isPublic)}
+      <FormField required>
+        <FormField.Legend className="mb-2 font-extrabold">제한 시간</FormField.Legend>
+        <Controller
+          control={control}
+          name={QNA_FORM_KEYS.timeLimit}
+          render={({ field: { onChange, value } }) => (
+            <TimeLimitDropdown
+              selectedTime={value}
+              onChange={onChange}
             />
-            <FormField.Label className="text-text text-sm font-extrabold">
-              익명으로 답변 전체 공개
-            </FormField.Label>
-          </div>
-        </FormField>
-      </form>
+          )}
+        />
+      </FormField>
+
+      <FormField>
+        <div className="flex items-center gap-3">
+          <FormField.CheckboxInput
+            {...register(QNA_FORM_KEYS.isPublic)}
+            checked={formMethods.watch(QNA_FORM_KEYS.isPublic)}
+          />
+          <FormField.Label className="text-text text-sm font-extrabold">
+            익명으로 답변 전체 공개
+          </FormField.Label>
+        </div>
+      </FormField>
 
       <Button
+        type="submit"
         disabled={!isValid}
-        className="mx-auto mt-8 w-full max-w-38.5"
-        onClick={handleSubmit(onSubmit)}
+        className="mx-auto w-full max-w-38.5"
       >
         {submitLabel}
       </Button>
-    </>
+    </form>
   );
 }
