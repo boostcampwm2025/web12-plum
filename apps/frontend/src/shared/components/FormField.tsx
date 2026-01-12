@@ -1,8 +1,7 @@
-import { createContext, useContext, useId, ReactNode, forwardRef } from 'react';
-import { Label } from './Label';
+import { createContext, useContext, useId, ReactNode, forwardRef, ComponentProps } from 'react';
 import { Input, InputProps } from './Input';
-import { HelpText } from './HelpText';
 import { cn } from '../lib/utils';
+import { cva, VariantProps } from 'class-variance-authority';
 
 interface FormFieldContextValue {
   id: string;
@@ -48,37 +47,49 @@ function FormFieldRoot({ children, error, required, className }: FormFieldRootPr
 
   return (
     <FormFieldContext.Provider value={{ id, error, required }}>
-      <section className={classNames}>{children}</section>
+      <fieldset className={classNames}>{children}</fieldset>
     </FormFieldContext.Provider>
   );
 }
 
-interface FormFieldLabelProps {
+const legendVariants = cva('text-text mb-2 block font-bold', {
+  variants: {
+    size: {
+      lg: 'text-xl',
+      md: 'text-sm',
+    },
+  },
+  defaultVariants: {
+    size: 'md',
+  },
+});
+
+interface FormFieldLegendProps
+  extends Omit<ComponentProps<'legend'>, 'size'>, VariantProps<typeof legendVariants> {
   children: ReactNode;
   className?: string;
   size?: 'md' | 'lg';
 }
 
 /**
- * FormField의 Label 컴포넌트
- * Root에서 제공하는 id와 required 상태를 자동으로 연결
+ * FormField의 Legend 컴포넌트
+ * Root에서 제공하는 required 상태를 자동으로 연결
  * @param children 라벨 내용
  * @param className 추가 클래스 이름
  * @param size 라벨 크기
- * @returns FormField Label JSX 요소
+ * @returns FormField Legend JSX 요소
  */
-function FormFieldLabel({ children, className, size }: FormFieldLabelProps) {
-  const { id, required } = useFormFieldContext();
+function FormFieldLegend({ children, className, size, ...props }: FormFieldLegendProps) {
+  const { required } = useFormFieldContext();
 
   return (
-    <Label
-      htmlFor={id}
-      required={required}
-      size={size}
-      className={className}
+    <legend
+      className={cn(legendVariants({ size, className }))}
+      {...props}
     >
       {children}
-    </Label>
+      {required && <span className="text-primary ml-1">*</span>}
+    </legend>
   );
 }
 
@@ -106,7 +117,21 @@ const FormFieldInput = forwardRef<HTMLInputElement, FormFieldInputProps>((props,
 
 FormFieldInput.displayName = 'FormFieldInput';
 
-interface FormFieldHelpTextProps {
+const helpTextVariants = cva('mt-1 text-sm', {
+  variants: {
+    variant: {
+      default: 'text-subtext-light',
+      error: 'text-error',
+      success: 'text-success',
+    },
+  },
+  defaultVariants: {
+    variant: 'default',
+  },
+});
+
+interface FormFieldHelpTextProps
+  extends Omit<ComponentProps<'p'>, 'children'>, VariantProps<typeof helpTextVariants> {
   children: string;
   className?: string;
 }
@@ -116,18 +141,46 @@ interface FormFieldHelpTextProps {
  * Root에서 제공하는 설명 텍스트를 표시
  * @param children 도움말 텍스트 내용
  * @param className 추가 클래스 이름
+ * @param variant 도움말 텍스트 변형 스타일
  * @returns FormField HelpText JSX 요소
  */
-function FormFieldHelpText({ children, className }: FormFieldHelpTextProps) {
+function FormFieldHelpText({ children, className, variant, ...props }: FormFieldHelpTextProps) {
   const { id } = useFormFieldContext();
 
   return (
-    <HelpText
+    <p
       id={`${id}-help`}
+      className={cn(helpTextVariants({ variant }), className)}
+      {...props}
+    >
+      {children}
+    </p>
+  );
+}
+
+interface FormFieldLabelProps {
+  children: ReactNode;
+  className?: string;
+}
+
+/**
+ * FormField의 Label 컴포넌트
+ * Root에서 제공하는 id를 자동으로 연결
+ * @param children 라벨 내용
+ * @param className 추가 클래스 이름
+ * @returns FormField Label JSX 요소
+ */
+
+function FormFieldLabel({ children, className }: FormFieldLabelProps) {
+  const { id } = useFormFieldContext();
+
+  return (
+    <label
+      htmlFor={id}
       className={className}
     >
       {children}
-    </HelpText>
+    </label>
   );
 }
 
@@ -163,6 +216,7 @@ function FormFieldError({ children, className = '' }: FormFieldErrorProps) {
  * 폼 필드 컴포넌트
  */
 export const FormField = Object.assign(FormFieldRoot, {
+  Legend: FormFieldLegend,
   Label: FormFieldLabel,
   Input: FormFieldInput,
   HelpText: FormFieldHelpText,
