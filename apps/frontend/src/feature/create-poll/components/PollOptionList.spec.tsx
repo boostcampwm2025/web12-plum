@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import '@testing-library/jest-dom';
 import { useForm, useFieldArray, FormProvider } from 'react-hook-form';
 import { describe, it, expect } from 'vitest';
 import { PollOptionList } from './PollOptionList';
