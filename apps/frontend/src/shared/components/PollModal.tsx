@@ -1,5 +1,13 @@
 import { useEffect } from 'react';
-import { useFieldArray, useForm, Controller, FormProvider, useFormContext } from 'react-hook-form';
+import {
+  useFieldArray,
+  useForm,
+  Controller,
+  FormProvider,
+  useFormContext,
+  FieldArrayWithId,
+  UseFieldArrayRemove,
+} from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 
 import { Modal } from '@/shared/components/Modal';
@@ -61,17 +69,16 @@ function PollOptionItem({ index, onRemove, canDelete }: PollOptionItemProps) {
   );
 }
 
+interface PollOptionListProps {
+  fields: FieldArrayWithId<PollFormValues, 'options', 'id'>[];
+  remove: UseFieldArrayRemove;
+}
+
 /**
  * 투표 선택지 리스트 컴포넌트
  * @returns 투표 선택지 리스트 JSX 요소
  */
-function PollOptionList() {
-  const { control } = useFormContext<PollFormValues>();
-  const { fields, remove } = useFieldArray({
-    control,
-    name: POLL_FORM_KEYS.options,
-  });
-
+function PollOptionList({ fields, remove }: PollOptionListProps) {
   return (
     <ul className="flex flex-col gap-3">
       {fields.map((field, index) => (
@@ -119,7 +126,7 @@ export function PollModal({
   const { register, control, handleSubmit, formState, reset } = formMethods;
 
   // 추가 버튼 활성화 여부 판단 위해 useFieldArray 훅 사용
-  const { fields, append } = useFieldArray({
+  const { fields, append, remove } = useFieldArray({
     control,
     name: POLL_FORM_KEYS.options,
   });
@@ -172,12 +179,16 @@ export function PollModal({
           <FormField required>
             <FormField.Legend className="mb-2 font-extrabold">투표 선택지</FormField.Legend>
             <div className="flex flex-col gap-3">
-              <PollOptionList />
+              <PollOptionList
+                fields={fields}
+                remove={remove}
+              />
               <Button
                 variant="ghost"
                 type="button"
                 onClick={() => append({ value: '' })}
                 disabled={fields.length >= MAX_POLL_OPTIONS}
+                className="mx-auto w-fit"
               >
                 <Icon
                   name="plus"
@@ -207,7 +218,7 @@ export function PollModal({
           <Button
             type="submit"
             disabled={!formState.isValid}
-            className="w-full"
+            className="mx-auto mt-2 w-full max-w-39"
           >
             {submitLabel}
           </Button>
