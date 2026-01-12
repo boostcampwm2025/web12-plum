@@ -38,8 +38,8 @@ describe('Modal Component', () => {
       const props = { ...defaultProps, className: 'custom-class' };
       render(<Modal {...props} />);
 
-      const section = screen.getByText('Modal Content').closest('section');
-      expect(section).toHaveClass('custom-class');
+      const dialog = screen.getByRole('dialog');
+      expect(dialog).toHaveClass('custom-class');
     });
   });
 
@@ -53,16 +53,27 @@ describe('Modal Component', () => {
 
     it('배경을 클릭하면 onClose가 호출된다', () => {
       render(<Modal {...defaultProps} />);
-      const backdrop = screen.getByRole('dialog');
-      fireEvent.click(backdrop);
+      const dialog = screen.getByRole('dialog');
+      const backdrop = dialog.parentElement;
 
-      expect(mockOnClose).toHaveBeenCalledTimes(1);
+      if (backdrop) {
+        fireEvent.click(backdrop);
+        expect(mockOnClose).toHaveBeenCalledTimes(1);
+      }
     });
 
     it('모달 컨텐츠를 클릭하면 onClose가 호출되지 않는다', () => {
       render(<Modal {...defaultProps} />);
       const content = screen.getByText('Modal Content');
       fireEvent.click(content);
+
+      expect(mockOnClose).not.toHaveBeenCalled();
+    });
+
+    it('dialog를 직접 클릭하면 onClose가 호출되지 않는다', () => {
+      render(<Modal {...defaultProps} />);
+      const dialog = screen.getByRole('dialog');
+      fireEvent.click(dialog);
 
       expect(mockOnClose).not.toHaveBeenCalled();
     });

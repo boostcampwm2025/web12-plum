@@ -2,6 +2,8 @@ import { MouseEvent, useEffect, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 
 import { cn } from '@/shared/lib/utils';
+import { Button } from './Button';
+import { Icon } from './icon/Icon';
 import { useEscapeKey } from '@/shared/hooks/useEscapeKey';
 
 /**
@@ -38,12 +40,10 @@ function ModalOverlay({ onClose, children }: ModalOverlayProps) {
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 grid place-items-center bg-gray-700/75"
+      className="fixed inset-0 z-50 grid place-items-center bg-gray-700/75 px-4"
       onClick={handleBackdropClick}
-      role="dialog"
-      aria-modal="true"
     >
-      <div>{children}</div>
+      {children}
     </div>,
     document.body,
   );
@@ -64,7 +64,7 @@ interface ModalProps {
  * @param className 추가 클래스 이름
  * @returns 모달 JSX 요소
  */
-export const Modal = ({ isOpen, onClose, children, className }: ModalProps) => {
+function ModalRoot({ isOpen, onClose, children, className }: ModalProps) {
   useEscapeKey(isOpen, onClose);
   useModalBodyScrollLock(isOpen);
 
@@ -72,14 +72,59 @@ export const Modal = ({ isOpen, onClose, children, className }: ModalProps) => {
 
   return (
     <ModalOverlay onClose={onClose}>
-      <section
-        className={cn(
-          'flex max-h-[90vh] min-w-105 flex-col overflow-y-auto rounded-lg bg-gray-500 p-4',
-          className,
-        )}
+      <div
+        role="dialog"
+        aria-modal="true"
+        className={cn('flex max-h-[90vh] w-full flex-col rounded-lg bg-gray-500 p-4', className)}
       >
         {children}
-      </section>
+      </div>
     </ModalOverlay>
   );
-};
+}
+
+interface ModalTitleProps {
+  children: ReactNode;
+}
+
+/**
+ * 모달 헤더 컴포넌트
+ * @param children 헤더 내용
+ * @returns 모달 헤더 JSX 요소
+ */
+function ModalTitle({ children }: ModalTitleProps) {
+  return <h2 className="text-text text-base font-extrabold">{children}</h2>;
+}
+
+interface ModalCloseButtonProps {
+  onClose: () => void;
+}
+
+/**
+ * 모달 닫기 버튼 컴포넌트
+ * @param onClose 모달 닫기 함수
+ * @returns 모달 닫기 버튼 JSX 요소
+ */
+
+function ModalCloseButton({ onClose }: ModalCloseButtonProps) {
+  return (
+    <Button
+      variant="icon"
+      aria-label="모달 닫기"
+      onClick={onClose}
+    >
+      <Icon
+        name="x"
+        size={24}
+        strokeWidth={2}
+        decorative
+        className="text-text"
+      />
+    </Button>
+  );
+}
+
+export const Modal = Object.assign(ModalRoot, {
+  Title: ModalTitle,
+  CloseButton: ModalCloseButton,
+});
