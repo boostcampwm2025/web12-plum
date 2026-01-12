@@ -1,8 +1,14 @@
+import { motion } from 'motion/react';
 import { cn } from '@/shared/lib/utils';
 import { Icon } from '@/shared/components/icon/Icon';
 import { Button } from '@/shared/components/Button';
 
 export type VideoDisplayMode = 'minimize' | 'pip' | 'side';
+
+const VIDEO_HEIGHTS = {
+  MINIMIZED: 36,
+  NORMAL: 114,
+};
 
 export interface ParticipantVideoProps {
   id: string;
@@ -13,19 +19,29 @@ export interface ParticipantVideoProps {
 }
 
 export function ParticipantVideo({
+  id,
   name,
   mode,
   isCurrentUser = false,
   onModeChange,
 }: ParticipantVideoProps) {
   return (
-    <div
+    <motion.div
+      layout="position"
+      layoutId={isCurrentUser ? `participant-video-${id}` : undefined}
+      animate={{
+        height: mode === 'minimize' ? VIDEO_HEIGHTS.MINIMIZED : VIDEO_HEIGHTS.NORMAL,
+      }}
+      transition={{
+        layout: {
+          duration: 0.3,
+          ease: 'easeInOut',
+        },
+      }}
       className={cn(
-        'relative w-50.5 overflow-hidden rounded-lg transition-[height] duration-300 ease-in-out',
+        'relative z-50 w-50.5 overflow-hidden rounded-lg',
         isCurrentUser && 'group',
-        mode === 'minimize'
-          ? 'flex h-9 items-center justify-between bg-gray-500 px-2 shadow-md'
-          : 'h-28.5',
+        mode === 'minimize' && 'flex h-9 items-center justify-between bg-gray-500 px-2 shadow-md',
         mode === 'pip' && 'shadow-md',
       )}
     >
@@ -52,10 +68,13 @@ export function ParticipantVideo({
 
       {/* 호버 컨트롤 (pip, side 모드) */}
       {mode !== 'minimize' && isCurrentUser && (
-        <div
+        <motion.div
+          initial={{ opacity: 0 }}
+          whileHover={{ opacity: 1 }}
+          transition={{ duration: 0.3 }}
           className={cn(
-            'absolute inset-0 bg-gray-700/40 transition-opacity duration-300',
-            'pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100',
+            'absolute inset-0 bg-gray-700/40',
+            'pointer-events-none group-hover:pointer-events-auto',
           )}
         >
           {mode === 'pip' && (
@@ -98,8 +117,8 @@ export function ParticipantVideo({
               />
             </Button>
           )}
-        </div>
+        </motion.div>
       )}
-    </div>
+    </motion.div>
   );
 }
