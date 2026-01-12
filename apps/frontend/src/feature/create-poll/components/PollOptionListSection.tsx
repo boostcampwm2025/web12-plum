@@ -1,6 +1,6 @@
-import Button from '@/shared/components/button/Button';
+import { Button } from '@/shared/components/Button';
 import { Icon } from '@/shared/components/icon/Icon';
-import Input from '@/shared/components/Input';
+import { Input } from '@/shared/components/Input';
 import type { PollOption } from '../types';
 
 interface PollOptionItemProps {
