@@ -9,6 +9,8 @@ services:
     container_name: plum-backend-prod
     ports:
       - "${BACKEND_PORT:-3000}:3000" # 호스트 포트를 환경변수로 관리 (기본값: 3000)
+    env_file:
+      - .env
     environment:
       - NODE_ENV=production
     restart: always # 운영에서는 항상 재시작 (unless-stopped보다 강함)
