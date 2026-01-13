@@ -61,7 +61,7 @@ function FormFieldRoot({ children, error, required, className }: FormFieldRootPr
   );
 }
 
-const legendVariants = cva('text-text mb-2 block font-bold', {
+const legendVariants = cva('text-text font-bold', {
   variants: {
     size: {
       lg: 'text-xl',
