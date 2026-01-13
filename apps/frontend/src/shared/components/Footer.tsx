@@ -11,7 +11,7 @@ const currentYear = new Date().getFullYear();
 /**
  * 사이트맵 링크 배열
  */
-const SITEMAP_LINKS = [{ label: '강의 생성하기', to: ROUTES.CREATE_LECTURE }];
+const SITEMAP_LINKS = [{ label: '강의 생성하기', to: ROUTES.CREATE }];
 
 /**
  * 푸터 링크 배열
