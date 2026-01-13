@@ -7,7 +7,7 @@ import { Button } from '@/shared/components/Button';
 import { cn } from '@/shared/lib/utils';
 
 import { ENTER_LECTURE_KEYS, EnterLectureValues, enterLectureSchema } from '../schema';
-import { Icon } from '@/shared/components/icon/Icon';
+import { LocalMediaPreview } from './LocalMediaPreview';
 
 /**
  * 강의실 이름 입력 섹션
@@ -110,20 +110,11 @@ function MediaDeviceCheckSection() {
     <FormField className="gap-3">
       <FormField.Legend className="mb-3 text-xl font-bold">카메라 및 마이크 확인</FormField.Legend>
       <div className="flex items-center gap-2 rounded-lg border-2 border-gray-300 p-4">
-        <div className="grid aspect-video max-w-130 flex-1 place-items-center rounded-lg bg-gray-400">
-          <div className="flex h-full w-full items-center justify-center">
-            <Icon
-              name="cam-disabled"
-              size={48}
-              strokeWidth={2}
-              className="text-text"
-            />
-          </div>
-        </div>
+        <LocalMediaPreview />
 
         <div className="mx-auto flex h-full flex-col justify-center gap-5">
           <FormField className="flex-row items-center gap-3">
-            <FormField.Label className="text-xl">마이크</FormField.Label>
+            <FormField.Label>마이크</FormField.Label>
             <FormField.ToggleInput
               {...register(ENTER_LECTURE_KEYS.isAudioOn)}
               checked={isAudioOn}
@@ -131,7 +122,7 @@ function MediaDeviceCheckSection() {
           </FormField>
 
           <FormField className="flex-row items-center gap-3">
-            <FormField.Label className="text-xl">카메라</FormField.Label>
+            <FormField.Label>카메라</FormField.Label>
             <FormField.ToggleInput
               {...register(ENTER_LECTURE_KEYS.isVideoOn)}
               checked={isVideoOn}
