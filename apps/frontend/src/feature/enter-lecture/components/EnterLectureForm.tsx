@@ -1,11 +1,12 @@
 import { FormProvider, useForm, useFormContext, useWatch } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 
 import { FormField } from '@/shared/components/FormField';
 import { logger } from '@/shared/lib/logger';
 import { Button } from '@/shared/components/Button';
 import { cn } from '@/shared/lib/utils';
 
-import { ENTER_LECTURE_KEYS, EnterLectureValues } from '../schema';
+import { ENTER_LECTURE_KEYS, EnterLectureValues, enterLectureSchema } from '../schema';
 import { Icon } from '@/shared/components/icon/Icon';
 
 /**
@@ -151,6 +152,7 @@ export function EnterLectureForm() {
   const { lectureName } = { lectureName: '예시 강의실' };
 
   const formMethods = useForm<EnterLectureValues>({
+    resolver: zodResolver(enterLectureSchema),
     defaultValues: {
       name: lectureName,
       nickname: '',
@@ -181,7 +183,7 @@ export function EnterLectureForm() {
         <Button
           type="submit"
           disabled={!formState.isValid}
-          className={cn(!formState.isValid && 'opacity-50', 'pt-4 text-xl')}
+          className={cn(!formState.isValid && 'opacity-50', 'text-xl')}
         >
           강의실 입장하기
         </Button>
