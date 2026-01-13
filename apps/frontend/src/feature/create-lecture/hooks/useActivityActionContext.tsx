@@ -1,12 +1,12 @@
 import { createContext, useContext, ReactNode, useMemo } from 'react';
-import { useFieldArray, useFormContext } from 'react-hook-form';
+import { useFieldArray, useFormContext, FieldArrayWithId } from 'react-hook-form';
 import { CreateLectureFormValues, LECTURE_FORM_KEYS } from '../schema';
 import { PollFormValues } from '@/shared/constants/poll';
 import { QnAFormValues } from '@/shared/constants/qna';
 
 interface ActivityContextValue {
-  polls: PollFormValues[];
-  qnas: QnAFormValues[];
+  polls: FieldArrayWithId<CreateLectureFormValues, typeof LECTURE_FORM_KEYS.polls>[];
+  qnas: FieldArrayWithId<CreateLectureFormValues, typeof LECTURE_FORM_KEYS.qnas>[];
   actions: {
     addPoll: (poll: PollFormValues) => void;
     editPoll: (index: number, poll: PollFormValues) => void;
@@ -52,8 +52,8 @@ export function ActivityProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo(
     () => ({
-      polls: polls as unknown as PollFormValues[],
-      qnas: qnas as unknown as QnAFormValues[],
+      polls,
+      qnas,
       actions: {
         addPoll: appendPoll,
         editPoll: updatePoll,

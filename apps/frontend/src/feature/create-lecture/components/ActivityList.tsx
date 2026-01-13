@@ -93,7 +93,7 @@ export function ActivityList() {
       <ul className="flex flex-col gap-2">
         {polls.map((item, index) => (
           <ActivityItem
-            key={`poll-${item.title}-${index}`}
+            key={item.id}
             type="poll"
             title={item.title}
             onEdit={() => openEditPollModal(index)}
@@ -102,7 +102,7 @@ export function ActivityList() {
         ))}
         {qnas.map((item, index) => (
           <ActivityItem
-            key={`qna-${item.title}-${index}`}
+            key={item.id}
             type="qna"
             title={item.title}
             onEdit={() => openEditQnaModal(index)}
