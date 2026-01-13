@@ -151,7 +151,17 @@ function PresentationUploaderSection() {
   const { setValue } = useFormContext<CreateLectureFormValues>();
   const presentationFiles: File[] = useWatch({ name: LECTURE_FORM_KEYS.presentationFiles }) || [];
 
+  // 파일 선택 핸들러
   const handleFileSelect = (file: File) => {
+    const isDuplicate = presentationFiles.some(
+      (existingFile) => existingFile.name === file.name && existingFile.size === file.size,
+    );
+
+    if (isDuplicate) {
+      logger.ui.error('파일 업로드 에러:', '이미 동일한 파일이 업로드되어 있습니다.');
+      return;
+    }
+
     const updatedFiles = [...presentationFiles, file];
     setValue(LECTURE_FORM_KEYS.presentationFiles, updatedFiles, { shouldValidate: true });
   };
