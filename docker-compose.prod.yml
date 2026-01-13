@@ -11,6 +11,15 @@ services:
       - "${BACKEND_PORT:-3000}:3000" # 호스트 포트를 환경변수로 관리 (기본값: 3000)
     environment:
       - NODE_ENV=production
+      # Redis 연결 (별도 Redis 서버)
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+      # Mediasoup WebRTC 설정
+      - RTC_MIN_PORT=40000
+      - RTC_MAX_PORT=49999
+      - ANNOUNCED_IP=${ANNOUNCED_IP}
+      - MEDIASOUP_WORKER_NUM=auto
     restart: always # 운영에서는 항상 재시작 (unless-stopped보다 강함)
     networks:
       - plum-network
