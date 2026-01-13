@@ -9,7 +9,7 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          'bg-primary text-text px-4 py-3 before:absolute before:inset-0 before:bg-white before:opacity-0 before:transition-opacity before:duration-150 hover:before:opacity-5 active:before:opacity-10 disabled:cursor-not-allowed disabled:before:bg-black disabled:before:opacity-50',
+          'bg-primary text-text px-4 py-3 before:absolute before:inset-0 before:bg-white before:opacity-0 before:transition-opacity before:duration-150 hover:before:opacity-5 active:before:opacity-10 disabled:cursor-not-allowed disabled:opacity-30 disabled:before:hidden',
         ghost:
           'text-primary disabled:text-primary/50 bg-transparent px-4 py-2 hover:bg-gray-200/20 active:bg-gray-200/30 disabled:cursor-not-allowed',
         icon: 'text-text disabled:text-text/50 p-2 hover:bg-gray-200/20 active:bg-gray-200/30 disabled:cursor-not-allowed',
