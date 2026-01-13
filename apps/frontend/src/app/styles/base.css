@@ -1,0 +1,5 @@
+@layer base {
+  html {
+    @apply min-h-screen bg-gray-500;
+  }
+}
