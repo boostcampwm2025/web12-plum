@@ -13,8 +13,8 @@ import {
   LECTURE_FORM_KEYS,
   lectureFormDefaultValues,
 } from '../schema';
-import { ActivityProvider } from '../hooks/useActivityActions';
-import { ActivityModalProvider, useActivityModal } from '../hooks/useActivityModal';
+import { ActivityProvider } from '../hooks/useActivityActionContext';
+import { ActivityModalProvider, useActivityModalContext } from '../hooks/useActivityModalContext';
 import { ActivityList } from './ActivityList';
 import { ActivityModals } from './ActivityModals';
 import { LecturePresentationUpload } from './LecturePresentationUpload';
@@ -108,7 +108,7 @@ function AgreementSection() {
  * @returns 강의 활동 섹션 JSX 요소
  */
 function ActivitySection() {
-  const { openCreatePollModal, openCreateQnaModal } = useActivityModal();
+  const { openCreatePollModal, openCreateQnaModal } = useActivityModalContext();
 
   return (
     <FormField className="gap-3">

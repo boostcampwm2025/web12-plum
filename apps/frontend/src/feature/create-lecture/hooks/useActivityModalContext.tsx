@@ -48,7 +48,7 @@ export function ActivityModalProvider({ children }: { children: ReactNode }) {
  * 활동 모달 및 제어 함수들 사용 훅
  * @returns 활동 모달 상태 및 제어 함수들
  */
-export const useActivityModal = () => {
+export const useActivityModalContext = () => {
   const context = useContext(ActivityModalContext);
   if (!context) {
     throw new Error('useActivityModal은 ActivityModalProvider 내에서 사용되어야 합니다');

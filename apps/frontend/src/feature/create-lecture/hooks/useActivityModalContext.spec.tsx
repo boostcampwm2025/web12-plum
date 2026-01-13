@@ -1,13 +1,14 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
-import { ActivityModalProvider, useActivityModal } from './useActivityModal';
+import { ActivityModalProvider, useActivityModalContext } from './useActivityModalContext';
 import '@testing-library/jest-dom';
 
 /**
  * 컨텍스트 상태를 확인하기 위한 테스트용 컴포넌트
  */
 function TestComponent() {
-  const { modalState, openCreatePollModal, openEditQnaModal, closeModal } = useActivityModal();
+  const { modalState, openCreatePollModal, openEditQnaModal, closeModal } =
+    useActivityModalContext();
 
   return (
     <div>

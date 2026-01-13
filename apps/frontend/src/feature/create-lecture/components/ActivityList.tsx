@@ -2,8 +2,8 @@ import { Tooltip } from '@/shared/components/Tooltip';
 import { Button } from '@/shared/components/Button';
 import { Icon } from '@/shared/components/icon/Icon';
 
-import { useActivityActions } from '../hooks/useActivityActions';
-import { useActivityModal } from '../hooks/useActivityModal';
+import { useActivityActionContext } from '../hooks/useActivityActionContext';
+import { useActivityModalContext } from '../hooks/useActivityModalContext';
 
 interface ActivityItemProps {
   type: 'poll' | 'qna';
@@ -72,8 +72,8 @@ function ActivityItem({ type, title, onEdit, onDelete }: ActivityItemProps) {
  * @returns 활동 리스트 JSX 요소
  */
 export function ActivityList() {
-  const { polls, qnas, actions } = useActivityActions();
-  const { openEditPollModal, openEditQnaModal } = useActivityModal();
+  const { polls, qnas, actions } = useActivityActionContext();
+  const { openEditPollModal, openEditQnaModal } = useActivityModalContext();
 
   const hasNoActivities = polls.length === 0 && qnas.length === 0;
 

@@ -3,16 +3,16 @@ import { QnAFormValues } from '@/shared/constants/qna';
 import { PollModal } from '@/shared/components/PollModal';
 import { QnAModal } from '@/shared/components/QnAModal';
 
-import { useActivityActions } from '../hooks/useActivityActions';
-import { useActivityModal } from '../hooks/useActivityModal';
+import { useActivityActionContext } from '../hooks/useActivityActionContext';
+import { useActivityModalContext } from '../hooks/useActivityModalContext';
 
 /**
  * 활동 모달 컴포넌트 (투표/Q&A 생성 및 수정)
  * @returns 활동 모달 JSX 요소
  */
 export function ActivityModals() {
-  const { modalState, closeModal } = useActivityModal();
-  const { polls, qnas, actions } = useActivityActions();
+  const { modalState, closeModal } = useActivityModalContext();
+  const { polls, qnas, actions } = useActivityActionContext();
 
   // 투표 모달 제출 핸들러
   const handlePollSubmit = (data: PollFormValues) => {

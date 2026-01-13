@@ -1,7 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { FormProvider, useForm } from 'react-hook-form';
-import { ActivityProvider, useActivityActions } from './useActivityActions';
+import { ActivityProvider, useActivityActionContext } from './useActivityActionContext';
 import { CreateLectureFormValues } from '../schema';
 import '@testing-library/jest-dom';
 
@@ -9,7 +9,7 @@ import '@testing-library/jest-dom';
  * 테스트용 UI 컴포넌트
  */
 function TestComponent() {
-  const { polls, qnas, actions } = useActivityActions();
+  const { polls, qnas, actions } = useActivityActionContext();
 
   return (
     <div>

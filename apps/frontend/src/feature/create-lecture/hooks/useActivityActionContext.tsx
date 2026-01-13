@@ -73,7 +73,7 @@ export function ActivityProvider({ children }: { children: ReactNode }) {
  * 활동(투표/Q&A) 상태 및 제어 함수들 사용 훅
  * @returns 활동 상태 및 제어 함수들
  */
-export const useActivityActions = () => {
+export const useActivityActionContext = () => {
   const context = useContext(ActivityContext);
   if (!context) throw new Error('useActivity는 ActivityProvider 내에서 사용되어야 합니다');
 

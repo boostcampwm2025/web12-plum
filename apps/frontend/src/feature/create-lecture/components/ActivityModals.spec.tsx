@@ -1,14 +1,14 @@
 import { render } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ActivityModals } from './ActivityModals';
-import { useActivityActions } from '../hooks/useActivityActions';
-import { useActivityModal } from '../hooks/useActivityModal';
+import { useActivityActionContext } from '../hooks/useActivityActionContext';
+import { useActivityModalContext } from '../hooks/useActivityModalContext';
 import { PollModal } from '../../../shared/components/PollModal';
 import { QnAModal } from '../../../shared/components/QnAModal';
 import '@testing-library/jest-dom';
 
-vi.mock('../hooks/useActivityActions');
-vi.mock('../hooks/useActivityModal');
+vi.mock('../hooks/useActivityActionContext');
+vi.mock('../hooks/useActivityModalContext');
 vi.mock('../../../shared/components/PollModal', () => ({
   PollModal: vi.fn(() => null),
 }));
@@ -29,7 +29,7 @@ describe('ActivityModals 테스트', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    vi.mocked(useActivityActions).mockReturnValue({
+    vi.mocked(useActivityActionContext).mockReturnValue({
       polls: mockPolls,
       qnas: mockQnas,
       actions: {
@@ -44,7 +44,7 @@ describe('ActivityModals 테스트', () => {
   });
 
   it('투표 생성 모달이 올바르게 렌더링되어야 한다.', () => {
-    vi.mocked(useActivityModal).mockReturnValue({
+    vi.mocked(useActivityModalContext).mockReturnValue({
       modalState: { type: 'create-poll' },
       openCreatePollModal: vi.fn(),
       openCreateQnaModal: vi.fn(),
@@ -67,7 +67,7 @@ describe('ActivityModals 테스트', () => {
   });
 
   it('투표 수정 모달이 올바르게 렌더링되어야 한다.', () => {
-    vi.mocked(useActivityModal).mockReturnValue({
+    vi.mocked(useActivityModalContext).mockReturnValue({
       modalState: { type: 'edit-poll', index: 0 },
       openCreatePollModal: vi.fn(),
       openCreateQnaModal: vi.fn(),
@@ -90,7 +90,7 @@ describe('ActivityModals 테스트', () => {
   });
 
   it('Q&A 생성 모달이 올바르게 렌더링되어야 한다.', () => {
-    vi.mocked(useActivityModal).mockReturnValue({
+    vi.mocked(useActivityModalContext).mockReturnValue({
       modalState: { type: 'create-qna' },
       openCreatePollModal: vi.fn(),
       openCreateQnaModal: vi.fn(),
@@ -113,7 +113,7 @@ describe('ActivityModals 테스트', () => {
   });
 
   it('Q&A 수정 모달이 올바르게 렌더링되어야 한다.', () => {
-    vi.mocked(useActivityModal).mockReturnValue({
+    vi.mocked(useActivityModalContext).mockReturnValue({
       modalState: { type: 'edit-qna', index: 0 },
       openCreatePollModal: vi.fn(),
       openCreateQnaModal: vi.fn(),
@@ -136,7 +136,7 @@ describe('ActivityModals 테스트', () => {
   });
 
   it('모달이 닫혀있을 때 isOpen이 false여야 한다.', () => {
-    vi.mocked(useActivityModal).mockReturnValue({
+    vi.mocked(useActivityModalContext).mockReturnValue({
       modalState: { type: 'none' },
       openCreatePollModal: vi.fn(),
       openCreateQnaModal: vi.fn(),
@@ -158,7 +158,7 @@ describe('ActivityModals 테스트', () => {
   });
 
   it('투표 생성 시 addPoll이 호출되고 모달이 닫혀야 한다.', () => {
-    vi.mocked(useActivityModal).mockReturnValue({
+    vi.mocked(useActivityModalContext).mockReturnValue({
       modalState: { type: 'create-poll' },
       openCreatePollModal: vi.fn(),
       openCreateQnaModal: vi.fn(),
@@ -180,7 +180,7 @@ describe('ActivityModals 테스트', () => {
   });
 
   it('투표 수정 시 editPoll이 호출되고 모달이 닫혀야 한다.', () => {
-    vi.mocked(useActivityModal).mockReturnValue({
+    vi.mocked(useActivityModalContext).mockReturnValue({
       modalState: { type: 'edit-poll', index: 0 },
       openCreatePollModal: vi.fn(),
       openCreateQnaModal: vi.fn(),
@@ -202,7 +202,7 @@ describe('ActivityModals 테스트', () => {
   });
 
   it('Q&A 생성 시 addQna가 호출되고 모달이 닫혀야 한다.', () => {
-    vi.mocked(useActivityModal).mockReturnValue({
+    vi.mocked(useActivityModalContext).mockReturnValue({
       modalState: { type: 'create-qna' },
       openCreatePollModal: vi.fn(),
       openCreateQnaModal: vi.fn(),
@@ -224,7 +224,7 @@ describe('ActivityModals 테스트', () => {
   });
 
   it('Q&A 수정 시 editQna가 호출되고 모달이 닫혀야 한다.', () => {
-    vi.mocked(useActivityModal).mockReturnValue({
+    vi.mocked(useActivityModalContext).mockReturnValue({
       modalState: { type: 'edit-qna', index: 0 },
       openCreatePollModal: vi.fn(),
       openCreateQnaModal: vi.fn(),

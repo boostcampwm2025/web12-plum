@@ -1,13 +1,13 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ActivityList } from './ActivityList';
-import { useActivityActions } from '../hooks/useActivityActions';
-import { useActivityModal } from '../hooks/useActivityModal';
+import { useActivityActionContext } from '../hooks/useActivityActionContext';
+import { useActivityModalContext } from '../hooks/useActivityModalContext';
 import '@testing-library/jest-dom';
 
 // 커스텀 훅 모킹
-vi.mock('../hooks/useActivityActions');
-vi.mock('../hooks/useActivityModal');
+vi.mock('../hooks/useActivityActionContext');
+vi.mock('../hooks/useActivityModalContext');
 
 describe('ActivityList 테스트', () => {
   const mockDeletePoll = vi.fn();
@@ -18,7 +18,7 @@ describe('ActivityList 테스트', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    vi.mocked(useActivityModal).mockReturnValue({
+    vi.mocked(useActivityModalContext).mockReturnValue({
       modalState: { type: 'none' },
       openCreatePollModal: vi.fn(),
       openCreateQnaModal: vi.fn(),
@@ -29,7 +29,7 @@ describe('ActivityList 테스트', () => {
   });
 
   it('활동이 없을 때 "추가된 투표 / Q&A가 없습니다" 메시지를 렌더링해야 한다.', () => {
-    vi.mocked(useActivityActions).mockReturnValue({
+    vi.mocked(useActivityActionContext).mockReturnValue({
       polls: [],
       qnas: [],
       actions: {
@@ -48,7 +48,7 @@ describe('ActivityList 테스트', () => {
   });
 
   it('활동(투표, Q&A)이 있을 때 리스트 아이템들을 렌더링해야 한다.', () => {
-    vi.mocked(useActivityActions).mockReturnValue({
+    vi.mocked(useActivityActionContext).mockReturnValue({
       polls: [{ title: '테스트 투표' }],
       qnas: [{ title: '테스트 Q&A' }],
       actions: {
@@ -70,7 +70,7 @@ describe('ActivityList 테스트', () => {
   });
 
   it('수정 버튼 클릭 시 openEditModal 함수가 해당 인덱스와 함께 호출되어야 한다.', () => {
-    vi.mocked(useActivityActions).mockReturnValue({
+    vi.mocked(useActivityActionContext).mockReturnValue({
       polls: [{ title: '투표 1' }],
       qnas: [],
       actions: {
@@ -93,7 +93,7 @@ describe('ActivityList 테스트', () => {
   });
 
   it('삭제 버튼 클릭 시 deletePoll 함수가 해당 인덱스와 함께 호출되어야 한다.', () => {
-    vi.mocked(useActivityActions).mockReturnValue({
+    vi.mocked(useActivityActionContext).mockReturnValue({
       polls: [{ title: '투표 1' }],
       qnas: [],
       actions: {
