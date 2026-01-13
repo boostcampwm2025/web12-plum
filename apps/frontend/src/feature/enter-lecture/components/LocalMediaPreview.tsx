@@ -60,7 +60,7 @@ export function LocalMediaPreview() {
   }, [localStream]);
 
   return (
-    <div className="grid aspect-video max-w-130 flex-1 place-items-center rounded-lg bg-gray-400">
+    <div className="relative grid aspect-video max-w-130 flex-1 place-items-center rounded-lg bg-gray-400">
       <video
         ref={localVideoRef}
         autoPlay // 자동 재생
