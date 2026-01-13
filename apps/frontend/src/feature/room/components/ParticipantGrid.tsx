@@ -33,7 +33,7 @@ export function ParticipantGrid({ currentUser, participants, onModeChange }: Par
   return (
     <div
       ref={containerRef}
-      className="flex h-full flex-col gap-3"
+      className="ml-4 flex h-full flex-col gap-3"
     >
       <ParticipantVideo
         id={currentUser.id}
