@@ -1,7 +1,16 @@
-import { createContext, useContext, useId, ReactNode, forwardRef, ComponentProps } from 'react';
+import {
+  createContext,
+  useContext,
+  useId,
+  ReactNode,
+  forwardRef,
+  ComponentProps,
+  InputHTMLAttributes,
+} from 'react';
 import { Input, InputProps } from './Input';
 import { cn } from '../lib/utils';
 import { cva, VariantProps } from 'class-variance-authority';
+import { Icon } from './icon/Icon';
 
 interface FormFieldContextValue {
   id: string;
@@ -117,6 +126,58 @@ const FormFieldInput = forwardRef<HTMLInputElement, FormFieldInputProps>((props,
 
 FormFieldInput.displayName = 'FormFieldInput';
 
+type FormFieldCheckboxInputProps = InputHTMLAttributes<HTMLInputElement>;
+
+/**
+ * FormField의 CheckboxInput 컴포넌트
+ * Root에서 제공하는 id와 에러 상태를 자동으로 연결
+ * @param className 추가 클래스 이름
+ * @param props 체크박스 Input 컴포넌트에 전달할 속성들
+ * @returns FormField Checkbox Input JSX 요소
+ */
+const FormFieldCheckboxInput = forwardRef<HTMLInputElement, FormFieldCheckboxInputProps>(
+  ({ className, ...props }, ref) => {
+    const { id, error } = useFormFieldContext();
+    const isChecked = props.checked;
+
+    return (
+      <div className="relative flex items-center">
+        <input
+          {...props}
+          type="checkbox"
+          id={id}
+          ref={ref}
+          className={cn('peer absolute z-10 size-5 cursor-pointer opacity-0', className)}
+          aria-invalid={error ? 'true' : 'false'}
+          aria-describedby={error ? `${id}-error` : undefined}
+        />
+
+        <div
+          className={cn(
+            'grid size-5 place-items-center rounded-sm transition-colors duration-150',
+            isChecked
+              ? 'bg-primary'
+              : 'peer-focus-visible:ring-primary bg-gray-300 peer-hover:bg-gray-400 peer-focus-visible:ring-2 peer-focus-visible:ring-offset-2',
+          )}
+          aria-hidden="true"
+        >
+          {isChecked && (
+            <Icon
+              name="check"
+              size={16}
+              strokeWidth={2}
+              className="text-white"
+              decorative
+            />
+          )}
+        </div>
+      </div>
+    );
+  },
+);
+
+FormFieldCheckboxInput.displayName = 'FormFieldCheckboxInput';
+
 const helpTextVariants = cva('mt-1 text-sm', {
   variants: {
     variant: {
@@ -219,6 +280,7 @@ export const FormField = Object.assign(FormFieldRoot, {
   Legend: FormFieldLegend,
   Label: FormFieldLabel,
   Input: FormFieldInput,
+  CheckboxInput: FormFieldCheckboxInput,
   HelpText: FormFieldHelpText,
   Error: FormFieldError,
 });
