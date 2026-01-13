@@ -1,0 +1,151 @@
+import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
+import * as mediasoup from 'mediasoup';
+import { Worker, Router } from 'mediasoup/node/lib/types';
+import { mediasoupConfig } from './mediasoup.config.js';
+
+/**
+ * Mediasoup Worker 및 Router 관리 서비스
+ * 공식문서 : https://mediasoup.org/documentation/v3/mediasoup/api/
+ *
+ * 앱 시작 시 =>  CPU 코어 수만큼 Mediasoup Worker 생성
+ * 강의실 생성 시 =>  라운드 로빈으로 Worker 선택 후 Router 생성
+ * Worker 죽으면 => 프로세스 종료 (PM2/Docker가 재시작)
+ *
+ */
+@Injectable()
+export class MediasoupService implements OnModuleInit, OnModuleDestroy {
+  private readonly logger = new Logger(MediasoupService.name);
+
+  private workers: Worker[] = []; // CPU 코어 수만큼 생성되는 Worker 배열
+  private routers: Map<string, Router> = new Map(); // 강의실별 Router 저장 (roomId -> Router)
+  private nextWorkerIdx = 0; // Round-robin Worker 선택 인덱스
+
+  /**
+   * 앱 시작 시 Mediasoup Worker 생성
+   */
+  async onModuleInit() {
+    this.logger.log(`${mediasoupConfig.numWorkers} mediasoup workers 생성 중...`);
+
+    for (let i = 0; i < mediasoupConfig.numWorkers; i++) {
+      try {
+        const worker = await mediasoup.createWorker({
+          rtcMinPort: mediasoupConfig.worker.rtcMinPort,
+          rtcMaxPort: mediasoupConfig.worker.rtcMaxPort,
+          logLevel: mediasoupConfig.worker.logLevel,
+          logTags: mediasoupConfig.worker.logTags,
+        });
+
+        // Worker 사망 시 프로세스 종료 (PM2/Docker가 재시작)
+        worker.on('died', () => {
+          this.logger.error(
+            `❌ Mediasoup Worker (PID: ${worker.pid})가 죽었습니다. 프로세스를 종료합니다.`,
+          );
+          process.exit(1);
+        });
+
+        this.workers.push(worker);
+        this.logger.log(`✅ Mediasoup Worker #${i} 생성 완료 (PID: ${worker.pid})`);
+      } catch (error) {
+        this.logger.error(`❌ Mediasoup Worker #${i} 생성 실패:`, error);
+        throw error;
+      }
+    }
+
+    this.logger.log(`🎉 Mediasoup이 ${this.workers.length}개의 Worker로 초기화되었습니다.`);
+  }
+
+  /**
+   * 앱 종료 시 모든 Worker 닫기
+   */
+  async onModuleDestroy() {
+    this.logger.log('🛑 모든 Mediasoup Workers 닫는 중...');
+    for (const worker of this.workers) {
+      worker.close();
+    }
+  }
+
+  /**
+   * 새로운 강의실을 위한 Router 생성
+   * @param roomId 강의실 고유 ID
+   * @returns Router 인스턴스
+   */
+  async createRouter(roomId: string): Promise<Router> {
+    try {
+      // Round-robin으로 Worker 선택
+      const worker = this.getNextWorker();
+
+      // Router 생성 (코덱 설정 적용)
+      const router = await worker.createRouter({
+        mediaCodecs: mediasoupConfig.router.mediaCodecs,
+      });
+
+      // Map에 저장
+      this.routers.set(roomId, router);
+
+      this.logger.log(`✅ Router이 ${roomId} 강의실에 생성되었습니다. (Worker PID: ${worker.pid})`);
+
+      return router;
+    } catch (error) {
+      this.logger.error(`❌ Router 생성 실패: room ${roomId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * 강의실의 Router 조회
+   * @param roomId 강의실 고유 ID
+   * @returns Router 인스턴스 (없으면 undefined)
+   */
+  getRouter(roomId: string): Router | undefined {
+    return this.routers.get(roomId);
+  }
+
+  /**
+   * 강의실의 Router 닫기 (강의 종료 시)
+   * @param roomId 강의실 고유 ID
+   */
+  async closeRouter(roomId: string): Promise<void> {
+    const router = this.routers.get(roomId);
+    if (router) {
+      router.close();
+      this.routers.delete(roomId);
+      this.logger.log(`🗑️  Router이 ${roomId} 강의실에서 닫혔습니다.`);
+    }
+  }
+
+  /**
+   * Router의 RTP Capabilities 반환
+   * 클라이언트가 Device.load()에서 사용
+   * @param roomId 강의실 고유 ID
+   * @returns RTP Capabilities 객체
+   */
+  getRouterRtpCapabilities(roomId: string) {
+    const router = this.routers.get(roomId);
+    if (!router) {
+      throw new Error(`${roomId}인 Router를 찾을 수 없습니다.`);
+    }
+    return router.rtpCapabilities;
+  }
+
+  /**
+   * Round-robin으로 다음 Worker 선택
+   * @returns Worker 인스턴스
+   */
+  private getNextWorker(): Worker {
+    const worker = this.workers[this.nextWorkerIdx];
+    this.nextWorkerIdx = (this.nextWorkerIdx + 1) % this.workers.length;
+    return worker;
+  }
+
+  /**
+   * Worker 상태 조회 (헬스체크용)
+   * @returns Worker 상태 배열
+   */
+  getWorkersStatus() {
+    return this.workers.map((worker, index) => ({
+      index,
+      pid: worker.pid,
+      closed: worker.closed,
+    }));
+  }
+}
