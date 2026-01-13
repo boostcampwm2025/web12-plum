@@ -178,6 +178,61 @@ const FormFieldCheckboxInput = forwardRef<HTMLInputElement, FormFieldCheckboxInp
 
 FormFieldCheckboxInput.displayName = 'FormFieldCheckboxInput';
 
+type FormFieldToggleInputProps = InputHTMLAttributes<HTMLInputElement>;
+
+/**
+ * FormField의 ToggleInput 컴포넌트
+ * Root에서 제공하는 id와 에러 상태를 자동으로 연결
+ * @param className 추가 클래스 이름
+ * @param props 토글 스위치 Input 컴포넌트에 전달할 속성들
+ * @returns FormField Toggle Input JSX 요소
+ */
+const FormFieldToggleInput = forwardRef<HTMLInputElement, FormFieldToggleInputProps>(
+  ({ className, ...props }, ref) => {
+    const { id, error, required } = useFormFieldContext();
+    const isChecked = props.checked;
+
+    return (
+      <>
+        <input
+          {...props}
+          ref={ref}
+          id={id}
+          required={required}
+          type="checkbox"
+          className="sr-only"
+          aria-invalid={error ? 'true' : 'false'}
+          aria-describedby={error ? `${id}-error` : undefined}
+        />
+
+        <label
+          htmlFor={id}
+          role="switch"
+          aria-checked={isChecked}
+          aria-invalid={!!error}
+          aria-describedby={error ? `${id}-error` : undefined}
+          className={cn(
+            'relative inline-flex h-9 w-16 shrink-0 cursor-pointer rounded-full border-4 border-transparent transition-colors duration-200 ease-in-out',
+            isChecked ? 'bg-primary' : 'bg-gray-300',
+            props.disabled && 'cursor-not-allowed opacity-50',
+            className,
+          )}
+        >
+          <span
+            aria-hidden="true"
+            className={cn(
+              'bg-text inline-block size-7 transform rounded-full transition duration-200 ease-in-out',
+              isChecked ? 'translate-x-7' : 'translate-x-0',
+            )}
+          />
+        </label>
+      </>
+    );
+  },
+);
+
+FormFieldToggleInput.displayName = 'FormFieldToggleInput';
+
 const helpTextVariants = cva('mt-1 text-sm', {
   variants: {
     variant: {
@@ -234,11 +289,12 @@ interface FormFieldLabelProps {
 
 function FormFieldLabel({ children, className }: FormFieldLabelProps) {
   const { id } = useFormFieldContext();
+  const classNames = cn('text-text font-bold', className);
 
   return (
     <label
       htmlFor={id}
-      className={className}
+      className={classNames}
     >
       {children}
     </label>
@@ -281,6 +337,7 @@ export const FormField = Object.assign(FormFieldRoot, {
   Label: FormFieldLabel,
   Input: FormFieldInput,
   CheckboxInput: FormFieldCheckboxInput,
+  ToggleInput: FormFieldToggleInput,
   HelpText: FormFieldHelpText,
   Error: FormFieldError,
 });
