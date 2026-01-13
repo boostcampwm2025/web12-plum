@@ -13,7 +13,7 @@ import { MockRoomRepository, RoomRepository } from './room.repository.js';
     {
       provide: RoomRepository,
       useClass: MockRoomRepository,
-    }
+    },
   ],
   controllers: [RoomController],
 })

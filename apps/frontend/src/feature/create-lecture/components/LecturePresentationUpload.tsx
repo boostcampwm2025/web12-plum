@@ -1,7 +1,7 @@
 import { ChangeEvent, useRef } from 'react';
+import { ALLOWED_FILE_EXTENSIONS_STRING } from '@plum/shared-interfaces';
 
 import { useDragAndDrop } from '@/shared/hooks/useDragAndDrop';
-import { ALLOWED_FILE_EXTENSIONS_STRING } from '@/shared/constants/presentation';
 import { Icon } from '@/shared/components/icon/Icon';
 import { validateFileForUpload } from '@/shared/lib/presentation';
 import { cn } from '@/shared/lib/utils';

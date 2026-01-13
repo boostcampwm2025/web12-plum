@@ -1,8 +1,8 @@
 import { z } from 'zod';
-import { Poll, pollFormSchema } from './poll.js'
-import { Qna, qnaFormSchema } from './qna.js'
-import { fileSchema, type Status } from './shared.js';
-import { Participant } from './participant.js';
+import { pollFormSchema } from './poll.js';
+import { qnaFormSchema } from './qna.js';
+import { type Status } from './shared.js';
+import { fileSchema } from './file.js';
 
 /**
  * 강의 생성 폼의 제약 조건
@@ -43,13 +43,15 @@ export const createLectureSchema = z.object({
     message: '데이터 수집에 동의해야 강의실을 생성할 수 있습니다.',
   }),
 
-  polls: z.array(pollFormSchema).optional().default([]),
-  qnas: z.array(qnaFormSchema).optional().default([]),
+  polls: z.array(pollFormSchema),
+  qnas: z.array(qnaFormSchema),
   presentationFiles: z
     .array(fileSchema)
-    .max(LECTURE_CONSTRAINTS.FILES.MAX, `파일은 최대 ${LECTURE_CONSTRAINTS.FILES.MAX}개까지 업로드 가능합니다.`)
-    .optional() // 선택적 업로드 허용
-    .default([]),
+    .max(
+      LECTURE_CONSTRAINTS.FILES.MAX,
+      `파일은 최대 ${LECTURE_CONSTRAINTS.FILES.MAX}개까지 업로드 가능합니다.`,
+    )
+    .optional(),
 });
 
 export interface Room {

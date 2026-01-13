@@ -3,10 +3,15 @@ import { ConfigService } from '@nestjs/config';
 import { ulid } from 'ulid';
 import { S3Client } from '@aws-sdk/client-s3';
 import { Upload } from '@aws-sdk/lib-storage';
-import { CreateRoomResponseBody, Participant, type ParticipantRole, Room } from '@plum/shared-interfaces'
+import {
+  CreateRoomResponseBody,
+  Participant,
+  type ParticipantRole,
+  Room,
+} from '@plum/shared-interfaces';
 import { InteractionService } from '../interaction/interaction.service.js';
-import { CreateRoomDto } from './room.dto.js'
-import { RoomRepository } from './room.repository.js'
+import { CreateRoomDto } from './room.dto.js';
+import { RoomRepository } from './room.repository.js';
 
 @Injectable()
 export class RoomService {
@@ -52,21 +57,20 @@ export class RoomService {
       // 환경 변수로 관리되는 region과 bucketName을 사용하여 URL 반환
       return `https://${this.bucketName}.s3.${this.region}.amazonaws.com/${fileName}`;
     } catch (error) {
-      throw new InternalServerErrorException('파일 업로드 중 오류가 발생했습니다.');
+      throw new InternalServerErrorException('파일 업로드 중 오류가 발생했습니다.', error);
     }
   }
 
   private async multipleFileUpload(files: Express.Multer.File[]): Promise<string[]> {
     if (!files || files.length === 0) return [];
 
-    try {
-      return await Promise.all(files.map((file) => this.uploadFile(file)));
-    } catch (error) {
-      throw new InternalServerErrorException('복수 파일 업로드 중 오류가 발생했습니다.');
-    }
+    return await Promise.all(files.map((file) => this.uploadFile(file)));
   }
 
-  async createRoom(body: CreateRoomDto, files: Express.Multer.File[]): Promise<CreateRoomResponseBody> {
+  async createRoom(
+    body: CreateRoomDto,
+    files: Express.Multer.File[],
+  ): Promise<CreateRoomResponseBody> {
     const id = ulid();
     const key = `room:${id}`;
 
@@ -76,7 +80,6 @@ export class RoomService {
     // 사전 투표 및 사전 질문 생성
     const polls = await this.interactionService.createMultiplePoll(id, body.polls);
     const qnas = await this.interactionService.createMultipleQna(id, body.qnas);
-
 
     const host = await this.createParticipant(id, body.hostName, 'presenter');
 
@@ -90,16 +93,20 @@ export class RoomService {
       endedAt: '',
       mainRouter: '', // TODO: add main Router
       files: uploadFilesUrl,
-      polls: polls.map(poll => poll.id),
-      qnas: qnas.map(qna => qna.id),
+      polls: polls.map((poll) => poll.id),
+      qnas: qnas.map((qna) => qna.id),
       aiSummery: '',
-    }
+    };
 
     await this.roomRepository.saveRoom(key, room, -1);
-    return { roomId: id }
+    return { roomId: id };
   }
 
-  async createParticipant(roomId: string, name: string, role: ParticipantRole): Promise<Participant> {
+  async createParticipant(
+    roomId: string,
+    name: string,
+    role: ParticipantRole,
+  ): Promise<Participant> {
     const id = ulid();
     const key = `participant:${id}`;
     const participant: Participant = {
@@ -118,7 +125,7 @@ export class RoomService {
       transports: [],
       producers: [],
       consumers: [],
-    }
+    };
 
     await this.roomRepository.saveParticipant(key, participant, -1);
     return participant;

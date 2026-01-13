@@ -3,4 +3,5 @@
 export * from './poll.js';
 export * from './qna.js';
 export * from './participant.js';
+export * from './file.js';
 export * from './room.js';

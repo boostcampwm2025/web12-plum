@@ -1,5 +1,6 @@
 import { FormProvider, useForm, useFormContext, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { createLectureSchema } from '@plum/shared-interfaces';
 
 import { Button } from '@/shared/components/Button';
 import { FormField } from '@/shared/components/FormField';
@@ -9,7 +10,6 @@ import { logger } from '@/shared/lib/logger';
 
 import {
   CreateLectureFormValues,
-  createLectureSchema,
   LECTURE_FORM_KEYS,
   lectureFormDefaultValues,
 } from '../schema';

@@ -53,7 +53,7 @@ export class InteractionService {
       updatedAt: date.toISOString(),
     };
 
-    await this.interactionRepository.savePoll(key, newQna, -1);
+    await this.interactionRepository.saveQna(key, newQna, -1);
     return newQna;
   }
 
