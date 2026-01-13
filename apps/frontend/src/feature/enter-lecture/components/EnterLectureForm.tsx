@@ -76,7 +76,7 @@ function AgreementSection() {
       required
       className="gap-3"
     >
-      <FormField.Legend className="m-0 text-xl font-bold">데이터 수집 동의</FormField.Legend>
+      <FormField.Legend className="mb-3 text-xl font-bold">데이터 수집 동의</FormField.Legend>
       <ul className="text-text flex list-inside list-decimal flex-col gap-3 rounded-lg border-2 border-gray-300 p-4 text-base font-bold">
         <li>참여도·발화 분석 데이터를 수집합니다.</li>
         <li>투표·질문 응답 데이터를 수집합니다.</li>
@@ -107,7 +107,7 @@ function MediaDeviceCheckSection() {
 
   return (
     <FormField className="gap-3">
-      <FormField.Legend className="m-0 text-xl font-bold">카메라 및 마이크 확인</FormField.Legend>
+      <FormField.Legend className="mb-3 text-xl font-bold">카메라 및 마이크 확인</FormField.Legend>
       <div className="flex items-center gap-2 rounded-lg border-2 border-gray-300 p-4">
         <div className="grid aspect-video max-w-130 flex-1 place-items-center rounded-lg bg-gray-400">
           <div className="flex h-full w-full items-center justify-center">
