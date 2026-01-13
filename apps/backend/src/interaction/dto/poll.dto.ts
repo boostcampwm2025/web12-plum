@@ -1,4 +1,4 @@
-import { createZodDto } from 'nestjs-zod';
+import { z } from 'zod';
 import { pollFormSchema } from '@plum/shared-interfaces';
 
-export class CreatePollDto extends createZodDto(pollFormSchema) {}
+export type CreatePollDto = z.infer<typeof pollFormSchema>;

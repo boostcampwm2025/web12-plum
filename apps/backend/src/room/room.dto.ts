@@ -1,4 +1,4 @@
-import { createZodDto } from 'nestjs-zod';
+import { z } from 'zod';
 import { createLectureSchema } from '@plum/shared-interfaces';
 
-export class CreateRoomDto extends createZodDto(createLectureSchema) {}
+export type CreateRoomDto = z.infer<typeof createLectureSchema>;

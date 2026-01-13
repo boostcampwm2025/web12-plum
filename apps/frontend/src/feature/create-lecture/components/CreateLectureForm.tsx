@@ -8,11 +8,7 @@ import { Icon } from '@/shared/components/icon/Icon';
 import { cn } from '@/shared/lib/utils';
 import { logger } from '@/shared/lib/logger';
 
-import {
-  CreateLectureFormValues,
-  LECTURE_FORM_KEYS,
-  lectureFormDefaultValues,
-} from '../schema';
+import { CreateLectureFormValues, LECTURE_FORM_KEYS, lectureFormDefaultValues } from '../schema';
 import { ActivityProvider } from '../hooks/useActivityActionContext';
 import { ActivityModalProvider, useActivityModalContext } from '../hooks/useActivityModalContext';
 import { ActivityList } from './ActivityList';

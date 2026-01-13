@@ -1,4 +1,4 @@
-import { createZodDto } from 'nestjs-zod';
+import { z } from 'zod';
 import { qnaFormSchema } from '@plum/shared-interfaces';
 
-export class CreateQnaDto extends createZodDto(qnaFormSchema) {}
+export type CreateQnaDto = z.infer<typeof qnaFormSchema>;
