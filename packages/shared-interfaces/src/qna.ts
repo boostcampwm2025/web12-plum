@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { type Status } from './shared.js';
 
 /**
  * QnA 폼 유효성 검사 제약 조건
@@ -40,6 +41,8 @@ export const qnaFormSchema = z.object({
 
 export interface Qna {
   id: string;
+  roomId: string;
+  status: Status;
   title: string;
   timeLimit: number;
   isPublic: boolean;

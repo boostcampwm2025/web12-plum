@@ -9,9 +9,9 @@ import { InteractionRepository } from './interaction.repository.js';
 export class InteractionService {
   constructor(private readonly interactionRepository: InteractionRepository) {}
 
-  async createPoll(dto: CreatePollDto): Promise<Poll> {
-    const pollId = ulid();
-    const key = `poll:${pollId}`;
+  async createPoll(roomId: string, dto: CreatePollDto): Promise<Poll> {
+    const id = ulid();
+    const key = `poll:${id}`;
     const date = new Date();
 
     const options: PollOption[] = dto.options.map((option, index) => ({
@@ -21,7 +21,9 @@ export class InteractionService {
     }));
 
     const newPoll: Poll = {
-      id: pollId,
+      id,
+      roomId,
+      status: 'pending',
       ...dto,
       options,
       createdAt: date.toISOString(),
@@ -32,12 +34,20 @@ export class InteractionService {
     return newPoll;
   }
 
-  async createQna(dto: CreateQnaDto): Promise<Qna> {
-    const qnaId = ulid();
-    const key = `qna:${qnaId}`;
+  async createMultiplePoll(roomId: string, data: CreatePollDto[]): Promise<Poll[]> {
+    if (!data || data.length === 0) return [];
+
+    return await Promise.all(data.map((poll) => this.createPoll(roomId, poll)));
+  }
+
+  async createQna(roomId: string, dto: CreateQnaDto): Promise<Qna> {
+    const id = ulid();
+    const key = `qna:${id}`;
     const date = new Date();
     const newQna: Qna = {
-      id: qnaId,
+      id: id,
+      roomId,
+      status: 'pending',
       ...dto,
       createdAt: date.toISOString(),
       updatedAt: date.toISOString(),
@@ -45,5 +55,11 @@ export class InteractionService {
 
     await this.interactionRepository.savePoll(key, newQna, -1);
     return newQna;
+  }
+
+  async createMultipleQna(roomId: string, data: CreateQnaDto[]): Promise<Qna[]> {
+    if (!data || data.length === 0) return [];
+
+    return await Promise.all(data.map((qna) => this.createQna(roomId, qna)));
   }
 }

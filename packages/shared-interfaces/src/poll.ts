@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { Status } from './shared.js';
 
 /**
  * 투표 선택지 개수 제한
@@ -80,6 +81,8 @@ export interface PollOption {
 
 export interface Poll {
   id: string;
+  roomId: string;
+  status: Status;
   title: string;
   options: PollOption[];
   timeLimit: number;
