@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { RoomGateway } from './room.gateway.js';
+import { RedisService } from '../redis/redis.service.js';
 
 describe('RoomGateway', () => {
   let gateway: RoomGateway;
@@ -14,6 +15,13 @@ describe('RoomGateway', () => {
           useValue: {
             log: jest.fn(),
             error: jest.fn(),
+          },
+        },
+        {
+          provide: RedisService,
+          useValue: {
+            getClient: jest.fn(),
+            getSubscriber: jest.fn(),
           },
         },
       ],
