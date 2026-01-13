@@ -6,7 +6,7 @@ type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 /**
  * 카테고리 타입
  */
-type LogCategory = 'API' | 'Socket' | 'UI' | 'Store' | 'Custom';
+type LogCategory = 'API' | 'Socket' | 'UI' | 'Store' | 'Custom' | 'Media';
 
 /**
  * 개발 환경 여부
@@ -32,6 +32,7 @@ const CATEGORY_COLORS: Record<LogCategory, string> = {
   UI: '#059669',
   Store: '#D97706',
   Custom: '#57534E',
+  Media: '#DB2777',
 };
 
 /**
@@ -162,5 +163,6 @@ export const logger = {
   socket: createCategoryLogger('Socket'),
   ui: createCategoryLogger('UI'),
   store: createCategoryLogger('Store'),
+  media: createCategoryLogger('Media'),
   custom: createCategoryLogger('Custom'),
 };
