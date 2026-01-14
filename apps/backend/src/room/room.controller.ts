@@ -15,7 +15,11 @@ import { FilesInterceptor } from '@nestjs/platform-express';
 import {
   ALLOWED_FILE_MIME_TYPES,
   createLectureSchema,
+  CreateRoomRequest,
   CreateRoomResponse,
+  EnterLectureRequestBody,
+  enterLectureSchema,
+  EnterRoomResponse,
   FILE_MAX_SIZE_BYTES,
   nicknameValidate,
   NicknameValidationRequestQueryParam,
@@ -23,7 +27,6 @@ import {
 } from '@plum/shared-interfaces';
 
 import { RoomService } from './room.service.js';
-import { CreateRoomDto } from './room.dto.js';
 import { CreateRoomValidationPipe } from './create-room-validation.pipe.js';
 import { UlidValidationPipe, ZodValidationPipe } from '../common/pipes/index.js';
 
@@ -48,7 +51,7 @@ export class RoomController {
     }),
   )
   async createPost(
-    @Body(new CreateRoomValidationPipe(createLectureSchema)) body: CreateRoomDto,
+    @Body(new CreateRoomValidationPipe(createLectureSchema)) body: CreateRoomRequest,
     @UploadedFiles() files: Express.Multer.File[],
   ): Promise<CreateRoomResponse> {
     return await this.roomService.createRoom(body, files);
@@ -63,10 +66,19 @@ export class RoomController {
   @Get(':id/nickname/validate')
   @HttpCode(HttpStatus.OK)
   async validateNickname(
-    @Query(new ZodValidationPipe(nicknameValidate)) query: NicknameValidationRequestQueryParam,
     @Param('id', UlidValidationPipe) id: string,
+    @Query(new ZodValidationPipe(nicknameValidate)) query: NicknameValidationRequestQueryParam,
   ): Promise<NicknameValidationResponse> {
     const available = await this.roomService.validateNickname(id, query.nickname);
     return { available };
+  }
+
+  @Post(':id/join')
+  @HttpCode(HttpStatus.OK)
+  async joinRoom(
+    @Param('id', UlidValidationPipe) id: string,
+    @Body(new ZodValidationPipe(enterLectureSchema)) body: EnterLectureRequestBody,
+  ): Promise<EnterRoomResponse> {
+    return await this.roomService.joinRoom(id, body);
   }
 }

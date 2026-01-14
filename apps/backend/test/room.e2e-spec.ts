@@ -34,6 +34,7 @@ describe('RoomController (E2E) - 데코레이터 및 유효성 검사', () => {
     createRoom: jest.fn().mockResolvedValue({ id: 'success-id' }),
     validateRoom: jest.fn(),
     validateNickname: jest.fn(),
+    joinRoom: jest.fn(),
   };
 
   beforeAll(async () => {
@@ -189,6 +190,86 @@ describe('RoomController (E2E) - 데코레이터 및 유효성 검사', () => {
         .query({ nickname: '' });
 
       expect(response.status).toBe(400);
+    });
+  });
+
+  describe('POST /room/:id/join', () => {
+    const validUlid = '01HJZ92956N9Y68SS7B9D95H01';
+    const mockJoinBody = {
+      name: '정상적인 강의실 이름',
+      nickname: '참가자1',
+      isAgreed: true,
+      isAudioOn: true,
+      isVideoOn: true,
+    };
+
+    // joinRoom 메서드 모킹 설정 (mockRoomService 객체에 joinRoom이 정의되어 있어야 함)
+    beforeEach(() => {
+      mockRoomService.joinRoom = jest.fn();
+    });
+
+    it('모든 데이터가 유효하면 200 OK와 함께 입장 정보를 반환해야 한다', async () => {
+      const expectedResult = {
+        participantId: 'p-123',
+        name: '참가자1',
+        role: 'audience',
+        mediasoup: {
+          routerRtpCapabilities: {},
+          existingProducers: [],
+        },
+      };
+      mockRoomService.joinRoom.mockResolvedValue(expectedResult);
+
+      const response = await request(app.getHttpServer())
+        .post(`/room/${validUlid}/join`)
+        .send(mockJoinBody);
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual(expectedResult);
+      expect(mockRoomService.joinRoom).toHaveBeenCalledWith(validUlid, mockJoinBody);
+    });
+
+    it('ID가 유효한 ULID 형식이 아니면 400 Bad Request를 반환해야 한다 (UlidValidationPipe)', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/room/invalid-id/join')
+        .send(mockJoinBody);
+
+      expect(response.status).toBe(400);
+      expect(mockRoomService.joinRoom).not.toHaveBeenCalled();
+    });
+
+    it('입력 데이터(Body)가 누락되면 400 Bad Request를 반환해야 한다 (ZodValidationPipe)', async () => {
+      const invalidBody = { name: '' }; // nickname 누락
+
+      const response = await request(app.getHttpServer())
+        .post(`/room/${validUlid}/join`)
+        .send(invalidBody);
+
+      expect(response.status).toBe(400);
+    });
+
+    it('강의실 이름이 실제와 다를 경우 서비스에서 던진 400 에러를 반환해야 한다', async () => {
+      const errorMsg = 'Room name does not match';
+      mockRoomService.joinRoom.mockRejectedValue(new BadRequestException(errorMsg));
+
+      const response = await request(app.getHttpServer())
+        .post(`/room/${validUlid}/join`)
+        .send(mockJoinBody);
+
+      expect(response.status).toBe(400);
+      expect(response.body.message).toBe(errorMsg);
+    });
+
+    it('방이 이미 종료되었을 경우 서비스에서 던진 400 에러를 반환해야 한다', async () => {
+      const errorMsg = 'The room has already ended.';
+      mockRoomService.joinRoom.mockRejectedValue(new BadRequestException(errorMsg));
+
+      const response = await request(app.getHttpServer())
+        .post(`/room/${validUlid}/join`)
+        .send(mockJoinBody);
+
+      expect(response.status).toBe(400);
+      expect(response.body.message).toBe(errorMsg);
     });
   });
 

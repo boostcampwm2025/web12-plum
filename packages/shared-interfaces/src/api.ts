@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { createLectureSchema } from './room.js';
+import { createLectureSchema, enterLectureSchema } from './room.js';
 import { nicknameValidate, ParticipantRole } from './participant.js';
 
 /**
@@ -35,18 +35,22 @@ export type CreateRoomResponse =
     }
   | ErrorResponse;
 
+export type EnterLectureRequestBody = z.infer<typeof enterLectureSchema>;
+
 /**
  * 강의실 입장 요청
  */
-export interface JoinRoomRequest {
-  participantName: string;
-  role: ParticipantRole;
+export interface EnterRoomRequest {
+  uri: {
+    id: string;
+  };
+  body: EnterLectureRequestBody;
 }
 
 /**
  * 강의실 입장 응답
  */
-export type JoinRoomResponse =
+export type EnterRoomResponse =
   | {
       participantId: string;
       name: string;

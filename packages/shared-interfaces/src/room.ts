@@ -55,6 +55,20 @@ export const createLectureSchema = z.object({
     .optional(),
 });
 
+export const enterLectureSchema = z.object({
+  name: z.string(),
+  nickname: z
+    .string()
+    .trim()
+    .min(NICKNAME_CONSTRAINT.MIN, `닉네임은 ${NICKNAME_CONSTRAINT.MIN}자 이상이어야 합니다.`)
+    .max(NICKNAME_CONSTRAINT.MAX, `닉네임은 ${NICKNAME_CONSTRAINT.MAX}자 이하여야 합니다.`),
+  isAgreed: z.boolean().refine((val) => val === true, {
+    message: '데이터 수집에 동의해야 강의실을 입장할 수 있습니다.',
+  }),
+  isAudioOn: z.boolean(),
+  isVideoOn: z.boolean(),
+});
+
 export interface Room {
   id: string;
   name: string;

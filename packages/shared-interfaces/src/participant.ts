@@ -24,6 +24,7 @@ export interface Participant {
     screen: string;
   };
   consumers: string[];
+  joinedAt: string;
 }
 
 export const nicknameValidate = z.object({

@@ -8,11 +8,20 @@ import { ConfigService } from '@nestjs/config';
 import { ulid } from 'ulid';
 import { S3Client } from '@aws-sdk/client-s3';
 import { Upload } from '@aws-sdk/lib-storage';
-import { CreateRoomResponse, Participant, ParticipantRole, Room } from '@plum/shared-interfaces';
-import { CreateRoomDto } from './room.dto.js';
+import {
+  CreateRoomRequest,
+  CreateRoomResponse,
+  EnterLectureRequestBody,
+  EnterRoomResponse,
+  Participant,
+  ParticipantRole,
+  Room,
+} from '@plum/shared-interfaces';
 import { InteractionService } from '../interaction/interaction.service.js';
 import { RoomManagerService } from '../redis/repository-manager/index.js';
 import { MediasoupService } from '../mediasoup/mediasoup.service.js';
+
+const AUDIENCE_VIDEO_LIMIT = 5;
 
 @Injectable()
 export class RoomService {
@@ -95,6 +104,7 @@ export class RoomService {
         screen: '',
       },
       consumers: [],
+      joinedAt: new Date().toISOString(),
     };
   }
 
@@ -104,7 +114,10 @@ export class RoomService {
     return host;
   }
 
-  async createRoom(body: CreateRoomDto, files: Express.Multer.File[]): Promise<CreateRoomResponse> {
+  async createRoom(
+    body: CreateRoomRequest,
+    files: Express.Multer.File[],
+  ): Promise<CreateRoomResponse> {
     const roomId = ulid();
     const hostId = ulid();
 
@@ -146,6 +159,77 @@ export class RoomService {
     };
   }
 
+  async joinRoom(roomId: string, body: EnterLectureRequestBody): Promise<EnterRoomResponse> {
+    const room = await this.validateRoom(roomId);
+    if (room.name !== body.name) throw new BadRequestException('Room name does not match');
+
+    const participant = await this.createParticipant(roomId, body.nickname);
+    const rtpCapabilities = this.mediasoupService.getRouterRtpCapabilities(roomId);
+
+    const allParticipants = await this.roomManagerService.getParticipantsInRoom(roomId);
+    const others = allParticipants.filter((p) => p.id !== participant.id);
+    const audienceVideoCandidates = others
+      .filter((p) => p.role === 'audience' && p.producers.video && p.id !== participant.id)
+      .sort((a, b) => {
+        const dateA = new Date(a.joinedAt).getTime();
+        const dateB = new Date(b.joinedAt).getTime();
+        return dateA - dateB;
+      })
+      .slice(0, AUDIENCE_VIDEO_LIMIT - 1);
+
+    const videoTargetIds = new Set(audienceVideoCandidates.map((p) => p.id));
+
+    const existingProducers: any[] = [];
+    for (const p of allParticipants) {
+      if (p.id === participant.id) continue; // 본인 제외
+
+      // 오디오는 무조건 추가
+      if (p.producers.audio) {
+        existingProducers.push({
+          producerId: p.producers.audio,
+          participantId: p.id,
+          kind: 'audio',
+        });
+      }
+
+      // 발표자 특수 로직
+      if (p.role === 'presenter') {
+        if (p.producers.video) {
+          existingProducers.push({
+            producerId: p.producers.video,
+            participantId: p.id,
+            kind: 'video',
+          });
+        }
+        if (p.producers.screen) {
+          existingProducers.push({
+            producerId: p.producers.screen,
+            participantId: p.id,
+            kind: 'screen',
+          });
+        }
+      }
+      // 선별된 청중 비디오 추가
+      else if (videoTargetIds.has(p.id) && p.producers.video) {
+        existingProducers.push({
+          producerId: p.producers.video,
+          participantId: p.id,
+          kind: 'video',
+        });
+      }
+    }
+
+    return {
+      participantId: participant.id,
+      name: participant.name,
+      role: participant.role,
+      mediasoup: {
+        existingProducers,
+        routerRtpCapabilities: rtpCapabilities,
+      },
+    };
+  }
+
   async createParticipant(roomId: string, name: string): Promise<Participant> {
     const participant = this.generateParticipantObject(ulid(), roomId, name, 'audience');
 
@@ -153,12 +237,12 @@ export class RoomService {
     return participant;
   }
 
-  async validateRoom(roomId: string): Promise<boolean> {
+  async validateRoom(roomId: string): Promise<Room> {
     const room = await this.roomManagerService.findOne(roomId);
 
     if (!room) throw new NotFoundException(`Room with ID ${roomId} not found`);
     if (room.status === 'ended') throw new BadRequestException(`The room has already ended.`);
-    return true;
+    return room;
   }
 
   async validateNickname(roomId: string, nickname: string): Promise<boolean> {
