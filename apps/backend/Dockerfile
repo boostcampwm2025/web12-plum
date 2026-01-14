@@ -1,9 +1,14 @@
 # 빌드 스테이지 (Build stage)
-FROM node:20-alpine AS builder
+# Alpine 대신 Debian 기반 이미지 사용 (Mediasoup prebuilt binary 호환성)
+FROM node:20-slim AS builder
 
 # Mediasoup 빌드를 위한 필수 패키지 설치
-# python3, py3-pip, make, g++, linux-headers (커널 헤더) 등이 필요함
-RUN apk add --no-cache python3 py3-pip make g++ linux-headers
+# Debian 기반이므로 apt-get 사용
+RUN apt-get update && apt-get install -y \
+    python3 \
+    python3-pip \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
 
 # Install pnpm
 RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
@@ -35,7 +40,8 @@ WORKDIR /app/apps/backend
 RUN pnpm run build
 
 # 프로덕션 스테이지 (Production stage)
-FROM node:20-alpine
+# Alpine 대신 Debian 기반 이미지 사용 (Mediasoup 실행 호환성)
+FROM node:20-slim
 
 # pnpm 설치
 RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
