@@ -1,4 +1,5 @@
 import { ApiError, type ApiClientConfig, type ApiResponse } from './types';
+import { logger } from '../lib/logger';
 import { defaultErrorHandler } from './errorHandler';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
@@ -13,6 +14,7 @@ function createApiClient(config: ApiClientConfig) {
     const { headers, ...restConfig } = config;
 
     const url = `${baseURL}${endpoint}`;
+    logger.api.info('API 요청', { method: restConfig.method, url });
 
     const hasBody = restConfig.body !== undefined && restConfig.body !== null;
     const shouldSetJsonContentType = hasBody && !(restConfig.body instanceof FormData);
@@ -41,6 +43,11 @@ function createApiClient(config: ApiClientConfig) {
       }
 
       const data = await response.json();
+      logger.api.info('API 응답', {
+        method: restConfig.method,
+        url,
+        status: response.status,
+      });
       return {
         data,
         status: response.status,
