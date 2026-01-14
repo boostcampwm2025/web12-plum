@@ -16,24 +16,22 @@ export interface ErrorResponse {
 /**
  * 강의실 생성 응답
  */
-export type CreateRoomResponse =
-  | {
-      roomId: string;
-      host: {
-        id: string;
-        name: string;
-        role: ParticipantRole;
-      };
-      mediasoup: {
-        routerRtpCapabilities: unknown;
-        existingProducers: Array<{
-          producerId: string;
-          participantId: string;
-          kind: 'audio' | 'video' | 'screen';
-        }>;
-      };
-    }
-  | ErrorResponse;
+export interface CreateRoomResponse {
+  roomId: string;
+  host: {
+    id: string;
+    name: string;
+    role: ParticipantRole;
+  };
+  mediasoup: {
+    routerRtpCapabilities: unknown;
+    existingProducers: Array<{
+      producerId: string;
+      participantId: string;
+      kind: 'audio' | 'video' | 'screen';
+    }>;
+  };
+}
 
 export type EnterLectureRequestBody = z.infer<typeof enterLectureSchema>;
 
@@ -50,21 +48,19 @@ export interface EnterRoomRequest {
 /**
  * 강의실 입장 응답
  */
-export type EnterRoomResponse =
-  | {
+export interface EnterRoomResponse {
+  participantId: string;
+  name: string;
+  role: ParticipantRole;
+  mediasoup: {
+    routerRtpCapabilities: unknown;
+    existingProducers: Array<{
+      producerId: string;
       participantId: string;
-      name: string;
-      role: ParticipantRole;
-      mediasoup: {
-        routerRtpCapabilities: unknown;
-        existingProducers: Array<{
-          producerId: string;
-          participantId: string;
-          kind: 'audio' | 'video' | 'screen';
-        }>;
-      };
-    }
-  | ErrorResponse;
+      kind: 'audio' | 'video' | 'screen';
+    }>;
+  };
+}
 
 /*
  * 강의실 id 검증 request

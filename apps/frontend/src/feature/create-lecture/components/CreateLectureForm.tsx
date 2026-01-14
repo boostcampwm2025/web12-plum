@@ -11,6 +11,7 @@ import { logger } from '@/shared/lib/logger';
 import { LECTURE_FORM_KEYS, lectureFormDefaultValues } from '../schema';
 import { ActivityProvider } from '../hooks/useActivityActionContext';
 import { ActivityModalProvider, useActivityModalContext } from '../hooks/useActivityModalContext';
+import { useCreateRoom } from '../hooks/useCreateRoom';
 import { ActivityList } from './ActivityList';
 import { ActivityModals } from './ActivityModals';
 import { LecturePresentationUpload } from './LecturePresentationUpload';
@@ -179,6 +180,7 @@ function PresentationUploaderSection() {
  * @returns 강의 생성 폼 JSX 요소
  */
 export function CreateLectureForm() {
+  const { createRoom, isSubmitting } = useCreateRoom();
   const formMethods = useForm<CreateRoomRequest>({
     resolver: zodResolver(createLectureSchema),
     defaultValues: lectureFormDefaultValues,
@@ -187,9 +189,16 @@ export function CreateLectureForm() {
 
   const { handleSubmit, formState } = formMethods;
 
-  const onSubmit = (data: CreateRoomRequest) => {
-    logger.ui.info('강의실 생성 최종 데이터:', data);
-    // 서버 API 호출 로직
+  const onSubmit = async (data: CreateRoomRequest) => {
+    try {
+      const { roomId } = await createRoom(data);
+      // TODO: 생성된 강의실 페이지로 이동
+      // navigate(`/room/${roomId}`);
+      alert(`강의실이 생성되었습니다! Room ID: ${roomId}`);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : '알 수 없는 오류';
+      alert(`강의실 생성에 실패했습니다: ${errorMessage}`);
+    }
   };
 
   return (
@@ -208,10 +217,10 @@ export function CreateLectureForm() {
 
             <Button
               type="submit"
-              disabled={!formState.isValid}
-              className={cn(!formState.isValid && 'opacity-50', 'pt-4 text-xl')}
+              disabled={!formState.isValid || isSubmitting}
+              className={cn((!formState.isValid || isSubmitting) && 'opacity-50', 'pt-4 text-xl')}
             >
-              강의실 생성하기
+              {isSubmitting ? '생성 중...' : '강의실 생성하기'}
             </Button>
           </form>
           <ActivityModals />
