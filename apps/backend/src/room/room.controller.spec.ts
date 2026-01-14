@@ -59,7 +59,7 @@ describe('RoomController', () => {
 
     it('성공적으로 강의실 생성을 요청하면 RoomService의 createRoom을 호출해야 한다', async () => {
       // service.createRoom이 반환할 가짜 결과값
-      const expectedResult = { id: 'room-id', ...mockDto, presentationFiles: ['https://s3...'] };
+      const expectedResult = { roomId: 'room-id' };
       mockRoomService.createRoom.mockResolvedValue(expectedResult);
 
       const result = await controller.createPost(mockDto, mockFiles);
@@ -87,13 +87,12 @@ describe('RoomController', () => {
         qnas: [{ title: '질문1', timeLimit: 60, isPublic: true }],
       };
 
-      mockRoomService.createRoom.mockResolvedValue({ id: 'new-room-id', ...fullDto });
+      mockRoomService.createRoom.mockResolvedValue({ roomId: 'new-room-id' });
 
       const result = await controller.createPost(fullDto, mockFiles);
 
       expect(service.createRoom).toHaveBeenCalledWith(fullDto, mockFiles);
-      expect(result.polls).toHaveLength(1);
-      expect(result.id).toBe('new-room-id');
+      expect(result.roomId).toBe('new-room-id');
     });
 
     it('파일 업로드 중 서버 에러(S3 에러 등)가 발생한 경우', async () => {

@@ -1,7 +1,7 @@
 import { ZodObject } from 'zod';
 import { ArgumentMetadata, BadRequestException } from '@nestjs/common';
 import { createLectureSchema } from '@plum/shared-interfaces';
-import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
+import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe.js';
 
 export class CreateRoomValidationPipe extends ZodValidationPipe {
   constructor(schema: ZodObject) {

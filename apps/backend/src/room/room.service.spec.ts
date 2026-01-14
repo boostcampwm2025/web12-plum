@@ -2,10 +2,11 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { InternalServerErrorException } from '@nestjs/common';
 import { Upload } from '@aws-sdk/lib-storage';
-import { RoomService } from './room.service';
-import { InteractionService } from '../interaction/interaction.service';
-import { RoomRepository } from './room.repository';
+import { RoomService } from './room.service.js';
+import { InteractionService } from '../interaction/interaction.service.js';
+import { RoomManagerService } from '../redis/repository-manager/room-manager.service';
 
+// S3 업로드 모킹
 jest.mock('@aws-sdk/lib-storage', () => ({
   Upload: jest.fn().mockImplementation(() => ({
     done: jest.fn().mockResolvedValue({ Location: 'mock-url' }),
@@ -14,7 +15,7 @@ jest.mock('@aws-sdk/lib-storage', () => ({
 
 describe('RoomService', () => {
   let service: RoomService;
-  let roomRepository: RoomRepository;
+  let roomManagerService: RoomManagerService;
 
   const MockedUpload = Upload as jest.MockedClass<typeof Upload>;
 
@@ -58,35 +59,33 @@ describe('RoomService', () => {
           },
         },
         {
-          provide: RoomRepository,
+          provide: RoomManagerService,
           useValue: {
-            saveRoom: jest.fn().mockResolvedValue(true),
-            saveParticipant: jest.fn().mockResolvedValue(true),
+            saveOne: jest.fn().mockResolvedValue(undefined),
+            addParticipant: jest.fn().mockResolvedValue(undefined),
           },
         },
       ],
     }).compile();
 
     service = module.get<RoomService>(RoomService);
-    roomRepository = module.get<RoomRepository>(RoomRepository);
+    roomManagerService = module.get<RoomManagerService>(RoomManagerService);
   });
 
   afterEach(() => {
     jest.clearAllMocks();
   });
 
-  it('서비스가 정의되어 있어야 한다', () => {
-    expect(service).toBeDefined();
-  });
-
   describe('createRoom', () => {
-    it('강의실 생성 및 파일 업로드가 성공해야 한다', async () => {
+    it('강의실 생성 시 파일 업로드, 인터랙션 생성, 방/호스트 저장이 순차적으로 일어나야 한다', async () => {
       const result = await service.createRoom(mockCreateRoomDto, [mockFile]);
 
+      // 1. 반환값 검증
       expect(result).toHaveProperty('roomId');
 
-      expect(roomRepository.saveRoom).toHaveBeenCalledWith(
-        expect.stringContaining('room:'),
+      // 2. S3 업로드 URL이 제대로 형성되었는지 확인 (saveOne 호출 인자 검증)
+      expect(roomManagerService.saveOne).toHaveBeenCalledWith(
+        result.roomId,
         expect.objectContaining({
           name: mockCreateRoomDto.name,
           files: [expect.stringContaining('test-bucket.s3.ap-northeast-2.amazonaws.com')],
@@ -94,10 +93,17 @@ describe('RoomService', () => {
         -1,
       );
 
-      expect(roomRepository.saveParticipant).toHaveBeenCalled();
+      // 3. 호스트 생성 확인 (addParticipant)
+      expect(roomManagerService.addParticipant).toHaveBeenCalledWith(
+        result.roomId,
+        expect.objectContaining({
+          name: mockCreateRoomDto.hostName,
+          role: 'presenter',
+        }),
+      );
     });
 
-    it('파일 업로드 중 오류가 발생하면 InternalServerErrorException을 던져야 한다', async () => {
+    it('파일 업로드 중 오류가 발생하면 예외를 던져야 한다', async () => {
       MockedUpload.mockImplementationOnce(
         () =>
           ({
@@ -112,13 +118,18 @@ describe('RoomService', () => {
   });
 
   describe('createParticipant', () => {
-    it('새로운 참가자를 생성하고 저장해야 한다', async () => {
-      const roomId = 'test-room-id';
-      const result = await service.createParticipant(roomId, '참가자1', 'presenter');
+    it('참가자를 생성하고 addParticipant를 통해 저장해야 한다', async () => {
+      const roomId = 'room-ulid';
+      const participantName = '학생1';
 
-      expect(result.name).toBe('참가자1');
-      expect(result.roomId).toBe(roomId);
-      expect(roomRepository.saveParticipant).toHaveBeenCalled();
+      const result = await service.createParticipant(roomId, participantName);
+
+      expect(result.name).toBe(participantName);
+      expect(result.role).toBe('audience');
+      expect(roomManagerService.addParticipant).toHaveBeenCalledWith(
+        roomId,
+        expect.objectContaining({ id: result.id, name: participantName }),
+      );
     });
   });
 });

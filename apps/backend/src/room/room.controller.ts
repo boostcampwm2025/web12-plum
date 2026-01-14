@@ -18,7 +18,7 @@ import {
 
 import { RoomService } from './room.service.js';
 import { CreateRoomDto } from './room.dto.js';
-import { CreateRoomValidationPipe } from './create-room-validation.pipe';
+import { CreateRoomValidationPipe } from './create-room-validation.pipe.js';
 
 @Controller('room')
 export class RoomController {

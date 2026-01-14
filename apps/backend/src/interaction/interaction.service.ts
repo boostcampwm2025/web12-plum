@@ -1,65 +1,82 @@
 import { Injectable } from '@nestjs/common';
 import { ulid } from 'ulid';
-import { Poll, PollOption, Qna } from '@plum/shared-interfaces';
+import { Poll, Qna } from '@plum/shared-interfaces';
 
 import { CreatePollDto, CreateQnaDto } from './dto';
-import { InteractionRepository } from './interaction.repository.js';
+import { PollManagerService, QnaManagerService } from '../redis/repository-manager/index.js';
 
 @Injectable()
 export class InteractionService {
-  constructor(private readonly interactionRepository: InteractionRepository) {}
+  constructor(
+    private readonly pollMangerService: PollManagerService,
+    private readonly qnaManagerService: QnaManagerService,
+  ) {}
 
-  async createPoll(roomId: string, dto: CreatePollDto): Promise<Poll> {
+  /**
+   * Poll 데이터 가공 로직
+   */
+  private preparePoll(roomId: string, dto: CreatePollDto): Poll {
     const id = ulid();
-    const key = `poll:${id}`;
-    const date = new Date();
-
-    const options: PollOption[] = dto.options.map((option, index) => ({
-      id: index,
-      value: option.value,
-      count: 0,
-    }));
-
-    const newPoll: Poll = {
+    const now = new Date().toISOString();
+    return {
       id,
       roomId,
       status: 'pending',
       ...dto,
-      options,
-      createdAt: date.toISOString(),
-      updatedAt: date.toISOString(),
+      options: dto.options.map((option, index) => ({
+        id: index,
+        value: option.value,
+        count: 0,
+      })),
+      createdAt: now,
+      updatedAt: now,
     };
+  }
 
-    await this.interactionRepository.savePoll(key, newPoll, -1);
-    return newPoll;
+  /**
+   * QnA 데이터 가공 로직
+   */
+  private prepareQna(roomId: string, dto: CreateQnaDto): Qna {
+    const id = ulid();
+    const now = new Date().toISOString();
+    return {
+      id,
+      roomId,
+      status: 'pending',
+      ...dto,
+      createdAt: now,
+      updatedAt: now,
+    };
+  }
+
+  // --- Poll Methods ---
+  async createPoll(roomId: string, dto: CreatePollDto): Promise<Poll> {
+    const poll = this.preparePoll(roomId, dto);
+    await this.pollMangerService.saveOne(poll.id, poll);
+    return poll;
   }
 
   async createMultiplePoll(roomId: string, data: CreatePollDto[]): Promise<Poll[]> {
     if (!data || data.length === 0) return [];
 
-    return await Promise.all(data.map((poll) => this.createPoll(roomId, poll)));
+    const polls = data.map((dto) => this.preparePoll(roomId, dto));
+
+    await this.pollMangerService.saveMany(polls);
+
+    return polls;
   }
 
+  // --- QnA Methods ---
   async createQna(roomId: string, dto: CreateQnaDto): Promise<Qna> {
-    const id = ulid();
-    const key = `qna:${id}`;
-    const date = new Date();
-    const newQna: Qna = {
-      id: id,
-      roomId,
-      status: 'pending',
-      ...dto,
-      createdAt: date.toISOString(),
-      updatedAt: date.toISOString(),
-    };
-
-    await this.interactionRepository.saveQna(key, newQna, -1);
-    return newQna;
+    const qna = this.prepareQna(roomId, dto);
+    await this.qnaManagerService.saveOne(qna.id, qna);
+    return qna;
   }
 
   async createMultipleQna(roomId: string, data: CreateQnaDto[]): Promise<Qna[]> {
     if (!data || data.length === 0) return [];
-
-    return await Promise.all(data.map((qna) => this.createQna(roomId, qna)));
+    const qnas = data.map((dto) => this.prepareQna(roomId, dto));
+    await this.qnaManagerService.saveMany(qnas);
+    return qnas;
   }
 }

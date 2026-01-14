@@ -3,10 +3,10 @@ import { ConfigService } from '@nestjs/config';
 import { ulid } from 'ulid';
 import { S3Client } from '@aws-sdk/client-s3';
 import { Upload } from '@aws-sdk/lib-storage';
-import { CreateRoomResponse, Participant, ParticipantRole, Room } from '@plum/shared-interfaces';
-import { InteractionService } from '../interaction/interaction.service.js';
+import { CreateRoomResponse, Participant, Room } from '@plum/shared-interfaces';
 import { CreateRoomDto } from './room.dto.js';
-import { RoomRepository } from './room.repository.js';
+import { InteractionService } from '../interaction/interaction.service.js';
+import { RoomManagerService } from '../redis/repository-manager/index.js';
 
 @Injectable()
 export class RoomService {
@@ -17,7 +17,7 @@ export class RoomService {
   constructor(
     private readonly configService: ConfigService,
     private readonly interactionService: InteractionService,
-    private readonly roomRepository: RoomRepository,
+    private readonly roomMangerService: RoomManagerService,
   ) {
     this.region = configService.get<string>('AWS_S3_REGION') || '';
     this.bucketName = configService.get<string>('AWS_S3_BUCKET_NAME') || '';
@@ -63,22 +63,20 @@ export class RoomService {
   }
 
   async createRoom(body: CreateRoomDto, files: Express.Multer.File[]): Promise<CreateRoomResponse> {
-    const id = ulid();
-    const key = `room:${id}`;
+    const roomId = ulid();
+    const hostId = ulid();
 
     // 파일 업로드
     const uploadFilesUrl = await this.multipleFileUpload(files);
 
     // 사전 투표 및 사전 질문 생성
-    const polls = await this.interactionService.createMultiplePoll(id, body.polls);
-    const qnas = await this.interactionService.createMultipleQna(id, body.qnas);
-
-    const host = await this.createParticipant(id, body.hostName, 'presenter');
+    const polls = await this.interactionService.createMultiplePoll(roomId, body.polls);
+    const qnas = await this.interactionService.createMultipleQna(roomId, body.qnas);
 
     const room: Room = {
-      id,
+      id: roomId,
       name: body.name,
-      presenter: host.id,
+      presenter: hostId,
       status: 'pending',
       createdAt: new Date().toISOString(),
       startedAt: '',
@@ -90,23 +88,45 @@ export class RoomService {
       aiSummery: '',
     };
 
-    await this.roomRepository.saveRoom(key, room, -1);
-    return { roomId: id };
+    await this.roomMangerService.saveOne(roomId, room, -1);
+    await this.createHost(roomId, hostId, body.hostName);
+
+    return { roomId: roomId };
   }
 
-  async createParticipant(
-    roomId: string,
-    name: string,
-    role: ParticipantRole,
-  ): Promise<Participant> {
+  private async createHost(roomId: string, hostId: string, name: string) {
+    const host: Participant = {
+      id: hostId,
+      roomId,
+      currentRoomId: roomId,
+      name,
+      role: 'presenter',
+      participationScore: 0,
+      gestureCount: 0,
+      chatCount: 0,
+      pollParticipation: 0,
+      cameraEnable: false,
+      micEnable: false,
+      screenEnable: false,
+      transports: [],
+      producers: {
+        audio: '',
+        video: '',
+        screen: '',
+      },
+      consumers: [],
+    };
+    await this.roomMangerService.addParticipant(roomId, host);
+  }
+
+  async createParticipant(roomId: string, name: string): Promise<Participant> {
     const id = ulid();
-    const key = `participant:${id}`;
     const participant: Participant = {
       id,
       roomId,
       currentRoomId: roomId,
       name,
-      role,
+      role: 'audience',
       participationScore: 0,
       gestureCount: 0,
       chatCount: 0,
@@ -123,7 +143,7 @@ export class RoomService {
       consumers: [],
     };
 
-    await this.roomRepository.saveParticipant(key, participant, -1);
+    await this.roomMangerService.addParticipant(roomId, participant);
     return participant;
   }
 }
