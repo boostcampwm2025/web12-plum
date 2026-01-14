@@ -16,24 +16,22 @@ export interface ErrorResponse {
 /**
  * 강의실 생성 응답
  */
-export type CreateRoomResponse =
-  | {
-      roomId: string;
-      host: {
-        id: string;
-        name: string;
-        role: ParticipantRole;
-      };
-      mediasoup: {
-        routerRtpCapabilities: unknown;
-        existingProducers: Array<{
-          producerId: string;
-          participantId: string;
-          kind: 'audio' | 'video' | 'screen';
-        }>;
-      };
-    }
-  | ErrorResponse;
+export interface CreateRoomResponse {
+  roomId: string;
+  host: {
+    id: string;
+    name: string;
+    role: ParticipantRole;
+  };
+  mediasoup: {
+    routerRtpCapabilities: unknown;
+    existingProducers: Array<{
+      producerId: string;
+      participantId: string;
+      kind: 'audio' | 'video' | 'screen';
+    }>;
+  };
+}
 
 export type EnterLectureRequestBody = z.infer<typeof enterLectureSchema>;
 
