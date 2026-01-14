@@ -136,7 +136,7 @@ jobs:
 
       # --filter @plum/frontend... = 프론트엔드 + 의존성(shared-interfaces)만 빌드
       - name: Build Frontend
-        run: pnpm --filter @plum/frontend run build
+        run: pnpm --filter @plum/frontend... run build
 
       - name: Test Frontend
         run: pnpm --filter @plum/frontend run test

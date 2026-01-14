@@ -117,7 +117,7 @@ jobs:
             update_env "DOCKER_USERNAME" "${DOCKER_USERNAME}"
             update_env "TAG" "${TAG}"
             update_env "LOKI_HOST" "${{ secrets.NCP_DEV_MONITORING_HOST }}"
-            update_env "RDDIS_HOST" "${{ secrets.NCP_DEV_REDIS_HOST }}"
+            update_env "REDIS_HOST" "${{ secrets.NCP_DEV_REDIS_HOST }}"
             update_env "ANNOUNCED_IP" "${{ secrets.NCP_DEV_HOST }}"
 
             docker compose -f docker-compose.yml -f docker-compose.develop.yml pull
@@ -202,7 +202,7 @@ jobs:
             update_env "DOCKER_USERNAME" "${DOCKER_USERNAME}"
             update_env "TAG" "${TAG}"
             update_env "LOKI_HOST" "${{ secrets.NCP_DEV_MONITORING_HOST }}"
-            update_env "RDDIS_HOST" "${{ secrets.NCP_DEV_REDIS_HOST }}"
+            update_env "REDIS_HOST" "${{ secrets.NCP_DEV_REDIS_HOST }}"
             update_env "ANNOUNCED_IP" "${{ secrets.NCP_DEV_HOST }}"
 
             docker compose -f docker-compose.yml -f docker-compose.prod.yml pull
