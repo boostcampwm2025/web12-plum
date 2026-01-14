@@ -1,6 +1,6 @@
 import { FormProvider, useForm, useFormContext, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { createLectureSchema } from '@plum/shared-interfaces';
+import { CreateRoomRequest, createLectureSchema } from '@plum/shared-interfaces';
 
 import { Button } from '@/shared/components/Button';
 import { FormField } from '@/shared/components/FormField';
@@ -8,7 +8,7 @@ import { Icon } from '@/shared/components/icon/Icon';
 import { cn } from '@/shared/lib/utils';
 import { logger } from '@/shared/lib/logger';
 
-import { CreateLectureFormValues, LECTURE_FORM_KEYS, lectureFormDefaultValues } from '../schema';
+import { LECTURE_FORM_KEYS, lectureFormDefaultValues } from '../schema';
 import { ActivityProvider } from '../hooks/useActivityActionContext';
 import { ActivityModalProvider, useActivityModalContext } from '../hooks/useActivityModalContext';
 import { ActivityList } from './ActivityList';
@@ -21,7 +21,7 @@ import { LecturePresentationList } from './LecturePresentationList';
  * @returns 강의실 이름 섹션 JSX 요소
  */
 function LectureNameSection() {
-  const { register } = useFormContext<CreateLectureFormValues>();
+  const { register } = useFormContext<CreateRoomRequest>();
 
   return (
     <FormField
@@ -46,7 +46,7 @@ function LectureNameSection() {
  * @returns 호스트 이름 섹션 JSX 요소
  */
 function HostNameSection() {
-  const { register } = useFormContext<CreateLectureFormValues>();
+  const { register } = useFormContext<CreateRoomRequest>();
 
   return (
     <FormField
@@ -71,7 +71,7 @@ function HostNameSection() {
  * @returns 데이터 수집 동의 섹션 JSX 요소
  */
 function AgreementSection() {
-  const { register } = useFormContext<CreateLectureFormValues>();
+  const { register } = useFormContext<CreateRoomRequest>();
   const isAgreed = useWatch({ name: LECTURE_FORM_KEYS.isAgreed });
 
   return (
@@ -144,7 +144,7 @@ function ActivitySection() {
  * @returns 발표 자료 업로더 섹션 JSX 요소
  */
 function PresentationUploaderSection() {
-  const { setValue } = useFormContext<CreateLectureFormValues>();
+  const { setValue } = useFormContext<CreateRoomRequest>();
   const presentationFiles: File[] = useWatch({ name: LECTURE_FORM_KEYS.presentationFiles }) || [];
 
   // 파일 선택 핸들러
@@ -179,7 +179,7 @@ function PresentationUploaderSection() {
  * @returns 강의 생성 폼 JSX 요소
  */
 export function CreateLectureForm() {
-  const formMethods = useForm<CreateLectureFormValues>({
+  const formMethods = useForm<CreateRoomRequest>({
     resolver: zodResolver(createLectureSchema),
     defaultValues: lectureFormDefaultValues,
     mode: 'onChange',
@@ -187,7 +187,7 @@ export function CreateLectureForm() {
 
   const { handleSubmit, formState } = formMethods;
 
-  const onSubmit = (data: CreateLectureFormValues) => {
+  const onSubmit = (data: CreateRoomRequest) => {
     logger.ui.info('강의실 생성 최종 데이터:', data);
     // 서버 API 호출 로직
   };

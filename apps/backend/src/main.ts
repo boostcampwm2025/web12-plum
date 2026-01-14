@@ -2,6 +2,8 @@ import { NestFactory } from '@nestjs/core';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { CORS_CONFIG } from './common/constants/cors.constants.js';
 import { AppModule } from './app.module.js';
+import { RedisIoAdapter } from './common/adapters/redis-io.adapter.js';
+import { RedisService } from './redis/redis.service.js';
 
 async function bootstrap() {
   // bufferLogs: true로 초기 로그를 버퍼에 저장
@@ -15,6 +17,12 @@ async function bootstrap() {
 
   // Winston 로거를 NestJS 기본 로거로 교체
   app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
+
+  // Socket.IO Redis Adapter 설정
+  // Redis Pub/Sub으로 여러 인스턴스 간 이벤트 동기화
+  const redisService = app.get(RedisService);
+  const redisIoAdapter = new RedisIoAdapter(app, redisService);
+  app.useWebSocketAdapter(redisIoAdapter);
 
   await app.listen(3000);
 

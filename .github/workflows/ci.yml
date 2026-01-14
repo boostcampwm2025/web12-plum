@@ -1,4 +1,9 @@
 # CI Pipeline - 코드 품질 검증
+# 변경사항:
+# - 백엔드/프론트엔드 파일 변경 감지로 선택적 CI 실행
+# - 백엔드 수정 시 → 백엔드 CI만 실행 (Playwright 설치 X)
+# - 프론트엔드 수정 시 → 프론트엔드 CI만 실행
+# - 공유 패키지 수정 시 → 백엔드 + 프론트엔드 모두 실행
 name: CI Pipeline
 
 on:
@@ -9,11 +14,39 @@ on:
 
   push:
     branches:
-      - develop 
+      - develop
       - main
 
 jobs:
-  ci:
+  # STEP 1: 변경된 파일 감지
+  # apps/backend, apps/frontend, packages/* 중 어느 부분이 변경되었는지 확인
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      shared: ${{ steps.filter.outputs.shared }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check changed files
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'apps/backend/**'
+            frontend:
+              - 'apps/frontend/**'
+            shared:
+              - 'packages/**'
+
+  # STEP 2: 백엔드 CI (백엔드 또는 공유 패키지가 변경되었을 때만 실행)
+  backend-ci:
+    needs: detect-changes
+    # 백엔드 파일이나 공유 패키지가 변경되지 않으면 스킵
+    if: needs.detect-changes.outputs.backend == 'true' || needs.detect-changes.outputs.shared == 'true'
     runs-on: ubuntu-latest
 
     steps:
@@ -31,35 +64,71 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'pnpm'       # pnpm 캐시로 설치 속도 향상
+          cache: 'pnpm'
 
-      # 의존성 설치 (pnpm-lock.yaml 기반)
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # 코드 스타일 검사
-      - name: Lint
-        run: pnpm run lint
+      # --filter @plum/backend = 백엔드 패키지만 대상
+      - name: Lint Backend
+        run: pnpm --filter @plum/backend run lint
 
-      # STEP 6: 프로젝트 빌드 (ts → js)
-      - name: Build
-        run: pnpm run build
+      # --filter @plum/backend... = 백엔드 + 의존성(shared-interfaces)만 빌드
+      - name: Build Backend
+        run: pnpm --filter @plum/backend... run build
+
+      - name: Test Backend
+        run: pnpm --filter @plum/backend run test
+
+  # STEP 3: 프론트엔드 CI (프론트엔드 또는 공유 패키지가 변경되었을 때만 실행)
+  frontend-ci:
+    needs: detect-changes
+    # 프론트엔드 파일이나 공유 패키지가 변경되지 않으면 스킵
+    if: needs.detect-changes.outputs.frontend == 'true' || needs.detect-changes.outputs.shared == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # --filter @plum/frontend = 프론트엔드 패키지만 대상
+      - name: Lint Frontend
+        run: pnpm --filter @plum/frontend run lint
 
       # STEP 7: 단위/통합 테스트 실행
-      - name: Create dummy .env for tests
+      - name: Run Unit/Integration Tests
+        run: pnpm run test
+
+      - name: Test Frontend
+        run: pnpm --filter @plum/frontend run test
+
+      # Playwright는 프론트엔드 CI에서만 설치 (백엔드 CI에서는 실행 안 됨!)
+      - name: Install Playwright Browsers
+        run: pnpm --filter @plum/frontend exec playwright install --with-deps chromium
+
+      - name: Create dummy .env for e2e tests
         run: |
           cd apps/backend
           echo "AWS_S3_REGION=ap-northeast-2" >> .env
           echo "AWS_S3_ACCESS_KEY=dummy" >> .env
           echo "AWS_S3_SECRET_KEY=dummy" >> .env
 
-      - name: Run Unit/Integration Tests
-        run: pnpm run test
-
-      # STEP 8: Playwright 브라우저 설치 (Frontend E2E 테스트용)
-      - name: Install Playwright Browsers
-        run: pnpm --filter @plum/frontend exec playwright install --with-deps chromium
-
-      # STEP 9: E2E 테스트 실행
+      # E2E 테스트도 프론트엔드 CI에서만 실행
       - name: Run E2E Tests
         run: pnpm run test:e2e

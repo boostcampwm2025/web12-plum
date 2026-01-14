@@ -3,12 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { ulid } from 'ulid';
 import { S3Client } from '@aws-sdk/client-s3';
 import { Upload } from '@aws-sdk/lib-storage';
-import {
-  CreateRoomResponseBody,
-  Participant,
-  type ParticipantRole,
-  Room,
-} from '@plum/shared-interfaces';
+import { CreateRoomResponse, Participant, ParticipantRole, Room } from '@plum/shared-interfaces';
 import { InteractionService } from '../interaction/interaction.service.js';
 import { CreateRoomDto } from './room.dto.js';
 import { RoomRepository } from './room.repository.js';
@@ -67,10 +62,7 @@ export class RoomService {
     return await Promise.all(files.map((file) => this.uploadFile(file)));
   }
 
-  async createRoom(
-    body: CreateRoomDto,
-    files: Express.Multer.File[],
-  ): Promise<CreateRoomResponseBody> {
+  async createRoom(body: CreateRoomDto, files: Express.Multer.File[]): Promise<CreateRoomResponse> {
     const id = ulid();
     const key = `room:${id}`;
 
@@ -123,7 +115,11 @@ export class RoomService {
       micEnable: false,
       screenEnable: false,
       transports: [],
-      producers: [],
+      producers: {
+        audio: '',
+        video: '',
+        screen: '',
+      },
       consumers: [],
     };
 

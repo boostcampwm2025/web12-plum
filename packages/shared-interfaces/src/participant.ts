@@ -5,7 +5,7 @@ export interface Participant {
   roomId: string;
   currentRoomId: string;
   name: string;
-  role: 'presenter' | 'audience';
+  role: ParticipantRole;
   participationScore: number;
   gestureCount: number;
   chatCount: number;
@@ -14,6 +14,10 @@ export interface Participant {
   micEnable: boolean;
   screenEnable: boolean;
   transports: string[];
-  producers: string[];
+  producers: {
+    audio: string;
+    video: string;
+    screen: string;
+  };
   consumers: string[];
 }

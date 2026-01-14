@@ -2,7 +2,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { FormProvider, useForm } from 'react-hook-form';
 import { ActivityProvider, useActivityActionContext } from './useActivityActionContext';
-import { CreateLectureFormValues } from '../schema';
+import { CreateRoomRequest } from '@plum/shared-interfaces';
 import '@testing-library/jest-dom';
 
 /**
@@ -34,7 +34,7 @@ function TestComponent() {
  * 폼 환경을 제공하는 Wrapper
  */
 function FormWrapper({ children }: { children: React.ReactNode }) {
-  const methods = useForm<CreateLectureFormValues>({
+  const methods = useForm<CreateRoomRequest>({
     defaultValues: {
       polls: [],
       qnas: [],

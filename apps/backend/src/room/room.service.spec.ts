@@ -6,7 +6,6 @@ import { RoomService } from './room.service';
 import { InteractionService } from '../interaction/interaction.service';
 import { RoomRepository } from './room.repository';
 
-
 jest.mock('@aws-sdk/lib-storage', () => ({
   Upload: jest.fn().mockImplementation(() => ({
     done: jest.fn().mockResolvedValue({ Location: 'mock-url' }),
@@ -99,9 +98,12 @@ describe('RoomService', () => {
     });
 
     it('파일 업로드 중 오류가 발생하면 InternalServerErrorException을 던져야 한다', async () => {
-      MockedUpload.mockImplementationOnce(() => ({
-        done: jest.fn().mockRejectedValue(new Error('S3 Upload Error')),
-      } as any));
+      MockedUpload.mockImplementationOnce(
+        () =>
+          ({
+            done: jest.fn().mockRejectedValue(new Error('S3 Upload Error')),
+          }) as any,
+      );
 
       await expect(service.createRoom(mockCreateRoomDto, [mockFile])).rejects.toThrow(
         InternalServerErrorException,

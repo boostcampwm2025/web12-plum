@@ -12,6 +12,7 @@ import { FilesInterceptor } from '@nestjs/platform-express';
 import {
   ALLOWED_FILE_MIME_TYPES,
   createLectureSchema,
+  CreateRoomResponse,
   FILE_MAX_SIZE_BYTES,
 } from '@plum/shared-interfaces';
 
@@ -42,7 +43,7 @@ export class RoomController {
   async createPost(
     @Body(new CreateRoomValidationPipe(createLectureSchema)) body: CreateRoomDto,
     @UploadedFiles() files: Express.Multer.File[],
-  ): Promise<any> {
+  ): Promise<CreateRoomResponse> {
     return await this.roomService.createRoom(body, files);
   }
 }

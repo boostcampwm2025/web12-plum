@@ -68,7 +68,3 @@ export interface Room {
   qnas: string[];
   aiSummery: string;
 }
-
-export interface CreateRoomResponseBody {
-  roomId: string;
-}
