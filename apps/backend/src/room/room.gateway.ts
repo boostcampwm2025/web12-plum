@@ -149,12 +149,18 @@ export class RoomGateway implements OnGatewayDisconnect {
     }
   }
 
+  // leave_room: 강의실 퇴장
+  @SubscribeMessage('leave_room')
+  async handleLeaveRoom(@ConnectedSocket() socket: Socket) {
+    await this.cleanupSocket(socket, 'leave_room');
+    return { success: true };
+  }
+
   // handleDisconnect: 비정상 퇴장 (브라우저 닫기 등)
   async handleDisconnect(socket: Socket) {
     await this.cleanupSocket(socket, 'disconnect');
   }
 
-  //
   // 공통 정리 로직
   private async cleanupSocket(socket: Socket, reason: string) {
     const metadata = this.socketMetadata.get(socket.id);
