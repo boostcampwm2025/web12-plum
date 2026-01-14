@@ -112,6 +112,20 @@ jobs:
               echo "LOKI_HOST=${{ secrets.NCP_DEV_MONITORING_HOST }}" >> .env
             fi
 
+            # Redis 호스트 환경변수 추가
+            if grep -q "^REDIS_HOST=" .env; then
+              sed -i 's/^REDIS_HOST=.*/REDIS_HOST=${{ secrets.NCP_DEV_REDIS_HOST }}/' .env
+            else
+              echo "REDIS_HOST=${{ secrets.NCP_DEV_REDIS_HOST }}" >> .env
+            fi
+
+            # Mediasoup ANNOUNCED_IP (백엔드 서버 공인 IP)
+            if grep -q "^ANNOUNCED_IP=" .env; then
+              sed -i 's/^ANNOUNCED_IP=.*/ANNOUNCED_IP=${{ secrets.NCP_DEV_HOST }}/' .env
+            else
+              echo "ANNOUNCED_IP=${{ secrets.NCP_DEV_HOST }}" >> .env
+            fi
+
             docker compose -f docker-compose.yml -f docker-compose.develop.yml pull
             docker compose -f docker-compose.yml -f docker-compose.develop.yml up -d
 
@@ -188,6 +202,20 @@ jobs:
               sed -i 's/^LOKI_HOST=.*/LOKI_HOST=${{ secrets.NCP_PROD_MONITORING_HOST }}/' .env
             else
               echo "LOKI_HOST=${{ secrets.NCP_PROD_MONITORING_HOST }}" >> .env
+            fi
+
+            # Redis 호스트 환경변수 추가
+            if grep -q "^REDIS_HOST=" .env; then
+              sed -i 's/^REDIS_HOST=.*/REDIS_HOST=${{ secrets.NCP_PROD_REDIS_HOST }}/' .env
+            else
+              echo "REDIS_HOST=${{ secrets.NCP_PROD_REDIS_HOST }}" >> .env
+            fi
+
+            # Mediasoup ANNOUNCED_IP (백엔드 서버 공인 IP)
+            if grep -q "^ANNOUNCED_IP=" .env; then
+              sed -i 's/^ANNOUNCED_IP=.*/ANNOUNCED_IP=${{ secrets.NCP_PROD_HOST }}/' .env
+            else
+              echo "ANNOUNCED_IP=${{ secrets.NCP_PROD_HOST }}" >> .env
             fi
 
             docker compose -f docker-compose.yml -f docker-compose.prod.yml pull
