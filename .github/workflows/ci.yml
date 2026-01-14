@@ -78,8 +78,20 @@ jobs:
       - name: Build Backend
         run: pnpm --filter @plum/backend... run build
 
+      - name: Create dummy .env for e2e tests
+        run: |
+          cd apps/backend
+          echo "AWS_S3_REGION=ap-northeast-2" >> .env
+          echo "AWS_S3_ACCESS_KEY=dummy" >> .env
+          echo "AWS_S3_SECRET_KEY=dummy" >> .env
+
       - name: Test Backend
         run: pnpm --filter @plum/backend run test
+
+      - name: Run E2E Tests
+        run: pnpm --filter @plum/backend run test:e2e
+        env:
+          CI: true
 
       # Docker 빌드 테스트 (CD 실패 방지)
       # 실제 푸시는 하지 않고 빌드만 테스트
@@ -122,9 +134,9 @@ jobs:
       - name: Lint Frontend
         run: pnpm --filter @plum/frontend run lint
 
-      # STEP 7: 단위/통합 테스트 실행
-      - name: Run Unit/Integration Tests
-        run: pnpm run test
+      # --filter @plum/frontend... = 프론트엔드 + 의존성(shared-interfaces)만 빌드
+      - name: Build Frontend
+        run: pnpm --filter @plum/frontend run build
 
       - name: Test Frontend
         run: pnpm --filter @plum/frontend run test
@@ -133,13 +145,8 @@ jobs:
       - name: Install Playwright Browsers
         run: pnpm --filter @plum/frontend exec playwright install --with-deps chromium
 
-      - name: Create dummy .env for e2e tests
-        run: |
-          cd apps/backend
-          echo "AWS_S3_REGION=ap-northeast-2" >> .env
-          echo "AWS_S3_ACCESS_KEY=dummy" >> .env
-          echo "AWS_S3_SECRET_KEY=dummy" >> .env
-
       # E2E 테스트도 프론트엔드 CI에서만 실행
       - name: Run E2E Tests
-        run: pnpm run test:e2e
+        run: pnpm --filter @plum/frontend run test:e2e
+        env:
+          CI: true
