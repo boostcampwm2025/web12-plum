@@ -3,13 +3,14 @@ import { pollFormSchema } from './poll.js';
 import { qnaFormSchema } from './qna.js';
 import { type Status } from './shared.js';
 import { fileSchema } from './file.js';
+import { NICKNAME_CONSTRAINT } from './participant.js';
 
 /**
  * 강의 생성 폼의 제약 조건
  */
 export const LECTURE_CONSTRAINTS = {
   NAME: { MIN: 5, MAX: 30 },
-  HOST: { MIN: 2, MAX: 16 },
+  HOST: NICKNAME_CONSTRAINT,
   FILES: { MAX: 5 },
 } as const;
 

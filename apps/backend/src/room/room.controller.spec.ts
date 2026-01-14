@@ -17,6 +17,7 @@ describe('RoomController', () => {
   const mockRoomService = {
     createRoom: jest.fn(),
     validateRoom: jest.fn(),
+    validateNickname: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -145,6 +146,40 @@ describe('RoomController', () => {
 
       await expect(controller.validateRoom(mockUlid)).rejects.toThrow(NotFoundException);
       expect(service.validateRoom).toHaveBeenCalledWith(mockUlid);
+    });
+  });
+
+  describe('validateNickname', () => {
+    const mockUlid = '01HJZ92956N9Y68SS7B9D95H01';
+    const mockNickname = 'testUser';
+    const mockQuery = { nickname: mockNickname };
+
+    it('닉네임이 사용 가능하면 { available: true }를 반환해야 한다', async () => {
+      mockRoomService.validateNickname.mockResolvedValue(true);
+
+      const result = await controller.validateNickname(mockQuery, mockUlid);
+
+      expect(service.validateNickname).toHaveBeenCalledWith(mockUlid, mockNickname);
+      expect(result).toEqual({ available: true });
+    });
+
+    it('닉네임이 중복되면 { available: false }를 반환해야 한다', async () => {
+      mockRoomService.validateNickname.mockResolvedValue(false);
+
+      const result = await controller.validateNickname(mockQuery, mockUlid);
+
+      expect(service.validateNickname).toHaveBeenCalledWith(mockUlid, mockNickname);
+      expect(result).toEqual({ available: false });
+    });
+
+    it('서비스에서 예외가 발생하면 예외를 그대로 던져야 한다', async () => {
+      mockRoomService.validateNickname.mockRejectedValue(
+        new BadRequestException('Invalid nickname format'),
+      );
+
+      await expect(controller.validateNickname(mockQuery, mockUlid)).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 });

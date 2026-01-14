@@ -73,6 +73,7 @@ describe('RoomService', () => {
             saveOne: jest.fn().mockResolvedValue(undefined),
             addParticipant: jest.fn().mockResolvedValue(undefined),
             findOne: jest.fn().mockResolvedValue(undefined),
+            isNameAvailable: jest.fn(),
           },
         },
         {
@@ -238,6 +239,28 @@ describe('RoomService', () => {
       await expect(service.validateRoom(mockRoomId)).rejects.toThrow(
         new BadRequestException(`The room has already ended.`),
       );
+    });
+  });
+
+  describe('validateNickname', () => {
+    const mockRoomId = '01HJZ92956N9Y68SS7B9D95H01';
+
+    it('RoomManagerService의 중복 체크 결과를 반환해야 한다', async () => {
+      // RoomManagerService.isNameAvailable이 true를 반환하도록 모킹
+      jest.spyOn(roomManagerService, 'isNameAvailable').mockResolvedValue(true);
+
+      const result = await service.validateNickname(mockRoomId, '유저1');
+
+      expect(roomManagerService.isNameAvailable).toHaveBeenCalledWith(mockRoomId, '유저1');
+      expect(result).toBe(true);
+    });
+
+    it('중복된 경우 false를 반환해야 한다', async () => {
+      jest.spyOn(roomManagerService, 'isNameAvailable').mockResolvedValue(false);
+
+      const result = await service.validateNickname(mockRoomId, '중복유저');
+
+      expect(result).toBe(false);
     });
   });
 });

@@ -7,6 +7,7 @@ import {
   HttpStatus,
   Param,
   Post,
+  Query,
   UploadedFiles,
   UseInterceptors,
 } from '@nestjs/common';
@@ -16,12 +17,15 @@ import {
   createLectureSchema,
   CreateRoomResponse,
   FILE_MAX_SIZE_BYTES,
+  nicknameValidate,
+  NicknameValidationRequestQueryParam,
+  NicknameValidationResponse,
 } from '@plum/shared-interfaces';
 
 import { RoomService } from './room.service.js';
 import { CreateRoomDto } from './room.dto.js';
 import { CreateRoomValidationPipe } from './create-room-validation.pipe.js';
-import { UlidValidationPipe } from '../common/pipes/index.js';
+import { UlidValidationPipe, ZodValidationPipe } from '../common/pipes/index.js';
 
 @Controller('room')
 export class RoomController {
@@ -54,5 +58,15 @@ export class RoomController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async validateRoom(@Param('id', UlidValidationPipe) id: string): Promise<void> {
     await this.roomService.validateRoom(id);
+  }
+
+  @Get(':id/nickname/validate')
+  @HttpCode(HttpStatus.OK)
+  async validateNickname(
+    @Query(new ZodValidationPipe(nicknameValidate)) query: NicknameValidationRequestQueryParam,
+    @Param('id', UlidValidationPipe) id: string,
+  ): Promise<NicknameValidationResponse> {
+    const available = await this.roomService.validateNickname(id, query.nickname);
+    return { available };
   }
 }

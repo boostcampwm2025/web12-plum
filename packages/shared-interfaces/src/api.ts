@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { createLectureSchema } from './room.js';
-import { ParticipantRole } from './participant.js';
+import { nicknameValidate, ParticipantRole } from './participant.js';
 
 /**
  * 강의실 생성 요청
@@ -62,8 +62,34 @@ export type JoinRoomResponse =
     }
   | ErrorResponse;
 
+/*
+ * 강의실 id 검증 request
+ */
 export interface RoomValidationRequest {
   uri: {
     id: string;
   };
+}
+
+/**
+ * 강의실 참여자 id 검증 request body
+ */
+
+export type NicknameValidationRequestQueryParam = z.infer<typeof nicknameValidate>;
+
+/**
+ * 강의실 참여자 id 검증 request
+ */
+export interface NicknameValidationRequest {
+  uri: {
+    id: string;
+  };
+  query: NicknameValidationRequestQueryParam;
+}
+
+/**
+ * 강의실 참여자 id 검증 response
+ */
+export interface NicknameValidationResponse {
+  available: boolean;
 }

@@ -19,6 +19,7 @@ const mockManagers = {
     saveOne: jest.fn(),
     addParticipant: jest.fn(),
     findOne: jest.fn(),
+    isNameAvailable: jest.fn(),
   },
   ParticipantManagerService: {},
   PollManagerService: {},
@@ -32,6 +33,7 @@ describe('RoomController (E2E) - 데코레이터 및 유효성 검사', () => {
   const mockRoomService = {
     createRoom: jest.fn().mockResolvedValue({ id: 'success-id' }),
     validateRoom: jest.fn(),
+    validateNickname: jest.fn(),
   };
 
   beforeAll(async () => {
@@ -152,6 +154,41 @@ describe('RoomController (E2E) - 데코레이터 및 유효성 검사', () => {
 
       expect(response.status).toBe(400);
       expect(response.body.message).toBe(errorMsg);
+    });
+  });
+
+  describe('GET /room/:id/nickname/validate', () => {
+    const validUlid = '01HJZ92956N9Y68SS7B9D95H01';
+
+    it('사용 가능한 닉네임일 때 { available: true }를 반환해야 한다', async () => {
+      mockRoomService.validateNickname.mockResolvedValue(true);
+
+      const response = await request(app.getHttpServer())
+        .get(`/room/${validUlid}/nickname/validate`)
+        .query({ nickname: '새닉네임' });
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({ available: true });
+      expect(mockRoomService.validateNickname).toHaveBeenCalledWith(validUlid, '새닉네임');
+    });
+
+    it('이미 존재하는 닉네임일 때 { available: false }를 반환해야 한다', async () => {
+      mockRoomService.validateNickname.mockResolvedValue(false);
+
+      const response = await request(app.getHttpServer())
+        .get(`/room/${validUlid}/nickname/validate`)
+        .query({ nickname: '중복닉네임' });
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({ available: false });
+    });
+
+    it('닉네임 형식이 잘못되었을 때 400 에러를 반환해야 한다 (Zod 검증)', async () => {
+      const response = await request(app.getHttpServer())
+        .get(`/room/${validUlid}/nickname/validate`)
+        .query({ nickname: '' });
+
+      expect(response.status).toBe(400);
     });
   });
 

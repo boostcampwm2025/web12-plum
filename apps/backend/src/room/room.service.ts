@@ -160,4 +160,8 @@ export class RoomService {
     if (room.status === 'ended') throw new BadRequestException(`The room has already ended.`);
     return true;
   }
+
+  async validateNickname(roomId: string, nickname: string): Promise<boolean> {
+    return await this.roomManagerService.isNameAvailable(roomId, nickname);
+  }
 }
