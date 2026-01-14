@@ -8,7 +8,7 @@ const SOCKET_URL = import.meta.env.VITE_SOCKET_URL as string;
 /**
  * 소켓 연결 타임아웃 시간 (밀리초)
  */
-const CONNECTION_TIMEOUT = 15000;
+const CONNECTION_TIMEOUT = 7000;
 
 /**
  * 소켓 연결 옵션
@@ -17,7 +17,7 @@ const SOCKET_OPTIONS = {
   transports: ['websocket', 'polling'], // 전송방식의 우선순위
   reconnection: true, // 자동 재연결 활성화
   reconnectionDelay: 1000, // 재연결 시도 간격 (최소)
-  reconnectionDelayMax: 15000, // 재연결 시도 간격 (최대)
+  reconnectionDelayMax: CONNECTION_TIMEOUT, // 재연결 시도 간격 (최대)
   reconnectionAttempts: Infinity, // 최대 재연결 시도 횟수
   autoConnect: false, // 수동으로 connect() 호출 필요
 };
@@ -164,12 +164,20 @@ export const useSocketStore = create<SocketState>((set, get) => ({
         });
 
         /**
-         * 연결 도중 에러가 나거나 거부당했을 때 발생하는 이벤트
-         *
-         * 실패하면 null을 resolve(반환)하여 호출한 쪽에서 실패를 알 수 있게 함
+         * 서버가 명시적으로 거부할 경우 (인증 에러 등)
+         * socket.active가 false라면 재연결 시도가 중단된 것이므로 7초를 기다릴 필요가 없음
          */
-        currentSocket.once('connect_error', () => {
-          // 정해진 시간 내에 연결에 실패했을 때
+        currentSocket.once('connect_error', (error) => {
+          if (!currentSocket.active) {
+            logger.socket.error('서버 연결 거부 (인증 실패 등)', error.message);
+            clearTimeout(timer);
+            resolve(null);
+          }
+          // socket.active가 true라면 일시적 에러이므로 resolve 하지 않고 7초간 계속 재시도함
+        });
+
+        // 연결 시도 중 disconnect() 호출로 소켓이 닫히는 경우 처리
+        currentSocket.once('disconnect', () => {
           clearTimeout(timer);
           resolve(null);
         });
@@ -185,7 +193,7 @@ export const useSocketStore = create<SocketState>((set, get) => ({
      */
     disconnect: () => {
       const { socket } = get();
-      if (socket && socket.connected) {
+      if (socket) {
         socket.removeAllListeners();
         socket.disconnect();
         set({ socket: null, isConnected: false, reconnectCount: 0 });
