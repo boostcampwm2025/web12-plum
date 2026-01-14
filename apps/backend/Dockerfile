@@ -53,11 +53,9 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/backend/package.json ./apps/backend/
 COPY packages/shared-interfaces/package.json ./packages/shared-interfaces/
 
-# 빌더 스테이지에서 빌드된 node_modules 복사 (Mediasoup 포함)
-# 프로덕션에서 재설치하지 않고 빌더에서 빌드된 것을 사용
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/apps/backend/node_modules ./apps/backend/node_modules
-COPY --from=builder /app/packages/shared-interfaces/node_modules ./packages/shared-interfaces/node_modules
+# 프로덕션 의존성만 설치 (devDependencies 제외)
+# Mediasoup prebuilt binary가 이제 정상 동작함 (Debian glibc 호환)
+RUN HUSKY=0 pnpm install --frozen-lockfile --prod
 
 # 빌더 스테이지에서 빌드된 애플리케이션 복사
 COPY --from=builder /app/apps/backend/dist ./apps/backend/dist
