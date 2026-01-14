@@ -1,6 +1,10 @@
 # 빌드 스테이지 (Build stage)
 FROM node:20-alpine AS builder
 
+# Mediasoup 빌드를 위한 필수 패키지 설치
+# python3, make, g++ 등이 필요함
+RUN apk add --no-cache python3 make g++
+
 # Install pnpm
 RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
 
@@ -15,6 +19,7 @@ COPY apps/backend/package.json ./apps/backend/
 COPY packages/shared-interfaces/package.json ./packages/shared-interfaces/
 
 # 모든 의존성 설치 (워크스페이스 모드)
+# Mediasoup이 여기서 빌드됨
 RUN HUSKY=0 pnpm install --frozen-lockfile
 
 # 소스 파일 복사
@@ -42,8 +47,11 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/backend/package.json ./apps/backend/
 COPY packages/shared-interfaces/package.json ./packages/shared-interfaces/
 
-# 프로덕션 의존성 설치 (워크스페이스 모드)
-RUN HUSKY=0 pnpm install --frozen-lockfile --prod
+# 빌더 스테이지에서 빌드된 node_modules 복사 (Mediasoup 포함)
+# 프로덕션에서 재설치하지 않고 빌더에서 빌드된 것을 사용
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/apps/backend/node_modules ./apps/backend/node_modules
+COPY --from=builder /app/packages/shared-interfaces/node_modules ./packages/shared-interfaces/node_modules
 
 # 빌더 스테이지에서 빌드된 애플리케이션 복사
 COPY --from=builder /app/apps/backend/dist ./apps/backend/dist
