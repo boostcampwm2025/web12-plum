@@ -2,8 +2,8 @@
 FROM node:20-alpine AS builder
 
 # Mediasoup 빌드를 위한 필수 패키지 설치
-# python3, make, g++ 등이 필요함
-RUN apk add --no-cache python3 make g++
+# python3, py3-pip (pip), make, g++ 등이 필요함
+RUN apk add --no-cache python3 py3-pip make g++
 
 # Install pnpm
 RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
