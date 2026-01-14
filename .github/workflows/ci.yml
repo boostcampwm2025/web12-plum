@@ -80,6 +80,16 @@ jobs:
       - name: Test Backend
         run: pnpm --filter @plum/backend run test
 
+      # Docker 빌드 테스트 (CD 실패 방지)
+      # 실제 푸시는 하지 않고 빌드만 테스트
+      - name: Test Docker Build
+        run: |
+          docker build \
+            --file ./apps/backend/Dockerfile \
+            --tag plum-backend:test \
+            --no-cache \
+            .
+
   # STEP 3: 프론트엔드 CI (프론트엔드 또는 공유 패키지가 변경되었을 때만 실행)
   frontend-ci:
     needs: detect-changes
