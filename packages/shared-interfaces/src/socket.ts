@@ -47,6 +47,12 @@ export interface ServerToClientEvents {
  * 클라이언트 -> 서버 이벤트
  */
 export interface ClientToServerEvents {
+  // 강의실 입장
+  join_room: (
+    data: { roomId: string; participantId: string },
+    callback: (response: { success: boolean; error?: string }) => void,
+  ) => void;
+
   // Mediasoup RTP Capabilities 요청
   media_get_rtp_capabilities: (callback: (response: unknown) => void) => void;
 
