@@ -12,6 +12,19 @@ export type CreateRoomRequest = z.infer<typeof createLectureSchema>;
  */
 export interface CreateRoomResponse {
   roomId: string;
+  host: {
+    id: string;
+    name: string;
+    role: ParticipantRole;
+  };
+  mediasoup: {
+    routerRtpCapabilities: unknown;
+    existingProducers: Array<{
+      producerId: string;
+      participantId: string;
+      kind: 'audio' | 'video' | 'screen';
+    }>;
+  };
 }
 
 /**
@@ -27,6 +40,7 @@ export interface JoinRoomRequest {
  */
 export interface JoinRoomResponse {
   participantId: string;
+  name: string;
   role: ParticipantRole;
   mediasoup: {
     routerRtpCapabilities: unknown;

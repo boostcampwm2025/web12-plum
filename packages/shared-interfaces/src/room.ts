@@ -62,7 +62,6 @@ export interface Room {
   createdAt: string;
   startedAt: string;
   endedAt: string;
-  mainRouter: string;
   files: string[];
   polls: string[];
   qnas: string[];

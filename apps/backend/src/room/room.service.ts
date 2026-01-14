@@ -3,10 +3,11 @@ import { ConfigService } from '@nestjs/config';
 import { ulid } from 'ulid';
 import { S3Client } from '@aws-sdk/client-s3';
 import { Upload } from '@aws-sdk/lib-storage';
-import { CreateRoomResponse, Participant, Room } from '@plum/shared-interfaces';
+import { CreateRoomResponse, Participant, ParticipantRole, Room } from '@plum/shared-interfaces';
 import { CreateRoomDto } from './room.dto.js';
 import { InteractionService } from '../interaction/interaction.service.js';
 import { RoomManagerService } from '../redis/repository-manager/index.js';
+import { MediasoupService } from '../mediasoup/mediasoup.service.js';
 
 @Injectable()
 export class RoomService {
@@ -18,6 +19,7 @@ export class RoomService {
     private readonly configService: ConfigService,
     private readonly interactionService: InteractionService,
     private readonly roomMangerService: RoomManagerService,
+    private readonly mediasoupService: MediasoupService,
   ) {
     this.region = configService.get<string>('AWS_S3_REGION') || '';
     this.bucketName = configService.get<string>('AWS_S3_BUCKET_NAME') || '';
@@ -62,16 +64,51 @@ export class RoomService {
     return await Promise.all(files.map((file) => this.uploadFile(file)));
   }
 
+  private generateParticipantObject(
+    id: string,
+    roomId: string,
+    name: string,
+    role: ParticipantRole,
+  ): Participant {
+    return {
+      id,
+      roomId,
+      currentRoomId: roomId,
+      name,
+      role,
+      participationScore: 0,
+      gestureCount: 0,
+      chatCount: 0,
+      pollParticipation: 0,
+      cameraEnable: false,
+      micEnable: false,
+      screenEnable: false,
+      transports: [],
+      producers: {
+        audio: '',
+        video: '',
+        screen: '',
+      },
+      consumers: [],
+    };
+  }
+
+  private async createHost(roomId: string, hostId: string, name: string) {
+    const host = this.generateParticipantObject(hostId, roomId, name, 'presenter');
+    await this.roomMangerService.addParticipant(roomId, host);
+    return host;
+  }
+
   async createRoom(body: CreateRoomDto, files: Express.Multer.File[]): Promise<CreateRoomResponse> {
     const roomId = ulid();
     const hostId = ulid();
 
-    // 파일 업로드
-    const uploadFilesUrl = await this.multipleFileUpload(files);
-
-    // 사전 투표 및 사전 질문 생성
-    const polls = await this.interactionService.createMultiplePoll(roomId, body.polls);
-    const qnas = await this.interactionService.createMultipleQna(roomId, body.qnas);
+    const [uploadFilesUrl, polls, qnas, router] = await Promise.all([
+      this.multipleFileUpload(files),
+      this.interactionService.createMultiplePoll(roomId, body.polls),
+      this.interactionService.createMultipleQna(roomId, body.qnas),
+      this.mediasoupService.createRouter(roomId),
+    ]);
 
     const room: Room = {
       id: roomId,
@@ -79,69 +116,33 @@ export class RoomService {
       presenter: hostId,
       status: 'pending',
       createdAt: new Date().toISOString(),
-      startedAt: '',
+      startedAt: new Date().toISOString(),
       endedAt: '',
-      mainRouter: '', // TODO: add main Router
       files: uploadFilesUrl,
       polls: polls.map((poll) => poll.id),
       qnas: qnas.map((qna) => qna.id),
       aiSummery: '',
     };
 
-    await this.roomMangerService.saveOne(roomId, room, -1);
-    await this.createHost(roomId, hostId, body.hostName);
+    await this.roomMangerService.saveOne(roomId, room);
+    const host = await this.createHost(roomId, hostId, body.hostName);
 
-    return { roomId: roomId };
-  }
-
-  private async createHost(roomId: string, hostId: string, name: string) {
-    const host: Participant = {
-      id: hostId,
-      roomId,
-      currentRoomId: roomId,
-      name,
-      role: 'presenter',
-      participationScore: 0,
-      gestureCount: 0,
-      chatCount: 0,
-      pollParticipation: 0,
-      cameraEnable: false,
-      micEnable: false,
-      screenEnable: false,
-      transports: [],
-      producers: {
-        audio: '',
-        video: '',
-        screen: '',
+    return {
+      roomId: roomId,
+      host: {
+        id: host.id,
+        name: host.name,
+        role: host.role,
       },
-      consumers: [],
+      mediasoup: {
+        routerRtpCapabilities: router.rtpCapabilities,
+        existingProducers: [],
+      },
     };
-    await this.roomMangerService.addParticipant(roomId, host);
   }
 
   async createParticipant(roomId: string, name: string): Promise<Participant> {
-    const id = ulid();
-    const participant: Participant = {
-      id,
-      roomId,
-      currentRoomId: roomId,
-      name,
-      role: 'audience',
-      participationScore: 0,
-      gestureCount: 0,
-      chatCount: 0,
-      pollParticipation: 0,
-      cameraEnable: false,
-      micEnable: false,
-      screenEnable: false,
-      transports: [],
-      producers: {
-        audio: '',
-        video: '',
-        screen: '',
-      },
-      consumers: [],
-    };
+    const participant = this.generateParticipantObject(ulid(), roomId, name, 'audience');
 
     await this.roomMangerService.addParticipant(roomId, participant);
     return participant;
