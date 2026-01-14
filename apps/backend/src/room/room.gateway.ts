@@ -7,6 +7,7 @@ import {
   OnGatewayDisconnect,
 } from '@nestjs/websockets';
 import { Socket } from 'socket.io';
+import { DtlsParameters } from 'mediasoup/node/lib/types';
 import { SOCKET_CONFIG } from '../common/constants/socket.constants.js';
 import { WsExceptionFilter } from '../common/filters/index.js';
 import { MediasoupService } from '../mediasoup/mediasoup.service.js';
@@ -84,11 +85,76 @@ export class RoomGateway implements OnGatewayDisconnect {
     }
   }
 
+  // create_transport: Transport 생성
+  @SubscribeMessage('create_transport')
+  async handleCreateTransport(
+    @ConnectedSocket() socket: Socket,
+    @MessageBody() data: { direction: 'send' | 'recv' },
+  ) {
+    const metadata = this.socketMetadata.get(socket.id);
+    if (!metadata) {
+      return { success: false, error: '먼저 join_room을 호출하세요.' };
+    }
+
+    try {
+      // 1. Transport 생성
+      const transportParams = await this.mediasoupService.createWebRtcTransport(metadata.roomId);
+
+      // 2. transportId 저장
+      metadata.transportIds.push(transportParams.id);
+
+      // 3. Redis에 participant.transports 업데이트
+      const participant = await this.participantManagerService.findOne(metadata.participantId);
+      if (participant) {
+        participant.transports.push(transportParams.id);
+        await this.participantManagerService.updatePartial(metadata.participantId, {
+          transports: participant.transports,
+        });
+      }
+
+      this.logger.log(
+        `✅ [create_transport] Transport 생성 (direction: ${data.direction}, id: ${transportParams.id})`,
+      );
+
+      return {
+        success: true,
+        ...transportParams,
+      };
+    } catch (error) {
+      this.logger.error(`❌ [create_transport] 실패:`, error);
+      return { success: false, error: 'Transport 생성에 실패했습니다.' };
+    }
+  }
+
+  // connect_transport: Transport DTLS 연결
+  @SubscribeMessage('connect_transport')
+  async handleConnectTransport(
+    @ConnectedSocket() socket: Socket,
+    @MessageBody() data: { transportId: string; dtlsParameters: DtlsParameters },
+  ) {
+    const metadata = this.socketMetadata.get(socket.id);
+    if (!metadata) {
+      return { success: false, error: '먼저 join_room을 호출하세요.' };
+    }
+
+    try {
+      await this.mediasoupService.connectTransport(data.transportId, data.dtlsParameters);
+
+      this.logger.log(`✅ [connect_transport] Transport 연결 완료 (id: ${data.transportId})`);
+
+      return { success: true };
+    } catch (error) {
+      this.logger.error(`❌ [connect_transport] 실패:`, error);
+      return { success: false, error: 'Transport 연결에 실패했습니다.' };
+    }
+  }
+
   // handleDisconnect: 비정상 퇴장 (브라우저 닫기 등)
   async handleDisconnect(socket: Socket) {
     await this.cleanupSocket(socket, 'disconnect');
   }
 
+  //
   // 공통 정리 로직
   private async cleanupSocket(socket: Socket, reason: string) {
     const metadata = this.socketMetadata.get(socket.id);
