@@ -1,12 +1,18 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
-import { InternalServerErrorException } from '@nestjs/common';
+import {
+  BadRequestException,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { Upload } from '@aws-sdk/lib-storage';
+import { Room } from '@plum/shared-interfaces';
+
 import { RoomService } from './room.service.js';
+import { CreateRoomDto } from './room.dto.js';
 import { InteractionService } from '../interaction/interaction.service.js';
 import { RoomManagerService } from '../redis/repository-manager/index.js'; // 경로 수정
 import { MediasoupService } from '../mediasoup/mediasoup.service.js';
-import { CreateRoomDto } from './room.dto';
 
 // S3 업로드 모킹
 jest.mock('@aws-sdk/lib-storage', () => ({
@@ -66,6 +72,7 @@ describe('RoomService', () => {
           useValue: {
             saveOne: jest.fn().mockResolvedValue(undefined),
             addParticipant: jest.fn().mockResolvedValue(undefined),
+            findOne: jest.fn().mockResolvedValue(undefined),
           },
         },
         {
@@ -103,6 +110,8 @@ describe('RoomService', () => {
           routerRtpCapabilities: { codecs: expect.any(Array) },
         },
       });
+
+      if (!('roomId' in result)) fail('Response should contain roomId');
 
       expect(roomManagerService.saveOne).toHaveBeenCalledWith(
         result.roomId,
@@ -158,6 +167,8 @@ describe('RoomService', () => {
 
       const result = await service.createRoom(mockCreateRoomDto, mockFiles);
 
+      if (!('roomId' in result)) fail('Response should contain roomId');
+
       expect(result.roomId).toBeDefined();
       const savedRoom = (roomManagerService.saveOne as jest.Mock).mock.calls[0][1];
       expect(savedRoom.files).toHaveLength(2);
@@ -198,6 +209,35 @@ describe('RoomService', () => {
       expect(p1.id).not.toBe(p2.id);
       expect(p1.roomId).toBe(roomId);
       expect(p2.roomId).toBe(roomId);
+    });
+  });
+
+  describe('validateRoom', () => {
+    const mockRoomId = '01HJZ92956N9Y68SS7B9D95H01';
+
+    it('방이 존재하고 상태가 "ended"가 아니면 true를 반환해야 한다', async () => {
+      const mockRoom = { id: mockRoomId, status: 'active' } as Room;
+      jest.spyOn(roomManagerService, 'findOne').mockResolvedValue(mockRoom);
+
+      const result = await service.validateRoom(mockRoomId);
+
+      expect(roomManagerService.findOne).toHaveBeenCalledWith(mockRoomId);
+      expect(result).toBe(true);
+    });
+
+    it('방이 존재하지 않으면 NotFoundException을 던져야 한다', async () => {
+      await expect(service.validateRoom(mockRoomId)).rejects.toThrow(
+        new NotFoundException(`Room with ID ${mockRoomId} not found`),
+      );
+    });
+
+    it('방의 상태가 "ended"이면 BadRequestException을 던져야 한다', async () => {
+      const mockRoom = { id: mockRoomId, status: 'ended' } as Room;
+      jest.spyOn(roomManagerService, 'findOne').mockResolvedValue(mockRoom);
+
+      await expect(service.validateRoom(mockRoomId)).rejects.toThrow(
+        new BadRequestException(`The room has already ended.`),
+      );
     });
   });
 });

@@ -1,4 +1,9 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ulid } from 'ulid';
 import { S3Client } from '@aws-sdk/client-s3';
@@ -18,7 +23,7 @@ export class RoomService {
   constructor(
     private readonly configService: ConfigService,
     private readonly interactionService: InteractionService,
-    private readonly roomMangerService: RoomManagerService,
+    private readonly roomManagerService: RoomManagerService,
     private readonly mediasoupService: MediasoupService,
   ) {
     this.region = configService.get<string>('AWS_S3_REGION') || '';
@@ -95,7 +100,7 @@ export class RoomService {
 
   private async createHost(roomId: string, hostId: string, name: string) {
     const host = this.generateParticipantObject(hostId, roomId, name, 'presenter');
-    await this.roomMangerService.addParticipant(roomId, host);
+    await this.roomManagerService.addParticipant(roomId, host);
     return host;
   }
 
@@ -124,7 +129,7 @@ export class RoomService {
       aiSummery: '',
     };
 
-    await this.roomMangerService.saveOne(roomId, room);
+    await this.roomManagerService.saveOne(roomId, room);
     const host = await this.createHost(roomId, hostId, body.hostName);
 
     return {
@@ -144,7 +149,15 @@ export class RoomService {
   async createParticipant(roomId: string, name: string): Promise<Participant> {
     const participant = this.generateParticipantObject(ulid(), roomId, name, 'audience');
 
-    await this.roomMangerService.addParticipant(roomId, participant);
+    await this.roomManagerService.addParticipant(roomId, participant);
     return participant;
+  }
+
+  async validateRoom(roomId: string): Promise<boolean> {
+    const room = await this.roomManagerService.findOne(roomId);
+
+    if (!room) throw new NotFoundException(`Room with ID ${roomId} not found`);
+    if (room.status === 'ended') throw new BadRequestException(`The room has already ended.`);
+    return true;
   }
 }

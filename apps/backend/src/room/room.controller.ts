@@ -2,8 +2,10 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Get,
   HttpCode,
   HttpStatus,
+  Param,
   Post,
   UploadedFiles,
   UseInterceptors,
@@ -19,6 +21,7 @@ import {
 import { RoomService } from './room.service.js';
 import { CreateRoomDto } from './room.dto.js';
 import { CreateRoomValidationPipe } from './create-room-validation.pipe.js';
+import { UlidValidationPipe } from '../common/pipes/index.js';
 
 @Controller('room')
 export class RoomController {
@@ -45,5 +48,11 @@ export class RoomController {
     @UploadedFiles() files: Express.Multer.File[],
   ): Promise<CreateRoomResponse> {
     return await this.roomService.createRoom(body, files);
+  }
+
+  @Get(':id/validate')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async validateRoom(@Param('id', UlidValidationPipe) id: string): Promise<void> {
+    await this.roomService.validateRoom(id);
   }
 }

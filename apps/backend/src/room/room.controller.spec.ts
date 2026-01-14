@@ -1,4 +1,8 @@
-import { InternalServerErrorException } from '@nestjs/common';
+import {
+  BadRequestException,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 
 import { RoomController } from './room.controller';
@@ -12,6 +16,7 @@ describe('RoomController', () => {
   // RoomService Mocking
   const mockRoomService = {
     createRoom: jest.fn(),
+    validateRoom: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -91,6 +96,7 @@ describe('RoomController', () => {
 
       const result = await controller.createPost(fullDto, mockFiles);
 
+      if (!('roomId' in result)) fail('Response should contain roomId');
       expect(service.createRoom).toHaveBeenCalledWith(fullDto, mockFiles);
       expect(result.roomId).toBe('new-room-id');
     });
@@ -111,6 +117,34 @@ describe('RoomController', () => {
       await expect(controller.createPost(dto, mockFiles)).rejects.toThrow(
         InternalServerErrorException,
       );
+    });
+  });
+
+  describe('validateRoom', () => {
+    const mockUlid = '01HJZ92956N9Y68SS7B9D95H01'; // 유효한 ULID 예시
+
+    it('방이 유효하면 아무것도 반환하지 않고 204를 기대한다', async () => {
+      mockRoomService.validateRoom.mockResolvedValue(undefined);
+
+      const result = await controller.validateRoom(mockUlid);
+
+      expect(service.validateRoom).toHaveBeenCalledWith(mockUlid);
+      expect(result).toBeUndefined();
+    });
+
+    it('방이 종료된 상태면 BadRequestException을 던져야 한다', async () => {
+      mockRoomService.validateRoom.mockRejectedValue(
+        new BadRequestException('The room has already ended.'),
+      );
+      await expect(controller.validateRoom(mockUlid)).rejects.toThrow(BadRequestException);
+    });
+
+    it('방이 유효하지 않으면 NotFoundException을 던져야 한다', async () => {
+      const error = new NotFoundException(`Room with ID ${mockUlid} not found`);
+      mockRoomService.validateRoom.mockRejectedValue(error);
+
+      await expect(controller.validateRoom(mockUlid)).rejects.toThrow(NotFoundException);
+      expect(service.validateRoom).toHaveBeenCalledWith(mockUlid);
     });
   });
 });
