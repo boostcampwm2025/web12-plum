@@ -1,9 +1,20 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
+import { Global, INestApplication, Module } from '@nestjs/common';
 import request from 'supertest';
 import { io, Socket as ClientSocket } from 'socket.io-client';
 import { AppModule } from '../src/app.module.js';
 import { SOCKET_CONFIG } from '../src/common/constants/socket.constants.js';
+import { RedisModule } from '../src/redis/redis.module.js';
+import { RedisService } from '../src/redis/redis.service.js';
+import * as Managers from '../src/redis/repository-manager/index.js';
+
+const mockRedisService = {};
+const mockManagers = {
+  RoomManagerService: {},
+  ParticipantManagerService: {},
+  PollManagerService: {},
+  QnaManagerService: {},
+};
 
 describe('AppController (e2e)', () => {
   let app: INestApplication;
@@ -11,9 +22,28 @@ describe('AppController (e2e)', () => {
   const socketNamespace = SOCKET_CONFIG.namespace;
 
   beforeEach(async () => {
+    @Global()
+    @Module({
+      providers: [
+        { provide: RedisService, useValue: mockRedisService },
+        { provide: Managers.RoomManagerService, useValue: mockManagers.RoomManagerService },
+        {
+          provide: Managers.ParticipantManagerService,
+          useValue: mockManagers.ParticipantManagerService,
+        },
+        { provide: Managers.PollManagerService, useValue: mockManagers.PollManagerService },
+        { provide: Managers.QnaManagerService, useValue: mockManagers.QnaManagerService },
+      ],
+      exports: [RedisService, ...Object.values(Managers)],
+    })
+    class FakeRedisModule {}
+
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideModule(RedisModule)
+      .useModule(FakeRedisModule)
+      .compile();
 
     app = moduleFixture.createNestApplication();
     await app.init();

@@ -1,8 +1,19 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
+import { Global, INestApplication, Module } from '@nestjs/common';
 import request from 'supertest';
-import { AppModule } from '../src/app.module';
-import { RoomService } from '../src/room/room.service';
+import { AppModule } from '../src/app.module.js';
+import { RoomService } from '../src/room/room.service.js';
+import { RedisModule } from '../src/redis/redis.module.js';
+import { RedisService } from '../src/redis/redis.service.js';
+import * as Managers from '../src/redis/repository-manager/index.js';
+
+const mockRedisService = {};
+const mockManagers = {
+  RoomManagerService: { saveOne: jest.fn(), addParticipant: jest.fn() },
+  ParticipantManagerService: {},
+  PollManagerService: {},
+  QnaManagerService: {},
+};
 
 describe('RoomController (E2E) - 데코레이터 및 유효성 검사', () => {
   let app: INestApplication;
@@ -13,15 +24,32 @@ describe('RoomController (E2E) - 데코레이터 및 유효성 검사', () => {
   };
 
   beforeAll(async () => {
+    @Global()
+    @Module({
+      providers: [
+        { provide: RedisService, useValue: mockRedisService },
+        { provide: Managers.RoomManagerService, useValue: mockManagers.RoomManagerService },
+        {
+          provide: Managers.ParticipantManagerService,
+          useValue: mockManagers.ParticipantManagerService,
+        },
+        { provide: Managers.PollManagerService, useValue: mockManagers.PollManagerService },
+        { provide: Managers.QnaManagerService, useValue: mockManagers.QnaManagerService },
+      ],
+      exports: [RedisService, ...Object.values(Managers)],
+    })
+    class FakeRedisModule {}
+
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     })
+      .overrideModule(RedisModule)
+      .useModule(FakeRedisModule)
       .overrideProvider(RoomService)
       .useValue(mockRoomService)
       .compile();
 
     app = moduleFixture.createNestApplication();
-
     await app.init();
   });
 
