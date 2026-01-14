@@ -50,21 +50,19 @@ export interface EnterRoomRequest {
 /**
  * 강의실 입장 응답
  */
-export type EnterRoomResponse =
-  | {
+export interface EnterRoomResponse {
+  participantId: string;
+  name: string;
+  role: ParticipantRole;
+  mediasoup: {
+    routerRtpCapabilities: unknown;
+    existingProducers: Array<{
+      producerId: string;
       participantId: string;
-      name: string;
-      role: ParticipantRole;
-      mediasoup: {
-        routerRtpCapabilities: unknown;
-        existingProducers: Array<{
-          producerId: string;
-          participantId: string;
-          kind: 'audio' | 'video' | 'screen';
-        }>;
-      };
-    }
-  | ErrorResponse;
+      kind: 'audio' | 'video' | 'screen';
+    }>;
+  };
+}
 
 /*
  * 강의실 id 검증 request
