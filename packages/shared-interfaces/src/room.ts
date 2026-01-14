@@ -3,13 +3,14 @@ import { pollFormSchema } from './poll.js';
 import { qnaFormSchema } from './qna.js';
 import { type Status } from './shared.js';
 import { fileSchema } from './file.js';
+import { NICKNAME_CONSTRAINT } from './participant.js';
 
 /**
  * 강의 생성 폼의 제약 조건
  */
 export const LECTURE_CONSTRAINTS = {
   NAME: { MIN: 5, MAX: 30 },
-  HOST: { MIN: 2, MAX: 16 },
+  HOST: NICKNAME_CONSTRAINT,
   FILES: { MAX: 5 },
 } as const;
 
@@ -52,6 +53,20 @@ export const createLectureSchema = z.object({
       `파일은 최대 ${LECTURE_CONSTRAINTS.FILES.MAX}개까지 업로드 가능합니다.`,
     )
     .optional(),
+});
+
+export const enterLectureSchema = z.object({
+  name: z.string(),
+  nickname: z
+    .string()
+    .trim()
+    .min(NICKNAME_CONSTRAINT.MIN, `닉네임은 ${NICKNAME_CONSTRAINT.MIN}자 이상이어야 합니다.`)
+    .max(NICKNAME_CONSTRAINT.MAX, `닉네임은 ${NICKNAME_CONSTRAINT.MAX}자 이하여야 합니다.`),
+  isAgreed: z.boolean().refine((val) => val === true, {
+    message: '데이터 수집에 동의해야 강의실을 입장할 수 있습니다.',
+  }),
+  isAudioOn: z.boolean(),
+  isVideoOn: z.boolean(),
 });
 
 export interface Room {

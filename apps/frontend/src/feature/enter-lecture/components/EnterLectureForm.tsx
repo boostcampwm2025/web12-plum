@@ -1,12 +1,13 @@
 import { FormProvider, useForm, useFormContext, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { EnterLectureRequestBody, enterLectureSchema } from '@plum/shared-interfaces';
 
 import { FormField } from '@/shared/components/FormField';
 import { logger } from '@/shared/lib/logger';
 import { Button } from '@/shared/components/Button';
 import { cn } from '@/shared/lib/utils';
 
-import { ENTER_LECTURE_KEYS, EnterLectureValues, enterLectureSchema } from '../schema';
+import { ENTER_LECTURE_KEYS } from '../schema';
 import { LocalMediaPreview } from './LocalMediaPreview';
 
 /**
@@ -14,7 +15,7 @@ import { LocalMediaPreview } from './LocalMediaPreview';
  * @returns 강의실 이름 입력 섹션 JSX 요소
  */
 function LectureNameSection() {
-  const { register } = useFormContext<EnterLectureValues>();
+  const { register } = useFormContext<EnterLectureRequestBody>();
 
   return (
     <FormField
@@ -40,7 +41,7 @@ function LectureNameSection() {
  * @returns 호스트 닉네임 입력 섹션 JSX 요소
  */
 function HostNameSection() {
-  const { register } = useFormContext<EnterLectureValues>();
+  const { register } = useFormContext<EnterLectureRequestBody>();
 
   return (
     <FormField
@@ -69,7 +70,7 @@ function HostNameSection() {
  * @returns 데이터 수집 동의 섹션 JSX 요소
  */
 function AgreementSection() {
-  const { register } = useFormContext<EnterLectureValues>();
+  const { register } = useFormContext<EnterLectureRequestBody>();
   const isAgreed = useWatch({ name: ENTER_LECTURE_KEYS.isAgreed });
 
   return (
@@ -102,7 +103,7 @@ function AgreementSection() {
  * @returns 카메라 및 마이크 확인 섹션 JSX 요소
  */
 function MediaDeviceCheckSection() {
-  const { register } = useFormContext<EnterLectureValues>();
+  const { register } = useFormContext<EnterLectureRequestBody>();
   const isAudioOn = useWatch({ name: ENTER_LECTURE_KEYS.isAudioOn });
   const isVideoOn = useWatch({ name: ENTER_LECTURE_KEYS.isVideoOn });
 
@@ -142,7 +143,7 @@ export function EnterLectureForm() {
   // TODO: 강의실 이름 API 연동
   const { lectureName } = { lectureName: '예시 강의실' };
 
-  const formMethods = useForm<EnterLectureValues>({
+  const formMethods = useForm<EnterLectureRequestBody>({
     resolver: zodResolver(enterLectureSchema),
     defaultValues: {
       name: lectureName,
@@ -156,7 +157,7 @@ export function EnterLectureForm() {
 
   const { handleSubmit, formState } = formMethods;
 
-  const onSubmit = (data: EnterLectureValues) => {
+  const onSubmit = (data: EnterLectureRequestBody) => {
     logger.ui.info('EnterLectureForm: onSubmit', data);
   };
 
