@@ -3,7 +3,7 @@ import {
   ALLOWED_FILE_MIME_TYPES,
   FILE_MAX_SIZE_BYTES,
   FILE_MAX_SIZE_MB,
-} from '@/shared/constants/presentation';
+} from '@plum/shared-interfaces';
 
 type AllowedMimeType = (typeof ALLOWED_FILE_MIME_TYPES)[number];
 

@@ -1,12 +1,13 @@
 import { createContext, useContext, ReactNode, useMemo } from 'react';
 import { useFieldArray, useFormContext, FieldArrayWithId } from 'react-hook-form';
-import { CreateLectureFormValues, LECTURE_FORM_KEYS } from '../schema';
+import { CreateRoomRequest } from '@plum/shared-interfaces';
+import { LECTURE_FORM_KEYS } from '../schema';
 import { PollFormValues } from '@/shared/constants/poll';
 import { QnAFormValues } from '@/shared/constants/qna';
 
 interface ActivityContextValue {
-  polls: FieldArrayWithId<CreateLectureFormValues, typeof LECTURE_FORM_KEYS.polls>[];
-  qnas: FieldArrayWithId<CreateLectureFormValues, typeof LECTURE_FORM_KEYS.qnas>[];
+  polls: FieldArrayWithId<CreateRoomRequest, typeof LECTURE_FORM_KEYS.polls>[];
+  qnas: FieldArrayWithId<CreateRoomRequest, typeof LECTURE_FORM_KEYS.qnas>[];
   actions: {
     addPoll: (poll: PollFormValues) => void;
     editPoll: (index: number, poll: PollFormValues) => void;
@@ -28,7 +29,7 @@ const ActivityContext = createContext<ActivityContextValue | null>(null);
  * @returns 활동 상태 및 제어 함수들 관리 Provider JSX 요소
  */
 export function ActivityProvider({ children }: { children: ReactNode }) {
-  const { control } = useFormContext<CreateLectureFormValues>();
+  const { control } = useFormContext<CreateRoomRequest>();
 
   const {
     fields: polls,

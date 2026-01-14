@@ -1,5 +1,6 @@
 import { useFormContext, useWatch } from 'react-hook-form';
-import { CreateLectureFormValues, LECTURE_FORM_KEYS } from '../schema';
+import { CreateRoomRequest } from '@plum/shared-interfaces';
+import { LECTURE_FORM_KEYS } from '../schema';
 import { Button } from '@/shared/components/Button';
 import { Icon } from '@/shared/components/icon/Icon';
 
@@ -59,7 +60,7 @@ function FileListItem({ file, onDelete }: FileListItemProps) {
  * @returns 강의 발표자료 파일 리스트 JSX 요소
  */
 export function LecturePresentationList() {
-  const { setValue } = useFormContext<CreateLectureFormValues>();
+  const { setValue } = useFormContext<CreateRoomRequest>();
   const presentationFiles: File[] = useWatch({ name: LECTURE_FORM_KEYS.presentationFiles }) || [];
 
   // 파일 삭제 핸들러

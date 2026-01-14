@@ -66,12 +66,17 @@ jobs:
         env:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           TAG: ${{ needs.build.outputs.tag }}
+          FE_URL: ${{ secrets.FE_URL_DEV }}
+          AWS_REGION: ${{ secrets.AWS_S3_REGION }}
+          AWS_KEY: ${{ secrets.AWS_S3_ACCESS_KEY }}
+          AWS_SECRET: ${{ secrets.AWS_S3_SECRET_KEY }}
+          AWS_BUCKET: ${{ secrets.AWS_S3_BUCKET_NAME }}
         with:
           host: ${{ secrets.NCP_DEV_HOST }}
           username: ${{ secrets.NCP_DEV_USERNAME }}
           key: ${{ secrets.NCP_DEV_SSH_KEY }}
           port: ${{ secrets.NCP_DEV_PORT || 22 }}
-          envs: DOCKER_USERNAME,TAG
+          envs: DOCKER_USERNAME,TAG,FE_URL,AWS_REGION,AWS_KEY,AWS_SECRET,AWS_BUCKET
           script: |
             DEPLOY_BRANCH="${{ github.ref_name }}"
             echo "배포 브랜치: ${DEPLOY_BRANCH}"
@@ -92,39 +97,28 @@ jobs:
             GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy_key -o StrictHostKeyChecking=no" \
               git pull origin ${DEPLOY_BRANCH}
 
-            # .env 파일에 DOCKER_USERNAME과 TAG 값 업데이트
-            if grep -q "^DOCKER_USERNAME=" .env; then
-              sed -i 's/^DOCKER_USERNAME=.*/DOCKER_USERNAME='"${DOCKER_USERNAME}"'/' .env
-            else
-              echo "DOCKER_USERNAME=${DOCKER_USERNAME}" >> .env
-            fi
-
-            if grep -q "^TAG=" .env; then
-              sed -i 's/^TAG=.*/TAG='"${TAG}"'/' .env
-            else
-              echo "TAG=${TAG}" >> .env
-            fi
-
-            # Loki 호스트 환경변수 추가
-            if grep -q "^LOKI_HOST=" .env; then
-              sed -i 's/^LOKI_HOST=.*/LOKI_HOST=${{ secrets.NCP_DEV_MONITORING_HOST }}/' .env
-            else
-              echo "LOKI_HOST=${{ secrets.NCP_DEV_MONITORING_HOST }}" >> .env
-            fi
-
-            # Redis 호스트 환경변수 추가
-            if grep -q "^REDIS_HOST=" .env; then
-              sed -i 's/^REDIS_HOST=.*/REDIS_HOST=${{ secrets.NCP_DEV_REDIS_HOST }}/' .env
-            else
-              echo "REDIS_HOST=${{ secrets.NCP_DEV_REDIS_HOST }}" >> .env
-            fi
-
-            # Mediasoup ANNOUNCED_IP (백엔드 서버 공인 IP)
-            if grep -q "^ANNOUNCED_IP=" .env; then
-              sed -i 's/^ANNOUNCED_IP=.*/ANNOUNCED_IP=${{ secrets.NCP_DEV_HOST }}/' .env
-            else
-              echo "ANNOUNCED_IP=${{ secrets.NCP_DEV_HOST }}" >> .env
-            fi
+            # .env 파일에 값 업데이트
+            update_env() {
+              local key=$1
+              local value=$2
+              if grep -q "^${key}=" .env; then
+                sed -i "s|^${key}=.*|${key}=${value}|" .env
+              else
+                echo "${key}=${value}" >> .env
+              fi
+            }
+            
+            update_env "FE_URL" "${FE_URL}"
+            update_env "AWS_S3_REGION" "${AWS_REGION}"
+            update_env "AWS_S3_ACCESS_KEY" "${AWS_KEY}"
+            update_env "AWS_S3_SECRET_KEY" "${AWS_SECRET}"
+            update_env "AWS_S3_BUCKET_NAME" "${AWS_BUCKET}"
+            
+            update_env "DOCKER_USERNAME" "${DOCKER_USERNAME}"
+            update_env "TAG" "${TAG}"
+            update_env "LOKI_HOST" "${{ secrets.NCP_DEV_MONITORING_HOST }}"
+            update_env "REDIS_HOST" "${{ secrets.NCP_DEV_REDIS_HOST }}"
+            update_env "ANNOUNCED_IP" "${{ secrets.NCP_DEV_HOST }}"
 
             docker compose -f docker-compose.yml -f docker-compose.develop.yml pull
             docker compose -f docker-compose.yml -f docker-compose.develop.yml up -d
@@ -158,12 +152,17 @@ jobs:
         env:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           TAG: ${{ needs.build.outputs.tag }}
+          FE_URL: ${{ secrets.FE_URL_PROD }}
+          AWS_REGION: ${{ secrets.AWS_S3_REGION }}
+          AWS_KEY: ${{ secrets.AWS_S3_ACCESS_KEY }}
+          AWS_SECRET: ${{ secrets.AWS_S3_SECRET_KEY }}
+          AWS_BUCKET: ${{ secrets.AWS_S3_BUCKET_NAME }}
         with:
           host: ${{ secrets.NCP_PROD_HOST }}
           username: ${{ secrets.NCP_PROD_USERNAME }}
           key: ${{ secrets.NCP_PROD_SSH_KEY }}
           port: ${{ secrets.NCP_PROD_PORT || 22 }}
-          envs: DOCKER_USERNAME,TAG
+          envs: DOCKER_USERNAME,TAG,FE_URL,AWS_REGION,AWS_KEY,AWS_SECRET,AWS_BUCKET
           script: |
             DEPLOY_BRANCH="${{ github.ref_name }}"
             echo "배포 브랜치: ${DEPLOY_BRANCH}"
@@ -183,40 +182,28 @@ jobs:
             git checkout ${DEPLOY_BRANCH}
             GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy_key -o StrictHostKeyChecking=no" \
               git pull origin ${DEPLOY_BRANCH}
-
-            # .env 파일에 DOCKER_USERNAME과 TAG 값 업데이트
-            if grep -q "^DOCKER_USERNAME=" .env; then
-              sed -i 's/^DOCKER_USERNAME=.*/DOCKER_USERNAME='"${DOCKER_USERNAME}"'/' .env
-            else
-              echo "DOCKER_USERNAME=${DOCKER_USERNAME}" >> .env
-            fi
-
-            if grep -q "^TAG=" .env; then
-              sed -i 's/^TAG=.*/TAG='"${TAG}"'/' .env
-            else
-              echo "TAG=${TAG}" >> .env
-            fi
-
-            # Loki 호스트 환경변수 추가
-            if grep -q "^LOKI_HOST=" .env; then
-              sed -i 's/^LOKI_HOST=.*/LOKI_HOST=${{ secrets.NCP_PROD_MONITORING_HOST }}/' .env
-            else
-              echo "LOKI_HOST=${{ secrets.NCP_PROD_MONITORING_HOST }}" >> .env
-            fi
-
-            # Redis 호스트 환경변수 추가
-            if grep -q "^REDIS_HOST=" .env; then
-              sed -i 's/^REDIS_HOST=.*/REDIS_HOST=${{ secrets.NCP_PROD_REDIS_HOST }}/' .env
-            else
-              echo "REDIS_HOST=${{ secrets.NCP_PROD_REDIS_HOST }}" >> .env
-            fi
-
-            # Mediasoup ANNOUNCED_IP (백엔드 서버 공인 IP)
-            if grep -q "^ANNOUNCED_IP=" .env; then
-              sed -i 's/^ANNOUNCED_IP=.*/ANNOUNCED_IP=${{ secrets.NCP_PROD_HOST }}/' .env
-            else
-              echo "ANNOUNCED_IP=${{ secrets.NCP_PROD_HOST }}" >> .env
-            fi
+            
+            update_env() {
+              local key=$1
+              local value=$2
+              if grep -q "^${key}=" .env; then
+                sed -i "s|^${key}=.*|${key}=${value}|" .env
+              else
+                echo "${key}=${value}" >> .env
+              fi
+            }
+            
+            update_env "FE_URL" "${FE_URL}"
+            update_env "AWS_S3_REGION" "${AWS_REGION}"
+            update_env "AWS_S3_ACCESS_KEY" "${AWS_KEY}"
+            update_env "AWS_S3_SECRET_KEY" "${AWS_SECRET}"
+            update_env "AWS_S3_BUCKET_NAME" "${AWS_BUCKET}"
+            
+            update_env "DOCKER_USERNAME" "${DOCKER_USERNAME}"
+            update_env "TAG" "${TAG}"
+            update_env "LOKI_HOST" "${{ secrets.NCP_DEV_MONITORING_HOST }}"
+            update_env "REDIS_HOST" "${{ secrets.NCP_DEV_REDIS_HOST }}"
+            update_env "ANNOUNCED_IP" "${{ secrets.NCP_DEV_HOST }}"
 
             docker compose -f docker-compose.yml -f docker-compose.prod.yml pull
             docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d

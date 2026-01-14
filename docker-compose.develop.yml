@@ -9,6 +9,8 @@ services:
     container_name: plum-backend-develop
     ports:
       - "${BACKEND_PORT:-3000}:3000" # 호스트 포트를 환경변수로 관리 (기본값: 3000)
+    env_file:
+      - .env
     environment:
       - NODE_ENV=development
       # Redis 연결 (별도 Redis 서버)

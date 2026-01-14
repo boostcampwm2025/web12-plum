@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { APP_INTERCEPTOR, APP_FILTER } from '@nestjs/core';
+import { ConfigModule } from '@nestjs/config';
 import { HealthModule } from './health/health.module.js';
 import { WinstonModule } from 'nest-winston';
 import { winstonConfig } from './config/logger.config.js';
@@ -21,6 +22,7 @@ import { MediasoupModule } from './mediasoup/mediasoup.module.js';
     // 기본 인프라
     HealthModule,
     WinstonModule.forRoot(winstonConfig),
+    ConfigModule.forRoot({ isGlobal: true }),
     PrometheusModule,
 
     // Gateway 모듈들 (Redis에 의존)

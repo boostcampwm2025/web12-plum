@@ -78,8 +78,20 @@ jobs:
       - name: Build Backend
         run: pnpm --filter @plum/backend... run build
 
+      - name: Create dummy .env for e2e tests
+        run: |
+          cd apps/backend
+          echo "AWS_S3_REGION=ap-northeast-2" >> .env
+          echo "AWS_S3_ACCESS_KEY=dummy" >> .env
+          echo "AWS_S3_SECRET_KEY=dummy" >> .env
+
       - name: Test Backend
         run: pnpm --filter @plum/backend run test
+
+      - name: Run E2E Tests
+        run: pnpm --filter @plum/backend run test:e2e
+        env:
+          CI: true
 
       # Docker 빌드 테스트 (CD 실패 방지)
       # 실제 푸시는 하지 않고 빌드만 테스트
