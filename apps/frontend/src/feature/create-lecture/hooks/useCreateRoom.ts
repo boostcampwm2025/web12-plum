@@ -1,25 +1,23 @@
 import { useState } from 'react';
-import type { CreateRoomRequest, CreateRoomResponse, ErrorResponse } from '@plum/shared-interfaces';
+import type { CreateRoomRequest, CreateRoomResponse } from '@plum/shared-interfaces';
 import { roomApi } from '@/shared/api';
-
-type CreateRoomSuccessResponse = Exclude<CreateRoomResponse, ErrorResponse>;
+import { logger } from '@/shared/lib/logger';
 
 interface UseCreateRoomReturn {
-  createRoom: (data: CreateRoomRequest) => Promise<CreateRoomSuccessResponse>;
+  createRoom: (data: CreateRoomRequest) => Promise<CreateRoomResponse>;
   isSubmitting: boolean;
 }
 
 export function useCreateRoom(): UseCreateRoomReturn {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const createRoom = async (data: CreateRoomRequest): Promise<CreateRoomSuccessResponse> => {
+  const createRoom = async (data: CreateRoomRequest): Promise<CreateRoomResponse> => {
     setIsSubmitting(true);
 
     try {
       const response = await roomApi.createRoom(data);
-      if ('statusCode' in response.data) {
-        throw new Error(response.data.message || '강의실 생성 중 오류가 발생했습니다.');
-      }
+      logger.api.info('강의실 생성 성공:', response.data);
+
       return response.data;
     } finally {
       setIsSubmitting(false);
