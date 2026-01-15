@@ -583,7 +583,7 @@ describe('useMediaTransport', () => {
           });
         }
         if (event === 'produce') {
-          callback({ id: 'producer-id' });
+          callback({ success: true, producerId: 'producer-id' });
         }
       });
 
@@ -599,7 +599,7 @@ describe('useMediaTransport', () => {
       const mockRtpParameters = { codecs: [] };
 
       await produceHandler(
-        { kind: 'video', rtpParameters: mockRtpParameters },
+        { kind: 'video', rtpParameters: mockRtpParameters, appData: { type: 'video' } },
         mockCallback,
         mockErrback,
       );
@@ -608,7 +608,7 @@ describe('useMediaTransport', () => {
         'produce',
         {
           transportId: mockTransport.id,
-          kind: 'video',
+          type: 'video',
           rtpParameters: mockRtpParameters,
         },
         expect.any(Function),
@@ -637,7 +637,7 @@ describe('useMediaTransport', () => {
           });
         }
         if (event === 'produce') {
-          callback({ error: 'Producer 생성 실패' });
+          callback({ success: false, error: 'Producer 생성 실패' });
         }
       });
 
@@ -651,7 +651,11 @@ describe('useMediaTransport', () => {
       const mockCallback = vi.fn();
       const mockErrback = vi.fn();
 
-      await produceHandler({ kind: 'video', rtpParameters: {} }, mockCallback, mockErrback);
+      await produceHandler(
+        { kind: 'video', rtpParameters: {}, appData: { type: 'video' } },
+        mockCallback,
+        mockErrback,
+      );
 
       expect(mockCallback).not.toHaveBeenCalled();
       expect(mockErrback).toHaveBeenCalledWith(expect.any(Error));
