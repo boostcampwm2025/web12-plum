@@ -210,10 +210,20 @@ export const useMediaTransport = () => {
     logger.media.info('모든 미디어 전송/수신 Transport가 안전하게 정리됨');
   }, []);
 
+  /**
+   * 현재 활성화된 Send Transport 반환
+   */
+  const getSendTransport = useCallback(() => sendTransportRef.current, []);
+
+  /**
+   * 현재 활성화된 Receive Transport 반환
+   */
+  const getRecvTransport = useCallback(() => recvTransportRef.current, []);
+
   return {
     createTransport,
     closeTransports,
-    getSendTransport: () => sendTransportRef.current,
-    getRecvTransport: () => recvTransportRef.current,
+    getSendTransport,
+    getRecvTransport,
   };
 };
