@@ -203,6 +203,8 @@ describe('RoomGateway', () => {
       });
 
       expect(result.success).toBe(true);
+      if (!('consumerId' in result)) fail('consumerId must be in result when gateway success');
+
       expect(result.consumerId).toBe('c-1');
       expect(result.type).toBe('video');
     });
