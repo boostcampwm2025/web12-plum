@@ -49,7 +49,7 @@ export interface ToggleMediaRequest {
 
 // 클라이언트에서 보낸 요청에 따라 발생하는 이벤트 페이로드
 
-interface BaseResponse {
+export interface BaseResponse {
   success: boolean;
   error?: string;
 }
