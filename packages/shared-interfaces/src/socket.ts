@@ -1,88 +1,170 @@
+import { ParticipantRole } from './participant.js';
+
+export type MediaKind = 'audio' | 'video'; // mediasoup에서 사용하는 미디어 타입
+export type MediaType = MediaKind | 'screen'; // 우리가 사용할 미디어 소스 타입
+export type ToggleActionType = 'pause' | 'resume';
+
+// 클라이언트에서 보내는 데이터 페이로드
+
+export interface JoinRoomRequest {
+  roomId: string;
+  participantId: string;
+}
+
+export interface CreateTransportRequest {
+  direction: 'send' | 'recv';
+}
+
+export interface ConnectTransportRequest<T = any> {
+  transportId: string;
+  dtlsParameters: T; // mediasoup-client/node DtlsParameters
+}
+
+export interface ProduceRequest<T = any> {
+  transportId: string;
+  type: MediaType;
+  rtpParameters: T; // RtpParameters
+}
+
+export interface GetProducerRequest {
+  targetParticipantId: string;
+  type: MediaType;
+}
+
+export interface ConsumeRequest<T = any> {
+  transportId: string;
+  producerId: string;
+  rtpCapabilities: T; // RtpCapabilities
+}
+
+export interface ConsumeResumeRequest {
+  consumerId: string;
+}
+
+export interface ToggleMediaRequest {
+  producerId: string;
+  action: ToggleActionType;
+  type: MediaType;
+}
+
+// 클라이언트에서 보낸 요청에 따라 발생하는 이벤트 페이로드
+
+interface BaseResponse {
+  success: boolean;
+  error?: string;
+}
+
+export type JoinRoomResponse = BaseResponse;
+
+export type CreateTransportResponse<T1 = any, T2 = any, T3 = any> =
+  | BaseResponse
+  | {
+      success: boolean;
+      id: string;
+      iceParameters: T1;
+      iceCandidates: T2;
+      dtlsParameters: T3;
+    };
+
+export type ConnectTransportResponse = BaseResponse;
+
+export type ProduceResponse =
+  | BaseResponse
+  | {
+      success: boolean;
+      producerId: string;
+      kind: MediaKind;
+      type: MediaType;
+    };
+
+export type GetProducerResponse =
+  | BaseResponse
+  | {
+      success: boolean;
+      producerId?: string;
+    };
+
+export type ConsumeResponse<T = any> =
+  | BaseResponse
+  | {
+      success: boolean;
+      producerId: string;
+      consumerId: string;
+      kind: MediaKind;
+      type: MediaType;
+      rtpParameters: T;
+    };
+
+export type ConsumeResumeResponse = BaseResponse;
+
+export type ToggleMediaResponse = BaseResponse;
+
+export type LeaveRoomResponse = BaseResponse;
+
+// 서버에서 보내는 브로드캐스트 페이로드
+export interface UserJoinedPayload {
+  id: string;
+  name: string;
+  role: string;
+  joinedAt: Date;
+}
+
+export interface UserLeftPayload {
+  id: string;
+  name: string;
+  leavedAt: Date;
+}
+
+export interface NewProducerPayload {
+  producerId: string;
+  participantId: string;
+  participantRole: ParticipantRole;
+  kind: MediaKind;
+  type: MediaType;
+}
+
+export type MediaStateChangedPayload = NewProducerPayload & {
+  action: ToggleActionType;
+};
+
 /**
  * 서버 -> 클라이언트 이벤트
  */
 export interface ServerToClientEvents {
-  // 강의실 이벤트
-  user_joined: (data: {
-    id: string;
-    name: string;
-    role: 'presenter' | 'audience';
-    joinedAt: Date;
-  }) => void;
+  user_joined: (data: UserJoinedPayload) => void;
 
-  user_left: (data: { id: string; name: string; leavedAt: Date }) => void;
+  user_left: (data: UserLeftPayload) => void;
 
-  // Mediasoup Transport 이벤트
-  transport_created: (data: {
-    id: string;
-    iceParameters: unknown;
-    iceCandidates: unknown;
-    dtlsParameters: unknown;
-  }) => void;
+  new_producer: (data: NewProducerPayload) => void;
 
-  // Mediasoup Producer 이벤트
-  produce_success: (data: { producerId: string }) => void;
-
-  new_producer: (data: {
-    producerId: string;
-    participantId: string;
-    kind: 'audio' | 'video' | 'screen';
-  }) => void;
-
-  producer_closed: (data: { producerId: string; participantId: string }) => void;
-
-  // Mediasoup Consumer 이벤트
-  consume_success: (data: {
-    consumerId: string;
-    producerId: string;
-    kind: string;
-    rtpParameters: unknown;
-  }) => void;
-
-  // 에러 이벤트
-  error_occurred: (data: { message: string; code?: string }) => void;
+  media_state_changed: (data: MediaStateChangedPayload) => void;
 }
 
 /**
  * 클라이언트 -> 서버 이벤트
  */
 export interface ClientToServerEvents {
-  // 강의실 입장
-  join_room: (
-    data: { roomId: string; participantId: string },
-    callback: (response: { success: boolean; error?: string }) => void,
-  ) => void;
+  join_room: (data: JoinRoomRequest, cb: (res: JoinRoomResponse) => void) => void;
 
-  // Mediasoup RTP Capabilities 요청
-  media_get_rtp_capabilities: (callback: (response: unknown) => void) => void;
-
-  // Transport 생성 및 연결
   create_transport: (
-    data: { direction: 'send' | 'recv' },
-    callback: (response: unknown) => void,
+    data: CreateTransportRequest,
+    cb: (res: CreateTransportResponse) => void,
   ) => void;
 
   connect_transport: (
-    data: { transportId: string; dtlsParameters: unknown },
-    callback: (response: unknown) => void,
+    data: ConnectTransportRequest,
+    cb: (res: ConnectTransportResponse) => void,
   ) => void;
 
-  // Producer 생성
-  produce: (
-    data: {
-      transportId: string;
-      kind: 'audio' | 'video' | 'screen';
-      rtpParameters: unknown;
-    },
-    callback: (response: unknown) => void,
-  ) => void;
+  produce: (data: ProduceRequest, cb: (res: ProduceResponse) => void) => void;
 
-  // Consumer 생성
-  consume: (
-    data: { producerId: string; rtpCapabilities: unknown },
-    callback: (response: unknown) => void,
-  ) => void;
+  consume: (data: ConsumeRequest, cb: (res: ConsumeResponse) => void) => void;
 
-  // 강의실 퇴장
-  leave_room: () => void;
+  consume_resume: (data: ConsumeResumeRequest, cb: (res: ConsumeResumeResponse) => void) => void;
+
+  toggle_media: (data: ToggleMediaRequest, cb: (res: ToggleMediaResponse) => void) => void;
+
+  get_producer: (data: GetProducerRequest, cb: (res: GetProducerRequest) => void) => void;
+
+  leave_room: (cb: (res: LeaveRoomResponse) => void) => void;
 }
