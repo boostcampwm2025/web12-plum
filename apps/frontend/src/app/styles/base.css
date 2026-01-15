@@ -1,5 +1,7 @@
 @layer base {
-  html {
-    @apply min-h-screen bg-gray-500;
+  html,
+  body,
+  #root {
+    @apply h-full bg-gray-500;
   }
 }

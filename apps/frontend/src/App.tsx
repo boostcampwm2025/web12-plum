@@ -8,7 +8,7 @@ import { ROUTES } from './app/routes/routes';
 
 function App() {
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex h-full flex-col">
       <Routes>
         <Route
           path={ROUTES.HOME}
