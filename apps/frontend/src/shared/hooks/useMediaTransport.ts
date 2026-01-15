@@ -1,14 +1,17 @@
 import { useCallback, useRef } from 'react';
-import { Transport, TransportOptions } from 'mediasoup-client/types';
+import { Transport } from 'mediasoup-client/types';
 import { Socket } from 'socket.io-client';
-import { logger } from '@/shared/lib/logger';
-import { ClientToServerEvents, ServerToClientEvents } from '@plum/shared-interfaces';
-import { useMediaDeviceStore } from '@/store/useMediaDeviceStore';
 
-interface CreateTransportResponse extends TransportOptions {
-  success?: boolean;
-  error?: string;
-}
+import {
+  BaseResponse,
+  ClientToServerEvents,
+  CreateTransportResponse,
+  MediaType,
+  ServerToClientEvents,
+} from '@plum/shared-interfaces';
+
+import { logger } from '@/shared/lib/logger';
+import { useMediaDeviceStore } from '@/store/useMediaDeviceStore';
 
 /**
  * Transport의 생성과 생명주기를 관리
@@ -86,16 +89,25 @@ export const useMediaTransport = () => {
        * 서버와 클라이언트 간의 WebRTC 파라미터 교환 및 인스턴스 초기화
        */
       const createPromise = new Promise<Transport>((resolve, reject) => {
-        socket.emit('create_transport', { direction }, (response: unknown) => {
-          const { success, error, ...transportOptions } = response as CreateTransportResponse;
-          if (!success || error) {
-            logger.media.error(`${direction} 서버 Transport 생성 요청 실패`, error);
-            reject(new Error(error));
+        socket.emit('create_transport', { direction }, (response: CreateTransportResponse) => {
+          // 실패 응답 처리: id가 없으면 실패 응답
+          if (!response.success) {
+            const errorResponse = response as BaseResponse;
+            const errorMsg = errorResponse.error || 'Transport 생성 실패';
+            logger.media.error(`${direction} 서버 Transport 생성 요청 실패`, errorMsg);
+            reject(new Error(errorMsg));
             return;
           }
 
+          // 성공 응답 검증: id 필수
+          if (!('id' in response)) return reject(new Error('서버 응답 형식에서 ID가 누락됨'));
+
+          // 성공 응답에서 Transport 옵션 추출
+          const { id, iceParameters, iceCandidates, dtlsParameters } = response;
+
           try {
             // 서버 응답 설정을 기반으로 클라이언트 측 Transport 객체를 생성
+            const transportOptions = { id, iceParameters, iceCandidates, dtlsParameters };
             const transport = isSender
               ? device.createSendTransport(transportOptions)
               : device.createRecvTransport(transportOptions);
@@ -110,12 +122,11 @@ export const useMediaTransport = () => {
               socket.emit(
                 'connect_transport',
                 { transportId: transport.id, dtlsParameters },
-                (res: unknown) => {
-                  const { success, error } = res as { success: boolean; error?: string };
-                  if (!success || error) {
-                    const errorMsg = error || 'DTLS 연결 실패';
-                    logger.media.error('Transport DTLS 연결 실패:', errorMsg);
-                    return errback(new Error(errorMsg));
+                (res) => {
+                  if (!res.success) {
+                    const errorMessage = res.error || 'DTLS 연결 실패';
+                    logger.media.error('Transport DTLS 연결 실패:', errorMessage);
+                    return errback(new Error(errorMessage));
                   }
                   callback();
                 },
@@ -128,20 +139,33 @@ export const useMediaTransport = () => {
              * 클라이언트가 'produce()'를 호출할 때 발생하며, 서버측에 Producer 생성을 요청
              */
             if (isSender) {
-              transport.on('produce', async ({ kind, rtpParameters }, callback, errback) => {
-                socket.emit(
-                  'produce',
-                  { transportId: transport.id, kind, rtpParameters },
-                  (res: unknown) => {
-                    const { id, error } = res as { id?: string; error?: string };
-                    if (error) {
-                      logger.media.error('서버 Producer 생성 실패:', error);
-                      return errback(new Error(error));
-                    }
-                    callback({ id: id! });
-                  },
-                );
-              });
+              transport.on(
+                'produce',
+                async ({ kind, rtpParameters, appData }, callback, errback) => {
+                  socket.emit(
+                    'produce',
+                    {
+                      transportId: transport.id,
+                      type: (appData?.type || kind) as MediaType,
+                      rtpParameters,
+                    },
+                    (res) => {
+                      if (!res.success) {
+                        const errorResponse = response as BaseResponse;
+                        const errorMessage = errorResponse.error || 'Producer 생성 실패';
+                        logger.media.error('서버 Producer 생성 실패:', errorMessage);
+                        return errback(new Error(errorMessage));
+                      }
+
+                      if ('producerId' in res) {
+                        callback({ id: res.producerId });
+                      } else {
+                        errback(new Error('서버 응답에 producerId가 없습니다.'));
+                      }
+                    },
+                  );
+                },
+              );
             }
 
             /**
