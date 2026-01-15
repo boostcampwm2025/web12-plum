@@ -159,10 +159,15 @@ export const useMediaConsumer = () => {
     [device, createTransport, getRecvTransport, removeConsumer],
   );
 
+  /**
+   * 현재 활성화된 Receive Transport 반환
+   */
+  const getConsumers = useCallback(() => consumersRef.current, []);
+
   return {
     consume,
     removeConsumer,
-    consumers: consumersRef.current,
+    getConsumers,
     consumerIds,
   };
 };
