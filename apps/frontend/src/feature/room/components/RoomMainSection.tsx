@@ -3,6 +3,8 @@ import { Draggable } from './Draggable';
 import { ScreenShareBanner } from './ScreenShareBanner';
 import { ParticipantGrid } from './ParticipantGrid';
 import { ParticipantVideo, VideoDisplayMode } from './ParticipantVideo';
+import { useStreamStore } from '@/store/useLocalStreamStore';
+import { useMediaStore } from '../stores/useMediaStore';
 
 interface RoomMainSectionProps {
   isScreenSharing: boolean;
@@ -21,6 +23,9 @@ export function RoomMainSection({
   onModeChange,
   onStopScreenShare,
 }: RoomMainSectionProps) {
+  const localStream = useStreamStore((state) => state.localStream);
+  const isCameraOn = useMediaStore((state) => state.isCameraOn);
+
   return (
     <>
       <main className="relative flex grow flex-col text-sm">
@@ -49,6 +54,8 @@ export function RoomMainSection({
                 mode={userVideoMode}
                 isCurrentUser={true}
                 onModeChange={onModeChange}
+                localStream={localStream}
+                isCameraOn={isCameraOn}
               />
             </Draggable>
           )}
@@ -61,6 +68,8 @@ export function RoomMainSection({
             currentUser={currentUser}
             participants={participants}
             onModeChange={onModeChange}
+            localStream={localStream}
+            isCameraOn={isCameraOn}
           />
         </aside>
       )}

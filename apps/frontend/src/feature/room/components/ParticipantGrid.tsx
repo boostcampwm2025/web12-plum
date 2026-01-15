@@ -10,9 +10,17 @@ interface ParticipantGridProps {
   currentUser: Participant;
   participants: Array<Participant>;
   onModeChange?: (mode: VideoDisplayMode) => void;
+  localStream?: MediaStream | null;
+  isCameraOn?: boolean;
 }
 
-export function ParticipantGrid({ currentUser, participants, onModeChange }: ParticipantGridProps) {
+export function ParticipantGrid({
+  currentUser,
+  participants,
+  onModeChange,
+  localStream,
+  isCameraOn = true,
+}: ParticipantGridProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   const itemsPerPage = useItemsPerPage(containerRef, {
@@ -41,6 +49,8 @@ export function ParticipantGrid({ currentUser, participants, onModeChange }: Par
         mode="side"
         isCurrentUser={true}
         onModeChange={onModeChange}
+        localStream={localStream}
+        isCameraOn={isCameraOn}
       />
 
       <Button
