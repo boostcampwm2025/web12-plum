@@ -1,7 +1,18 @@
 import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
 import * as mediasoup from 'mediasoup';
-import { Worker, Router, WebRtcTransport, DtlsParameters } from 'mediasoup/node/lib/types';
+import {
+  Worker,
+  Router,
+  WebRtcTransport,
+  DtlsParameters,
+  Producer,
+  Consumer,
+  RtpParameters,
+  RtpCapabilities,
+} from 'mediasoup/node/lib/types';
+import { MediaType } from '@plum/shared-interfaces';
 import { mediasoupConfig } from './mediasoup.config.js';
+import { ConsumerAppData, ProducerAppData } from './mediasoup.type.js';
 
 /**
  * Mediasoup Worker 및 Router 관리 서비스
@@ -19,6 +30,8 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
   private workers: Worker[] = []; // CPU 코어 수만큼 생성되는 Worker 배열
   private routers: Map<string, Router> = new Map(); // 강의실별 Router 저장 (roomId -> Router)
   private transports: Map<string, WebRtcTransport> = new Map(); // Transport 저장 (transportId -> Transport)
+  private producers: Map<string, Producer<ProducerAppData>> = new Map();
+  private consumers: Map<string, Consumer<ConsumerAppData>> = new Map();
   private nextWorkerIdx = 0; // Round-robin Worker 선택 인덱스
 
   /**
@@ -238,5 +251,130 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
       this.transports.delete(transportId);
       this.logger.log(`🗑️ Transport 닫힘 (id: ${transportId})`);
     }
+  }
+
+  async createProducer(
+    transportId: string,
+    kind: 'audio' | 'video',
+    participantId: string,
+    source: MediaType,
+    rtpParameters: RtpParameters,
+  ): Promise<Producer<ProducerAppData>> {
+    const transport = this.transports.get(transportId);
+    if (!transport) throw new Error(`${transportId} Transport를 찾을 수 없습니다.`);
+
+    const producer = await transport.produce({
+      kind,
+      rtpParameters,
+      appData: {
+        ownerId: participantId,
+        source,
+      },
+    });
+    this.producers.set(producer.id, producer);
+
+    // Producer가 닫힐 때 Map에서 제거
+    producer.on('transportclose', () => {
+      this.logger.log(`Producer의 Transport가 닫혀 Producer 제거 (id: ${producer.id})`);
+      this.producers.delete(producer.id);
+    });
+
+    return producer;
+  }
+
+  getProducer(producerId: string): Producer<ProducerAppData> | undefined {
+    return this.producers.get(producerId);
+  }
+
+  async pauseProducer(producerId: string) {
+    const producer = this.getProducer(producerId);
+    if (!producer) throw new Error(`${producerId} Producer를 찾을 수 없습니다.`);
+    await producer.pause();
+  }
+
+  async resumeProducer(producerId: string) {
+    const producer = this.getProducer(producerId);
+    if (!producer) throw new Error(`${producerId} Producer를 찾을 수 없습니다.`);
+    await producer.resume();
+  }
+
+  closeProducer(producerId: string) {
+    const producer = this.getProducer(producerId);
+    if (!producer) throw new Error(`${producerId} Producer를 찾을 수 없습니다.`);
+
+    producer.close();
+    this.producers.delete(producer.id);
+  }
+
+  async createConsumer(
+    transportId: string,
+    producerId: string,
+    participantId: string,
+    rtpCapabilities: RtpCapabilities,
+  ): Promise<Consumer<ConsumerAppData>> {
+    const transport = this.transports.get(transportId);
+    if (!transport) throw new Error(`${transportId} Transport를 찾을 수 없습니다.`);
+
+    const producer = this.getProducer(producerId);
+    if (!producer) throw new Error(`${producerId} Producer를 찾을 수 없습니다.`);
+
+    const consumer = await transport.consume({
+      producerId,
+      rtpCapabilities,
+      paused: true,
+      appData: {
+        ownerId: participantId,
+        receiverId: producer.appData.ownerId,
+      },
+    });
+    this.consumers.set(consumer.id, consumer);
+    consumer.on('transportclose', () => this.consumers.delete(consumer.id));
+    consumer.on('producerclose', () => {
+      consumer.close();
+      this.consumers.delete(consumer.id);
+    });
+
+    return consumer;
+  }
+
+  getConsumer(consumerId: string): Consumer<ConsumerAppData> | undefined {
+    return this.consumers.get(consumerId);
+  }
+
+  async resumeConsumer(consumerId: string) {
+    const consumer = this.getConsumer(consumerId);
+    if (!consumer) throw new Error(`${consumerId} Consumer를 찾을 수 없습니다.`);
+    await consumer.resume();
+  }
+
+  closeConsumer(consumerId: string) {
+    const consumer = this.getConsumer(consumerId);
+    if (!consumer) throw new Error(`${consumerId} Consumer를 찾을 수 없습니다.`);
+    consumer.close();
+    this.consumers.delete(consumer.id);
+  }
+
+  cleanupParticipantFromMaps(producers: string[] = [], consumers: string[] = []) {
+    producers.forEach((producerId) => {
+      try {
+        if (this.producers.has(producerId)) {
+          this.closeProducer(producerId);
+        }
+      } catch (error) {
+        this.logger.warn(
+          `Producer ${producerId} 정리 중 오류 (이미 닫혔을 수 있음): ${error.message}`,
+        );
+      }
+    });
+
+    consumers.forEach((consumerId) => {
+      try {
+        if (this.consumers.has(consumerId)) {
+          this.closeConsumer(consumerId);
+        }
+      } catch (error) {
+        this.logger.warn(`Consumer ${consumerId} 정리 중 오류: ${error.message}`);
+      }
+    });
   }
 }
