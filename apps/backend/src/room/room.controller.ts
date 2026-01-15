@@ -24,6 +24,7 @@ import {
   nicknameValidate,
   NicknameValidationRequestQueryParam,
   NicknameValidationResponse,
+  RoomValidationResponse,
 } from '@plum/shared-interfaces';
 
 import { RoomService } from './room.service.js';
@@ -58,9 +59,9 @@ export class RoomController {
   }
 
   @Get(':id/validate')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  async validateRoom(@Param('id', UlidValidationPipe) id: string): Promise<void> {
-    await this.roomService.validateRoom(id);
+  @HttpCode(HttpStatus.OK)
+  async validateRoom(@Param('id', UlidValidationPipe) id: string): Promise<RoomValidationResponse> {
+    return await this.roomService.getRoomValidation(id);
   }
 
   @Get(':id/nickname/validate')

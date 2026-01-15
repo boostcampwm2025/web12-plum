@@ -62,6 +62,13 @@ export interface EnterRoomResponse {
   };
 }
 
+/**
+ * 강의실 정보 조회 응답
+ */
+export interface RoomValidationResponse {
+  name: string;
+}
+
 /*
  * 강의실 id 검증 request
  */
