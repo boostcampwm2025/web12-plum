@@ -3,7 +3,7 @@ import { Home } from './pages/Home';
 import { EnterLecture } from './pages/EnterLecture';
 import { CreateLecture } from './pages/CreateLecture';
 import { NotFound } from './pages/NotFound';
-import RoomPage from './pages/RoomPage';
+import Room from './pages/Room';
 import { ROUTES } from './app/routes/routes';
 
 function App() {
@@ -24,7 +24,7 @@ function App() {
         />
         <Route
           path={ROUTES.ROOM()}
-          element={<RoomPage />}
+          element={<Room />}
         />
         <Route
           path={ROUTES.ROOM_SUMMARY()}

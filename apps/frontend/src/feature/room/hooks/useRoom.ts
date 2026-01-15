@@ -9,7 +9,7 @@ import { useRoomStore } from '../stores/useRoomStore';
 import { useMediaDeviceStore } from '@/store/useMediaDeviceStore';
 import { logger } from '@/shared/lib/logger';
 
-export function useRoomPage() {
+export function useRoom() {
   const location = useLocation();
   const { initDevice } = useMediaDeviceStore((state) => state.actions);
   const { isMicOn, isCameraOn, isScreenSharing, initialize, toggleScreenShare } = useMediaStore();
