@@ -1,10 +1,14 @@
+import { useNavigate } from 'react-router';
 import { Footer } from '@/shared/components/Footer';
 import { Header } from '@/shared/components/Header';
 import { PageSubHeader } from '@/shared/components/PageSubHeader';
+import { ROUTES } from '@/app/routes/routes';
 
 import { CreateLectureForm } from '@/feature/create-lecture/components/CreateLectureForm';
 
 export const CreateLecture = () => {
+  const navigate = useNavigate();
+
   return (
     <>
       <Header />
@@ -13,7 +17,11 @@ export const CreateLecture = () => {
           title="강의 생성"
           description="설정을 완료하고 새로운 강의실을 생성하세요."
         />
-        <CreateLectureForm />
+        <CreateLectureForm
+          onCreateSuccess={(roomId) => {
+            navigate(ROUTES.ROOM(roomId));
+          }}
+        />
       </main>
       <Footer />
     </>
