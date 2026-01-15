@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 import { Producer } from 'mediasoup-client/types';
 import { Socket } from 'socket.io-client';
 import { logger } from '@/shared/lib/logger';
-import { ClientToServerEvents, ServerToClientEvents } from '@plum/shared-interfaces';
+import { ClientToServerEvents, MediaType, ServerToClientEvents } from '@plum/shared-interfaces';
 import { useMediaTransport } from './useMediaTransport';
 
 /**
@@ -16,7 +16,7 @@ export const useMediaProducer = () => {
 
   /**
    * Producer 인스턴스들을 관리 (중복 전송 방지 및 역할별 조회를 위해 Map 사용)
-   * Key: 'camera' | 'screen' | 'mic' 등 스트림의 용도
+   * Key: 'video' | 'screen' | 'audio' 등 스트림의 용도
    */
   const producersRef = useRef<Map<string, Producer>>(new Map());
 
@@ -63,7 +63,7 @@ export const useMediaProducer = () => {
     async (
       socket: Socket<ServerToClientEvents, ClientToServerEvents>,
       track: MediaStreamTrack,
-      appData: Record<string, unknown> = {},
+      appData: { type: MediaType; [key: string]: unknown },
     ): Promise<Producer> => {
       /**
        * 트랙 상태 검증: 이미 종료되었거나 비활성화된 트랙은 전송할 수 없음
@@ -73,7 +73,7 @@ export const useMediaProducer = () => {
         throw new Error(`[Producer] 유효하지 않은 트랙 상태: ${track.readyState}`);
       }
 
-      const type = (appData.type as string) || 'camera';
+      const type = appData.type;
 
       /**
        * 동일한 타입(용도)의 Producer가 이미 존재하는지 체크
@@ -98,14 +98,11 @@ export const useMediaProducer = () => {
 
         /**
          * 서버 송출 시작
-         * appData를 통해 서버가 이 스트림이 'camera'인지 'screen'인지 명확히 구분하게 함
+         * appData를 통해 서버가 이 스트림이 'video'인지 'screen'인지 명확히 구분하게 함
          */
         const producer = await transport.produce({
           track,
-          appData: {
-            type,
-            ...appData,
-          },
+          appData: { ...appData, type },
         });
 
         /**
@@ -163,9 +160,9 @@ export const useMediaProducer = () => {
 
   /**
    * 최신 Producer 인스턴스 반환
-   * 특정 용도(camera/screen/mic)의 Producer를 Key로 즉시 찾아 반환
+   * 특정 용도(video/screen/audio)의 Producer를 Key로 즉시 찾아 반환
    */
-  const getProducer = useCallback((type: string = 'camera'): Producer | null => {
+  const getProducer = useCallback((type: MediaType = 'video'): Producer | null => {
     return producersRef.current.get(type) || null;
   }, []);
 
