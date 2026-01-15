@@ -33,10 +33,10 @@ export function ParticipantVideo({
   const localVideoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
-    if (localVideoRef.current && localStream && isCameraOn) {
+    if (mode !== 'minimize' && localVideoRef.current && localStream && isCameraOn) {
       localVideoRef.current.srcObject = localStream;
     }
-  }, [isCameraOn, localStream]);
+  }, [isCameraOn, localStream, mode]);
 
   return (
     <motion.div
