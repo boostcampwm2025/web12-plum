@@ -1,6 +1,6 @@
 import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
 import * as mediasoup from 'mediasoup';
-import { Worker, Router } from 'mediasoup/node/lib/types';
+import { Worker, Router, WebRtcTransport, DtlsParameters } from 'mediasoup/node/lib/types';
 import { mediasoupConfig } from './mediasoup.config.js';
 
 /**
@@ -18,6 +18,7 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
 
   private workers: Worker[] = []; // CPU 코어 수만큼 생성되는 Worker 배열
   private routers: Map<string, Router> = new Map(); // 강의실별 Router 저장 (roomId -> Router)
+  private transports: Map<string, WebRtcTransport> = new Map(); // Transport 저장 (transportId -> Transport)
   private nextWorkerIdx = 0; // Round-robin Worker 선택 인덱스
 
   /**
@@ -147,5 +148,95 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
       pid: worker.pid,
       closed: worker.closed,
     }));
+  }
+
+  // Transport
+  /**
+   * WebRTC Transport 생성
+   * 클라이언트와 서버 간 미디어 송수신 통로 생성
+   *
+   * @param roomId 강의실 고유 ID
+   * @returns Transport 정보 (id, iceParameters, iceCandidates, dtlsParameters)
+   * 공식문서: https://mediasoup.org/documentation/v3/mediasoup/api/#WebRtcTransportOptions
+   */
+  async createWebRtcTransport(roomId: string) {
+    const router = this.routers.get(roomId);
+    if (!router) {
+      throw new Error(`${roomId} 강의실의 Router를 찾을 수 없습니다.`);
+    }
+
+    try {
+      // Router에서 WebRtcTransport 생성
+      const transport = await router.createWebRtcTransport({
+        listenIps: mediasoupConfig.webRtcTransport.listenIps,
+        enableUdp: mediasoupConfig.webRtcTransport.enableUdp,
+        enableTcp: mediasoupConfig.webRtcTransport.enableTcp,
+        preferUdp: mediasoupConfig.webRtcTransport.preferUdp,
+        initialAvailableOutgoingBitrate:
+          mediasoupConfig.webRtcTransport.initialAvailableOutgoingBitrate,
+      });
+
+      // Map에 저장
+      this.transports.set(transport.id, transport);
+
+      this.logger.log(`✅ Transport 생성 완료 (id: ${transport.id}, room: ${roomId})`);
+
+      // 클라이언트에게 필요한 정보 반환
+      return {
+        id: transport.id,
+        iceParameters: transport.iceParameters,
+        iceCandidates: transport.iceCandidates,
+        dtlsParameters: transport.dtlsParameters,
+      };
+    } catch (error) {
+      this.logger.error(`❌ Transport 생성 실패 (room: ${roomId}):`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Transport 연결 (DTLS 핸드쉐이크)
+   * 클라이언트의 DTLS 파라미터로 Transport 연결 완료
+   *
+   * @param transportId Transport 고유 ID
+   * @param dtlsParameters 클라이언트의 DTLS 파라미터
+   */
+  async connectTransport(transportId: string, dtlsParameters: DtlsParameters) {
+    const transport = this.transports.get(transportId);
+    if (!transport) {
+      throw new Error(`${transportId} Transport를 찾을 수 없습니다.`);
+    }
+
+    try {
+      await transport.connect({ dtlsParameters });
+      this.logger.log(`✅ Transport 연결 완료 (id: ${transportId})`);
+    } catch (error) {
+      this.logger.error(`❌ Transport 연결 실패 (id: ${transportId}):`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Transport 조회
+   * @param transportId Transport 고유 ID
+   * @returns Transport 인스턴스 (없으면 undefined)
+   */
+  getTransport(transportId: string): WebRtcTransport | undefined {
+    return this.transports.get(transportId);
+  }
+
+  /**
+   * Transport 닫기
+   * 참가자 퇴장 시 Transport 리소스 정리
+   *
+   * @param transportId Transport 고유 ID
+   */
+  closeTransport(transportId: string) {
+    const transport = this.transports.get(transportId);
+    if (transport) {
+      transport.close();
+      this.transports.delete(transportId);
+      this.logger.log(`🗑️ Transport 닫힘 (id: ${transportId})`);
+    }
   }
 }
