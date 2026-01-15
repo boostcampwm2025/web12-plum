@@ -2,6 +2,7 @@ import type {
   CreateRoomResponse,
   EnterLectureRequestBody,
   EnterRoomResponse,
+  NicknameValidationResponse,
   RoomValidationResponse,
 } from '@plum/shared-interfaces';
 import { createLectureSchema } from '@plum/shared-interfaces';
@@ -41,5 +42,13 @@ export const roomApi = {
 
   async validateRoom(roomId: string): Promise<ApiResponse<RoomValidationResponse>> {
     return apiClient.get<RoomValidationResponse>(`/room/${roomId}/validate`);
+  },
+
+  async validateNickname(
+    roomId: string,
+    nickname: string,
+  ): Promise<ApiResponse<NicknameValidationResponse>> {
+    const query = new URLSearchParams({ nickname });
+    return apiClient.get<NicknameValidationResponse>(`/room/${roomId}/nickname/validate?${query}`);
   },
 };
