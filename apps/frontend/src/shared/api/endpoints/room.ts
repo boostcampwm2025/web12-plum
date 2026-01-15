@@ -1,4 +1,10 @@
-import { createLectureSchema, type CreateRoomResponse } from '@plum/shared-interfaces';
+import type {
+  CreateRoomResponse,
+  EnterLectureRequestBody,
+  EnterRoomResponse,
+  RoomValidationResponse,
+} from '@plum/shared-interfaces';
+import { createLectureSchema } from '@plum/shared-interfaces';
 import type { z } from 'zod';
 import { apiClient } from '../client';
 import type { ApiResponse } from '../types';
@@ -24,5 +30,16 @@ export const roomApi = {
     }
 
     return apiClient.postFormData<CreateRoomResponse>('/room', formData);
+  },
+
+  async joinRoom(
+    roomId: string,
+    data: EnterLectureRequestBody,
+  ): Promise<ApiResponse<EnterRoomResponse>> {
+    return apiClient.post<EnterRoomResponse>(`/room/${roomId}/join`, data);
+  },
+
+  async validateRoom(roomId: string): Promise<ApiResponse<RoomValidationResponse>> {
+    return apiClient.get<RoomValidationResponse>(`/room/${roomId}/validate`);
   },
 };
