@@ -221,6 +221,10 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
    * @param transportId Transport 고유 ID
    * @returns Transport 인스턴스 (없으면 undefined)
    */
+  getTransport(transportId: string): WebRtcTransport | undefined {
+    return this.transports.get(transportId);
+  }
+
   /**
    * Transport 닫기
    * 참가자 퇴장 시 Transport 리소스 정리
@@ -232,11 +236,7 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
     if (transport) {
       transport.close();
       this.transports.delete(transportId);
-      this.logger.log(`Transport 닫힘 (id: ${transportId})`);
+      this.logger.log(`🗑️ Transport 닫힘 (id: ${transportId})`);
     }
-  }
-
-  getTransport(transportId: string): WebRtcTransport | undefined {
-    return this.transports.get(transportId);
   }
 }
