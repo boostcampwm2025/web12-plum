@@ -191,12 +191,15 @@ export function EnterLectureForm({
   });
 
   const { handleSubmit, formState, setValue, getValues, trigger, control } = formMethods;
-  const { nicknameValue, checkMessage, checkVariant, handleCheckNickname } = useNicknameValidation({
-    roomId,
-    control,
-    trigger,
-    getValues,
-  });
+  const {
+    nicknameValue,
+    checkMessage,
+    checkVariant,
+    hasCheckedNickname,
+    isNicknameAvailable,
+    handleCheckNickname,
+    requireCheck,
+  } = useNicknameValidation({ roomId, control, trigger, getValues });
 
   useEffect(() => {
     setValue(ENTER_LECTURE_KEYS.name, lectureName, { shouldValidate: true });
@@ -205,6 +208,10 @@ export function EnterLectureForm({
   const onSubmit = async (data: EnterLectureRequestBody) => {
     if (!roomId || !lectureName) {
       logger.ui.warn('EnterLectureForm: 강의실 정보를 확인할 수 없습니다.', data);
+      return;
+    }
+    if (!hasCheckedNickname || !isNicknameAvailable) {
+      requireCheck();
       return;
     }
 
