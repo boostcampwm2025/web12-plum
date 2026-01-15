@@ -11,6 +11,7 @@ import { FormField } from '@/shared/components/FormField';
 import { logger } from '@/shared/lib/logger';
 import { Button } from '@/shared/components/Button';
 import { cn } from '@/shared/lib/utils';
+import { useMediaStore } from '@/feature/room/stores/useMediaStore';
 
 import { enterLectureDefaultValues, ENTER_LECTURE_KEYS } from '../schema';
 import { LocalMediaPreview } from './LocalMediaPreview';
@@ -180,6 +181,7 @@ export function EnterLectureForm({
   onEnterSuccess,
 }: EnterLectureFormProps) {
   const { enterRoom, isSubmitting } = useEnterRoom();
+  const { initialize } = useMediaStore();
 
   const formMethods = useForm<EnterLectureRequestBody>({
     resolver: zodResolver(enterLectureSchema),
@@ -217,6 +219,7 @@ export function EnterLectureForm({
 
     try {
       const response = await enterRoom(roomId, data);
+      initialize(data.isAudioOn, data.isVideoOn);
       onEnterSuccess?.(response);
     } catch (error) {
       logger.ui.error('강의실 입장 실패:', error);

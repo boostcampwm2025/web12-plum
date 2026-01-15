@@ -7,14 +7,18 @@ import { useMediaStore } from '../stores/useMediaStore';
 import { useRoomUIStore } from '../stores/useRoomUIStore';
 import { useRoomStore } from '../stores/useRoomStore';
 import { useMediaDeviceStore } from '@/store/useMediaDeviceStore';
+import { useStreamStore } from '@/store/useLocalStreamStore';
 import { logger } from '@/shared/lib/logger';
 
 export function useRoom() {
   const location = useLocation();
   const { initDevice } = useMediaDeviceStore((state) => state.actions);
-  const { isMicOn, isCameraOn, isScreenSharing, initialize, toggleScreenShare } = useMediaStore();
+  const { isMicOn, isCameraOn, isScreenSharing, hasHydrated, initialize, toggleScreenShare } =
+    useMediaStore();
   const { activeDialog, activeSidePanel, setActiveDialog, setActiveSidePanel } = useRoomUIStore();
   const { setMyInfo } = useRoomStore((state) => state.actions);
+  const localStream = useStreamStore((state) => state.localStream);
+  const { startStream, stopStream, setTracksEnabled } = useStreamStore((state) => state.actions);
   const [userVideoMode, setUserVideoMode] = useState<VideoDisplayMode>('pip');
 
   // Mock 데이터 (나중에 실제 데이터로 교체)
@@ -27,12 +31,6 @@ export function useRoom() {
     { id: '5', name: '최자두' },
     { id: '6', name: '정자두' },
   ];
-
-  // 강의실 입장 시 초기 미디어 상태 설정
-  useEffect(() => {
-    // TODO: 실제로는 사용자가 선택한 초기 상태를 받아와야 함
-    initialize(false, false);
-  }, [initialize]);
 
   useEffect(() => {
     const state = location.state as EnterRoomResponse | null;
@@ -72,6 +70,48 @@ export function useRoom() {
     logger.socket.info('미디어 상태 변경:', { isMicOn, isCameraOn, isScreenSharing });
     // TODO: WebRTC 연동
   }, [isMicOn, isCameraOn, isScreenSharing]);
+
+  useEffect(() => {
+    if (!hasHydrated) return;
+
+    const syncStream = async () => {
+      const shouldHaveStream = isCameraOn || isMicOn;
+
+      if (!shouldHaveStream) {
+        stopStream();
+        return;
+      }
+
+      if (localStream) {
+        const currentVideoEnabled = localStream.getVideoTracks().some((track) => track.enabled);
+        const currentAudioEnabled = localStream.getAudioTracks().some((track) => track.enabled);
+
+        if (currentVideoEnabled !== isCameraOn || currentAudioEnabled !== isMicOn) {
+          setTracksEnabled(isCameraOn, isMicOn);
+        }
+        return;
+      }
+
+      try {
+        await startStream({ video: true, audio: true });
+        setTracksEnabled(isCameraOn, isMicOn);
+      } catch (error) {
+        logger.media.error('로컬 스트림 요청 실패', error);
+        initialize(false, false);
+      }
+    };
+
+    syncStream();
+  }, [
+    hasHydrated,
+    isCameraOn,
+    isMicOn,
+    initialize,
+    localStream,
+    setTracksEnabled,
+    startStream,
+    stopStream,
+  ]);
 
   const handleExit = () => {
     logger.ui.debug('강의실 나가기 요청');
