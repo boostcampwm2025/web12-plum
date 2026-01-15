@@ -1,7 +1,5 @@
 import { create } from 'zustand';
 import { Device } from 'mediasoup-client';
-import { Socket } from 'socket.io-client';
-import { ClientToServerEvents, ServerToClientEvents } from '@plum/shared-interfaces';
 import { RtpCapabilities } from 'mediasoup-client/types';
 import { logger } from '@/shared/lib/logger';
 
@@ -31,7 +29,7 @@ interface MediaDeviceState {
   isLoaded: boolean; // Device가 성공적으로 로드되어 통신 준비가 되었는지 여부
   isInitializing: boolean; // Device 초기화 프로세스가 진행 중인지 여부
   actions: {
-    initDevice: (socket: Socket<ServerToClientEvents, ClientToServerEvents>) => Promise<void>;
+    initDevice: (routerRtpCapabilities: RtpCapabilities) => Promise<void>;
     resetDevice: () => void;
   };
 }
@@ -56,10 +54,11 @@ export const useMediaDeviceStore = create<MediaDeviceState>((set, get) => ({
      * Mediasoup Device 초기화 프로세스
      * 1. 중복 실행 방지 체크
      * 2. Device 인스턴스 생성 (없을 경우)
-     * 3. 서버에 Router RTP Capabilities 요청
-     * 4. 브라우저 호환성 검사 및 Device 로드
+     * 3. 브라우저 호환성 검사 및 Device 로드
+     *
+     * @param routerRtpCapabilities 강의실 생성/입장 API 응답에서 전달받은 Router RTP Capabilities
      */
-    initDevice: async (socket: Socket<ServerToClientEvents, ClientToServerEvents>) => {
+    initDevice: async (routerRtpCapabilities: RtpCapabilities) => {
       const { device, isLoaded, isInitializing } = get();
 
       // 1. 이미 로드되었거나 현재 초기화가 진행 중이라면 중복 호출을 차단
@@ -88,29 +87,10 @@ export const useMediaDeviceStore = create<MediaDeviceState>((set, get) => ({
           }
         }
 
-        logger.media.info('Device 초기화 시작: Router RTP Capabilities 요청 중');
+        logger.media.info('Device 초기화 시작');
 
         /**
-         * 3. 서버로부터 Router의 RTP Capabilities(지원 코덱 등) 획득
-         * 소켓 자체 타임아웃이 설정되어 있으므로, 실패 시 catch 블록으로 이동
-         * 클라이언트 Device가 서버와 어떤 언어(코덱)로 대화할지 결정하는 기준
-         */
-        const routerRtpCapabilities = await new Promise<RtpCapabilities>((resolve, reject) => {
-          socket.emit('media_get_rtp_capabilities', (response: unknown) => {
-            const typedResponse = response as {
-              routerRtpCapabilities: RtpCapabilities;
-              error?: string;
-            };
-            if (typedResponse.error) {
-              reject(new Error(typedResponse.error));
-            } else {
-              resolve(typedResponse.routerRtpCapabilities);
-            }
-          });
-        });
-
-        /**
-         * 4. Device 로드 수행
+         * 3. Device 로드 수행
          * 내부적으로 브라우저의 WebRTC 지원 여부를 확인하고 서버의 RTP 설정과 동기화
          * 브라우저의 WebRTC 성능과 서버의 설정이 일치하는지 최종 검증
          */

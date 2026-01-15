@@ -24,9 +24,7 @@ describe('useMediaDeviceStore', () => {
     canProduce: ReturnType<typeof vi.fn>;
   };
 
-  let mockSocket: {
-    emit: ReturnType<typeof vi.fn>;
-  };
+  const mockRtpCapabilities = { codecs: [], headerExtensions: [] };
 
   beforeEach(() => {
     useMediaDeviceStore.setState({
@@ -42,10 +40,6 @@ describe('useMediaDeviceStore', () => {
     };
 
     (Device as unknown as ReturnType<typeof vi.fn>).mockImplementation(() => mockDevice);
-
-    mockSocket = {
-      emit: vi.fn(),
-    };
   });
 
   afterEach(() => {
@@ -71,16 +65,8 @@ describe('useMediaDeviceStore', () => {
 
   describe('initDevice', () => {
     it('성공적으로 Device를 초기화한다', async () => {
-      const routerRtpCapabilities = { codecs: [], headerExtensions: [] };
-
-      mockSocket.emit.mockImplementation((event: string, callback: (response: unknown) => void) => {
-        if (event === 'media_get_rtp_capabilities') {
-          callback({ routerRtpCapabilities });
-        }
-      });
-
       const { actions } = useMediaDeviceStore.getState();
-      await actions.initDevice(mockSocket as never);
+      await actions.initDevice(mockRtpCapabilities as never);
 
       const state = useMediaDeviceStore.getState();
       expect(state.device).toBe(mockDevice);
@@ -89,64 +75,22 @@ describe('useMediaDeviceStore', () => {
     });
 
     it('Device 생성 시 new Device()를 호출한다', async () => {
-      const routerRtpCapabilities = { codecs: [], headerExtensions: [] };
-
-      mockSocket.emit.mockImplementation((event: string, callback: (response: unknown) => void) => {
-        if (event === 'media_get_rtp_capabilities') {
-          callback({ routerRtpCapabilities });
-        }
-      });
-
       const { actions } = useMediaDeviceStore.getState();
-      await actions.initDevice(mockSocket as never);
+      await actions.initDevice(mockRtpCapabilities as never);
 
       expect(Device).toHaveBeenCalledTimes(1);
     });
 
-    it('서버에서 routerRtpCapabilities를 받아온다', async () => {
-      const routerRtpCapabilities = { codecs: [], headerExtensions: [] };
-
-      mockSocket.emit.mockImplementation((event: string, callback: (response: unknown) => void) => {
-        if (event === 'media_get_rtp_capabilities') {
-          callback({ routerRtpCapabilities });
-        }
-      });
-
-      const { actions } = useMediaDeviceStore.getState();
-      await actions.initDevice(mockSocket as never);
-
-      expect(mockSocket.emit).toHaveBeenCalledWith(
-        'media_get_rtp_capabilities',
-        expect.any(Function),
-      );
-    });
-
     it('Device.load()가 routerRtpCapabilities와 함께 호출된다', async () => {
-      const routerRtpCapabilities = { codecs: [], headerExtensions: [] };
-
-      mockSocket.emit.mockImplementation((event: string, callback: (response: unknown) => void) => {
-        if (event === 'media_get_rtp_capabilities') {
-          callback({ routerRtpCapabilities });
-        }
-      });
-
       const { actions } = useMediaDeviceStore.getState();
-      await actions.initDevice(mockSocket as never);
+      await actions.initDevice(mockRtpCapabilities as never);
 
-      expect(mockDevice.load).toHaveBeenCalledWith({ routerRtpCapabilities });
+      expect(mockDevice.load).toHaveBeenCalledWith({ routerRtpCapabilities: mockRtpCapabilities });
     });
 
     it('canProduce로 audio/video 지원 여부를 확인한다', async () => {
-      const routerRtpCapabilities = { codecs: [], headerExtensions: [] };
-
-      mockSocket.emit.mockImplementation((event: string, callback: (response: unknown) => void) => {
-        if (event === 'media_get_rtp_capabilities') {
-          callback({ routerRtpCapabilities });
-        }
-      });
-
       const { actions } = useMediaDeviceStore.getState();
-      await actions.initDevice(mockSocket as never);
+      await actions.initDevice(mockRtpCapabilities as never);
 
       expect(mockDevice.canProduce).toHaveBeenCalled();
     });
@@ -156,20 +100,18 @@ describe('useMediaDeviceStore', () => {
         useMediaDeviceStore.setState({ isLoaded: true });
 
         const { actions } = useMediaDeviceStore.getState();
-        await actions.initDevice(mockSocket as never);
+        await actions.initDevice(mockRtpCapabilities as never);
 
         expect(Device).not.toHaveBeenCalled();
-        expect(mockSocket.emit).not.toHaveBeenCalled();
       });
 
       it('초기화 진행 중인 경우 건너뛴다', async () => {
         useMediaDeviceStore.setState({ isInitializing: true });
 
         const { actions } = useMediaDeviceStore.getState();
-        await actions.initDevice(mockSocket as never);
+        await actions.initDevice(mockRtpCapabilities as never);
 
         expect(Device).not.toHaveBeenCalled();
-        expect(mockSocket.emit).not.toHaveBeenCalled();
       });
 
       it('device.loaded가 true인 경우 건너뛴다', async () => {
@@ -177,9 +119,9 @@ describe('useMediaDeviceStore', () => {
         useMediaDeviceStore.setState({ device: loadedDevice as never });
 
         const { actions } = useMediaDeviceStore.getState();
-        await actions.initDevice(mockSocket as never);
+        await actions.initDevice(mockRtpCapabilities as never);
 
-        expect(mockSocket.emit).not.toHaveBeenCalled();
+        expect(Device).not.toHaveBeenCalled();
       });
     });
 
@@ -191,84 +133,47 @@ describe('useMediaDeviceStore', () => {
 
         const { actions } = useMediaDeviceStore.getState();
 
-        await expect(actions.initDevice(mockSocket as never)).rejects.toThrow(MediaDeviceError);
-        await expect(actions.initDevice(mockSocket as never)).rejects.toMatchObject({
+        await expect(actions.initDevice(mockRtpCapabilities as never)).rejects.toThrow(
+          MediaDeviceError,
+        );
+        await expect(actions.initDevice(mockRtpCapabilities as never)).rejects.toMatchObject({
           code: MEDIA_DEVICE_ERRORS.NOT_SUPPORTED,
         });
       });
 
-      it('서버 응답 에러 시 LOAD_FAILED 에러를 던진다', async () => {
-        mockSocket.emit.mockImplementation(
-          (event: string, callback: (response: unknown) => void) => {
-            if (event === 'media_get_rtp_capabilities') {
-              callback({ error: 'Server error' });
-            }
-          },
-        );
-
-        const { actions } = useMediaDeviceStore.getState();
-
-        await expect(actions.initDevice(mockSocket as any)).rejects.toThrow(MediaDeviceError);
-        await expect(actions.initDevice(mockSocket as any)).rejects.toMatchObject({
-          code: MEDIA_DEVICE_ERRORS.LOAD_FAILED,
-        });
-      });
-
       it('Device.load() 실패 시 LOAD_FAILED 에러를 던진다', async () => {
-        const routerRtpCapabilities = { codecs: [], headerExtensions: [] };
-
-        mockSocket.emit.mockImplementation(
-          (event: string, callback: (response: unknown) => void) => {
-            if (event === 'media_get_rtp_capabilities') {
-              callback({ routerRtpCapabilities });
-            }
-          },
-        );
-
         mockDevice.load.mockRejectedValue(new Error('Load failed'));
 
         const { actions } = useMediaDeviceStore.getState();
 
-        await expect(actions.initDevice(mockSocket as never)).rejects.toThrow(MediaDeviceError);
-        await expect(actions.initDevice(mockSocket as never)).rejects.toMatchObject({
+        await expect(actions.initDevice(mockRtpCapabilities as never)).rejects.toThrow(
+          MediaDeviceError,
+        );
+        await expect(actions.initDevice(mockRtpCapabilities as never)).rejects.toMatchObject({
           code: MEDIA_DEVICE_ERRORS.LOAD_FAILED,
         });
       });
 
       it('audio/video 모두 지원하지 않으면 NOT_SUPPORTED 에러를 던진다', async () => {
-        const routerRtpCapabilities = { codecs: [], headerExtensions: [] };
-
-        mockSocket.emit.mockImplementation(
-          (event: string, callback: (response: unknown) => void) => {
-            if (event === 'media_get_rtp_capabilities') {
-              callback({ routerRtpCapabilities });
-            }
-          },
-        );
-
         mockDevice.canProduce.mockReturnValue(false);
 
         const { actions } = useMediaDeviceStore.getState();
 
-        await expect(actions.initDevice(mockSocket as never)).rejects.toThrow(MediaDeviceError);
-        await expect(actions.initDevice(mockSocket as never)).rejects.toMatchObject({
+        await expect(actions.initDevice(mockRtpCapabilities as never)).rejects.toThrow(
+          MediaDeviceError,
+        );
+        await expect(actions.initDevice(mockRtpCapabilities as never)).rejects.toMatchObject({
           code: MEDIA_DEVICE_ERRORS.NOT_SUPPORTED,
         });
       });
 
       it('에러 발생 시 isInitializing이 false로 리셋된다', async () => {
-        mockSocket.emit.mockImplementation(
-          (event: string, callback: (response: unknown) => void) => {
-            if (event === 'media_get_rtp_capabilities') {
-              callback({ error: 'Server error' });
-            }
-          },
-        );
+        mockDevice.load.mockRejectedValue(new Error('Load failed'));
 
         const { actions } = useMediaDeviceStore.getState();
 
         try {
-          await actions.initDevice(mockSocket as never);
+          await actions.initDevice(mockRtpCapabilities as never);
         } catch {
           // 에러 무시
         }
@@ -280,37 +185,21 @@ describe('useMediaDeviceStore', () => {
 
     describe('상태 전이', () => {
       it('초기화 시작 시 isInitializing이 true가 된다', async () => {
-        const routerRtpCapabilities = { codecs: [], headerExtensions: [] };
-
         let capturedInitializingState = false;
-        mockSocket.emit.mockImplementation(
-          (event: string, callback: (response: unknown) => void) => {
-            if (event === 'media_get_rtp_capabilities') {
-              capturedInitializingState = useMediaDeviceStore.getState().isInitializing;
-              callback({ routerRtpCapabilities });
-            }
-          },
-        );
+        mockDevice.load.mockImplementation(() => {
+          capturedInitializingState = useMediaDeviceStore.getState().isInitializing;
+          return Promise.resolve();
+        });
 
         const { actions } = useMediaDeviceStore.getState();
-        await actions.initDevice(mockSocket as any);
+        await actions.initDevice(mockRtpCapabilities as never);
 
         expect(capturedInitializingState).toBe(true);
       });
 
       it('초기화 완료 시 isLoaded가 true, isInitializing이 false가 된다', async () => {
-        const routerRtpCapabilities = { codecs: [], headerExtensions: [] };
-
-        mockSocket.emit.mockImplementation(
-          (event: string, callback: (response: unknown) => void) => {
-            if (event === 'media_get_rtp_capabilities') {
-              callback({ routerRtpCapabilities });
-            }
-          },
-        );
-
         const { actions } = useMediaDeviceStore.getState();
-        await actions.initDevice(mockSocket as any);
+        await actions.initDevice(mockRtpCapabilities as never);
 
         const state = useMediaDeviceStore.getState();
         expect(state.isLoaded).toBe(true);
@@ -321,16 +210,8 @@ describe('useMediaDeviceStore', () => {
 
   describe('resetDevice', () => {
     it('모든 상태를 초기값으로 리셋한다', async () => {
-      const routerRtpCapabilities = { codecs: [], headerExtensions: [] };
-
-      mockSocket.emit.mockImplementation((event: string, callback: (response: unknown) => void) => {
-        if (event === 'media_get_rtp_capabilities') {
-          callback({ routerRtpCapabilities });
-        }
-      });
-
       const { actions } = useMediaDeviceStore.getState();
-      await actions.initDevice(mockSocket as any);
+      await actions.initDevice(mockRtpCapabilities as never);
 
       actions.resetDevice();
 
