@@ -1,8 +1,9 @@
 import { create } from 'zustand';
+import { createJSONStorage, persist } from 'zustand/middleware';
 import type { ParticipantRole } from '@plum/shared-interfaces';
 
 interface MyInfo {
-  participantId: string;
+  id: string;
   name: string;
   role: ParticipantRole;
 }
@@ -19,10 +20,21 @@ const initialState: Pick<RoomState, 'myInfo'> = {
   myInfo: null,
 };
 
-export const useRoomStore = create<RoomState>((set) => ({
-  ...initialState,
-  actions: {
-    setMyInfo: (info) => set({ myInfo: info }),
-    reset: () => set({ ...initialState }),
-  },
-}));
+export const useRoomStore = create<RoomState>()(
+  persist(
+    (set) => ({
+      ...initialState,
+      actions: {
+        setMyInfo: (info) => set({ myInfo: info }),
+        reset: () => set({ ...initialState }),
+      },
+    }),
+    {
+      name: 'room-my-info',
+      storage: createJSONStorage(() => sessionStorage),
+      partialize: (state) => ({
+        myInfo: state.myInfo,
+      }),
+    },
+  ),
+);

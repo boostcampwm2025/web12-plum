@@ -1,6 +1,6 @@
 import { FormProvider, useForm, useFormContext, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import type { CreateRoomRequest } from '@plum/shared-interfaces';
+import type { CreateRoomRequest, CreateRoomResponse } from '@plum/shared-interfaces';
 import { createLectureSchema } from '@plum/shared-interfaces';
 
 import { Button } from '@/shared/components/Button';
@@ -181,7 +181,7 @@ function PresentationUploaderSection() {
  * @returns 강의 생성 폼 JSX 요소
  */
 interface CreateLectureFormProps {
-  onCreateSuccess?: (roomId: string) => void;
+  onCreateSuccess?: (response: CreateRoomResponse) => void;
 }
 
 export function CreateLectureForm({ onCreateSuccess }: CreateLectureFormProps) {
@@ -196,8 +196,8 @@ export function CreateLectureForm({ onCreateSuccess }: CreateLectureFormProps) {
 
   const onSubmit = async (data: CreateRoomRequest) => {
     try {
-      const { roomId } = await createRoom(data);
-      onCreateSuccess?.(roomId);
+      const response = await createRoom(data);
+      onCreateSuccess?.(response);
     } catch (err) {
       alert(`강의실 생성에 실패했습니다: ${err}`);
     }

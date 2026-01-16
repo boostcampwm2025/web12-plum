@@ -16,13 +16,14 @@ export function useRoom() {
   const { isMicOn, isCameraOn, isScreenSharing, hasHydrated, initialize, toggleScreenShare } =
     useMediaStore();
   const { activeDialog, activeSidePanel, setActiveDialog, setActiveSidePanel } = useRoomUIStore();
+  const myInfo = useRoomStore((state) => state.myInfo);
   const { setMyInfo } = useRoomStore((state) => state.actions);
   const localStream = useStreamStore((state) => state.localStream);
   const { startStream, stopStream, setTracksEnabled } = useStreamStore((state) => state.actions);
   const [userVideoMode, setUserVideoMode] = useState<VideoDisplayMode>('pip');
 
+  const currentUser = myInfo ?? { id: '', name: '' };
   // Mock 데이터 (나중에 실제 데이터로 교체)
-  const currentUser = { id: 'me', name: '윤자두' };
   const participants = [
     { id: '1', name: '김자두' },
     { id: '2', name: '김자두' },
@@ -35,11 +36,12 @@ export function useRoom() {
   useEffect(() => {
     const state = location.state as EnterRoomResponse | null;
     if (state?.participantId && state?.name && state?.role) {
-      setMyInfo({
-        participantId: state.participantId,
+      const nextMyInfo = {
+        id: state.participantId,
         name: state.name,
         role: state.role,
-      });
+      };
+      setMyInfo(nextMyInfo);
     }
 
     // 입장 응답에 있으면 세션에 저장해서 새로고침 이후에도 재사용

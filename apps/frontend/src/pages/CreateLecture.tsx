@@ -18,8 +18,15 @@ export const CreateLecture = () => {
           description="설정을 완료하고 새로운 강의실을 생성하세요."
         />
         <CreateLectureForm
-          onCreateSuccess={(roomId) => {
-            navigate(ROUTES.ROOM(roomId));
+          onCreateSuccess={({ roomId, host, mediasoup }) => {
+            navigate(ROUTES.ROOM(roomId), {
+              state: {
+                participantId: host.id,
+                name: host.name,
+                role: host.role,
+                mediasoup,
+              },
+            });
           }}
         />
       </main>

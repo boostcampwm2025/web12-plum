@@ -32,7 +32,6 @@ function LectureNameSection() {
     >
       <div className="flex items-center gap-4">
         <FormField.Legend className="m-0 text-xl font-bold">강의실 이름</FormField.Legend>
-        <FormField.HelpText className="m-0">5~30자 이내</FormField.HelpText>
       </div>
 
       <FormField.Input
