@@ -21,30 +21,37 @@ const buttonVariants = cva(
   },
 );
 
-interface ButtonProps extends ComponentProps<'button'>, VariantProps<typeof buttonVariants> {
+type ButtonElement = 'button' | 'a';
+
+type ButtonProps = {
+  as?: ButtonElement;
   children?: ReactNode;
   tooltip?: string;
   tooltipPosition?: 'top' | 'bottom' | 'left' | 'right';
-}
+} & VariantProps<typeof buttonVariants> &
+  ((ComponentProps<'button'> & { as?: 'button' }) | (ComponentProps<'a'> & { as: 'a' }));
 
 export function Button({
+  as = 'button',
   variant,
   children,
   tooltip,
   tooltipPosition = 'top',
   className,
-  type = 'button',
   ...props
 }: ButtonProps) {
-  const button = (
-    <button
-      className={cn(buttonVariants({ variant }), className)}
-      type={type}
-      {...props}
-    >
-      {children}
-    </button>
-  );
+  const Component = as;
+  const componentProps = {
+    ...props,
+    className: cn(buttonVariants({ variant }), className),
+  };
+
+  if (Component === 'button') {
+    const buttonProps = componentProps as ComponentProps<'button'>;
+    buttonProps.type = buttonProps.type ?? 'button';
+  }
+
+  const button = <Component {...componentProps}>{children}</Component>;
 
   if (tooltip) {
     return (
