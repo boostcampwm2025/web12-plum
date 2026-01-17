@@ -1,9 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
-import { Producer } from 'mediasoup-client/types';
-import { Socket } from 'socket.io-client';
+import { Producer, Transport } from 'mediasoup-client/types';
 import { logger } from '@/shared/lib/logger';
-import { ClientToServerEvents, MediaType, ServerToClientEvents } from '@plum/shared-interfaces';
-import { useMediaTransport } from './useMediaTransport';
+import { MediaType } from '@plum/shared-interfaces';
 
 /**
  * 로컬 미디어 트랙(카메라, 마이크, 화면)을 서버로 송출하는 Producer의 생명주기를 관리
@@ -12,8 +10,6 @@ import { useMediaTransport } from './useMediaTransport';
  * 하드웨어 상태 변화(트랙 종료 등)와 서버 상태를 동기화
  */
 export const useMediaProducer = () => {
-  const { createTransport, getSendTransport } = useMediaTransport();
-
   /**
    * Producer 인스턴스들을 관리 (중복 전송 방지 및 역할별 조회를 위해 Map 사용)
    * Key: 'video' | 'screen' | 'audio' 등 스트림의 용도
@@ -55,13 +51,12 @@ export const useMediaProducer = () => {
    * 미디어 송출
    *
    * 1. 트랙의 ReadyState를 검증하여 에러를 미연에 방지
-   * 2. 유효한 Send Transport를 확보(필요 시 생성)
-   * 3. 서버에 Produce 요청을 보내고 응답받은 ID로 Producer 인스턴스를 생성
-   * 4. 트랙 종료나 전송로 단절 등 예외 상황에 대비한 핸들러를 바인딩
+   * 2. 주입받은 Transport를 사용하여 Producer 인스턴스를 생성
+   * 3. 트랙 종료나 전송로 단절 등 예외 상황에 대비한 핸들러를 바인딩
    */
   const produce = useCallback(
     async (
-      socket: Socket<ServerToClientEvents, ClientToServerEvents>,
+      transport: Transport,
       track: MediaStreamTrack,
       appData: { type: MediaType; [key: string]: unknown },
     ): Promise<Producer> => {
@@ -71,6 +66,14 @@ export const useMediaProducer = () => {
       if (track.readyState !== 'live') {
         logger.media.error(`${track.kind} 트랙 상태가 유효하지 않음: ${track.readyState}`);
         throw new Error(`[Producer] 유효하지 않은 트랙 상태: ${track.readyState}`);
+      }
+
+      /**
+       * Transport 상태 검증
+       */
+      if (transport.closed) {
+        logger.media.error('Transport가 이미 닫혀 있음');
+        throw new Error('[Producer] Transport가 닫혀 있어 송출할 수 없습니다.');
       }
 
       const type = appData.type;
@@ -90,12 +93,6 @@ export const useMediaProducer = () => {
       }
 
       try {
-        // 기존 송출용 Transport를 재사용하거나 새로 생성
-        let transport = getSendTransport();
-        if (!transport || transport.closed) {
-          transport = await createTransport(socket, 'send');
-        }
-
         /**
          * 서버 송출 시작
          * appData를 통해 서버가 이 스트림이 'video'인지 'screen'인지 명확히 구분하게 함
@@ -129,7 +126,7 @@ export const useMediaProducer = () => {
         throw error;
       }
     },
-    [createTransport, getSendTransport, cleanupProducer, updateActiveState],
+    [cleanupProducer, updateActiveState],
   );
 
   /**
