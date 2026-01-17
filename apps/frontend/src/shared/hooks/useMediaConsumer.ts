@@ -64,7 +64,7 @@ export const useMediaConsumer = () => {
         let transport = getRecvTransport();
         if (!transport || transport.closed) {
           logger.media.info('[Consumer] 수신용 Transport가 없거나 닫혀 있어 새로 생성');
-          transport = await createTransport(socket, 'recv');
+          transport = await createTransport(device, socket, 'recv');
         }
 
         /**
