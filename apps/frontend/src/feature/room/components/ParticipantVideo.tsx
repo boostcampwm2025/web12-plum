@@ -19,6 +19,7 @@ export interface ParticipantVideoProps {
   onModeChange?: (mode: VideoDisplayMode) => void;
   stream?: MediaStream | null;
   isCameraOn?: boolean;
+  onVideoElementChange?: (element: HTMLVideoElement | null) => void;
 }
 
 export function ParticipantVideo({
@@ -29,6 +30,7 @@ export function ParticipantVideo({
   onModeChange,
   stream,
   isCameraOn = true,
+  onVideoElementChange,
 }: ParticipantVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -42,6 +44,13 @@ export function ParticipantVideo({
       videoRef.current.srcObject = null;
     }
   }, [isCameraOn, stream, mode]);
+
+  useEffect(() => {
+    onVideoElementChange?.(localVideoRef.current);
+    return () => {
+      onVideoElementChange?.(null);
+    };
+  }, [onVideoElementChange, mode, localStream, isCameraOn]);
 
   return (
     <motion.div

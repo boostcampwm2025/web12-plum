@@ -1,0 +1,202 @@
+import { useEffect, useRef } from 'react';
+import { useParams } from 'react-router';
+import { FilesetResolver, GestureRecognizer } from '@mediapipe/tasks-vision';
+import type { GestureType } from '@plum/shared-interfaces';
+import { logger } from '@/shared/lib/logger';
+import { isOkSign } from '../utils/gestureLandmarks';
+import { useRoomStore } from '../stores/useRoomStore';
+import { useSocketStore } from '@/store/useSocketStore';
+
+type GestureRecognitionOptions = {
+  enabled: boolean;
+  videoElement: HTMLVideoElement | null;
+};
+
+type GestureState = {
+  gesture: GestureType | null;
+  startedAt: number;
+  confirmedGesture: GestureType | null;
+};
+
+const WASM_BASE_URL =
+  'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22-rc.20250304/wasm';
+const GESTURE_MODEL_URL =
+  'https://storage.googleapis.com/mediapipe-models/gesture_recognizer/gesture_recognizer/float16/latest/gesture_recognizer.task';
+
+const GESTURE_NAME_MAP: Record<string, GestureType> = {
+  thumb_up: 'thumbs_up',
+  thumb_down: 'thumbs_down',
+  ok_sign: 'ok_sign',
+};
+
+const HOLD_DURATION_MS = 1500;
+const INFERENCE_FPS = 5;
+const INFERENCE_INTERVAL_MS = 1000 / INFERENCE_FPS;
+const MIN_GESTURE_SCORE = 0.5;
+const isVideoReady = (video: HTMLVideoElement) => video.readyState >= 2 && video.videoWidth > 0;
+const normalizeGestureName = (name: string) => name.trim().toLowerCase();
+
+export function useGestureRecognition({ enabled, videoElement }: GestureRecognitionOptions) {
+  const { roomId } = useParams();
+  const myInfo = useRoomStore((state) => state.myInfo);
+  const { emit } = useSocketStore((state) => state.actions);
+  const gestureStateRef = useRef<GestureState>({
+    gesture: null,
+    startedAt: 0,
+    confirmedGesture: null,
+  });
+
+  useEffect(() => {
+    if (!enabled || !videoElement) {
+      gestureStateRef.current = { gesture: null, startedAt: 0, confirmedGesture: null };
+      return;
+    }
+
+    let animationFrameId = 0;
+    let lastInferenceAt = 0;
+    let recognizer: GestureRecognizer | null = null;
+    let isActive = true;
+    let hasRecognizer = false;
+    let hasStarted = false;
+
+    const setupRecognizer = async () => {
+      try {
+        const vision = await FilesetResolver.forVisionTasks(WASM_BASE_URL);
+        recognizer = await GestureRecognizer.createFromOptions(vision, {
+          baseOptions: {
+            modelAssetPath: GESTURE_MODEL_URL,
+          },
+          runningMode: 'VIDEO',
+        });
+        hasRecognizer = true;
+        logger.media.info('MediaPipe GestureRecognizer 초기화 완료');
+      } catch (error) {
+        logger.media.error('MediaPipe GestureRecognizer 초기화 실패', error);
+      }
+    };
+
+    const handleLoadedData = () => {
+      logger.media.info('제스처 인식용 비디오 준비됨', {
+        width: videoElement.videoWidth,
+        height: videoElement.videoHeight,
+      });
+      if (isActive && hasRecognizer && !hasStarted && isVideoReady(videoElement)) {
+        hasStarted = true;
+        detectLoop();
+      }
+    };
+
+    const updateGestureState = (nextGesture: GestureType | null, now: number) => {
+      const state = gestureStateRef.current;
+
+      // 제스처가 인식되지 않는 경우 상태 초기화
+      if (!nextGesture) {
+        gestureStateRef.current = { gesture: null, startedAt: 0, confirmedGesture: null };
+        return;
+      }
+
+      // 새로운 제스처가 인식된 경우 상태 갱신
+      if (state.gesture !== nextGesture) {
+        gestureStateRef.current = {
+          gesture: nextGesture,
+          startedAt: now,
+          confirmedGesture: null,
+        };
+        return;
+      }
+
+      // 동일한 제스처가 계속 인식되는 경우 확인된 제스처로 처리
+      if (state.confirmedGesture === nextGesture) {
+        return;
+      }
+
+      // 제스처가 일정 시간 이상 유지된 경우 확인된 제스처로 설정
+      if (now - state.startedAt >= HOLD_DURATION_MS) {
+        gestureStateRef.current = {
+          gesture: nextGesture,
+          startedAt: state.startedAt,
+          confirmedGesture: nextGesture,
+        };
+        logger.media.info('제스처 인식 확정', { gesture: nextGesture });
+        if (!roomId || !myInfo?.id) {
+          logger.socket.warn('제스처 전송 불가: roomId 또는 participantId 없음', {
+            roomId,
+            participantId: myInfo?.id,
+          });
+          return;
+        }
+        emit('action_gesture', {
+          roomId,
+          participantId: myInfo.id,
+          gesture: nextGesture,
+          performedAt: new Date().toISOString(),
+        });
+      }
+    };
+
+    const detectLoop = () => {
+      if (!isActive || !videoElement || !recognizer) {
+        return;
+      }
+
+      // 비디오가 준비되지 않은 경우 다음 프레임까지 대기
+      if (!isVideoReady(videoElement)) {
+        animationFrameId = requestAnimationFrame(detectLoop);
+        return;
+      }
+
+      const timestamp = performance.now();
+
+      // 지정된 FPS에 맞춰 추론 수행
+      if (timestamp - lastInferenceAt < INFERENCE_INTERVAL_MS) {
+        animationFrameId = requestAnimationFrame(detectLoop);
+        return;
+      }
+      lastInferenceAt = timestamp;
+      const result = recognizer.recognizeForVideo(videoElement, timestamp);
+      const topGesture = result.gestures?.[0]?.[0];
+      let detectedGesture: GestureType | null = null;
+
+      // 신뢰도 기준으로 제스처 필터링
+      if (topGesture?.categoryName && topGesture.score >= MIN_GESTURE_SCORE) {
+        const normalized = normalizeGestureName(topGesture.categoryName);
+        detectedGesture = GESTURE_NAME_MAP[normalized] ?? null;
+      }
+
+      // 랜드마크 기반 커스텀 제스처 인식
+      if (!detectedGesture && result.landmarks?.[0]) {
+        if (isOkSign(result.landmarks[0])) {
+          detectedGesture = 'ok_sign';
+        }
+
+        // TODO: 추가 제스처 인식 로직 구현
+      }
+
+      updateGestureState(detectedGesture, timestamp);
+      animationFrameId = requestAnimationFrame(detectLoop);
+    };
+
+    const start = async () => {
+      videoElement.addEventListener('loadeddata', handleLoadedData);
+      await setupRecognizer();
+      if (isActive) {
+        if (isVideoReady(videoElement) && !hasStarted) {
+          hasStarted = true;
+          detectLoop();
+        }
+      }
+    };
+
+    start();
+
+    return () => {
+      isActive = false;
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+      }
+      videoElement.removeEventListener('loadeddata', handleLoadedData);
+      recognizer?.close();
+      gestureStateRef.current = { gesture: null, startedAt: 0, confirmedGesture: null };
+    };
+  }, [enabled, videoElement]);
+}
