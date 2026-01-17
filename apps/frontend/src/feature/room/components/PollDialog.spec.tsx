@@ -28,14 +28,19 @@ const mockPoll = {
 
 describe('PollDialog', () => {
   it('투표가 없으면 안내 문구가 렌더링된다', () => {
-    render(<PollDialog />);
+    render(<PollDialog startedAt={Date.now()} />);
 
     expect(screen.getByText('현재 진행중인 투표가 없습니다')).toBeInTheDocument();
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
   });
 
   it('투표 제목과 선택지, 퍼센트가 렌더링된다', () => {
-    const { container } = render(<PollDialog poll={mockPoll} />);
+    const { container } = render(
+      <PollDialog
+        poll={mockPoll}
+        startedAt={Date.now()}
+      />,
+    );
 
     expect(screen.getByText('오늘 강의 어땠나요?')).toBeInTheDocument();
     expect(screen.getByText('좋았어요')).toBeInTheDocument();
@@ -50,7 +55,12 @@ describe('PollDialog', () => {
 
   it('한 번 선택하면 모든 선택지가 비활성화된다', async () => {
     const user = userEvent.setup();
-    render(<PollDialog poll={mockPoll} />);
+    render(
+      <PollDialog
+        poll={mockPoll}
+        startedAt={Date.now()}
+      />,
+    );
 
     const buttons = screen.getAllByRole('button');
     await user.click(buttons[0]);
