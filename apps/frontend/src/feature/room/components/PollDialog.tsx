@@ -62,6 +62,10 @@ export function PollDialog({ poll, startedAt }: PollDialogProps) {
             })}
           </ul>
 
+          <div className="text-error flex w-full justify-center text-xs">
+            선택 후에는 변경할 수 없습니다.
+          </div>
+
           <TimeLeft
             timeLimitSeconds={poll.timeLimit}
             startedAt={startedAt}
