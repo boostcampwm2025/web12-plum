@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useMediaTransport } from './useMediaTransport';
-import { useMediaDeviceStore } from '../../store/useMediaDeviceStore';
 
 // Mock logger
 vi.mock('@/shared/lib/logger', () => ({
@@ -39,11 +38,6 @@ const createMockSocket = () => ({
 describe('useMediaTransport', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    useMediaDeviceStore.setState({
-      device: null,
-      isLoaded: false,
-      isInitializing: false,
-    });
   });
 
   afterEach(() => {
@@ -54,18 +48,17 @@ describe('useMediaTransport', () => {
     it('Device가 로드되지 않은 경우 에러를 던져야 한다', async () => {
       const { result } = renderHook(() => useMediaTransport());
       const mockSocket = createMockSocket();
+      const mockDevice = createMockDevice(false);
 
-      await expect(result.current.createTransport(mockSocket as never, 'send')).rejects.toThrow(
-        'Mediasoup Device가 로드되지 않았습니다',
-      );
+      await expect(
+        result.current.createTransport(mockDevice as never, mockSocket as never, 'send'),
+      ).rejects.toThrow('Mediasoup Device가 로드되지 않았습니다');
     });
 
     it('send Transport를 성공적으로 생성해야 한다', async () => {
       const mockDevice = createMockDevice();
       const mockTransport = createMockTransport();
       mockDevice.createSendTransport.mockReturnValue(mockTransport);
-
-      useMediaDeviceStore.setState({ device: mockDevice as never, isLoaded: true });
 
       const { result } = renderHook(() => useMediaTransport());
       const mockSocket = createMockSocket();
@@ -83,7 +76,11 @@ describe('useMediaTransport', () => {
         }
       });
 
-      const transport = await result.current.createTransport(mockSocket as never, 'send');
+      const transport = await result.current.createTransport(
+        mockDevice as never,
+        mockSocket as never,
+        'send',
+      );
 
       expect(mockSocket.emit).toHaveBeenCalledWith(
         'create_transport',
@@ -98,8 +95,6 @@ describe('useMediaTransport', () => {
       const mockDevice = createMockDevice();
       const mockTransport = createMockTransport();
       mockDevice.createRecvTransport.mockReturnValue(mockTransport);
-
-      useMediaDeviceStore.setState({ device: mockDevice as never, isLoaded: true });
 
       const { result } = renderHook(() => useMediaTransport());
       const mockSocket = createMockSocket();
@@ -116,7 +111,11 @@ describe('useMediaTransport', () => {
         }
       });
 
-      const transport = await result.current.createTransport(mockSocket as never, 'recv');
+      const transport = await result.current.createTransport(
+        mockDevice as never,
+        mockSocket as never,
+        'recv',
+      );
 
       expect(mockDevice.createRecvTransport).toHaveBeenCalled();
       expect(transport).toBe(mockTransport);
@@ -124,7 +123,6 @@ describe('useMediaTransport', () => {
 
     it('서버에서 에러 응답 시 reject되어야 한다', async () => {
       const mockDevice = createMockDevice();
-      useMediaDeviceStore.setState({ device: mockDevice as never, isLoaded: true });
 
       const { result } = renderHook(() => useMediaTransport());
       const mockSocket = createMockSocket();
@@ -138,17 +136,15 @@ describe('useMediaTransport', () => {
         }
       });
 
-      await expect(result.current.createTransport(mockSocket as never, 'send')).rejects.toThrow(
-        '서버 에러 발생',
-      );
+      await expect(
+        result.current.createTransport(mockDevice as never, mockSocket as never, 'send'),
+      ).rejects.toThrow('서버 에러 발생');
     });
 
     it('이미 존재하는 Transport가 있으면 재사용해야 한다', async () => {
       const mockDevice = createMockDevice();
       const mockTransport = createMockTransport();
       mockDevice.createSendTransport.mockReturnValue(mockTransport);
-
-      useMediaDeviceStore.setState({ device: mockDevice as never, isLoaded: true });
 
       const { result } = renderHook(() => useMediaTransport());
       const mockSocket = createMockSocket();
@@ -166,10 +162,18 @@ describe('useMediaTransport', () => {
       });
 
       // 첫 번째 호출
-      const transport1 = await result.current.createTransport(mockSocket as never, 'send');
+      const transport1 = await result.current.createTransport(
+        mockDevice as never,
+        mockSocket as never,
+        'send',
+      );
 
       // 두 번째 호출 - 기존 Transport 재사용
-      const transport2 = await result.current.createTransport(mockSocket as never, 'send');
+      const transport2 = await result.current.createTransport(
+        mockDevice as never,
+        mockSocket as never,
+        'send',
+      );
 
       expect(transport1).toBe(transport2);
       expect(mockDevice.createSendTransport).toHaveBeenCalledTimes(1);
@@ -183,8 +187,6 @@ describe('useMediaTransport', () => {
       mockDevice.createSendTransport
         .mockReturnValueOnce(closedTransport)
         .mockReturnValueOnce(newTransport);
-
-      useMediaDeviceStore.setState({ device: mockDevice as never, isLoaded: true });
 
       const { result } = renderHook(() => useMediaTransport());
       const mockSocket = createMockSocket();
@@ -202,10 +204,14 @@ describe('useMediaTransport', () => {
       });
 
       // 첫 번째 호출 - closed 상태의 Transport 생성
-      await result.current.createTransport(mockSocket as never, 'send');
+      await result.current.createTransport(mockDevice as never, mockSocket as never, 'send');
 
       // 두 번째 호출 - closed 상태이므로 새로 생성해야 함
-      const transport2 = await result.current.createTransport(mockSocket as never, 'send');
+      const transport2 = await result.current.createTransport(
+        mockDevice as never,
+        mockSocket as never,
+        'send',
+      );
 
       expect(mockDevice.createSendTransport).toHaveBeenCalledTimes(2);
       expect(transport2).toBe(newTransport);
@@ -219,8 +225,6 @@ describe('useMediaTransport', () => {
       mockDevice.createSendTransport
         .mockReturnValueOnce(failedTransport)
         .mockReturnValueOnce(newTransport);
-
-      useMediaDeviceStore.setState({ device: mockDevice as never, isLoaded: true });
 
       const { result } = renderHook(() => useMediaTransport());
       const mockSocket = createMockSocket();
@@ -237,8 +241,12 @@ describe('useMediaTransport', () => {
         }
       });
 
-      await result.current.createTransport(mockSocket as never, 'send');
-      const transport2 = await result.current.createTransport(mockSocket as never, 'send');
+      await result.current.createTransport(mockDevice as never, mockSocket as never, 'send');
+      const transport2 = await result.current.createTransport(
+        mockDevice as never,
+        mockSocket as never,
+        'send',
+      );
 
       expect(mockDevice.createSendTransport).toHaveBeenCalledTimes(2);
       expect(transport2).toBe(newTransport);
@@ -248,8 +256,6 @@ describe('useMediaTransport', () => {
       const mockDevice = createMockDevice();
       const mockTransport = createMockTransport();
       mockDevice.createSendTransport.mockReturnValue(mockTransport);
-
-      useMediaDeviceStore.setState({ device: mockDevice as never, isLoaded: true });
 
       const { result } = renderHook(() => useMediaTransport());
       const mockSocket = createMockSocket();
@@ -264,9 +270,21 @@ describe('useMediaTransport', () => {
       });
 
       // 동시에 3번 호출
-      const promise1 = result.current.createTransport(mockSocket as never, 'send');
-      const promise2 = result.current.createTransport(mockSocket as never, 'send');
-      const promise3 = result.current.createTransport(mockSocket as never, 'send');
+      const promise1 = result.current.createTransport(
+        mockDevice as never,
+        mockSocket as never,
+        'send',
+      );
+      const promise2 = result.current.createTransport(
+        mockDevice as never,
+        mockSocket as never,
+        'send',
+      );
+      const promise3 = result.current.createTransport(
+        mockDevice as never,
+        mockSocket as never,
+        'send',
+      );
 
       // 서버 응답 시뮬레이션
       callbackHolder.resolve?.({
@@ -295,8 +313,6 @@ describe('useMediaTransport', () => {
       const mockTransport = createMockTransport();
       mockDevice.createSendTransport.mockReturnValue(mockTransport);
 
-      useMediaDeviceStore.setState({ device: mockDevice as never, isLoaded: true });
-
       const { result } = renderHook(() => useMediaTransport());
       const mockSocket = createMockSocket();
 
@@ -312,7 +328,7 @@ describe('useMediaTransport', () => {
         }
       });
 
-      await result.current.createTransport(mockSocket as never, 'send');
+      await result.current.createTransport(mockDevice as never, mockSocket as never, 'send');
 
       expect(mockTransport.on).toHaveBeenCalledWith('connect', expect.any(Function));
       expect(mockTransport.on).toHaveBeenCalledWith('connectionstatechange', expect.any(Function));
@@ -323,8 +339,6 @@ describe('useMediaTransport', () => {
       const mockTransport = createMockTransport();
       mockDevice.createSendTransport.mockReturnValue(mockTransport);
 
-      useMediaDeviceStore.setState({ device: mockDevice as never, isLoaded: true });
-
       const { result } = renderHook(() => useMediaTransport());
       const mockSocket = createMockSocket();
 
@@ -340,7 +354,7 @@ describe('useMediaTransport', () => {
         }
       });
 
-      await result.current.createTransport(mockSocket as never, 'send');
+      await result.current.createTransport(mockDevice as never, mockSocket as never, 'send');
 
       expect(mockTransport.on).toHaveBeenCalledWith('produce', expect.any(Function));
     });
@@ -350,8 +364,6 @@ describe('useMediaTransport', () => {
       const mockTransport = createMockTransport();
       mockDevice.createRecvTransport.mockReturnValue(mockTransport);
 
-      useMediaDeviceStore.setState({ device: mockDevice as never, isLoaded: true });
-
       const { result } = renderHook(() => useMediaTransport());
       const mockSocket = createMockSocket();
 
@@ -367,7 +379,7 @@ describe('useMediaTransport', () => {
         }
       });
 
-      await result.current.createTransport(mockSocket as never, 'recv');
+      await result.current.createTransport(mockDevice as never, mockSocket as never, 'recv');
 
       const produceCalls = mockTransport.on.mock.calls.filter(
         (call: string[]) => call[0] === 'produce',
@@ -385,8 +397,6 @@ describe('useMediaTransport', () => {
       mockDevice.createSendTransport.mockReturnValue(sendTransport);
       mockDevice.createRecvTransport.mockReturnValue(recvTransport);
 
-      useMediaDeviceStore.setState({ device: mockDevice as never, isLoaded: true });
-
       const { result } = renderHook(() => useMediaTransport());
       const mockSocket = createMockSocket();
 
@@ -403,8 +413,8 @@ describe('useMediaTransport', () => {
       });
 
       // Transport 생성
-      await result.current.createTransport(mockSocket as never, 'send');
-      await result.current.createTransport(mockSocket as never, 'recv');
+      await result.current.createTransport(mockDevice as never, mockSocket as never, 'send');
+      await result.current.createTransport(mockDevice as never, mockSocket as never, 'recv');
 
       // closeTransports 호출
       act(() => {
@@ -419,8 +429,6 @@ describe('useMediaTransport', () => {
       const mockDevice = createMockDevice();
       const mockTransport = createMockTransport();
       mockDevice.createSendTransport.mockReturnValue(mockTransport);
-
-      useMediaDeviceStore.setState({ device: mockDevice as never, isLoaded: true });
 
       const { result } = renderHook(() => useMediaTransport());
       const mockSocket = createMockSocket();
@@ -437,7 +445,7 @@ describe('useMediaTransport', () => {
         }
       });
 
-      await result.current.createTransport(mockSocket as never, 'send');
+      await result.current.createTransport(mockDevice as never, mockSocket as never, 'send');
       expect(result.current.getSendTransport()).toBe(mockTransport);
 
       act(() => {
@@ -477,8 +485,6 @@ describe('useMediaTransport', () => {
       const mockTransport = createMockTransport();
       mockDevice.createSendTransport.mockReturnValue(mockTransport);
 
-      useMediaDeviceStore.setState({ device: mockDevice as never, isLoaded: true });
-
       const { result } = renderHook(() => useMediaTransport());
       const mockSocket = createMockSocket();
 
@@ -497,7 +503,7 @@ describe('useMediaTransport', () => {
         }
       });
 
-      await result.current.createTransport(mockSocket as never, 'send');
+      await result.current.createTransport(mockDevice as never, mockSocket as never, 'send');
 
       // connect 이벤트 핸들러 가져오기
       const connectCall = mockTransport.on.mock.calls.find(
@@ -526,8 +532,6 @@ describe('useMediaTransport', () => {
       const mockTransport = createMockTransport();
       mockDevice.createSendTransport.mockReturnValue(mockTransport);
 
-      useMediaDeviceStore.setState({ device: mockDevice as never, isLoaded: true });
-
       const { result } = renderHook(() => useMediaTransport());
       const mockSocket = createMockSocket();
 
@@ -546,7 +550,7 @@ describe('useMediaTransport', () => {
         }
       });
 
-      await result.current.createTransport(mockSocket as never, 'send');
+      await result.current.createTransport(mockDevice as never, mockSocket as never, 'send');
 
       const connectCall = mockTransport.on.mock.calls.find(
         (call: string[]) => call[0] === 'connect',
@@ -567,8 +571,6 @@ describe('useMediaTransport', () => {
       const mockTransport = createMockTransport();
       mockDevice.createSendTransport.mockReturnValue(mockTransport);
 
-      useMediaDeviceStore.setState({ device: mockDevice as never, isLoaded: true });
-
       const { result } = renderHook(() => useMediaTransport());
       const mockSocket = createMockSocket();
 
@@ -587,7 +589,7 @@ describe('useMediaTransport', () => {
         }
       });
 
-      await result.current.createTransport(mockSocket as never, 'send');
+      await result.current.createTransport(mockDevice as never, mockSocket as never, 'send');
 
       const produceCall = mockTransport.on.mock.calls.find(
         (call: string[]) => call[0] === 'produce',
@@ -621,8 +623,6 @@ describe('useMediaTransport', () => {
       const mockTransport = createMockTransport();
       mockDevice.createSendTransport.mockReturnValue(mockTransport);
 
-      useMediaDeviceStore.setState({ device: mockDevice as never, isLoaded: true });
-
       const { result } = renderHook(() => useMediaTransport());
       const mockSocket = createMockSocket();
 
@@ -641,7 +641,7 @@ describe('useMediaTransport', () => {
         }
       });
 
-      await result.current.createTransport(mockSocket as never, 'send');
+      await result.current.createTransport(mockDevice as never, mockSocket as never, 'send');
 
       const produceCall = mockTransport.on.mock.calls.find(
         (call: string[]) => call[0] === 'produce',
@@ -666,8 +666,6 @@ describe('useMediaTransport', () => {
       const mockTransport = createMockTransport();
       mockDevice.createSendTransport.mockReturnValue(mockTransport);
 
-      useMediaDeviceStore.setState({ device: mockDevice as never, isLoaded: true });
-
       const { result } = renderHook(() => useMediaTransport());
       const mockSocket = createMockSocket();
 
@@ -683,7 +681,7 @@ describe('useMediaTransport', () => {
         }
       });
 
-      await result.current.createTransport(mockSocket as never, 'send');
+      await result.current.createTransport(mockDevice as never, mockSocket as never, 'send');
       expect(result.current.getSendTransport()).toBe(mockTransport);
 
       // connectionstatechange 이벤트 핸들러 가져오기
@@ -705,8 +703,6 @@ describe('useMediaTransport', () => {
       const mockTransport = createMockTransport();
       mockDevice.createRecvTransport.mockReturnValue(mockTransport);
 
-      useMediaDeviceStore.setState({ device: mockDevice as never, isLoaded: true });
-
       const { result } = renderHook(() => useMediaTransport());
       const mockSocket = createMockSocket();
 
@@ -722,7 +718,7 @@ describe('useMediaTransport', () => {
         }
       });
 
-      await result.current.createTransport(mockSocket as never, 'recv');
+      await result.current.createTransport(mockDevice as never, mockSocket as never, 'recv');
       expect(result.current.getRecvTransport()).toBe(mockTransport);
 
       const stateChangeCall = mockTransport.on.mock.calls.find(
@@ -745,8 +741,6 @@ describe('useMediaTransport', () => {
         throw new Error('Transport 생성 실패');
       });
 
-      useMediaDeviceStore.setState({ device: mockDevice as never, isLoaded: true });
-
       const { result } = renderHook(() => useMediaTransport());
       const mockSocket = createMockSocket();
 
@@ -762,9 +756,9 @@ describe('useMediaTransport', () => {
         }
       });
 
-      await expect(result.current.createTransport(mockSocket as never, 'send')).rejects.toThrow(
-        'Transport 생성 실패',
-      );
+      await expect(
+        result.current.createTransport(mockDevice as never, mockSocket as never, 'send'),
+      ).rejects.toThrow('Transport 생성 실패');
     });
   });
 });
