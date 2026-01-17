@@ -21,16 +21,6 @@ const createMockTransport = (overrides = {}) => ({
   ...overrides,
 });
 
-const mockCreateTransport = vi.fn();
-const mockGetSendTransport = vi.fn();
-
-vi.mock('./useMediaTransport', () => ({
-  useMediaTransport: () => ({
-    createTransport: mockCreateTransport,
-    getSendTransport: mockGetSendTransport,
-  }),
-}));
-
 const createMockProducer = (overrides = {}) => ({
   id: `producer-${Math.random().toString(36).slice(2)}`,
   kind: 'video' as const,
@@ -48,20 +38,12 @@ const createMockTrack = (overrides = {}) => ({
   ...overrides,
 });
 
-const createMockSocket = () => ({
-  emit: vi.fn(),
-  on: vi.fn(),
-  off: vi.fn(),
-});
-
 describe('useMediaProducer', () => {
   let mockTransport: ReturnType<typeof createMockTransport>;
 
   beforeEach(() => {
     vi.clearAllMocks();
     mockTransport = createMockTransport();
-    mockGetSendTransport.mockReturnValue(null);
-    mockCreateTransport.mockResolvedValue(mockTransport);
   });
 
   afterEach(() => {
@@ -85,62 +67,21 @@ describe('useMediaProducer', () => {
   describe('produce', () => {
     it('유효하지 않은 트랙 상태면 에러를 던져야 한다', async () => {
       const { result } = renderHook(() => useMediaProducer());
-      const mockSocket = createMockSocket();
       const invalidTrack = createMockTrack({ readyState: 'ended' });
 
       await expect(
-        result.current.produce(mockSocket as never, invalidTrack as never, { type: 'video' }),
+        result.current.produce(mockTransport as never, invalidTrack as never, { type: 'video' }),
       ).rejects.toThrow('유효하지 않은 트랙 상태');
     });
 
-    it('Transport가 없으면 새로 생성해야 한다', async () => {
-      const mockProducer = createMockProducer();
-      mockTransport.produce.mockResolvedValue(mockProducer);
-
-      const { result } = renderHook(() => useMediaProducer());
-      const mockSocket = createMockSocket();
-      const mockTrack = createMockTrack();
-
-      await act(async () => {
-        await result.current.produce(mockSocket as never, mockTrack as never, { type: 'video' });
-      });
-
-      expect(mockCreateTransport).toHaveBeenCalledWith(mockSocket, 'send');
-    });
-
-    it('기존 Transport가 있으면 재사용해야 한다', async () => {
-      const existingTransport = createMockTransport();
-      const mockProducer = createMockProducer();
-      existingTransport.produce.mockResolvedValue(mockProducer);
-      mockGetSendTransport.mockReturnValue(existingTransport);
-
-      const { result } = renderHook(() => useMediaProducer());
-      const mockSocket = createMockSocket();
-      const mockTrack = createMockTrack();
-
-      await act(async () => {
-        await result.current.produce(mockSocket as never, mockTrack as never, { type: 'video' });
-      });
-
-      expect(mockCreateTransport).not.toHaveBeenCalled();
-      expect(existingTransport.produce).toHaveBeenCalled();
-    });
-
-    it('closed 상태의 Transport는 새로 생성해야 한다', async () => {
+    it('Transport가 닫혀 있으면 에러를 던져야 한다', async () => {
       const closedTransport = createMockTransport({ closed: true });
-      const mockProducer = createMockProducer();
-      mockTransport.produce.mockResolvedValue(mockProducer);
-      mockGetSendTransport.mockReturnValue(closedTransport);
-
       const { result } = renderHook(() => useMediaProducer());
-      const mockSocket = createMockSocket();
       const mockTrack = createMockTrack();
 
-      await act(async () => {
-        await result.current.produce(mockSocket as never, mockTrack as never, { type: 'video' });
-      });
-
-      expect(mockCreateTransport).toHaveBeenCalledWith(mockSocket, 'send');
+      await expect(
+        result.current.produce(closedTransport as never, mockTrack as never, { type: 'video' }),
+      ).rejects.toThrow('Transport가 닫혀 있어 송출할 수 없습니다');
     });
 
     it('produce 성공 시 Producer를 반환해야 한다', async () => {
@@ -148,12 +89,11 @@ describe('useMediaProducer', () => {
       mockTransport.produce.mockResolvedValue(mockProducer);
 
       const { result } = renderHook(() => useMediaProducer());
-      const mockSocket = createMockSocket();
       const mockTrack = createMockTrack();
 
       let producer;
       await act(async () => {
-        producer = await result.current.produce(mockSocket as never, mockTrack as never, {
+        producer = await result.current.produce(mockTransport as never, mockTrack as never, {
           type: 'video',
         });
       });
@@ -166,11 +106,10 @@ describe('useMediaProducer', () => {
       mockTransport.produce.mockResolvedValue(mockProducer);
 
       const { result } = renderHook(() => useMediaProducer());
-      const mockSocket = createMockSocket();
       const mockTrack = createMockTrack({ kind: 'video' });
 
       await act(async () => {
-        await result.current.produce(mockSocket as never, mockTrack as never, { type: 'video' });
+        await result.current.produce(mockTransport as never, mockTrack as never, { type: 'video' });
       });
 
       expect(result.current.activeProducers.video).toBe(true);
@@ -181,11 +120,10 @@ describe('useMediaProducer', () => {
       mockTransport.produce.mockResolvedValue(mockProducer);
 
       const { result } = renderHook(() => useMediaProducer());
-      const mockSocket = createMockSocket();
       const mockTrack = createMockTrack();
 
       await act(async () => {
-        await result.current.produce(mockSocket as never, mockTrack as never, { type: 'video' });
+        await result.current.produce(mockTransport as never, mockTrack as never, { type: 'video' });
       });
 
       expect(mockTransport.produce).toHaveBeenCalledWith(
@@ -200,11 +138,12 @@ describe('useMediaProducer', () => {
       mockTransport.produce.mockResolvedValue(mockProducer);
 
       const { result } = renderHook(() => useMediaProducer());
-      const mockSocket = createMockSocket();
       const mockTrack = createMockTrack();
 
       await act(async () => {
-        await result.current.produce(mockSocket as never, mockTrack as never, { type: 'screen' });
+        await result.current.produce(mockTransport as never, mockTrack as never, {
+          type: 'screen',
+        });
       });
 
       expect(mockTransport.produce).toHaveBeenCalledWith(
@@ -222,18 +161,17 @@ describe('useMediaProducer', () => {
       mockTransport.produce.mockResolvedValue(existingProducer);
 
       const { result } = renderHook(() => useMediaProducer());
-      const mockSocket = createMockSocket();
       const mockTrack = createMockTrack({ id: 'same-track-id' });
 
       // 첫 번째 produce
       await act(async () => {
-        await result.current.produce(mockSocket as never, mockTrack as never, { type: 'video' });
+        await result.current.produce(mockTransport as never, mockTrack as never, { type: 'video' });
       });
 
       // 동일한 트랙으로 두 번째 produce
       let secondProducer;
       await act(async () => {
-        secondProducer = await result.current.produce(mockSocket as never, mockTrack as never, {
+        secondProducer = await result.current.produce(mockTransport as never, mockTrack as never, {
           type: 'video',
         });
       });
@@ -258,18 +196,17 @@ describe('useMediaProducer', () => {
         .mockResolvedValueOnce(newProducer);
 
       const { result } = renderHook(() => useMediaProducer());
-      const mockSocket = createMockSocket();
       const oldTrack = createMockTrack({ id: 'old-track-id' });
       const newTrack = createMockTrack({ id: 'new-track-id' });
 
       // 첫 번째 produce
       await act(async () => {
-        await result.current.produce(mockSocket as never, oldTrack as never, { type: 'video' });
+        await result.current.produce(mockTransport as never, oldTrack as never, { type: 'video' });
       });
 
       // 다른 트랙으로 두 번째 produce
       await act(async () => {
-        await result.current.produce(mockSocket as never, newTrack as never, { type: 'video' });
+        await result.current.produce(mockTransport as never, newTrack as never, { type: 'video' });
       });
 
       expect(existingProducer.close).toHaveBeenCalled();
@@ -281,11 +218,10 @@ describe('useMediaProducer', () => {
       mockTransport.produce.mockResolvedValue(mockProducer);
 
       const { result } = renderHook(() => useMediaProducer());
-      const mockSocket = createMockSocket();
       const mockTrack = createMockTrack();
 
       await act(async () => {
-        await result.current.produce(mockSocket as never, mockTrack as never, { type: 'video' });
+        await result.current.produce(mockTransport as never, mockTrack as never, { type: 'video' });
       });
 
       expect(mockProducer.on).toHaveBeenCalledWith('transportclose', expect.any(Function));
@@ -296,11 +232,10 @@ describe('useMediaProducer', () => {
       mockTransport.produce.mockResolvedValue(mockProducer);
 
       const { result } = renderHook(() => useMediaProducer());
-      const mockSocket = createMockSocket();
       const mockTrack = createMockTrack();
 
       await act(async () => {
-        await result.current.produce(mockSocket as never, mockTrack as never, { type: 'video' });
+        await result.current.produce(mockTransport as never, mockTrack as never, { type: 'video' });
       });
 
       expect(mockProducer.on).toHaveBeenCalledWith('trackended', expect.any(Function));
@@ -310,11 +245,10 @@ describe('useMediaProducer', () => {
       mockTransport.produce.mockRejectedValue(new Error('Produce failed'));
 
       const { result } = renderHook(() => useMediaProducer());
-      const mockSocket = createMockSocket();
       const mockTrack = createMockTrack();
 
       await expect(
-        result.current.produce(mockSocket as never, mockTrack as never, { type: 'video' }),
+        result.current.produce(mockTransport as never, mockTrack as never, { type: 'video' }),
       ).rejects.toThrow('Produce failed');
     });
   });
@@ -329,14 +263,17 @@ describe('useMediaProducer', () => {
         .mockResolvedValueOnce(audioProducer);
 
       const { result } = renderHook(() => useMediaProducer());
-      const mockSocket = createMockSocket();
       const videoTrack = createMockTrack({ kind: 'video' });
       const audioTrack = createMockTrack({ kind: 'audio' });
 
       // 두 개의 Producer 생성
       await act(async () => {
-        await result.current.produce(mockSocket as never, videoTrack as never, { type: 'video' });
-        await result.current.produce(mockSocket as never, audioTrack as never, { type: 'audio' });
+        await result.current.produce(mockTransport as never, videoTrack as never, {
+          type: 'video',
+        });
+        await result.current.produce(mockTransport as never, audioTrack as never, {
+          type: 'audio',
+        });
       });
 
       // video만 중단
@@ -353,11 +290,12 @@ describe('useMediaProducer', () => {
       mockTransport.produce.mockResolvedValue(videoProducer);
 
       const { result } = renderHook(() => useMediaProducer());
-      const mockSocket = createMockSocket();
       const videoTrack = createMockTrack({ kind: 'video' });
 
       await act(async () => {
-        await result.current.produce(mockSocket as never, videoTrack as never, { type: 'video' });
+        await result.current.produce(mockTransport as never, videoTrack as never, {
+          type: 'video',
+        });
       });
 
       expect(result.current.activeProducers.video).toBe(true);
@@ -380,13 +318,16 @@ describe('useMediaProducer', () => {
         .mockResolvedValueOnce(audioProducer);
 
       const { result } = renderHook(() => useMediaProducer());
-      const mockSocket = createMockSocket();
       const videoTrack = createMockTrack({ kind: 'video' });
       const audioTrack = createMockTrack({ kind: 'audio' });
 
       await act(async () => {
-        await result.current.produce(mockSocket as never, videoTrack as never, { type: 'video' });
-        await result.current.produce(mockSocket as never, audioTrack as never, { type: 'audio' });
+        await result.current.produce(mockTransport as never, videoTrack as never, {
+          type: 'video',
+        });
+        await result.current.produce(mockTransport as never, audioTrack as never, {
+          type: 'audio',
+        });
       });
 
       act(() => {
@@ -402,11 +343,12 @@ describe('useMediaProducer', () => {
       mockTransport.produce.mockResolvedValue(videoProducer);
 
       const { result } = renderHook(() => useMediaProducer());
-      const mockSocket = createMockSocket();
       const videoTrack = createMockTrack({ kind: 'video' });
 
       await act(async () => {
-        await result.current.produce(mockSocket as never, videoTrack as never, { type: 'video' });
+        await result.current.produce(mockTransport as never, videoTrack as never, {
+          type: 'video',
+        });
       });
 
       act(() => {
@@ -433,11 +375,10 @@ describe('useMediaProducer', () => {
       mockTransport.produce.mockResolvedValue(mockProducer);
 
       const { result } = renderHook(() => useMediaProducer());
-      const mockSocket = createMockSocket();
       const mockTrack = createMockTrack();
 
       await act(async () => {
-        await result.current.produce(mockSocket as never, mockTrack as never, { type: 'video' });
+        await result.current.produce(mockTransport as never, mockTrack as never, { type: 'video' });
       });
 
       expect(result.current.getProducer('video')).toBe(mockProducer);
@@ -454,11 +395,10 @@ describe('useMediaProducer', () => {
       mockTransport.produce.mockResolvedValue(mockProducer);
 
       const { result } = renderHook(() => useMediaProducer());
-      const mockSocket = createMockSocket();
       const mockTrack = createMockTrack();
 
       await act(async () => {
-        await result.current.produce(mockSocket as never, mockTrack as never, { type: 'video' });
+        await result.current.produce(mockTransport as never, mockTrack as never, { type: 'video' });
       });
 
       expect(result.current.getProducer()).toBe(mockProducer);
@@ -471,11 +411,10 @@ describe('useMediaProducer', () => {
       mockTransport.produce.mockResolvedValue(mockProducer);
 
       const { result } = renderHook(() => useMediaProducer());
-      const mockSocket = createMockSocket();
       const mockTrack = createMockTrack();
 
       await act(async () => {
-        await result.current.produce(mockSocket as never, mockTrack as never, { type: 'video' });
+        await result.current.produce(mockTransport as never, mockTrack as never, { type: 'video' });
       });
 
       expect(result.current.activeProducers.video).toBe(true);
@@ -499,11 +438,10 @@ describe('useMediaProducer', () => {
       mockTransport.produce.mockResolvedValue(mockProducer);
 
       const { result } = renderHook(() => useMediaProducer());
-      const mockSocket = createMockSocket();
       const mockTrack = createMockTrack();
 
       await act(async () => {
-        await result.current.produce(mockSocket as never, mockTrack as never, { type: 'video' });
+        await result.current.produce(mockTransport as never, mockTrack as never, { type: 'video' });
       });
 
       expect(result.current.activeProducers.video).toBe(true);
@@ -528,11 +466,12 @@ describe('useMediaProducer', () => {
       mockTransport.produce.mockResolvedValue(audioProducer);
 
       const { result } = renderHook(() => useMediaProducer());
-      const mockSocket = createMockSocket();
       const audioTrack = createMockTrack({ kind: 'audio' });
 
       await act(async () => {
-        await result.current.produce(mockSocket as never, audioTrack as never, { type: 'audio' });
+        await result.current.produce(mockTransport as never, audioTrack as never, {
+          type: 'audio',
+        });
       });
 
       expect(result.current.activeProducers.audio).toBe(true);
