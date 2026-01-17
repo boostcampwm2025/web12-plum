@@ -1,12 +1,13 @@
 import { Qna } from '@plum/shared-interfaces';
-import { Icon } from '@/shared/components/icon/Icon';
 import { Button } from '@/shared/components/Button';
+import { TimeLeft } from './TimeLeft';
 
 interface QnaDialogProps {
   qna?: Pick<Qna, 'id' | 'title' | 'isPublic' | 'timeLimit'>;
+  startedAt: number;
 }
 
-export function QnaDialog({ qna }: QnaDialogProps) {
+export function QnaDialog({ qna, startedAt }: QnaDialogProps) {
   return (
     <>
       {qna ? (
@@ -19,14 +20,10 @@ export function QnaDialog({ qna }: QnaDialogProps) {
           />
 
           <Button className="text-sm">답변 보내기</Button>
-          <div className="text-text/60 flex w-full items-center justify-center gap-2 text-sm">
-            <Icon
-              name="timer"
-              size={16}
-            />
-            {/* TODO: 남은 시간 동기화 */}
-            02:25
-          </div>
+          <TimeLeft
+            timeLimitSeconds={qna.timeLimit}
+            startedAt={startedAt}
+          />
         </div>
       ) : (
         <div className="text-subtext mb-2 flex justify-center">현재 진행중인 Q&A가 없습니다</div>

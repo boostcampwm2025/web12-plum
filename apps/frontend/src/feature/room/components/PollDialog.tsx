@@ -1,13 +1,14 @@
 import { Poll } from '@plum/shared-interfaces';
 import { useState } from 'react';
-import { Icon } from '@/shared/components/icon/Icon';
 import { cn } from '@/shared/lib/utils';
+import { TimeLeft } from './TimeLeft';
 
 interface PollDialogProps {
   poll?: Pick<Poll, 'id' | 'title' | 'options' | 'timeLimit'>;
+  startedAt: number;
 }
 
-export function PollDialog({ poll }: PollDialogProps) {
+export function PollDialog({ poll, startedAt }: PollDialogProps) {
   const totalVotes = poll?.options.reduce((sum, option) => sum + option.count, 0) ?? 0;
   const [selectedOptionId, setSelectedOptionId] = useState<number | null>(null);
 
@@ -61,14 +62,10 @@ export function PollDialog({ poll }: PollDialogProps) {
             })}
           </ul>
 
-          <div className="text-text/60 flex w-full items-center justify-center gap-2 text-sm">
-            <Icon
-              name="timer"
-              size={16}
-            />
-            {/* TODO: 남은 시간 동기화 */}
-            02:25
-          </div>
+          <TimeLeft
+            timeLimitSeconds={poll.timeLimit}
+            startedAt={startedAt}
+          />
         </div>
       ) : (
         <div className="text-subtext mb-2 flex justify-center">현재 진행중인 투표가 없습니다</div>
