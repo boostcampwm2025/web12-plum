@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useMediaConsumer } from './useMediaConsumer';
-import { useMediaDeviceStore } from '../../store/useMediaDeviceStore';
 import { useMediaTransport } from './useMediaTransport';
 
 // MediaStream 모킹
@@ -53,8 +52,8 @@ const createMockTransport = (overrides = {}) => ({
   ...overrides,
 });
 
-const createMockDevice = () => ({
-  loaded: true,
+const createMockDevice = (loaded = true) => ({
+  loaded,
   rtpCapabilities: {
     codecs: [],
     headerExtensions: [],
@@ -83,12 +82,6 @@ describe('useMediaConsumer', () => {
       getSendTransport: vi.fn(),
       closeTransports: vi.fn(),
     });
-
-    useMediaDeviceStore.setState({
-      device: null,
-      isLoaded: false,
-      isInitializing: false,
-    });
   });
 
   afterEach(() => {
@@ -111,9 +104,10 @@ describe('useMediaConsumer', () => {
     it('Device가 초기화되지 않은 경우 에러를 던져야 한다', async () => {
       const { result } = renderHook(() => useMediaConsumer());
       const mockSocket = createMockSocket();
+      const mockDevice = createMockDevice(false);
 
       await expect(
-        result.current.consume(mockSocket as never, 'remote-producer-id'),
+        result.current.consume(mockDevice as never, mockSocket as never, 'remote-producer-id'),
       ).rejects.toThrow('Mediasoup Device가 초기화되지 않았습니다.');
     });
 
@@ -121,8 +115,6 @@ describe('useMediaConsumer', () => {
       const mockDevice = createMockDevice();
       const mockTransport = createMockTransport();
       const mockConsumer = createMockConsumer();
-
-      useMediaDeviceStore.setState({ device: mockDevice as never, isLoaded: true });
 
       mockGetRecvTransport.mockReturnValue(null);
       mockCreateTransport.mockResolvedValue(mockTransport);
@@ -146,7 +138,7 @@ describe('useMediaConsumer', () => {
         }
       });
 
-      await result.current.consume(mockSocket as never, 'remote-producer-id');
+      await result.current.consume(mockDevice as never, mockSocket as never, 'remote-producer-id');
 
       expect(mockCreateTransport).toHaveBeenCalledWith(mockSocket, 'recv');
     });
@@ -156,8 +148,6 @@ describe('useMediaConsumer', () => {
       const closedTransport = createMockTransport({ closed: true });
       const newTransport = createMockTransport();
       const mockConsumer = createMockConsumer();
-
-      useMediaDeviceStore.setState({ device: mockDevice as never, isLoaded: true });
 
       mockGetRecvTransport.mockReturnValue(closedTransport);
       mockCreateTransport.mockResolvedValue(newTransport);
@@ -181,7 +171,7 @@ describe('useMediaConsumer', () => {
         }
       });
 
-      await result.current.consume(mockSocket as never, 'remote-producer-id');
+      await result.current.consume(mockDevice as never, mockSocket as never, 'remote-producer-id');
 
       expect(mockCreateTransport).toHaveBeenCalledWith(mockSocket, 'recv');
     });
@@ -191,8 +181,6 @@ describe('useMediaConsumer', () => {
       const mockTransport = createMockTransport();
       const mockConsumer = createMockConsumer();
 
-      useMediaDeviceStore.setState({ device: mockDevice as never, isLoaded: true });
-
       mockGetRecvTransport.mockReturnValue(mockTransport);
       mockTransport.consume.mockResolvedValue(mockConsumer);
 
@@ -214,7 +202,7 @@ describe('useMediaConsumer', () => {
         }
       });
 
-      await result.current.consume(mockSocket as never, 'remote-producer-id');
+      await result.current.consume(mockDevice as never, mockSocket as never, 'remote-producer-id');
 
       expect(mockCreateTransport).not.toHaveBeenCalled();
     });
@@ -224,8 +212,6 @@ describe('useMediaConsumer', () => {
       const mockTransport = createMockTransport();
       const mockConsumer = createMockConsumer();
 
-      useMediaDeviceStore.setState({ device: mockDevice as never, isLoaded: true });
-
       mockGetRecvTransport.mockReturnValue(mockTransport);
       mockTransport.consume.mockResolvedValue(mockConsumer);
 
@@ -247,7 +233,7 @@ describe('useMediaConsumer', () => {
         }
       });
 
-      await result.current.consume(mockSocket as never, 'remote-producer-id');
+      await result.current.consume(mockDevice as never, mockSocket as never, 'remote-producer-id');
 
       expect(mockSocket.emit).toHaveBeenCalledWith(
         'consume',
@@ -264,8 +250,6 @@ describe('useMediaConsumer', () => {
       const mockDevice = createMockDevice();
       const mockTransport = createMockTransport();
 
-      useMediaDeviceStore.setState({ device: mockDevice as never, isLoaded: true });
-
       mockGetRecvTransport.mockReturnValue(mockTransport);
 
       const { result } = renderHook(() => useMediaConsumer());
@@ -281,15 +265,13 @@ describe('useMediaConsumer', () => {
       });
 
       await expect(
-        result.current.consume(mockSocket as never, 'remote-producer-id'),
+        result.current.consume(mockDevice as never, mockSocket as never, 'remote-producer-id'),
       ).rejects.toThrow('서버 에러 발생');
     });
 
     it('consume 요청 실패 시 기본 에러 메시지를 사용해야 한다', async () => {
       const mockDevice = createMockDevice();
       const mockTransport = createMockTransport();
-
-      useMediaDeviceStore.setState({ device: mockDevice as never, isLoaded: true });
 
       mockGetRecvTransport.mockReturnValue(mockTransport);
 
@@ -305,7 +287,7 @@ describe('useMediaConsumer', () => {
       });
 
       await expect(
-        result.current.consume(mockSocket as never, 'remote-producer-id'),
+        result.current.consume(mockDevice as never, mockSocket as never, 'remote-producer-id'),
       ).rejects.toThrow('Consume 요청 실패');
     });
 
@@ -313,8 +295,6 @@ describe('useMediaConsumer', () => {
       const mockDevice = createMockDevice();
       const mockTransport = createMockTransport();
       const mockConsumer = createMockConsumer();
-
-      useMediaDeviceStore.setState({ device: mockDevice as never, isLoaded: true });
 
       mockGetRecvTransport.mockReturnValue(mockTransport);
       mockTransport.consume.mockResolvedValue(mockConsumer);
@@ -339,7 +319,7 @@ describe('useMediaConsumer', () => {
         }
       });
 
-      await result.current.consume(mockSocket as never, 'remote-producer-id');
+      await result.current.consume(mockDevice as never, mockSocket as never, 'remote-producer-id');
 
       expect(mockTransport.consume).toHaveBeenCalledWith({
         id: 'consumer-123',
@@ -354,8 +334,6 @@ describe('useMediaConsumer', () => {
       const mockTransport = createMockTransport();
       const mockConsumer = createMockConsumer();
 
-      useMediaDeviceStore.setState({ device: mockDevice as never, isLoaded: true });
-
       mockGetRecvTransport.mockReturnValue(mockTransport);
       mockTransport.consume.mockResolvedValue(mockConsumer);
 
@@ -377,7 +355,7 @@ describe('useMediaConsumer', () => {
         }
       });
 
-      await result.current.consume(mockSocket as never, 'remote-producer-id');
+      await result.current.consume(mockDevice as never, mockSocket as never, 'remote-producer-id');
 
       expect(mockConsumer.on).toHaveBeenCalledWith('transportclose', expect.any(Function));
       expect(mockConsumer.on).toHaveBeenCalledWith('producerclose', expect.any(Function));
@@ -388,8 +366,6 @@ describe('useMediaConsumer', () => {
       const mockTransport = createMockTransport();
       const mockConsumer = createMockConsumer();
 
-      useMediaDeviceStore.setState({ device: mockDevice as never, isLoaded: true });
-
       mockGetRecvTransport.mockReturnValue(mockTransport);
       mockTransport.consume.mockResolvedValue(mockConsumer);
 
@@ -411,7 +387,7 @@ describe('useMediaConsumer', () => {
         }
       });
 
-      await result.current.consume(mockSocket as never, 'remote-producer-id');
+      await result.current.consume(mockDevice as never, mockSocket as never, 'remote-producer-id');
 
       expect(mockSocket.emit).toHaveBeenCalledWith(
         'consume_resume',
@@ -424,8 +400,6 @@ describe('useMediaConsumer', () => {
       const mockDevice = createMockDevice();
       const mockTransport = createMockTransport();
       const mockConsumer = createMockConsumer();
-
-      useMediaDeviceStore.setState({ device: mockDevice as never, isLoaded: true });
 
       mockGetRecvTransport.mockReturnValue(mockTransport);
       mockTransport.consume.mockResolvedValue(mockConsumer);
@@ -449,7 +423,7 @@ describe('useMediaConsumer', () => {
       });
 
       await expect(
-        result.current.consume(mockSocket as never, 'remote-producer-id'),
+        result.current.consume(mockDevice as never, mockSocket as never, 'remote-producer-id'),
       ).rejects.toThrow('Resume 실패');
     });
 
@@ -457,8 +431,6 @@ describe('useMediaConsumer', () => {
       const mockDevice = createMockDevice();
       const mockTransport = createMockTransport();
       const mockConsumer = createMockConsumer();
-
-      useMediaDeviceStore.setState({ device: mockDevice as never, isLoaded: true });
 
       mockGetRecvTransport.mockReturnValue(mockTransport);
       mockTransport.consume.mockResolvedValue(mockConsumer);
@@ -482,7 +454,7 @@ describe('useMediaConsumer', () => {
       });
 
       await expect(
-        result.current.consume(mockSocket as never, 'remote-producer-id'),
+        result.current.consume(mockDevice as never, mockSocket as never, 'remote-producer-id'),
       ).rejects.toThrow('Resume 실패');
     });
 
@@ -490,8 +462,6 @@ describe('useMediaConsumer', () => {
       const mockDevice = createMockDevice();
       const mockTransport = createMockTransport();
       const mockConsumer = createMockConsumer();
-
-      useMediaDeviceStore.setState({ device: mockDevice as never, isLoaded: true });
 
       mockGetRecvTransport.mockReturnValue(mockTransport);
       mockTransport.consume.mockResolvedValue(mockConsumer);
@@ -514,7 +484,11 @@ describe('useMediaConsumer', () => {
         }
       });
 
-      const consumeResult = await result.current.consume(mockSocket as never, 'remote-producer-id');
+      const consumeResult = await result.current.consume(
+        mockDevice as never,
+        mockSocket as never,
+        'remote-producer-id',
+      );
 
       expect(consumeResult.consumer).toBe(mockConsumer);
       expect(consumeResult.stream).toBeInstanceOf(MediaStream);
@@ -524,8 +498,6 @@ describe('useMediaConsumer', () => {
       const mockDevice = createMockDevice();
       const mockTransport = createMockTransport();
       const mockConsumer = createMockConsumer();
-
-      useMediaDeviceStore.setState({ device: mockDevice as never, isLoaded: true });
 
       mockGetRecvTransport.mockReturnValue(mockTransport);
       mockTransport.consume.mockResolvedValue(mockConsumer);
@@ -549,7 +521,11 @@ describe('useMediaConsumer', () => {
       });
 
       await act(async () => {
-        await result.current.consume(mockSocket as never, 'remote-producer-id');
+        await result.current.consume(
+          mockDevice as never,
+          mockSocket as never,
+          'remote-producer-id',
+        );
       });
 
       expect(result.current.getConsumers().get(mockConsumer.id)).toBe(mockConsumer);
@@ -563,8 +539,6 @@ describe('useMediaConsumer', () => {
       const mockTransport = createMockTransport();
       const mockConsumer1 = createMockConsumer();
       const mockConsumer2 = createMockConsumer();
-
-      useMediaDeviceStore.setState({ device: mockDevice as never, isLoaded: true });
 
       mockGetRecvTransport.mockReturnValue(mockTransport);
       mockTransport.consume
@@ -591,8 +565,8 @@ describe('useMediaConsumer', () => {
       });
 
       await act(async () => {
-        await result.current.consume(mockSocket as never, 'remote-producer-1');
-        await result.current.consume(mockSocket as never, 'remote-producer-2');
+        await result.current.consume(mockDevice as never, mockSocket as never, 'remote-producer-1');
+        await result.current.consume(mockDevice as never, mockSocket as never, 'remote-producer-2');
       });
 
       expect(result.current.getConsumers().size).toBe(2);
@@ -607,8 +581,6 @@ describe('useMediaConsumer', () => {
       const mockDevice = createMockDevice();
       const mockTransport = createMockTransport();
       const mockConsumer = createMockConsumer();
-
-      useMediaDeviceStore.setState({ device: mockDevice as never, isLoaded: true });
 
       mockGetRecvTransport.mockReturnValue(mockTransport);
       mockTransport.consume.mockResolvedValue(mockConsumer);
@@ -631,7 +603,7 @@ describe('useMediaConsumer', () => {
         }
       });
 
-      await result.current.consume(mockSocket as never, 'remote-producer-id');
+      await result.current.consume(mockDevice as never, mockSocket as never, 'remote-producer-id');
 
       expect(result.current.getConsumers().has(mockConsumer.id)).toBe(true);
 
@@ -648,8 +620,6 @@ describe('useMediaConsumer', () => {
       const mockTransport = createMockTransport();
       const mockConsumer = createMockConsumer();
 
-      useMediaDeviceStore.setState({ device: mockDevice as never, isLoaded: true });
-
       mockGetRecvTransport.mockReturnValue(mockTransport);
       mockTransport.consume.mockResolvedValue(mockConsumer);
 
@@ -671,7 +641,7 @@ describe('useMediaConsumer', () => {
         }
       });
 
-      await result.current.consume(mockSocket as never, 'remote-producer-id');
+      await result.current.consume(mockDevice as never, mockSocket as never, 'remote-producer-id');
 
       act(() => {
         result.current.removeConsumer(mockConsumer.id);
@@ -697,8 +667,6 @@ describe('useMediaConsumer', () => {
       const mockTransport = createMockTransport();
       const mockConsumer = createMockConsumer();
 
-      useMediaDeviceStore.setState({ device: mockDevice as never, isLoaded: true });
-
       mockGetRecvTransport.mockReturnValue(mockTransport);
       mockTransport.consume.mockResolvedValue(mockConsumer);
 
@@ -720,7 +688,7 @@ describe('useMediaConsumer', () => {
         }
       });
 
-      await result.current.consume(mockSocket as never, 'remote-producer-id');
+      await result.current.consume(mockDevice as never, mockSocket as never, 'remote-producer-id');
 
       const transportCloseCall = mockConsumer.on.mock.calls.find(
         (call: string[]) => call[0] === 'transportclose',
@@ -739,8 +707,6 @@ describe('useMediaConsumer', () => {
       const mockTransport = createMockTransport();
       const mockConsumer = createMockConsumer();
 
-      useMediaDeviceStore.setState({ device: mockDevice as never, isLoaded: true });
-
       mockGetRecvTransport.mockReturnValue(mockTransport);
       mockTransport.consume.mockResolvedValue(mockConsumer);
 
@@ -762,7 +728,7 @@ describe('useMediaConsumer', () => {
         }
       });
 
-      await result.current.consume(mockSocket as never, 'remote-producer-id');
+      await result.current.consume(mockDevice as never, mockSocket as never, 'remote-producer-id');
 
       const producerCloseCall = mockConsumer.on.mock.calls.find(
         (call: string[]) => call[0] === 'producerclose',
@@ -781,8 +747,6 @@ describe('useMediaConsumer', () => {
     it('transport.consume 실패 시 에러를 던져야 한다', async () => {
       const mockDevice = createMockDevice();
       const mockTransport = createMockTransport();
-
-      useMediaDeviceStore.setState({ device: mockDevice as never, isLoaded: true });
 
       mockGetRecvTransport.mockReturnValue(mockTransport);
       mockTransport.consume.mockRejectedValue(new Error('Consumer 생성 실패'));
@@ -803,14 +767,12 @@ describe('useMediaConsumer', () => {
       });
 
       await expect(
-        result.current.consume(mockSocket as never, 'remote-producer-id'),
+        result.current.consume(mockDevice as never, mockSocket as never, 'remote-producer-id'),
       ).rejects.toThrow('Consumer 생성 실패');
     });
 
     it('createTransport 실패 시 에러를 던져야 한다', async () => {
       const mockDevice = createMockDevice();
-
-      useMediaDeviceStore.setState({ device: mockDevice as never, isLoaded: true });
 
       mockGetRecvTransport.mockReturnValue(null);
       mockCreateTransport.mockRejectedValue(new Error('Transport 생성 실패'));
@@ -819,7 +781,7 @@ describe('useMediaConsumer', () => {
       const mockSocket = createMockSocket();
 
       await expect(
-        result.current.consume(mockSocket as never, 'remote-producer-id'),
+        result.current.consume(mockDevice as never, mockSocket as never, 'remote-producer-id'),
       ).rejects.toThrow('Transport 생성 실패');
     });
   });

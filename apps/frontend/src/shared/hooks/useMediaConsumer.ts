@@ -1,9 +1,8 @@
 import { useCallback, useRef, useState } from 'react';
-import { Consumer, ConsumerOptions } from 'mediasoup-client/types';
+import { Consumer, ConsumerOptions, Device } from 'mediasoup-client/types';
 import { Socket } from 'socket.io-client';
 import { logger } from '@/shared/lib/logger';
 import { BaseResponse, ClientToServerEvents, ServerToClientEvents } from '@plum/shared-interfaces';
-import { useMediaDeviceStore } from '@/store/useMediaDeviceStore';
 import { useMediaTransport } from './useMediaTransport';
 
 /**
@@ -12,8 +11,6 @@ import { useMediaTransport } from './useMediaTransport';
  */
 export const useMediaConsumer = () => {
   const { createTransport, getRecvTransport } = useMediaTransport();
-  // 내 디바이스의 RTP 수신 성능 정보를 서버에 전달하기 위해 스토어 참조
-  const device = useMediaDeviceStore((state) => state.device);
 
   /**
    * 참여자들의 Consumer 인스턴스 관리 (Key: consumerId)
@@ -47,6 +44,7 @@ export const useMediaConsumer = () => {
    */
   const consume = useCallback(
     async (
+      device: Device,
       socket: Socket<ServerToClientEvents, ClientToServerEvents>,
       remoteProducerId: string,
     ) => {
@@ -55,7 +53,7 @@ export const useMediaConsumer = () => {
          * 사전 검증
          * Device가 로드되어야 내 브라우저가 수신 가능한 코덱 정보(rtpCapabilities)를 서버에 전달할 수 있음
          */
-        if (!device) {
+        if (!device?.loaded) {
           throw new Error('Mediasoup Device가 초기화되지 않았습니다.');
         }
 
@@ -156,7 +154,7 @@ export const useMediaConsumer = () => {
         throw error;
       }
     },
-    [device, createTransport, getRecvTransport, removeConsumer],
+    [createTransport, getRecvTransport, removeConsumer],
   );
 
   /**
