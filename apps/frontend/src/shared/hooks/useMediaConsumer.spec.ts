@@ -140,7 +140,7 @@ describe('useMediaConsumer', () => {
 
       await result.current.consume(mockDevice as never, mockSocket as never, 'remote-producer-id');
 
-      expect(mockCreateTransport).toHaveBeenCalledWith(mockSocket, 'recv');
+      expect(mockCreateTransport).toHaveBeenCalledWith(mockDevice, mockSocket, 'recv');
     });
 
     it('기존 RecvTransport가 closed 상태이면 새로 생성해야 한다', async () => {
@@ -173,7 +173,7 @@ describe('useMediaConsumer', () => {
 
       await result.current.consume(mockDevice as never, mockSocket as never, 'remote-producer-id');
 
-      expect(mockCreateTransport).toHaveBeenCalledWith(mockSocket, 'recv');
+      expect(mockCreateTransport).toHaveBeenCalledWith(mockDevice, mockSocket, 'recv');
     });
 
     it('기존 RecvTransport가 정상이면 재사용해야 한다', async () => {
