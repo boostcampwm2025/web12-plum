@@ -29,7 +29,7 @@ interface MediaDeviceState {
   isLoaded: boolean; // Device가 성공적으로 로드되어 통신 준비가 되었는지 여부
   isInitializing: boolean; // Device 초기화 프로세스가 진행 중인지 여부
   actions: {
-    initDevice: (routerRtpCapabilities: RtpCapabilities) => Promise<void>;
+    initDevice: (routerRtpCapabilities: RtpCapabilities) => Promise<Device>;
     resetDevice: () => void;
   };
 }
@@ -61,10 +61,10 @@ export const useMediaDeviceStore = create<MediaDeviceState>((set, get) => ({
     initDevice: async (routerRtpCapabilities: RtpCapabilities) => {
       const { device, isLoaded, isInitializing } = get();
 
-      // 1. 이미 로드되었거나 현재 초기화가 진행 중이라면 중복 호출을 차단
+      // 1. 이미 로드되었거나 현재 초기화가 진행 중이라면 기존 Device 반환
       if (isLoaded || isInitializing || (device && device.loaded)) {
         logger.media.warn('Device 초기화 중복 호출 차단됨');
-        return;
+        return device!;
       }
 
       // 초기화 시작 상태 설정
@@ -113,6 +113,8 @@ export const useMediaDeviceStore = create<MediaDeviceState>((set, get) => ({
         // 상태 업데이트
         set({ isLoaded: true, isInitializing: false });
         logger.media.info('Device 로드 완료: 통신 준비됨');
+
+        return currentDevice;
       } catch (error: unknown) {
         // 에러 발생 시 초기화 중 플래그를 해제하여 재시도가 가능하도록 함
         set({ isInitializing: false });
