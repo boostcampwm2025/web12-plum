@@ -1,5 +1,5 @@
 import { useCallback, useRef } from 'react';
-import { Transport } from 'mediasoup-client/types';
+import { Device, Transport } from 'mediasoup-client/types';
 import { Socket } from 'socket.io-client';
 
 import {
@@ -11,7 +11,6 @@ import {
 } from '@plum/shared-interfaces';
 
 import { logger } from '@/shared/lib/logger';
-import { useMediaDeviceStore } from '@/store/useMediaDeviceStore';
 
 /**
  * Transport의 생성과 생명주기를 관리
@@ -20,9 +19,6 @@ import { useMediaDeviceStore } from '@/store/useMediaDeviceStore';
  * 중복 요청 방지 로직을 통해 네트워크 자원을 효율적으로 관리
  */
 export const useMediaTransport = () => {
-  // 전역 스토어에서 로드된 Device 인스턴스를 참조
-  const device = useMediaDeviceStore((state) => state.device);
-
   /**
    * 리렌더링 시에도 실제 WebRTC 인스턴스를 보존하기 위해 Ref를 사용
    * Transport 인스턴스는 내부적으로 네이티브 시스템 자원(포트 등)을 사용하기 때문에 불필요한 재생성을 피하는 것이 중요
@@ -48,6 +44,7 @@ export const useMediaTransport = () => {
    */
   const createTransport = useCallback(
     async (
+      device: Device,
       socket: Socket<ServerToClientEvents, ClientToServerEvents>,
       direction: 'send' | 'recv',
     ): Promise<Transport> => {
@@ -210,7 +207,7 @@ export const useMediaTransport = () => {
 
       return createPromise;
     },
-    [device],
+    [],
   );
 
   /**
