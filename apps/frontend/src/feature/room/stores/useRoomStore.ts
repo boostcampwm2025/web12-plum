@@ -27,7 +27,6 @@ interface RoomActions {
   removeProducer: (participantId: string, type: MediaType) => void;
   getParticipantList: () => Participant[];
   getParticipant: (id: string) => Participant | undefined;
-  leaveRoom: () => void;
 
   reset: () => void;
 }
@@ -135,9 +134,6 @@ export const useRoomStore = create<RoomState>()(
           const participants = get().participants;
           return participants.get(id);
         },
-
-        /** 참가자 목록과 미디어 설정만 초기화 (내 정보 유지) */
-        leaveRoom: () => set({ participants: new Map(), routerRtpCapabilities: null }),
 
         /** 스토어 초기화 */
         reset: () => set({ ...initialState, participants: new Map() }),
