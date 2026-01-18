@@ -1,7 +1,9 @@
 import { useCallback, useRef, useState } from 'react';
 import { Producer, Transport } from 'mediasoup-client/types';
-import { logger } from '@/shared/lib/logger';
 import { MediaType } from '@plum/shared-interfaces';
+
+import { logger } from '@/shared/lib/logger';
+import { ProducerSignaling } from './ProducerSignaling';
 
 /**
  * 로컬 미디어 트랙(카메라, 마이크, 화면)을 서버로 송출하는 Producer의 생명주기를 관리
@@ -17,10 +19,7 @@ export const useMediaProducer = () => {
   const producersRef = useRef<Map<string, Producer>>(new Map());
 
   // UI 레이어에서 현재 어떤 미디어가 송출 중인지 파악할 수 있도록 상태 관리
-  const [activeProducers, setActiveProducers] = useState<{ video: boolean; audio: boolean }>({
-    video: false,
-    audio: false,
-  });
+  const [activeProducers, setActiveProducers] = useState({ video: false, audio: false });
 
   /**
    * 현재 관리 중인 Producer 목록을 스캔하여 UI 상태를 동기화
@@ -28,31 +27,19 @@ export const useMediaProducer = () => {
    */
   const updateActiveState = useCallback(() => {
     const producers = Array.from(producersRef.current.values());
-    const hasVideo = producers.some((producer) => producer.kind === 'video');
-    const hasAudio = producers.some((producer) => producer.kind === 'audio');
-    setActiveProducers({ video: hasVideo, audio: hasAudio });
+    setActiveProducers({
+      video: producers.some((producer) => producer.kind === 'video'),
+      audio: producers.some((producer) => producer.kind === 'audio'),
+    });
   }, []);
-
-  /**
-   * 내부 자원 정리
-   * Producer가 닫힐 때 관련된 이벤트 리스너를 제거하고 메모리 참조를 해제
-   */
-  const cleanupProducer = useCallback(
-    (producer: Producer) => {
-      const type = producer.appData.type as string;
-      producer.close();
-      producersRef.current.delete(type);
-      updateActiveState();
-    },
-    [updateActiveState],
-  );
 
   /**
    * 미디어 송출
    *
-   * 1. 트랙의 ReadyState를 검증하여 에러를 미연에 방지
-   * 2. 주입받은 Transport를 사용하여 Producer 인스턴스를 생성
-   * 3. 트랙 종료나 전송로 단절 등 예외 상황에 대비한 핸들러를 바인딩
+   * 1. 트랙 상태 검증
+   * 2. Transport 상태 검증
+   * 3. 중복 송출 방지 및 트랙 교체 로직 처리
+   * 4. Producer 생성 및 시그널링 핸들러 설정
    */
   const produce = useCallback(
     async (
@@ -61,7 +48,7 @@ export const useMediaProducer = () => {
       appData: { type: MediaType; [key: string]: unknown },
     ): Promise<Producer> => {
       /**
-       * 트랙 상태 검증: 이미 종료되었거나 비활성화된 트랙은 전송할 수 없음
+       * 1. 트랙 상태 검증: 이미 종료되었거나 비활성화된 트랙은 전송할 수 없음
        */
       if (track.readyState !== 'live') {
         logger.media.error(`${track.kind} 트랙 상태가 유효하지 않음: ${track.readyState}`);
@@ -69,7 +56,7 @@ export const useMediaProducer = () => {
       }
 
       /**
-       * Transport 상태 검증
+       * 2. Transport 상태 검증
        */
       if (transport.closed) {
         logger.media.error('Transport가 이미 닫혀 있음');
@@ -79,69 +66,61 @@ export const useMediaProducer = () => {
       const type = appData.type;
 
       /**
-       * 동일한 타입(용도)의 Producer가 이미 존재하는지 체크
+       * 3. 중복 송출 방지 및 트랙 교체 로직 처리
        */
-      const existing = producersRef.current.get(type);
-      if (existing) {
-        // 만약 트랙 ID까지 같다면 기존 것 반환, 다르다면 기존 것을 닫고 새로 만들거나 에러 처리 가능
-        if (existing.track?.id === track.id) {
-          logger.media.warn(`[Producer] ${type} 타입의 동일 트랙이 이미 송출 중입니다.`);
-          return existing;
-        }
-        logger.media.info(`[Producer] 기존 ${type} 송출을 교체합니다.`);
-        cleanupProducer(existing);
+      const existingProducer = producersRef.current.get(type);
+      if (existingProducer && !existingProducer.closed) {
+        if (existingProducer.track?.id === track.id) return existingProducer;
+
+        logger.media.info(`[Producer] ${type} 트랙을 교체`);
+        await existingProducer.replaceTrack({ track });
+        return existingProducer;
       }
 
-      try {
-        /**
-         * 서버 송출 시작
-         * appData를 통해 서버가 이 스트림이 'video'인지 'screen'인지 명확히 구분하게 함
-         */
-        const producer = await transport.produce({
-          track,
-          appData: { ...appData, type },
-        });
-
-        /**
-         * 이벤트 핸들러 바인딩
-         * 하드웨어 장치 해제(trackended)나 네트워크 단절 시 즉시 자원을 반환
-         */
-        producer.on('transportclose', () => {
-          logger.media.warn(`[Producer] transport 단절로 인한 종료: ${producer.id}`);
-          cleanupProducer(producer);
-        });
-
-        producer.on('trackended', () => {
-          logger.media.warn(`[Producer] 하드웨어 트랙 종료: ${producer.id}`);
-          cleanupProducer(producer);
-        });
-
-        producersRef.current.set(type, producer);
+      /**
+       * 4. Producer 생성 및 시그널링 핸들러 설정
+       */
+      const producer = await transport.produce({ track, appData });
+      ProducerSignaling.setupAllHandlers(producer, () => {
+        producersRef.current.delete(type);
         updateActiveState();
+      });
 
-        logger.media.info(`Producer 송출 시작: ${track.kind} (Type: ${type})`);
-        return producer;
-      } catch (error) {
-        logger.media.error(`Producer 생성 실패 (${track.kind}):`, error);
-        throw error;
-      }
+      producersRef.current.set(type, producer);
+      updateActiveState();
+      return producer;
     },
-    [cleanupProducer, updateActiveState],
+    [updateActiveState],
   );
 
   /**
+   * 특정 미디어 타입 일시정지/재개
+   */
+  const togglePause = useCallback((type: MediaType, pause: boolean) => {
+    const producer = producersRef.current.get(type);
+    if (!producer) return;
+
+    if (pause) producer.pause();
+    else producer.resume();
+
+    logger.media.info(`[Producer] ${type} ${pause ? '일시정지' : '재개'}`);
+  }, []);
+
+  /**
    * 특정 미디어 타입 중단
-   * 'video'나 'audio' 타입을 지정하여 해당되는 모든 송출을 중단
+   * 사용자가 카메라나 마이크를 끌 때 해당 트랙의 송출을 중단하고 자원 정리
    */
   const stopProducing = useCallback(
     (kind: 'video' | 'audio') => {
       producersRef.current.forEach((producer) => {
         if (producer.kind === kind) {
-          cleanupProducer(producer);
+          producer.close();
+          producersRef.current.delete(producer.appData.type as string);
         }
       });
+      updateActiveState();
     },
-    [cleanupProducer],
+    [updateActiveState],
   );
 
   /**
@@ -165,6 +144,7 @@ export const useMediaProducer = () => {
 
   return {
     produce,
+    togglePause,
     stopProducing,
     stopAll,
     activeProducers,
