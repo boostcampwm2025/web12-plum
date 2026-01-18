@@ -1,71 +1,55 @@
-# CD Pipeline - Backend Docker 빌드 및 배포
-name: CD Pipeline
+# CD 파이프라인 - CI에서 빌드된 Docker 이미지 배포
+# CI 파이프라인에서 테스트 완료 후 push된 이미지를 그대로 사용
+name: CD 파이프라인
 
 on:
-  push:
+  workflow_run:
+    workflows: ["CI 파이프라인"]
+    types:
+      - completed
     branches:
       - develop
       - main
 
 jobs:
-  build:
+  # CI 성공 여부 확인 및 태그 설정
+  prepare:
     runs-on: ubuntu-latest
+    # CI가 성공했을 때만 실행
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     outputs:
       tag: ${{ steps.vars.outputs.TAG }}
       sha_tag: ${{ steps.vars.outputs.SHA_TAG }}
+      branch: ${{ steps.vars.outputs.BRANCH }}
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: Set environment variables
+      - name: 환경 변수 설정
         id: vars
         run: |
-          SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
-          BRANCH="${{ github.ref_name }}"
+          SHORT_SHA=$(echo ${{ github.event.workflow_run.head_sha }} | cut -c1-7)
+          BRANCH="${{ github.event.workflow_run.head_branch }}"
+
+          echo "BRANCH=${BRANCH}" >> $GITHUB_OUTPUT
 
           if [ "${BRANCH}" == "main" ]; then
-            echo "ENV=production" >> $GITHUB_OUTPUT
             echo "TAG=latest" >> $GITHUB_OUTPUT
             echo "SHA_TAG=prod-${SHORT_SHA}" >> $GITHUB_OUTPUT
           else
-            echo "ENV=staging" >> $GITHUB_OUTPUT
             echo "TAG=staging" >> $GITHUB_OUTPUT
             echo "SHA_TAG=dev-${SHORT_SHA}" >> $GITHUB_OUTPUT
           fi
 
-      - name: Build and push Backend Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./apps/backend/Dockerfile
-          push: true
-          tags: |
-            ${{ secrets.DOCKER_USERNAME }}/plum-backend:${{ steps.vars.outputs.TAG }}
-            ${{ secrets.DOCKER_USERNAME }}/plum-backend:${{ steps.vars.outputs.SHA_TAG }}
-          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/plum-backend:buildcache
-          cache-to: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/plum-backend:buildcache,mode=max
-
   deploy-dev:
-    needs: build
+    needs: prepare
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/develop'
+    if: needs.prepare.outputs.branch == 'develop'
 
     steps:
-      - name: Deploy to Development Server
+      - name: 개발 서버 배포
         uses: appleboy/ssh-action@v1.0.0
         env:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-          TAG: ${{ needs.build.outputs.tag }}
+          TAG: ${{ needs.prepare.outputs.tag }}
           FE_URL: ${{ secrets.FE_URL_DEV }}
           AWS_REGION: ${{ secrets.AWS_S3_REGION }}
           AWS_KEY: ${{ secrets.AWS_S3_ACCESS_KEY }}
@@ -78,7 +62,7 @@ jobs:
           port: ${{ secrets.NCP_DEV_PORT || 22 }}
           envs: DOCKER_USERNAME,TAG,FE_URL,AWS_REGION,AWS_KEY,AWS_SECRET,AWS_BUCKET
           script: |
-            DEPLOY_BRANCH="${{ github.ref_name }}"
+            DEPLOY_BRANCH="${{ needs.prepare.outputs.branch }}"
             echo "배포 브랜치: ${DEPLOY_BRANCH}"
 
             if [ ! -d ~/plum ]; then
@@ -142,16 +126,16 @@ jobs:
             docker ps --filter "name=plum-backend-develop"
 
   deploy-prod:
-    needs: build
+    needs: prepare
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: needs.prepare.outputs.branch == 'main'
 
     steps:
-      - name: Deploy to Production Server
+      - name: 운영 서버 배포
         uses: appleboy/ssh-action@v1.0.0
         env:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-          TAG: ${{ needs.build.outputs.tag }}
+          TAG: ${{ needs.prepare.outputs.tag }}
           FE_URL: ${{ secrets.FE_URL_PROD }}
           AWS_REGION: ${{ secrets.AWS_S3_REGION }}
           AWS_KEY: ${{ secrets.AWS_S3_ACCESS_KEY }}
@@ -164,7 +148,7 @@ jobs:
           port: ${{ secrets.NCP_PROD_PORT || 22 }}
           envs: DOCKER_USERNAME,TAG,FE_URL,AWS_REGION,AWS_KEY,AWS_SECRET,AWS_BUCKET
           script: |
-            DEPLOY_BRANCH="${{ github.ref_name }}"
+            DEPLOY_BRANCH="${{ needs.prepare.outputs.branch }}"
             echo "배포 브랜치: ${DEPLOY_BRANCH}"
 
             # 프로젝트 폴더 확인 및 생성
@@ -230,16 +214,18 @@ jobs:
             docker ps --filter "name=plum-backend-prod"
 
   deploy-dev-redis:
-    name: Deploy to Dev Redis Server
+    name: 개발 Redis 서버 배포
     runs-on: ubuntu-latest
-    needs: build
-    if: github.ref == 'refs/heads/develop'
+    needs: prepare
+    if: needs.prepare.outputs.branch == 'develop'
 
     steps:
-      - name: Checkout code
+      - name: 코드 체크아웃
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_branch }}
 
-      - name: Deploy Redis to Dev Server
+      - name: 개발 Redis 서버 배포
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.NCP_DEV_REDIS_HOST }}
@@ -292,16 +278,18 @@ jobs:
             docker compose ps
 
   deploy-dev-monitoring:
-    name: Deploy to Dev Monitoring Server
+    name: 개발 모니터링 서버 배포
     runs-on: ubuntu-latest
-    needs: build
-    if: github.ref == 'refs/heads/develop'
+    needs: prepare
+    if: needs.prepare.outputs.branch == 'develop'
 
     steps:
-      - name: Checkout code
+      - name: 코드 체크아웃
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_branch }}
 
-      - name: Deploy Monitoring to Dev Server
+      - name: 개발 모니터링 서버 배포
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.NCP_DEV_MONITORING_HOST }}
@@ -371,16 +359,18 @@ jobs:
             docker compose ps
 
   deploy-prod-redis:
-    name: Deploy to Prod Redis Server
+    name: 운영 Redis 서버 배포
     runs-on: ubuntu-latest
-    needs: build
-    if: github.ref == 'refs/heads/main'
+    needs: prepare
+    if: needs.prepare.outputs.branch == 'main'
 
     steps:
-      - name: Checkout code
+      - name: 코드 체크아웃
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_branch }}
 
-      - name: Deploy Redis to Prod Server
+      - name: 운영 Redis 서버 배포
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.NCP_PROD_REDIS_HOST }}
@@ -429,16 +419,18 @@ jobs:
             docker compose ps
 
   deploy-prod-monitoring:
-    name: Deploy to Prod Monitoring Server
+    name: 운영 모니터링 서버 배포
     runs-on: ubuntu-latest
-    needs: build
-    if: github.ref == 'refs/heads/main'
+    needs: prepare
+    if: needs.prepare.outputs.branch == 'main'
 
     steps:
-      - name: Checkout code
+      - name: 코드 체크아웃
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_branch }}
 
-      - name: Deploy Monitoring to Prod Server
+      - name: 운영 모니터링 서버 배포
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.NCP_PROD_MONITORING_HOST }}
