@@ -1,6 +1,7 @@
 import { FormProvider, useForm, useFormContext, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { CreateRoomRequest, createLectureSchema } from '@plum/shared-interfaces';
+import type { CreateRoomRequest, CreateRoomResponse } from '@plum/shared-interfaces';
+import { createLectureSchema } from '@plum/shared-interfaces';
 
 import { Button } from '@/shared/components/Button';
 import { FormField } from '@/shared/components/FormField';
@@ -179,7 +180,11 @@ function PresentationUploaderSection() {
  * 강의 생성 폼 컴포넌트
  * @returns 강의 생성 폼 JSX 요소
  */
-export function CreateLectureForm() {
+interface CreateLectureFormProps {
+  onCreateSuccess?: (response: CreateRoomResponse) => void;
+}
+
+export function CreateLectureForm({ onCreateSuccess }: CreateLectureFormProps) {
   const { createRoom, isSubmitting } = useCreateRoom();
   const formMethods = useForm<CreateRoomRequest>({
     resolver: zodResolver(createLectureSchema),
@@ -191,13 +196,10 @@ export function CreateLectureForm() {
 
   const onSubmit = async (data: CreateRoomRequest) => {
     try {
-      const { roomId } = await createRoom(data);
-      // TODO: 생성된 강의실 페이지로 이동
-      // navigate(`/room/${roomId}`);
-      alert(`강의실이 생성되었습니다! Room ID: ${roomId}`);
+      const response = await createRoom(data);
+      onCreateSuccess?.(response);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : '알 수 없는 오류';
-      alert(`강의실 생성에 실패했습니다: ${errorMessage}`);
+      alert(`강의실 생성에 실패했습니다: ${err}`);
     }
   };
 

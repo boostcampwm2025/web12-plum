@@ -2,9 +2,9 @@ import { RoomMenuBar } from '../feature/room/components/RoomMenuBar';
 import { RoomDialogs } from '../feature/room/components/RoomDialogs';
 import { RoomMainSection } from '../feature/room/components/RoomMainSection';
 import { RoomSideSection } from '../feature/room/components/RoomSideSection';
-import { useRoomPage } from '../feature/room/hooks/useRoomPage';
+import { useRoom } from '../feature/room/hooks/useRoom';
 
-export default function RoomPage() {
+export default function Room() {
   const {
     activeDialog,
     activeSidePanel,
@@ -17,7 +17,7 @@ export default function RoomPage() {
     userVideoMode,
     setUserVideoMode,
     isScreenSharing,
-  } = useRoomPage();
+  } = useRoom();
 
   return (
     <div className="flex h-full w-full flex-col bg-gray-700 pt-4">

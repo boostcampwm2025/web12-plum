@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
 import { cn } from '@/shared/lib/utils';
 import { Icon } from '@/shared/components/icon/Icon';
@@ -16,6 +17,8 @@ export interface ParticipantVideoProps {
   mode: VideoDisplayMode;
   isCurrentUser?: boolean;
   onModeChange?: (mode: VideoDisplayMode) => void;
+  localStream?: MediaStream | null;
+  isCameraOn?: boolean;
 }
 
 export function ParticipantVideo({
@@ -24,7 +27,17 @@ export function ParticipantVideo({
   mode,
   isCurrentUser = false,
   onModeChange,
+  localStream,
+  isCameraOn = true,
 }: ParticipantVideoProps) {
+  const localVideoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    if (mode !== 'minimize' && localVideoRef.current && localStream && isCameraOn) {
+      localVideoRef.current.srcObject = localStream;
+    }
+  }, [isCameraOn, localStream, mode]);
+
   return (
     <motion.div
       layout="position"
@@ -46,7 +59,24 @@ export function ParticipantVideo({
       )}
     >
       {/* 비디오 영역 */}
-      {mode !== 'minimize' && <div className="h-full w-full bg-gray-200" />}
+      {mode !== 'minimize' &&
+        (isCurrentUser && localStream && isCameraOn ? (
+          <video
+            ref={localVideoRef}
+            autoPlay
+            muted
+            playsInline
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-gray-200">
+            <Icon
+              name="cam-disabled"
+              size={32}
+              className="text-text"
+            />
+          </div>
+        ))}
 
       {/* 이름 표시 */}
       <div className="absolute bottom-2 left-2 rounded px-1 text-sm text-white">{name}</div>

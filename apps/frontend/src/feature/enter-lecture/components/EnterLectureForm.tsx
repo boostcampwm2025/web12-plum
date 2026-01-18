@@ -1,14 +1,22 @@
+import { useEffect } from 'react';
 import { FormProvider, useForm, useFormContext, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { EnterLectureRequestBody, enterLectureSchema } from '@plum/shared-interfaces';
+import {
+  EnterLectureRequestBody,
+  EnterRoomResponse,
+  enterLectureSchema,
+} from '@plum/shared-interfaces';
 
 import { FormField } from '@/shared/components/FormField';
 import { logger } from '@/shared/lib/logger';
 import { Button } from '@/shared/components/Button';
 import { cn } from '@/shared/lib/utils';
+import { useMediaStore } from '@/feature/room/stores/useMediaStore';
 
-import { ENTER_LECTURE_KEYS } from '../schema';
+import { enterLectureDefaultValues, ENTER_LECTURE_KEYS } from '../schema';
 import { LocalMediaPreview } from './LocalMediaPreview';
+import { useEnterRoom } from '../hooks/useEnterRoom';
+import { useNicknameValidation } from '../hooks/useNicknameValidation';
 
 /**
  * 강의실 이름 입력 섹션
@@ -24,7 +32,6 @@ function LectureNameSection() {
     >
       <div className="flex items-center gap-4">
         <FormField.Legend className="m-0 text-xl font-bold">강의실 이름</FormField.Legend>
-        <FormField.HelpText className="m-0">5~30자 이내</FormField.HelpText>
       </div>
 
       <FormField.Input
@@ -37,18 +44,32 @@ function LectureNameSection() {
 }
 
 /**
- * 호스트 닉네임 입력 섹션
- * @returns 호스트 닉네임 입력 섹션 JSX 요소
+ * 닉네임 입력 섹션
+ * @returns 닉네임 입력 섹션 JSX 요소
  */
-function HostNameSection() {
+interface NicknameSectionProps {
+  errorMessage?: string;
+  checkMessage?: string;
+  checkVariant?: 'default' | 'success' | 'error';
+  isCheckDisabled: boolean;
+  onCheckNickname: () => void;
+}
+
+function NicknameSection({
+  errorMessage,
+  checkMessage,
+  checkVariant = 'default',
+  isCheckDisabled,
+  onCheckNickname,
+}: NicknameSectionProps) {
   const { register } = useFormContext<EnterLectureRequestBody>();
 
   return (
     <FormField
       required
-      className="gap-3"
+      error={errorMessage}
     >
-      <div className="flex items-center gap-4">
+      <div className="mb-3 flex items-center gap-4">
         <FormField.Legend className="m-0 text-xl font-bold">닉네임</FormField.Legend>
         <FormField.HelpText className="m-0">2~16자 이내</FormField.HelpText>
       </div>
@@ -59,8 +80,16 @@ function HostNameSection() {
           size="lg"
           placeholder="예: 호눅스"
         />
-        <Button className="text-base font-extrabold">중복 확인</Button>
+        <Button
+          type="button"
+          className="text-base font-extrabold"
+          onClick={onCheckNickname}
+          disabled={isCheckDisabled}
+        >
+          중복 확인
+        </Button>
       </div>
+      <FormField.HelpText variant={checkVariant}>{checkMessage || ''}</FormField.HelpText>
     </FormField>
   );
 }
@@ -139,27 +168,64 @@ function MediaDeviceCheckSection() {
  * 강의실 입장 폼 컴포넌트
  * @returns 강의실 입장 폼 JSX 요소
  */
-export function EnterLectureForm() {
-  // TODO: 강의실 이름 API 연동
-  const { lectureName } = { lectureName: '예시 강의실' };
+interface EnterLectureFormProps {
+  roomId: string;
+  lectureName?: string;
+  onEnterSuccess?: (response: EnterRoomResponse) => void;
+}
+
+export function EnterLectureForm({
+  roomId,
+  lectureName = '예시 강의실',
+  onEnterSuccess,
+}: EnterLectureFormProps) {
+  const { enterRoom, isSubmitting } = useEnterRoom();
+  const { initialize } = useMediaStore();
 
   const formMethods = useForm<EnterLectureRequestBody>({
     resolver: zodResolver(enterLectureSchema),
     defaultValues: {
+      ...enterLectureDefaultValues,
       name: lectureName,
-      nickname: '',
-      isAgreed: false,
-      isAudioOn: false,
-      isVideoOn: false,
     },
     mode: 'onChange',
   });
 
-  const { handleSubmit, formState } = formMethods;
+  const { handleSubmit, formState, setValue, getValues, trigger, control } = formMethods;
+  const {
+    nicknameValue,
+    checkMessage,
+    checkVariant,
+    hasCheckedNickname,
+    isNicknameAvailable,
+    handleCheckNickname,
+    requireCheck,
+  } = useNicknameValidation({ roomId, control, trigger, getValues });
 
-  const onSubmit = (data: EnterLectureRequestBody) => {
-    logger.ui.info('EnterLectureForm: onSubmit', data);
+  useEffect(() => {
+    setValue(ENTER_LECTURE_KEYS.name, lectureName, { shouldValidate: true });
+  }, [lectureName, setValue]);
+
+  const onSubmit = async (data: EnterLectureRequestBody) => {
+    if (!roomId || !lectureName) {
+      logger.ui.warn('EnterLectureForm: 강의실 정보를 확인할 수 없습니다.', data);
+      return;
+    }
+    if (!hasCheckedNickname || !isNicknameAvailable) {
+      requireCheck();
+      return;
+    }
+
+    try {
+      const response = await enterRoom(roomId, data);
+      initialize(data.isAudioOn, data.isVideoOn);
+      onEnterSuccess?.(response);
+    } catch (error) {
+      logger.ui.error('강의실 입장 실패:', error);
+    }
   };
+
+  const isSubmitDisabled = !formState.isValid || isSubmitting || !roomId || !lectureName;
 
   return (
     <FormProvider {...formMethods}>
@@ -168,16 +234,22 @@ export function EnterLectureForm() {
         onSubmit={handleSubmit(onSubmit)}
       >
         <LectureNameSection />
-        <HostNameSection />
+        <NicknameSection
+          errorMessage={formState.errors.nickname?.message}
+          checkMessage={checkMessage}
+          checkVariant={checkVariant}
+          isCheckDisabled={!roomId || !nicknameValue?.trim()}
+          onCheckNickname={handleCheckNickname}
+        />
         <AgreementSection />
         <MediaDeviceCheckSection />
 
         <Button
           type="submit"
-          disabled={!formState.isValid}
-          className={cn(!formState.isValid && 'opacity-50', 'text-xl')}
+          disabled={isSubmitDisabled}
+          className={cn(isSubmitDisabled && 'opacity-50', 'text-xl')}
         >
-          강의실 입장하기
+          {isSubmitting ? '입장 중...' : '강의실 입장하기'}
         </Button>
       </form>
     </FormProvider>

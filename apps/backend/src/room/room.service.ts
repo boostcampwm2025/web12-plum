@@ -16,6 +16,7 @@ import {
   Participant,
   ParticipantRole,
   Room,
+  RoomValidationResponse,
 } from '@plum/shared-interfaces';
 import { InteractionService } from '../interaction/interaction.service.js';
 import { RoomManagerService } from '../redis/repository-manager/index.js';
@@ -228,6 +229,11 @@ export class RoomService {
         routerRtpCapabilities: rtpCapabilities,
       },
     };
+  }
+
+  async getRoomValidation(roomId: string): Promise<RoomValidationResponse> {
+    const room = await this.validateRoom(roomId);
+    return { name: room.name };
   }
 
   async createParticipant(roomId: string, name: string): Promise<Participant> {

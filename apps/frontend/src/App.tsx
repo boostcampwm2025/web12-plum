@@ -3,12 +3,12 @@ import { Home } from './pages/Home';
 import { EnterLecture } from './pages/EnterLecture';
 import { CreateLecture } from './pages/CreateLecture';
 import { NotFound } from './pages/NotFound';
-import RoomPage from './pages/RoomPage';
+import Room from './pages/Room';
 import { ROUTES } from './app/routes/routes';
 
 function App() {
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex h-full flex-col">
       <Routes>
         <Route
           path={ROUTES.HOME}
@@ -24,7 +24,7 @@ function App() {
         />
         <Route
           path={ROUTES.ROOM()}
-          element={<RoomPage />}
+          element={<Room />}
         />
         <Route
           path={ROUTES.ROOM_SUMMARY()}

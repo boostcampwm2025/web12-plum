@@ -7,7 +7,7 @@ import { EnterLectureForm } from './EnterLectureForm';
 describe('EnterLectureForm', () => {
   describe('기본 렌더링', () => {
     it('모든 섹션이 렌더링된다', () => {
-      render(<EnterLectureForm />);
+      render(<EnterLectureForm roomId="room-id" />);
 
       expect(screen.getByText('강의실 이름')).toBeInTheDocument();
       expect(screen.getByText('닉네임')).toBeInTheDocument();
@@ -16,13 +16,13 @@ describe('EnterLectureForm', () => {
     });
 
     it('강의실 입장 버튼이 렌더링된다', () => {
-      render(<EnterLectureForm />);
+      render(<EnterLectureForm roomId="room-id" />);
 
       expect(screen.getByRole('button', { name: '강의실 입장하기' })).toBeInTheDocument();
     });
 
     it('초기 상태에서 강의실 입장 버튼이 비활성화되어 있다', () => {
-      render(<EnterLectureForm />);
+      render(<EnterLectureForm roomId="room-id" />);
 
       const submitButton = screen.getByRole('button', { name: '강의실 입장하기' });
       expect(submitButton).toBeDisabled();
@@ -31,7 +31,7 @@ describe('EnterLectureForm', () => {
 
   describe('강의실 이름 섹션', () => {
     it('강의실 이름이 읽기 전용으로 표시된다', () => {
-      render(<EnterLectureForm />);
+      render(<EnterLectureForm roomId="room-id" />);
 
       const nameInput = screen.getByDisplayValue('예시 강의실');
       expect(nameInput).toHaveAttribute('readonly');
@@ -40,20 +40,20 @@ describe('EnterLectureForm', () => {
 
   describe('닉네임 섹션', () => {
     it('닉네임 입력 필드가 렌더링된다', () => {
-      render(<EnterLectureForm />);
+      render(<EnterLectureForm roomId="room-id" />);
 
       expect(screen.getByPlaceholderText('예: 호눅스')).toBeInTheDocument();
     });
 
     it('중복 확인 버튼이 렌더링된다', () => {
-      render(<EnterLectureForm />);
+      render(<EnterLectureForm roomId="room-id" />);
 
       expect(screen.getByRole('button', { name: '중복 확인' })).toBeInTheDocument();
     });
 
     it('닉네임을 입력할 수 있다', async () => {
       const user = userEvent.setup();
-      render(<EnterLectureForm />);
+      render(<EnterLectureForm roomId="room-id" />);
 
       const nicknameInput = screen.getByPlaceholderText('예: 호눅스');
       await user.type(nicknameInput, '테스트닉네임');
@@ -64,7 +64,7 @@ describe('EnterLectureForm', () => {
 
   describe('데이터 수집 동의 섹션', () => {
     it('데이터 수집 항목들이 표시된다', () => {
-      render(<EnterLectureForm />);
+      render(<EnterLectureForm roomId="room-id" />);
 
       expect(screen.getByText('참여도·발화 분석 데이터를 수집합니다.')).toBeInTheDocument();
       expect(screen.getByText('투표·질문 응답 데이터를 수집합니다.')).toBeInTheDocument();
@@ -72,7 +72,7 @@ describe('EnterLectureForm', () => {
     });
 
     it('동의 체크박스가 렌더링된다', () => {
-      render(<EnterLectureForm />);
+      render(<EnterLectureForm roomId="room-id" />);
 
       expect(
         screen.getByRole('checkbox', { name: '데이터 수집에 동의합니다.' }),
@@ -81,7 +81,7 @@ describe('EnterLectureForm', () => {
 
     it('동의 체크박스를 클릭할 수 있다', async () => {
       const user = userEvent.setup();
-      render(<EnterLectureForm />);
+      render(<EnterLectureForm roomId="room-id" />);
 
       const checkbox = screen.getByRole('checkbox', { name: '데이터 수집에 동의합니다.' });
       expect(checkbox).not.toBeChecked();
@@ -96,13 +96,13 @@ describe('EnterLectureForm', () => {
 
   describe('카메라 및 마이크 확인 섹션', () => {
     it('마이크 토글이 렌더링된다', () => {
-      render(<EnterLectureForm />);
+      render(<EnterLectureForm roomId="room-id" />);
 
       expect(screen.getByText('마이크')).toBeInTheDocument();
     });
 
     it('카메라 토글이 렌더링된다', () => {
-      render(<EnterLectureForm />);
+      render(<EnterLectureForm roomId="room-id" />);
 
       expect(screen.getByText('카메라')).toBeInTheDocument();
     });
@@ -111,7 +111,7 @@ describe('EnterLectureForm', () => {
   describe('폼 유효성 검증', () => {
     it('닉네임이 2자 미만일 때 버튼이 비활성화된다', async () => {
       const user = userEvent.setup();
-      render(<EnterLectureForm />);
+      render(<EnterLectureForm roomId="room-id" />);
 
       const nicknameInput = screen.getByPlaceholderText('예: 호눅스');
       const checkbox = screen.getByRole('checkbox', { name: '데이터 수집에 동의합니다.' });
@@ -127,7 +127,7 @@ describe('EnterLectureForm', () => {
 
     it('닉네임이 16자를 초과할 때 버튼이 비활성화된다', async () => {
       const user = userEvent.setup();
-      render(<EnterLectureForm />);
+      render(<EnterLectureForm roomId="room-id" />);
 
       const nicknameInput = screen.getByPlaceholderText('예: 호눅스');
       const checkbox = screen.getByRole('checkbox', { name: '데이터 수집에 동의합니다.' });
@@ -143,7 +143,7 @@ describe('EnterLectureForm', () => {
 
     it('데이터 수집에 동의하지 않으면 버튼이 비활성화된다', async () => {
       const user = userEvent.setup();
-      render(<EnterLectureForm />);
+      render(<EnterLectureForm roomId="room-id" />);
 
       const nicknameInput = screen.getByPlaceholderText('예: 호눅스');
       const submitButton = screen.getByRole('button', { name: '강의실 입장하기' });
@@ -157,7 +157,7 @@ describe('EnterLectureForm', () => {
 
     it('닉네임이 유효하고 데이터 수집에 동의하면 버튼이 활성화된다', async () => {
       const user = userEvent.setup();
-      render(<EnterLectureForm />);
+      render(<EnterLectureForm roomId="room-id" />);
 
       const nicknameInput = screen.getByPlaceholderText('예: 호눅스');
       const checkbox = screen.getByRole('checkbox', { name: '데이터 수집에 동의합니다.' });
@@ -175,7 +175,7 @@ describe('EnterLectureForm', () => {
   describe('폼 제출', () => {
     it('유효한 데이터로 폼을 제출할 수 있다', async () => {
       const user = userEvent.setup();
-      render(<EnterLectureForm />);
+      render(<EnterLectureForm roomId="room-id" />);
 
       const nicknameInput = screen.getByPlaceholderText('예: 호눅스');
       const checkbox = screen.getByRole('checkbox', { name: '데이터 수집에 동의합니다.' });
@@ -195,7 +195,7 @@ describe('EnterLectureForm', () => {
   describe('닉네임 유효성 검증 경계값 테스트', () => {
     it('닉네임이 정확히 2자일 때 버튼이 활성화된다', async () => {
       const user = userEvent.setup();
-      render(<EnterLectureForm />);
+      render(<EnterLectureForm roomId="room-id" />);
 
       const nicknameInput = screen.getByPlaceholderText('예: 호눅스');
       const checkbox = screen.getByRole('checkbox', { name: '데이터 수집에 동의합니다.' });
@@ -211,7 +211,7 @@ describe('EnterLectureForm', () => {
 
     it('닉네임이 정확히 16자일 때 버튼이 활성화된다', async () => {
       const user = userEvent.setup();
-      render(<EnterLectureForm />);
+      render(<EnterLectureForm roomId="room-id" />);
 
       const nicknameInput = screen.getByPlaceholderText('예: 호눅스');
       const checkbox = screen.getByRole('checkbox', { name: '데이터 수집에 동의합니다.' });

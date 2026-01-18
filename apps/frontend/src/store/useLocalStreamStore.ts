@@ -76,9 +76,6 @@ export const useStreamStore = create<StreamState>((set, get) => ({
         // 내장 카메라 이외의 다른 카메라 사용 시 getVideoTracks()가 여러 개일 수 있으므로 전체 순회
         localStream.getVideoTracks().forEach((track) => (track.enabled = video));
         localStream.getAudioTracks().forEach((track) => (track.enabled = audio));
-
-        // 변경 알림을 위해 참조 업데이트
-        set({ localStream: new MediaStream(localStream) });
       }
     },
   },
