@@ -1,11 +1,7 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
-interface MediaState {
-  isMicOn: boolean;
-  isCameraOn: boolean;
-  isScreenSharing: boolean;
-  hasHydrated: boolean;
+interface MediaActions {
   toggleMic: () => void;
   toggleCamera: () => void;
   toggleScreenShare: () => void;
@@ -13,24 +9,36 @@ interface MediaState {
   setHasHydrated: (hydrated: boolean) => void;
 }
 
-const initialState: Pick<MediaState, 'isMicOn' | 'isCameraOn' | 'isScreenSharing' | 'hasHydrated'> =
-  {
-    isMicOn: false,
-    isCameraOn: false,
-    isScreenSharing: false,
-    hasHydrated: false,
-  };
+interface MediaState {
+  // 로컬 미디어 UI 상태
+  isMicOn: boolean;
+  isCameraOn: boolean;
+  isScreenSharing: boolean;
+  hasHydrated: boolean;
+
+  // 액션
+  actions: MediaActions;
+}
+
+const initialState: Omit<MediaState, 'actions'> = {
+  isMicOn: false,
+  isCameraOn: false,
+  isScreenSharing: false,
+  hasHydrated: false,
+};
 
 export const useMediaStore = create<MediaState>()(
   persist(
     (set) => ({
       ...initialState,
-      toggleMic: () => set((state) => ({ isMicOn: !state.isMicOn })),
-      toggleCamera: () => set((state) => ({ isCameraOn: !state.isCameraOn })),
-      toggleScreenShare: () => set((state) => ({ isScreenSharing: !state.isScreenSharing })),
-      initialize: (mic, camera) =>
-        set({ isMicOn: mic, isCameraOn: camera, isScreenSharing: false }),
-      setHasHydrated: (hydrated) => set({ hasHydrated: hydrated }),
+      actions: {
+        toggleMic: () => set((state) => ({ isMicOn: !state.isMicOn })),
+        toggleCamera: () => set((state) => ({ isCameraOn: !state.isCameraOn })),
+        toggleScreenShare: () => set((state) => ({ isScreenSharing: !state.isScreenSharing })),
+        initialize: (mic, camera) =>
+          set({ isMicOn: mic, isCameraOn: camera, isScreenSharing: false }),
+        setHasHydrated: (hydrated) => set({ hasHydrated: hydrated }),
+      },
     }),
     {
       name: 'room-media',
@@ -41,7 +49,7 @@ export const useMediaStore = create<MediaState>()(
         isScreenSharing: state.isScreenSharing,
       }),
       onRehydrateStorage: () => (state) => {
-        state?.setHasHydrated(true);
+        state?.actions.setHasHydrated(true);
       },
     },
   ),
