@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import type { ParticipantRole } from '@plum/shared-interfaces';
+import { RtpCapabilities } from 'mediasoup-client/types';
 
 interface MyInfo {
   id: string;
@@ -8,16 +9,22 @@ interface MyInfo {
   role: ParticipantRole;
 }
 
-interface RoomState {
-  myInfo: MyInfo | null;
-  actions: {
-    setMyInfo: (info: MyInfo) => void;
-    reset: () => void;
-  };
+interface RoomActions {
+  setMyInfo: (info: MyInfo) => void;
+  setRouterRtpCapabilities: (capabilities: RtpCapabilities) => void;
+  reset: () => void;
 }
 
-const initialState: Pick<RoomState, 'myInfo'> = {
+interface RoomState {
+  // 내 정보
+  myInfo: MyInfo | null;
+  routerRtpCapabilities: RtpCapabilities | null;
+  actions: RoomActions;
+}
+
+const initialState: Omit<RoomState, 'actions'> = {
   myInfo: null,
+  routerRtpCapabilities: null,
 };
 
 export const useRoomStore = create<RoomState>()(
@@ -26,6 +33,8 @@ export const useRoomStore = create<RoomState>()(
       ...initialState,
       actions: {
         setMyInfo: (info) => set({ myInfo: info }),
+        setRouterRtpCapabilities: (capabilities) => set({ routerRtpCapabilities: capabilities }),
+
         reset: () => set({ ...initialState }),
       },
     }),
@@ -34,6 +43,7 @@ export const useRoomStore = create<RoomState>()(
       storage: createJSONStorage(() => sessionStorage),
       partialize: (state) => ({
         myInfo: state.myInfo,
+        routerRtpCapabilities: state.routerRtpCapabilities,
       }),
     },
   ),
