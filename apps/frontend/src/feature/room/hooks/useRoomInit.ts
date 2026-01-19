@@ -53,7 +53,11 @@ export function useRoomInit() {
   } = useSocketStore((state) => state.actions);
 
   // 미디어 컨트롤러
-  const { startProducing, consumeRemoteProducer } = useMediaConnectionContext();
+  const {
+    startProducing,
+    consumeRemoteProducer,
+    cleanup: cleanupMedia,
+  } = useMediaConnectionContext();
 
   // 소켓 이벤트 핸들러 모음
   const socketEventHandlers: Partial<ServerToClientEvents> = {
@@ -171,9 +175,14 @@ export function useRoomInit() {
    */
   useEffect(() => {
     return () => {
+      // 소켓 이벤트 핸들러 해제
       const eventNames = Object.keys(socketEventHandlers) as (keyof ServerToClientEvents)[];
       unregisterHandlers(eventNames);
       logger.custom.info('[RoomInit] 소켓 리스너 해제 완료');
+
+      // 미디어 자원 정리
+      cleanupMedia();
+      logger.custom.info('[RoomInit] 미디어 연결 자원 정리 완료');
     };
   }, [unregisterHandlers]);
 
