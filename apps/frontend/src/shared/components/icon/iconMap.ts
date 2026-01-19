@@ -36,6 +36,8 @@ import iconsUpload from '@/assets/icons/upload.svg?react';
 import iconsUsers from '@/assets/icons/users.svg?react';
 import iconsVote from '@/assets/icons/vote.svg?react';
 import iconsX from '@/assets/icons/x.svg?react';
+import iconsGestureO from '@/assets/icons/gesture/o.svg?react';
+import iconsGestureX from '@/assets/icons/gesture/x.svg?react';
 
 import iconsThumbsDown from '@/assets/icons/gesture/thumbs-down.svg?react';
 import iconsThumbsUp from '@/assets/icons/gesture/thumbs-up.svg?react';
@@ -97,6 +99,8 @@ export const iconMap = {
   two: iconTwo,
   three: iconThree,
   four: iconFour,
+  'gesture-o': iconsGestureO,
+  'gesture-x': iconsGestureX,
 };
 
 export type IconName = keyof typeof iconMap;
