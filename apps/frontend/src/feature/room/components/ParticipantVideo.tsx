@@ -3,8 +3,62 @@ import { motion } from 'motion/react';
 import { cn } from '@/shared/lib/utils';
 import { Icon } from '@/shared/components/icon/Icon';
 import { Button } from '@/shared/components/Button';
+import { useGestureStore, type GestureProgress } from '../stores/useGestureStore';
+import type { IconName } from '@/shared/components/icon/iconMap';
 
 export type VideoDisplayMode = 'minimize' | 'pip' | 'side';
+
+function GestureProgressOverlay({ gestureProgress }: { gestureProgress: GestureProgress }) {
+  const getGestureIconName = (gesture: GestureProgress['gesture']): IconName | null => {
+    switch (gesture) {
+      case 'thumbs_up':
+        return 'thumbs-up';
+      case 'thumbs_down':
+        return 'thumbs-down';
+      case 'ok_sign':
+        return 'circle-check';
+      default:
+        return null;
+    }
+  };
+
+  const gestureIconName = getGestureIconName(gestureProgress.gesture);
+  const progressRatio = Math.min(1, Math.max(0, gestureProgress.progress));
+  const progressPercent = Math.round(progressRatio * 100);
+
+  return (
+    <div className="pointer-events-none absolute right-2 bottom-2">
+      <div className="flex items-center gap-2 rounded-full bg-gray-700/80 p-2">
+        {gestureIconName && (
+          <div className="relative inline-flex items-center justify-center">
+            <Icon
+              name={gestureIconName}
+              size={24}
+              className="fill-current text-white/50"
+              decorative
+            />
+            <motion.div
+              className="absolute inset-0 overflow-hidden"
+              initial={{ clipPath: 'inset(0 100% 0 0)' }}
+              animate={{ clipPath: `inset(0 ${100 - progressPercent}% 0 0)` }}
+              transition={{
+                duration: 0.2,
+                ease: 'linear',
+              }}
+            >
+              <Icon
+                name={gestureIconName}
+                size={24}
+                className="text-primary fill-current"
+                decorative
+              />
+            </motion.div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 const VIDEO_HEIGHTS = {
   MINIMIZED: 36,
@@ -91,6 +145,14 @@ export function ParticipantVideo({
             />
           </div>
         ))}
+
+      {/* 제스처 인식 프로그레스바 */}
+      {mode !== 'minimize' &&
+        isCurrentUser &&
+        gestureProgress?.gesture &&
+        gestureProgress.progress > 0 && (
+          <GestureProgressOverlay gestureProgress={gestureProgress} />
+        )}
 
       {/* 이름 표시 */}
       <div className="absolute bottom-2 left-2 rounded px-1 text-sm text-white">{name}</div>
