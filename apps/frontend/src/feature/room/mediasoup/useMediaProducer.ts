@@ -16,10 +16,14 @@ export const useMediaProducer = () => {
    * Producer 인스턴스들을 관리 (중복 전송 방지 및 역할별 조회를 위해 Map 사용)
    * Key: 'video' | 'screen' | 'audio' 등 스트림의 용도
    */
-  const producersRef = useRef<Map<string, Producer>>(new Map());
+  const producersRef = useRef<Map<MediaType, Producer>>(new Map());
 
   // UI 레이어에서 현재 어떤 미디어가 송출 중인지 파악할 수 있도록 상태 관리
-  const [activeProducers, setActiveProducers] = useState({ video: false, audio: false });
+  const [activeProducers, setActiveProducers] = useState({
+    video: false,
+    audio: false,
+    screen: false,
+  });
 
   /**
    * 현재 관리 중인 Producer 목록을 스캔하여 UI 상태를 동기화
@@ -30,6 +34,9 @@ export const useMediaProducer = () => {
     setActiveProducers({
       video: producers.some((producer) => producer.kind === 'video'),
       audio: producers.some((producer) => producer.kind === 'audio'),
+      screen: producers.some(
+        (producer) => producer.kind === 'video' && producer.appData.type === 'screen',
+      ),
     });
   }, []);
 
@@ -107,17 +114,19 @@ export const useMediaProducer = () => {
   }, []);
 
   /**
-   * 특정 미디어 타입 중단
+   * 특정 MediaType(video, audio, screen 등) 중단
    * 사용자가 카메라나 마이크를 끌 때 해당 트랙의 송출을 중단하고 자원 정리
    */
   const stopProducing = useCallback(
-    (kind: 'video' | 'audio') => {
-      producersRef.current.forEach((producer) => {
-        if (producer.kind === kind) {
-          producer.close();
-          producersRef.current.delete(producer.appData.type as string);
-        }
-      });
+    (type: MediaType) => {
+      const producer = producersRef.current.get(type);
+
+      if (producer) {
+        producer.close();
+        producersRef.current.delete(type);
+        logger.media.info(`[MediaProducer] ${type} 송출 중단 및 자원 정리 완료`);
+      }
+
       updateActiveState();
     },
     [updateActiveState],
