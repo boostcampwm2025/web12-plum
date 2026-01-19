@@ -12,6 +12,7 @@ import { RoomModule } from './room/room.module.js';
 import { PrometheusModule, MetricsInterceptor } from './prometheus/index.js';
 import { RedisModule } from './redis/redis.module.js';
 import { MediasoupModule } from './mediasoup/mediasoup.module.js';
+import { SocketMetadataService } from './common/services/index.js';
 
 @Module({
   imports: [
@@ -32,6 +33,9 @@ import { MediasoupModule } from './mediasoup/mediasoup.module.js';
   ],
   controllers: [],
   providers: [
+    // 소켓 메타데이터 공유 서비스
+    SocketMetadataService,
+
     // 전역 HTTP 로깅 인터셉터
     {
       provide: APP_INTERCEPTOR,
@@ -50,5 +54,6 @@ import { MediasoupModule } from './mediasoup/mediasoup.module.js';
       useClass: HttpExceptionFilter,
     },
   ],
+  exports: [SocketMetadataService],
 })
 export class AppModule {}
