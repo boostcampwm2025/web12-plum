@@ -1,6 +1,7 @@
 import { Button } from '@/shared/components/Button';
 import { logger } from '@/shared/lib/logger';
 import { useMediaStore } from '../stores/useMediaStore';
+import { useMediaConnectionContext } from '../hooks/useMediaConnectionContext';
 
 interface ScreenShareBannerProps {
   userName: string;
@@ -8,12 +9,11 @@ interface ScreenShareBannerProps {
 
 export function ScreenShareBanner({ userName }: ScreenShareBannerProps) {
   const isScreenSharing = useMediaStore((state) => state.isScreenSharing);
-  const { toggleScreenShare } = useMediaStore((state) => state.actions);
+  const { stopScreenShare } = useMediaConnectionContext();
 
   const handleStopScreenShare = () => {
     logger.ui.debug('화면 공유 중지 요청');
-    toggleScreenShare();
-    // TODO: 화면 공유 중지 로직
+    stopScreenShare();
   };
 
   if (!isScreenSharing) return null;

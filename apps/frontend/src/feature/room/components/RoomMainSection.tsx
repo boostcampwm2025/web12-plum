@@ -6,7 +6,7 @@ import { ParticipantVideo, VideoDisplayMode } from './ParticipantVideo';
 import { useStreamStore } from '@/store/useLocalStreamStore';
 import { useMediaStore } from '../stores/useMediaStore';
 import { MyInfo, useRoomStore } from '../stores/useRoomStore';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 // Mock 데이터 (나중에 실제 데이터로 교체)
 const participants = [
@@ -18,7 +18,34 @@ const participants = [
   { id: '6', name: '정자두' },
 ];
 
-interface ParticipantVideoProps {
+/**
+ * 화면공유 영상을 표시하는 컴포넌트
+ */
+function ScreenShareVideo() {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const isScreenSharing = useMediaStore((state) => state.isScreenSharing);
+  const screenStream = useMediaStore((state) => state.screenStream);
+
+  useEffect(() => {
+    if (videoRef.current && screenStream) {
+      videoRef.current.srcObject = screenStream;
+    }
+  }, [screenStream]);
+
+  if (!isScreenSharing) return <div className="aspect-video w-full rounded-2xl bg-gray-200"></div>;
+
+  return (
+    <video
+      ref={videoRef}
+      autoPlay
+      playsInline
+      muted
+      className="h-full w-full rounded-2xl bg-black object-contain"
+    />
+  );
+}
+
+interface MyVideoProps {
   currentUser: MyInfo;
   videoMode: VideoDisplayMode;
   onModeChange: (mode: VideoDisplayMode) => void;
@@ -28,7 +55,7 @@ interface ParticipantVideoProps {
  * 내 비디오 컴포넌트
  * 비디오 모드가 'pip' 또는 'minimize'일 때만 렌더링
  */
-function MyVideo({ currentUser, videoMode, onModeChange }: ParticipantVideoProps) {
+function MyVideo({ currentUser, videoMode, onModeChange }: MyVideoProps) {
   const isCameraOn = useMediaStore((state) => state.isCameraOn);
   const localStream = useStreamStore((state) => state.localStream);
 
@@ -71,7 +98,7 @@ export function RoomMainSection() {
             ease: 'easeInOut',
           }}
         >
-          <div className="aspect-video w-full rounded-2xl bg-gray-200"></div>
+          <ScreenShareVideo />
           <MyVideo
             currentUser={currentUser}
             videoMode={userVideoMode}

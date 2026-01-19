@@ -4,6 +4,7 @@ import type { IconName } from '@/shared/components/icon/iconMap';
 import { useMediaStore } from '../stores/useMediaStore';
 import { useRoomUIStore } from '../stores/useRoomUIStore';
 import { logger } from '@/shared/lib/logger';
+import { useMediaConnectionContext } from '../hooks/useMediaConnectionContext';
 
 interface MenuButton {
   icon: IconName;
@@ -21,8 +22,9 @@ function MainMenu() {
   const isCameraOn = useMediaStore((state) => state.isCameraOn);
   const isScreenSharing = useMediaStore((state) => state.isScreenSharing);
 
-  const { toggleMic, toggleCamera, toggleScreenShare } = useMediaStore((state) => state.actions);
+  const { toggleMic, toggleCamera } = useMediaStore((state) => state.actions);
   const { activeDialog, setActiveDialog } = useRoomUIStore();
+  const { startScreenShare, stopScreenShare } = useMediaConnectionContext();
 
   const menuButtons: MenuButton[] = [
     {
@@ -41,7 +43,7 @@ function MainMenu() {
       icon: 'screen-share',
       tooltip: isScreenSharing ? '화면공유 중지' : '화면공유',
       isActive: isScreenSharing,
-      onClick: toggleScreenShare,
+      onClick: isScreenSharing ? stopScreenShare : startScreenShare,
     },
     {
       icon: 'vote',
