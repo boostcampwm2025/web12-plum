@@ -7,6 +7,19 @@ import {
   ToggleActionType,
 } from './shared.js';
 
+// 제스처 타입 정의
+export type GestureType =
+  | 'thumbs_up' // 👍 좋아요/이해했어요
+  | 'thumbs_down' // 👎 모르겠어요
+  | 'hand_raise' // ✋ 손들기/질문
+  | 'ok_sign' // 👌 괜찮아요
+  | 'x_sign' // ❌ 반대
+  | 'o_sign' // 🙆 찬성
+  | 'one' // ☝️ 1번 투표
+  | 'two' // ✌️ 2번 투표
+  | 'three' // 3번 투표
+  | 'four'; // 4번 투표
+
 // 클라이언트에서 보내는 데이터 페이로드
 
 export interface JoinRoomRequest {
@@ -48,6 +61,11 @@ export interface ToggleMediaRequest {
   producerId: string;
   action: ToggleActionType;
   type: MediaType;
+}
+
+// 제스처 요청 (클라이언트 -> 서버)
+export interface ActionGestureRequest {
+  gesture: GestureType;
 }
 
 // 클라이언트에서 보낸 요청에 따라 발생하는 이벤트 페이로드
@@ -125,12 +143,21 @@ export interface UserLeftPayload {
 
 export interface NewProducerPayload extends MediasoupProducer {
   participantRole: ParticipantRole;
+  kind: MediaKind;
   type: MediaType;
 }
 
 export type MediaStateChangedPayload = NewProducerPayload & {
   action: ToggleActionType;
 };
+
+// 제스처 상태 업데이트 페이로드
+export interface UpdateGestureStatusPayload {
+  participantId: string;
+  gesture: GestureType;
+}
+
+export type ActionGestureResponse = BaseResponse;
 
 /**
  * 서버 -> 클라이언트 이벤트
@@ -143,6 +170,8 @@ export interface ServerToClientEvents {
   new_producer: (data: NewProducerPayload) => void;
 
   media_state_changed: (data: MediaStateChangedPayload) => void;
+
+  update_gesture_status: (data: UpdateGestureStatusPayload) => void;
 }
 
 /**
@@ -172,4 +201,6 @@ export interface ClientToServerEvents {
   get_producer: (data: GetProducerRequest, cb: (res: GetProducerRequest) => void) => void;
 
   leave_room: (cb: (res: LeaveRoomResponse) => void) => void;
+
+  action_gesture: (data: ActionGestureRequest, cb: (res: ActionGestureResponse) => void) => void;
 }

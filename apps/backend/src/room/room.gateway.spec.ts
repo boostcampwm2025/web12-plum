@@ -9,6 +9,7 @@ import {
   RoomManagerService,
   ParticipantManagerService,
 } from '../redis/repository-manager/index.js';
+import { SocketMetadataService, SocketDeletionMetadataService } from '../common/services/index.js';
 import { SOCKET_TIMEOUT } from '../common/constants/socket.constants.js';
 import { RoomService } from './room.service.js';
 
@@ -16,6 +17,8 @@ describe('RoomGateway', () => {
   let gateway: RoomGateway;
   let mediasoupService: MediasoupService;
   let participantManager: ParticipantManagerService;
+  let socketMetadataService: SocketMetadataService;
+  let socketDeletionMetadataService: SocketDeletionMetadataService;
 
   const createMockSocket = (id: string = 'socket-123') =>
     ({
@@ -96,17 +99,39 @@ describe('RoomGateway', () => {
             updatePartial: jest.fn(),
           },
         },
+        {
+          provide: SocketMetadataService,
+          useValue: {
+            get: jest.fn(),
+            set: jest.fn(),
+            delete: jest.fn(),
+            has: jest.fn(),
+          },
+        },
+        {
+          provide: SocketDeletionMetadataService,
+          useValue: {
+            get: jest.fn(),
+            set: jest.fn(),
+            delete: jest.fn(),
+            has: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
     gateway = module.get<RoomGateway>(RoomGateway);
+    mediasoupService = module.get<MediasoupService>(MediasoupService);
+    participantManager = module.get<ParticipantManagerService>(ParticipantManagerService);
+    socketMetadataService = module.get<SocketMetadataService>(SocketMetadataService);
+    socketDeletionMetadataService = module.get<SocketDeletionMetadataService>(
+      SocketDeletionMetadataService,
+    );
+
     (gateway as any).server = {
       to: jest.fn().mockReturnThis(),
       emit: jest.fn(),
     };
-
-    mediasoupService = module.get<MediasoupService>(MediasoupService);
-    participantManager = module.get<ParticipantManagerService>(ParticipantManagerService);
   });
 
   it('should be defined', () => {
@@ -143,7 +168,7 @@ describe('RoomGateway', () => {
     it('정상적으로 Transport 파라미터를 반환해야 함', async () => {
       const socket = createMockSocket();
       // 먼저 조인된 상태를 메타데이터에 주입
-      gateway['socketMetadata'].set(socket.id, {
+      jest.spyOn(socketMetadataService, 'get').mockReturnValue({
         roomId: 'room-1',
         participantId: 'user-1',
         transportIds: [],
@@ -166,7 +191,7 @@ describe('RoomGateway', () => {
   describe('handleProduce', () => {
     it('Producer를 생성하고 새 프로듀서 알림을 브로드캐스트해야 함', async () => {
       const socket = createMockSocket();
-      gateway['socketMetadata'].set(socket.id, {
+      jest.spyOn(socketMetadataService, 'get').mockReturnValue({
         roomId: 'room-1',
         participantId: 'user-1',
         transportIds: [],
@@ -193,7 +218,7 @@ describe('RoomGateway', () => {
   describe('handleConsume', () => {
     it('Consumer 생성 시 필요한 RTP 파라미터를 반환해야 함', async () => {
       const socket = createMockSocket();
-      gateway['socketMetadata'].set(socket.id, {
+      jest.spyOn(socketMetadataService, 'get').mockReturnValue({
         roomId: 'room-1',
         participantId: 'user-1',
         transportIds: [],
@@ -227,7 +252,7 @@ describe('RoomGateway', () => {
   describe('handleToggleMedia', () => {
     it('pause 액션 시 producer를 일시정지시켜야 함', async () => {
       const socket = createMockSocket();
-      gateway['socketMetadata'].set(socket.id, {
+      jest.spyOn(socketMetadataService, 'get').mockReturnValue({
         roomId: 'room-1',
         participantId: 'user-1',
         transportIds: [],
@@ -260,7 +285,7 @@ describe('RoomGateway', () => {
     it('연결 해제 시 모든 미디어 리소스와 Redis 정보를 정리해야 함', async () => {
       const socket = createMockSocket();
       const transportIds = ['t-1', 't-2'];
-      gateway['socketMetadata'].set(socket.id, {
+      jest.spyOn(socketMetadataService, 'get').mockReturnValue({
         roomId: 'room-1',
         participantId: 'user-1',
         transportIds,
@@ -272,12 +297,18 @@ describe('RoomGateway', () => {
       await gateway.handleDisconnect(socket);
 
       expect(mediasoupService.closeTransport).not.toHaveBeenCalled();
-      expect(gateway['pendingDeletion'].has('user-1')).toBe(true);
+      expect(socketDeletionMetadataService.set).toHaveBeenCalledWith(
+        'user-1',
+        expect.objectContaining({
+          socketId: socket.id,
+          roomId: 'room-1',
+        }),
+      );
 
       await jest.advanceTimersByTimeAsync(SOCKET_TIMEOUT);
 
-      expect(gateway['socketMetadata'].has(socket.id)).toBe(false);
-      expect(gateway['pendingDeletion'].has('user-1')).toBe(false);
+      expect(socketMetadataService.delete).toHaveBeenCalledWith(socket.id);
+      expect(socketDeletionMetadataService.delete).toHaveBeenCalledWith('user-1');
     });
   });
 });

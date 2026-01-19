@@ -21,10 +21,7 @@ import {
   RoomValidationResponse,
 } from '@plum/shared-interfaces';
 import { InteractionService } from '../interaction/interaction.service.js';
-import {
-  ParticipantManagerService,
-  RoomManagerService,
-} from '../redis/repository-manager/index.js';
+import { RoomManagerService } from '../redis/repository-manager/index.js';
 import { MediasoupService } from '../mediasoup/mediasoup.service.js';
 
 const AUDIENCE_VIDEO_LIMIT = 5;
@@ -39,7 +36,6 @@ export class RoomService {
     private readonly configService: ConfigService,
     private readonly interactionService: InteractionService,
     private readonly roomManagerService: RoomManagerService,
-    private readonly participantManagerService: ParticipantManagerService,
     private readonly mediasoupService: MediasoupService,
   ) {
     this.region = configService.get<string>('AWS_S3_REGION') || '';
