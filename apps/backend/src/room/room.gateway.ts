@@ -45,6 +45,7 @@ import {
   RoomManagerService,
   ParticipantManagerService,
 } from '../redis/repository-manager/index.js';
+import { SocketMetadataService } from '../common/services/index.js';
 
 /**
  * 강의실 WebSocket Gateway
@@ -61,16 +62,11 @@ import {
 export class RoomGateway implements OnGatewayDisconnect {
   private readonly logger = new Logger(RoomGateway.name);
 
-  // socket.id -> { roomId, participantId, transportIds } 매핑
-  private socketMetadata: Map<
-    string,
-    { roomId: string; participantId: string; transportIds: string[] }
-  > = new Map();
-
   constructor(
     private readonly mediasoupService: MediasoupService,
     private readonly roomManagerService: RoomManagerService,
     private readonly participantManagerService: ParticipantManagerService,
+    private readonly socketMetadataService: SocketMetadataService,
   ) {}
 
   // join_room: 강의실 입장
@@ -92,7 +88,7 @@ export class RoomGateway implements OnGatewayDisconnect {
       socket.join(roomId);
 
       // 3. 메타데이터 저장
-      this.socketMetadata.set(socket.id, {
+      this.socketMetadataService.set(socket.id, {
         roomId,
         participantId,
         transportIds: [],
@@ -123,7 +119,7 @@ export class RoomGateway implements OnGatewayDisconnect {
     @ConnectedSocket() socket: Socket,
     @MessageBody() data: CreateTransportRequest,
   ): Promise<CreateTransportResponse<IceParameters, IceCandidate[], DtlsParameters>> {
-    const metadata = this.socketMetadata.get(socket.id);
+    const metadata = this.socketMetadataService.get(socket.id);
     if (!metadata) {
       return { success: false, error: '먼저 join_room을 호출하세요.' };
     }
@@ -164,7 +160,7 @@ export class RoomGateway implements OnGatewayDisconnect {
     @ConnectedSocket() socket: Socket,
     @MessageBody() data: ConnectTransportRequest<DtlsParameters>,
   ): Promise<ConnectTransportResponse> {
-    const metadata = this.socketMetadata.get(socket.id);
+    const metadata = this.socketMetadataService.get(socket.id);
     if (!metadata) {
       return { success: false, error: '먼저 join_room을 호출하세요.' };
     }
@@ -187,7 +183,7 @@ export class RoomGateway implements OnGatewayDisconnect {
     @ConnectedSocket() socket: Socket,
     @MessageBody() data: ProduceRequest<RtpParameters>,
   ): Promise<ProduceResponse> {
-    const metadata = this.socketMetadata.get(socket.id);
+    const metadata = this.socketMetadataService.get(socket.id);
     if (!metadata) return { success: false, error: '먼저 join_room을 호출하세요.' };
 
     try {
@@ -232,7 +228,7 @@ export class RoomGateway implements OnGatewayDisconnect {
     @ConnectedSocket() socket: Socket,
     @MessageBody() data: GetProducerRequest,
   ): Promise<GetProducerResponse> {
-    const metadata = this.socketMetadata.get(socket.id);
+    const metadata = this.socketMetadataService.get(socket.id);
     if (!metadata) return { success: false, error: '먼저 join_room을 호출하세요.' };
 
     try {
@@ -256,7 +252,7 @@ export class RoomGateway implements OnGatewayDisconnect {
     @ConnectedSocket() socket: Socket,
     @MessageBody() data: ConsumeRequest<RtpCapabilities>,
   ): Promise<ConsumeResponse<RtpParameters>> {
-    const metadata = this.socketMetadata.get(socket.id);
+    const metadata = this.socketMetadataService.get(socket.id);
     if (!metadata) return { success: false, error: '먼저 join_room을 호출하세요.' };
 
     try {
@@ -308,7 +304,7 @@ export class RoomGateway implements OnGatewayDisconnect {
     @ConnectedSocket() socket: Socket,
     @MessageBody() data: ToggleMediaRequest,
   ): Promise<ToggleMediaResponse> {
-    const metadata = this.socketMetadata.get(socket.id);
+    const metadata = this.socketMetadataService.get(socket.id);
     if (!metadata) return { success: false, error: '먼저 join_room을 호출하세요.' };
 
     try {
@@ -351,7 +347,7 @@ export class RoomGateway implements OnGatewayDisconnect {
 
   // 공통 정리 로직
   private async cleanupSocket(socket: Socket, reason: string) {
-    const metadata = this.socketMetadata.get(socket.id);
+    const metadata = this.socketMetadataService.get(socket.id);
     if (!metadata) return;
 
     const { roomId, participantId, transportIds } = metadata;
@@ -382,7 +378,7 @@ export class RoomGateway implements OnGatewayDisconnect {
       await this.roomManagerService.removeParticipant(roomId, participantId);
 
       // 5. 메타데이터 삭제
-      this.socketMetadata.delete(socket.id);
+      this.socketMetadataService.delete(socket.id);
 
       this.logger.log(`[${reason}] ${participant?.name || participantId} left room ${roomId}`);
     } catch (error) {
