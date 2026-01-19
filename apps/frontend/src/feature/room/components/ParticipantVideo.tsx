@@ -9,18 +9,21 @@ import type { IconName } from '@/shared/components/icon/iconMap';
 export type VideoDisplayMode = 'minimize' | 'pip' | 'side';
 
 function GestureProgressOverlay({ gestureProgress }: { gestureProgress: GestureProgress }) {
-  const getGestureIconName = (gesture: GestureProgress['gesture']): IconName | null => {
-    switch (gesture) {
-      case 'thumbs_up':
-        return 'thumbs-up';
-      case 'thumbs_down':
-        return 'thumbs-down';
-      case 'ok_sign':
-        return 'circle-check';
-      default:
-        return null;
-    }
+  const GESTURE_ICON_MAP: Record<NonNullable<GestureProgress['gesture']>, IconName> = {
+    thumbs_up: 'thumbs-up',
+    thumbs_down: 'thumbs-down',
+    hand_raise: 'hand-raise',
+    ok_sign: 'circle-check',
+    one: 'one',
+    two: 'two',
+    three: 'three',
+    four: 'four',
+    x_sign: 'x',
+    o_sign: 'circle-check',
   };
+
+  const getGestureIconName = (gesture: GestureProgress['gesture']): IconName | null =>
+    gesture ? (GESTURE_ICON_MAP[gesture] ?? null) : null;
 
   const gestureIconName = getGestureIconName(gestureProgress.gesture);
   const progressRatio = Math.min(1, Math.max(0, gestureProgress.progress));

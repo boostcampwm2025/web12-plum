@@ -3,7 +3,7 @@ import { useParams } from 'react-router';
 import { FilesetResolver, GestureRecognizer } from '@mediapipe/tasks-vision';
 import type { GestureType } from '@plum/shared-interfaces';
 import { logger } from '@/shared/lib/logger';
-import { isOkSign } from '../utils/gestureLandmarks';
+import { isFourSign, isOkSign, isOneSign, isThreeSign, isTwoSign } from '../utils/gestureLandmarks';
 import { useRoomStore } from '../stores/useRoomStore';
 import { useSocketStore } from '@/store/useSocketStore';
 import { useGestureStore } from '../stores/useGestureStore';
@@ -27,7 +27,12 @@ const GESTURE_MODEL_URL =
 const GESTURE_NAME_MAP: Record<string, GestureType> = {
   thumb_up: 'thumbs_up',
   thumb_down: 'thumbs_down',
+  open_palm: 'hand_raise',
   ok_sign: 'ok_sign',
+  one: 'one',
+  two: 'two',
+  three: 'three',
+  four: 'four',
 };
 
 const HOLD_DURATION_MS = 1500;
@@ -175,11 +180,19 @@ export function useGestureRecognition({ enabled, videoElement }: GestureRecognit
 
       // 랜드마크 기반 커스텀 제스처 인식
       if (!detectedGesture && result.landmarks?.[0]) {
-        if (isOkSign(result.landmarks[0])) {
-          detectedGesture = 'ok_sign';
-        }
+        const landmarks = result.landmarks[0];
 
-        // TODO: 추가 제스처 인식 로직 구현
+        if (isOkSign(landmarks)) {
+          detectedGesture = 'ok_sign';
+        } else if (isOneSign(landmarks)) {
+          detectedGesture = 'one';
+        } else if (isTwoSign(landmarks)) {
+          detectedGesture = 'two';
+        } else if (isThreeSign(landmarks)) {
+          detectedGesture = 'three';
+        } else if (isFourSign(landmarks)) {
+          detectedGesture = 'four';
+        }
       }
 
       updateGestureState(detectedGesture, timestamp);

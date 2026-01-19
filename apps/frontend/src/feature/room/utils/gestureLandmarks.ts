@@ -18,6 +18,9 @@ const EXTENDED_FINGER_DELTA = 0.02;
 const isFingerExtended = (landmarks: Landmark[], tip: number, pip: number) =>
   landmarks[tip].y + EXTENDED_FINGER_DELTA < landmarks[pip].y;
 
+const isFingerFolded = (landmarks: Landmark[], tip: number, pip: number) =>
+  landmarks[tip].y - EXTENDED_FINGER_DELTA > landmarks[pip].y;
+
 export const isOkSign = (landmarks: Landmark[]) => {
   const thumb = landmarks[LANDMARK_INDEX.thumbTip];
   const index = landmarks[LANDMARK_INDEX.indexTip];
@@ -40,4 +43,76 @@ export const isOkSign = (landmarks: Landmark[]) => {
   );
 
   return middleExtended && ringExtended && pinkyExtended;
+};
+
+export const isOneSign = (landmarks: Landmark[]) => {
+  const indexExtended = isFingerExtended(
+    landmarks,
+    LANDMARK_INDEX.indexTip,
+    LANDMARK_INDEX.indexPip,
+  );
+  const middleFolded = isFingerFolded(
+    landmarks,
+    LANDMARK_INDEX.middleTip,
+    LANDMARK_INDEX.middlePip,
+  );
+  const ringFolded = isFingerFolded(landmarks, LANDMARK_INDEX.ringTip, LANDMARK_INDEX.ringPip);
+  const pinkyFolded = isFingerFolded(landmarks, LANDMARK_INDEX.pinkyTip, LANDMARK_INDEX.pinkyPip);
+
+  return indexExtended && middleFolded && ringFolded && pinkyFolded;
+};
+
+export const isTwoSign = (landmarks: Landmark[]) => {
+  const indexExtended = isFingerExtended(
+    landmarks,
+    LANDMARK_INDEX.indexTip,
+    LANDMARK_INDEX.indexPip,
+  );
+  const middleExtended = isFingerExtended(
+    landmarks,
+    LANDMARK_INDEX.middleTip,
+    LANDMARK_INDEX.middlePip,
+  );
+  const ringFolded = isFingerFolded(landmarks, LANDMARK_INDEX.ringTip, LANDMARK_INDEX.ringPip);
+  const pinkyFolded = isFingerFolded(landmarks, LANDMARK_INDEX.pinkyTip, LANDMARK_INDEX.pinkyPip);
+
+  return indexExtended && middleExtended && ringFolded && pinkyFolded;
+};
+
+export const isThreeSign = (landmarks: Landmark[]) => {
+  const indexExtended = isFingerExtended(
+    landmarks,
+    LANDMARK_INDEX.indexTip,
+    LANDMARK_INDEX.indexPip,
+  );
+  const middleExtended = isFingerExtended(
+    landmarks,
+    LANDMARK_INDEX.middleTip,
+    LANDMARK_INDEX.middlePip,
+  );
+  const ringExtended = isFingerExtended(landmarks, LANDMARK_INDEX.ringTip, LANDMARK_INDEX.ringPip);
+  const pinkyFolded = isFingerFolded(landmarks, LANDMARK_INDEX.pinkyTip, LANDMARK_INDEX.pinkyPip);
+
+  return indexExtended && middleExtended && ringExtended && pinkyFolded;
+};
+
+export const isFourSign = (landmarks: Landmark[]) => {
+  const indexExtended = isFingerExtended(
+    landmarks,
+    LANDMARK_INDEX.indexTip,
+    LANDMARK_INDEX.indexPip,
+  );
+  const middleExtended = isFingerExtended(
+    landmarks,
+    LANDMARK_INDEX.middleTip,
+    LANDMARK_INDEX.middlePip,
+  );
+  const ringExtended = isFingerExtended(landmarks, LANDMARK_INDEX.ringTip, LANDMARK_INDEX.ringPip);
+  const pinkyExtended = isFingerExtended(
+    landmarks,
+    LANDMARK_INDEX.pinkyTip,
+    LANDMARK_INDEX.pinkyPip,
+  );
+
+  return indexExtended && middleExtended && ringExtended && pinkyExtended;
 };
