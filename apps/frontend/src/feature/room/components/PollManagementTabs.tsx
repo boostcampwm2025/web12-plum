@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { useState } from 'react';
 import { Button } from '@/shared/components/Button';
 import { Icon } from '@/shared/components/icon/Icon';
+import { PollModal } from '@/shared/components/PollModal';
 import { Tabs, TabsList, TabContent, type TabItem, type TabValue } from './Tabs';
 import { ScheduledCard } from './ScheduledCard';
 import { TimeLeft } from './TimeLeft';
@@ -94,57 +95,70 @@ export function PollManagementTabs() {
   const [activeTab, setActiveTab] = useState<TabValue>('scheduled');
 
   return (
-    <Tabs
-      value={activeTab}
-      onChange={setActiveTab}
-    >
-      <TabsList tabs={voteTabs} />
-      <TabContent value={activeTab}>
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeTab}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.2 }}
-            className="flex min-h-0 flex-1 flex-col"
-          >
-            {activeTab === 'scheduled' && <ScheduledVoteList />}
-            {activeTab === 'active' && <ActiveVoteSection />}
-            {activeTab === 'completed' && <CompletedVoteSection />}
-          </motion.div>
-        </AnimatePresence>
-      </TabContent>
-    </Tabs>
+    <>
+      <Tabs
+        value={activeTab}
+        onChange={setActiveTab}
+      >
+        <TabsList tabs={voteTabs} />
+        <TabContent value={activeTab}>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.2 }}
+              className="flex min-h-0 flex-1 flex-col"
+            >
+              {activeTab === 'scheduled' && <ScheduledVoteList />}
+              {activeTab === 'active' && <ActiveVoteSection />}
+              {activeTab === 'completed' && <CompletedVoteSection />}
+            </motion.div>
+          </AnimatePresence>
+        </TabContent>
+      </Tabs>
+    </>
   );
 }
 
 function ScheduledVoteList() {
+  const [isPollModalOpen, setIsPollModalOpen] = useState(false);
+
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4">
-      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
-        {scheduledVotes.length === 0 && (
-          <div className="text-subtext flex flex-1 items-center justify-center text-sm font-bold">
-            예정된 투표가 없습니다.
-          </div>
-        )}
-        {scheduledVotes.map((vote) => (
-          <ScheduledCard
-            key={vote.id}
-            title={vote.title}
+    <>
+      <div className="flex min-h-0 flex-1 flex-col gap-4">
+        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
+          {scheduledVotes.length === 0 && (
+            <div className="text-subtext flex flex-1 items-center justify-center text-sm font-bold">
+              예정된 투표가 없습니다.
+            </div>
+          )}
+          {scheduledVotes.map((vote) => (
+            <ScheduledCard
+              key={vote.id}
+              title={vote.title}
+            />
+          ))}
+        </div>
+        <Button
+          className="w-full"
+          onClick={() => setIsPollModalOpen(true)}
+        >
+          <Icon
+            name="plus"
+            size={16}
+            decorative
           />
-        ))}
+          새로운 투표 추가
+        </Button>
       </div>
-      <Button className="w-full">
-        <Icon
-          name="plus"
-          size={16}
-          className="text-text"
-          decorative
-        />
-        새로운 투표 추가
-      </Button>
-    </div>
+      <PollModal
+        isOpen={isPollModalOpen}
+        onClose={() => setIsPollModalOpen(false)}
+        onSubmit={() => undefined}
+      />
+    </>
   );
 }
 
@@ -208,7 +222,7 @@ function ActiveVoteSection() {
         </div>
       </div>
 
-      <Button className="bg-error hover:bg-error/90 mt-auto w-full text-white">종료하기</Button>
+      <Button className="bg-error mt-auto w-full">종료하기</Button>
     </div>
   );
 }
@@ -295,7 +309,7 @@ function CompletedVoteSection() {
                     {voters.length === 0 ? (
                       <div className="text-subtext">투표자가 없습니다.</div>
                     ) : (
-                      <div className="flex flex-col gap-2">
+                      <div className="flex flex-wrap gap-x-3 gap-y-2">
                         {voters.map((name) => (
                           <div key={name}>{name}</div>
                         ))}
