@@ -101,6 +101,8 @@ export type ToggleMediaResponse = BaseResponse;
 
 export type LeaveRoomResponse = BaseResponse;
 
+export type BreakRoomResponse = BaseResponse;
+
 // 서버에서 보내는 브로드캐스트 페이로드
 export interface UserJoinedPayload {
   id: string;
@@ -138,6 +140,8 @@ export interface ServerToClientEvents {
   new_producer: (data: NewProducerPayload) => void;
 
   media_state_changed: (data: MediaStateChangedPayload) => void;
+
+  room_end: () => void;
 }
 
 /**
@@ -167,4 +171,6 @@ export interface ClientToServerEvents {
   get_producer: (data: GetProducerRequest, cb: (res: GetProducerRequest) => void) => void;
 
   leave_room: (cb: (res: LeaveRoomResponse) => void) => void;
+
+  break_room: (db: (res: BreakRoomResponse) => void) => void;
 }
