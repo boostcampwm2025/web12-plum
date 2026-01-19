@@ -97,6 +97,14 @@ export class RoomGateway implements OnGatewayDisconnect {
     if (pending) {
       this.logger.log(`[reconnect] ${participantId} 유저 재접속 확인. 삭제 취소.`);
       const participant = await this.participantManagerService.findOne(participantId);
+      await this.participantManagerService.updatePartial(participantId, {
+        producers: {
+          video: '',
+          audio: '',
+          screen: '',
+        },
+        consumers: [],
+      });
 
       this.cleanupMediasoup(pending.transportIds, participant!);
       clearTimeout(pending.timer);
@@ -122,14 +130,16 @@ export class RoomGateway implements OnGatewayDisconnect {
       });
 
       // 4. 다른 참가자들에게 user_joined 브로드캐스트
-      const payload: UserJoinedPayload = {
-        id: participant.id,
-        name: participant.name,
-        role: participant.role,
-        joinedAt: new Date(),
-      };
+      if (!pending) {
+        const payload: UserJoinedPayload = {
+          id: participant.id,
+          name: participant.name,
+          role: participant.role,
+          joinedAt: new Date(),
+        };
 
-      socket.to(roomId).emit('user_joined', payload);
+        socket.to(roomId).emit('user_joined', payload);
+      }
 
       this.logger.log(`✅ [join_room] ${participant.name}님이 ${roomId} 강의실에 입장했습니다.`);
       const mediasoup = await this.roomService.getRoomInfo(roomId, participant);
