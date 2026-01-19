@@ -60,6 +60,7 @@ export interface ToggleMediaRequest {
   type: MediaType;
 }
 
+// 제스처 요청 (클라이언트 -> 서버)
 export interface ActionGestureRequest {
   gesture: GestureType;
 }
@@ -144,6 +145,14 @@ export type MediaStateChangedPayload = NewProducerPayload & {
   action: ToggleActionType;
 };
 
+// 제스처 상태 업데이트 페이로드
+export interface UpdateGestureStatusPayload {
+  participantId: string;
+  gesture: GestureType;
+}
+
+export type ActionGestureResponse = BaseResponse;
+
 /**
  * 서버 -> 클라이언트 이벤트
  */
@@ -155,6 +164,8 @@ export interface ServerToClientEvents {
   new_producer: (data: NewProducerPayload) => void;
 
   media_state_changed: (data: MediaStateChangedPayload) => void;
+
+  update_gesture_status: (data: UpdateGestureStatusPayload) => void;
 }
 
 /**
@@ -184,4 +195,6 @@ export interface ClientToServerEvents {
   get_producer: (data: GetProducerRequest, cb: (res: GetProducerRequest) => void) => void;
 
   leave_room: (cb: (res: LeaveRoomResponse) => void) => void;
+
+  action_gesture: (data: ActionGestureRequest, cb: (res: ActionGestureResponse) => void) => void;
 }
