@@ -12,7 +12,7 @@ import { RoomModule } from './room/room.module.js';
 import { PrometheusModule, MetricsInterceptor } from './prometheus/index.js';
 import { RedisModule } from './redis/redis.module.js';
 import { MediasoupModule } from './mediasoup/mediasoup.module.js';
-import { SocketMetadataService } from './common/services/index.js';
+import { SocketMetadataModule } from './common/services/index.js';
 
 @Module({
   imports: [
@@ -26,6 +26,9 @@ import { SocketMetadataService } from './common/services/index.js';
     ConfigModule.forRoot({ isGlobal: true }),
     PrometheusModule,
 
+    // 소켓 메타데이터 공유 (전역 모듈)
+    SocketMetadataModule,
+
     // Gateway 모듈들 (Redis에 의존)
     MediaModule,
     InteractionModule,
@@ -33,9 +36,6 @@ import { SocketMetadataService } from './common/services/index.js';
   ],
   controllers: [],
   providers: [
-    // 소켓 메타데이터 공유 서비스
-    SocketMetadataService,
-
     // 전역 HTTP 로깅 인터셉터
     {
       provide: APP_INTERCEPTOR,
@@ -54,6 +54,5 @@ import { SocketMetadataService } from './common/services/index.js';
       useClass: HttpExceptionFilter,
     },
   ],
-  exports: [SocketMetadataService],
 })
 export class AppModule {}
