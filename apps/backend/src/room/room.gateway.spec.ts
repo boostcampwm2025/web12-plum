@@ -288,8 +288,8 @@ describe('RoomGateway', () => {
       const presenterId = 'presenter-456';
 
       // 1. 메타데이터 설정
-      gateway['socketMetadata'].set(socket.id, {
-        roomId,
+      jest.spyOn(socketMetadataService, 'get').mockReturnValue({
+        roomId: 'room-1',
         participantId: presenterId,
         transportIds: [],
       });
@@ -325,7 +325,7 @@ describe('RoomGateway', () => {
 
     it('발표자가 아닌 참가자가 요청할 경우 권한 에러를 반환해야 함', async () => {
       const socket = createMockSocket();
-      gateway['socketMetadata'].set(socket.id, {
+      jest.spyOn(socketMetadataService, 'get').mockReturnValue({
         roomId: 'r1',
         participantId: 'u1',
         transportIds: [],
@@ -347,9 +347,9 @@ describe('RoomGateway', () => {
 
     it('이미 종료된 방인 경우 에러를 반환해야 함', async () => {
       const socket = createMockSocket();
-      gateway['socketMetadata'].set(socket.id, {
+      jest.spyOn(socketMetadataService, 'get').mockReturnValue({
         roomId: 'r1',
-        participantId: 'p1',
+        participantId: 'u1',
         transportIds: [],
       });
 
