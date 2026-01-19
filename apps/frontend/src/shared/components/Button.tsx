@@ -21,37 +21,60 @@ const buttonVariants = cva(
   },
 );
 
-type ButtonElement = 'button' | 'a';
-
-type ButtonProps = {
-  as?: ButtonElement;
+type ButtonBaseProps = {
   children?: ReactNode;
   tooltip?: string;
   tooltipPosition?: 'top' | 'bottom' | 'left' | 'right';
-} & VariantProps<typeof buttonVariants> &
-  ((ComponentProps<'button'> & { as?: 'button' }) | (ComponentProps<'a'> & { as: 'a' }));
+  className?: string;
+} & VariantProps<typeof buttonVariants>;
 
-export function Button({
-  as = 'button',
-  variant,
-  children,
-  tooltip,
-  tooltipPosition = 'top',
-  className,
-  ...props
-}: ButtonProps) {
-  const Component = as;
-  const componentProps = {
-    ...props,
-    className: cn(buttonVariants({ variant }), className),
-  };
+type ButtonAsButtonProps = ButtonBaseProps &
+  Omit<ComponentProps<'button'>, 'className' | 'children'> & { as?: 'button' };
 
-  if (Component === 'button') {
-    const buttonProps = componentProps as ComponentProps<'button'>;
-    buttonProps.type = buttonProps.type ?? 'button';
+type ButtonAsAnchorProps = ButtonBaseProps &
+  Omit<ComponentProps<'a'>, 'className' | 'children'> & { as: 'a' };
+
+type ButtonProps = ButtonAsButtonProps | ButtonAsAnchorProps;
+
+export function Button(props: ButtonProps) {
+  const { variant, children, tooltip, tooltipPosition = 'top', className } = props;
+  const sharedClassName = cn(buttonVariants({ variant }), className);
+
+  if (props.as === 'a') {
+    const { as: _as, ...anchorProps } = props as ButtonAsAnchorProps;
+    const button = (
+      <a
+        {...anchorProps}
+        className={sharedClassName}
+      >
+        {children}
+      </a>
+    );
+
+    if (tooltip) {
+      return (
+        <Tooltip
+          content={tooltip}
+          position={tooltipPosition}
+        >
+          {button}
+        </Tooltip>
+      );
+    }
+
+    return button;
   }
 
-  const button = <Component {...componentProps}>{children}</Component>;
+  const { as: _as, type, ...buttonProps } = props as ButtonAsButtonProps;
+  const button = (
+    <button
+      {...buttonProps}
+      type={type ?? 'button'}
+      className={sharedClassName}
+    >
+      {children}
+    </button>
+  );
 
   if (tooltip) {
     return (
