@@ -1,9 +1,10 @@
 import { useEffect, useRef } from 'react';
 import { useParams } from 'react-router';
-import { FilesetResolver, GestureRecognizer } from '@mediapipe/tasks-vision';
+import { FilesetResolver, GestureRecognizer, PoseLandmarker } from '@mediapipe/tasks-vision';
 import type { GestureType } from '@plum/shared-interfaces';
 import { logger } from '@/shared/lib/logger';
 import { isFourSign, isOkSign, isOneSign, isThreeSign, isTwoSign } from '../utils/gestureLandmarks';
+import { isPoseO, isPoseX } from '../utils/poseLandmarks';
 import { useRoomStore } from '../stores/useRoomStore';
 import { useSocketStore } from '@/store/useSocketStore';
 import { useGestureStore } from '../stores/useGestureStore';
@@ -23,6 +24,8 @@ const WASM_BASE_URL =
   'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22-rc.20250304/wasm';
 const GESTURE_MODEL_URL =
   'https://storage.googleapis.com/mediapipe-models/gesture_recognizer/gesture_recognizer/float16/latest/gesture_recognizer.task';
+const POSE_MODEL_URL =
+  'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/latest/pose_landmarker_lite.task';
 
 const GESTURE_NAME_MAP: Record<string, GestureType> = {
   thumb_up: 'thumbs_up',
@@ -64,6 +67,7 @@ export function useGestureRecognition({ enabled, videoElement }: GestureRecognit
     let animationFrameId = 0;
     let lastInferenceAt = 0;
     let recognizer: GestureRecognizer | null = null;
+    let poseLandmarker: PoseLandmarker | null = null;
     let isActive = true;
     let hasRecognizer = false;
     let hasStarted = false;
@@ -77,8 +81,16 @@ export function useGestureRecognition({ enabled, videoElement }: GestureRecognit
           },
           runningMode: 'VIDEO',
         });
+        poseLandmarker = await PoseLandmarker.createFromOptions(vision, {
+          baseOptions: {
+            modelAssetPath: POSE_MODEL_URL,
+          },
+          runningMode: 'VIDEO',
+          numPoses: 1,
+        });
         hasRecognizer = true;
         logger.media.info('MediaPipe GestureRecognizer 초기화 완료');
+        logger.media.info('MediaPipe PoseLandmarker 초기화 완료');
       } catch (error) {
         logger.media.error('MediaPipe GestureRecognizer 초기화 실패', error);
       }
@@ -150,7 +162,7 @@ export function useGestureRecognition({ enabled, videoElement }: GestureRecognit
     };
 
     const detectLoop = () => {
-      if (!isActive || !videoElement || !recognizer) {
+      if (!isActive || !videoElement || !recognizer || !poseLandmarker) {
         return;
       }
 
@@ -169,6 +181,7 @@ export function useGestureRecognition({ enabled, videoElement }: GestureRecognit
       }
       lastInferenceAt = timestamp;
       const result = recognizer.recognizeForVideo(videoElement, timestamp);
+      const poseResult = poseLandmarker.detectForVideo(videoElement, timestamp);
       const topGesture = result.gestures?.[0]?.[0];
       let detectedGesture: GestureType | null = null;
 
@@ -195,6 +208,17 @@ export function useGestureRecognition({ enabled, videoElement }: GestureRecognit
         }
       }
 
+      if (!detectedGesture && poseResult.landmarks?.[0]) {
+        const poseLandmarks = poseResult.landmarks[0];
+        if (isPoseO(poseLandmarks)) {
+          detectedGesture = 'o_sign';
+        } else if (isPoseX(poseLandmarks)) {
+          detectedGesture = 'x_sign';
+        }
+      } else if (!detectedGesture) {
+        logger.media.debug('Pose landmarks 미검출');
+      }
+
       updateGestureState(detectedGesture, timestamp);
       animationFrameId = requestAnimationFrame(detectLoop);
     };
@@ -219,6 +243,7 @@ export function useGestureRecognition({ enabled, videoElement }: GestureRecognit
       }
       videoElement.removeEventListener('loadeddata', handleLoadedData);
       recognizer?.close();
+      poseLandmarker?.close();
       gestureStateRef.current = { gesture: null, startedAt: 0, confirmedGesture: null };
       resetGestureProgress();
     };

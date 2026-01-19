@@ -18,8 +18,8 @@ function GestureProgressOverlay({ gestureProgress }: { gestureProgress: GestureP
     two: 'two',
     three: 'three',
     four: 'four',
-    x_sign: 'x',
-    o_sign: 'circle-check',
+    x_sign: 'gesture-x',
+    o_sign: 'gesture-o',
   };
 
   const getGestureIconName = (gesture: GestureProgress['gesture']): IconName | null =>
