@@ -32,7 +32,7 @@ describe('PollManagementTabs', () => {
 
     expect(screen.getByTestId('poll-modal')).toHaveAttribute('data-open', 'false');
 
-    await user.click(screen.getByRole('button', { name: '새로운 투표 추가' }));
+    await user.click(screen.getByRole('button', { name: /새로운 투표 추가/ }));
 
     expect(screen.getByTestId('poll-modal')).toHaveAttribute('data-open', 'true');
   });
@@ -41,21 +41,21 @@ describe('PollManagementTabs', () => {
     const user = userEvent.setup();
     render(<PollManagementTabs />);
 
-    await user.click(screen.getByRole('tab', { name: '진행중' }));
+    await user.click(screen.getByRole('tab', { name: /진행중/ }));
 
-    expect(screen.getByText('오늘 저녁 메뉴로 가장 적절한 것은?')).toBeInTheDocument();
-    expect(screen.getByText('삼겹살에 된장찌개')).toBeInTheDocument();
-    expect(screen.getByText('연어 포케')).toBeInTheDocument();
+    await screen.findByText('오늘 저녁 메뉴로 가장 적절한 것은?');
+    await screen.findByText('삼겹살에 된장찌개');
+    await screen.findByText('연어 포케');
   });
 
   it('완료 탭으로 이동하면 완료된 투표가 보인다', async () => {
     const user = userEvent.setup();
     render(<PollManagementTabs />);
 
-    await user.click(screen.getByRole('tab', { name: '완료' }));
+    await user.click(screen.getByRole('tab', { name: /완료/ }));
 
-    expect(screen.getByText('지난 회의 만족도는 어땠나요?')).toBeInTheDocument();
-    expect(screen.getByText('만족')).toBeInTheDocument();
-    expect(screen.getByText('보통')).toBeInTheDocument();
+    await screen.findByText('지난 회의 만족도는 어땠나요?');
+    await screen.findByText('만족');
+    await screen.findByText('보통');
   });
 });
