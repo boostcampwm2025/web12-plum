@@ -50,29 +50,6 @@ function MyVideo({ currentUser, videoMode, onModeChange }: ParticipantVideoProps
 }
 
 /**
- * 참가자 그리드 섹션
- * 비디오 모드가 'side'일 때만 렌더링
- */
-function ParticipantGridSection({ currentUser, videoMode, onModeChange }: ParticipantVideoProps) {
-  const isCameraOn = useMediaStore((state) => state.isCameraOn);
-  const localStream = useStreamStore((state) => state.localStream);
-
-  if (videoMode !== 'side') return null;
-
-  return (
-    <aside className="bg-gray-700">
-      <ParticipantGrid
-        currentUser={currentUser}
-        participants={participants}
-        onModeChange={onModeChange}
-        localStream={localStream}
-        isCameraOn={isCameraOn}
-      />
-    </aside>
-  );
-}
-
-/**
  * 강의실 메인 섹션 컴포넌트
  * 강의 화면과 참가자 비디오를 포함
  */
@@ -103,9 +80,10 @@ export function RoomMainSection() {
         </motion.div>
       </main>
 
-      <ParticipantGridSection
+      <ParticipantGrid
         currentUser={currentUser}
         videoMode={userVideoMode}
+        participants={participants}
         onModeChange={setUserVideoMode}
       />
     </>
