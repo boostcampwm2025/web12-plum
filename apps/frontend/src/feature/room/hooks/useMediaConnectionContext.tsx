@@ -49,7 +49,7 @@ export function MediaConnectionProvider({ children }: MediaConnectionProviderPro
   const { consume, removeAll: removeConsumers } = useMediaConsumer();
 
   // 외부 스토어 액션
-  const { setTracksEnabled } = useStreamStore((state) => state.actions);
+  const { setTracksEnabled, stopStream } = useStreamStore((state) => state.actions);
   const { setScreenSharing, setScreenStream } = useMediaStore((state) => state.actions);
   const { addRemoteStream, resetRemoteStreams, toggleMic, toggleCamera } = useMediaStore(
     (state) => state.actions,
@@ -230,12 +230,16 @@ export function MediaConnectionProvider({ children }: MediaConnectionProviderPro
     closeTransports();
     resetRemoteStreams();
 
-    // 상태 초기화
+    // 로컬 스트림 정리
+    stopStream();
     setScreenStream(null);
+
+    // 상태 초기화
     setScreenSharing(false);
 
     logger.media.info('[MediaConnection] 모든 미디어 자원(Transport/Producer/Consumer) 정리 완료');
   }, [
+    stopStream,
     stopProducers,
     removeConsumers,
     closeTransports,
