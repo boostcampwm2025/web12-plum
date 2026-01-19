@@ -1,11 +1,12 @@
 import { UseFilters, Logger } from '@nestjs/common';
 import {
   WebSocketGateway,
+  WebSocketServer,
   SubscribeMessage,
   ConnectedSocket,
   MessageBody,
 } from '@nestjs/websockets';
-import { Socket } from 'socket.io';
+import { Server, Socket } from 'socket.io';
 import {
   ActionGestureRequest,
   ActionGestureResponse,
@@ -19,6 +20,9 @@ import { ParticipantManagerService } from '../redis/repository-manager/index.js'
 @UseFilters(WsExceptionFilter)
 @WebSocketGateway(SOCKET_CONFIG)
 export class InteractionGateway {
+  @WebSocketServer()
+  private server: Server;
+
   private readonly logger = new Logger(InteractionGateway.name);
 
   constructor(
@@ -56,8 +60,7 @@ export class InteractionGateway {
         gesture: data.gesture,
       };
 
-      socket.to(roomId).emit('update_gesture_status', payload); // 다른 사람들
-      socket.emit('update_gesture_status', payload); // 본인에게도
+      this.server.to(roomId).emit('update_gesture_status', payload);
 
       this.logger.log(`[action_gesture] ${participant.name}님이 ${data.gesture} 제스처`);
 
