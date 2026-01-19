@@ -6,6 +6,7 @@ import { InfoPanel } from './InfoPanel';
 import { MenuPanel } from './MenuPanel';
 import { SidePanel as SidePanelType } from '../stores/useRoomUIStore';
 import { cn } from '@/shared/lib/utils';
+import { buildJoinLink } from '@/shared/lib/roomLinks';
 
 interface RoomSideSectionProps {
   activeSidePanel: SidePanelType | null;
@@ -17,8 +18,7 @@ const mockFileList = Array.from({ length: 5 }, (_, i) => ({ name: `파일_${i + 
 
 export function RoomSideSection({ activeSidePanel, onClosePanel }: RoomSideSectionProps) {
   const location = useLocation();
-  const joinPath = location.pathname.replace(/^\/rooms(\/|$)/, '/enter$1');
-  const joinLink = new URL(joinPath, window.location.origin).toString();
+  const joinLink = buildJoinLink(location.pathname, window.location.origin);
 
   return (
     <div
