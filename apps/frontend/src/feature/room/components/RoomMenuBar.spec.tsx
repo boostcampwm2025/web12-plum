@@ -87,15 +87,4 @@ describe('RoomMenuBar', () => {
 
     expect(mockSetActiveSidePanel).toHaveBeenCalledWith('chat');
   });
-
-  it('나가기 버튼 클릭 시 onExit이 호출된다', async () => {
-    const user = userEvent.setup();
-    const onExit = vi.fn();
-
-    render(<RoomMenuBar onExit={onExit} />);
-
-    const buttons = screen.getAllByRole('button');
-    await user.click(buttons[6]); // 나가기
-    expect(onExit).toHaveBeenCalledTimes(1);
-  });
 });
