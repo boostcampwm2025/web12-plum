@@ -180,7 +180,7 @@ export function EnterLectureForm({
   onEnterSuccess,
 }: EnterLectureFormProps) {
   const { enterRoom, isSubmitting } = useEnterRoom();
-  const { initialize } = useMediaStore();
+  const { initialize } = useMediaStore((state) => state.actions);
 
   const formMethods = useForm<EnterLectureRequestBody>({
     resolver: zodResolver(enterLectureSchema),

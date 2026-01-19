@@ -12,9 +12,13 @@ import { logger } from '@/shared/lib/logger';
 
 export function useRoom() {
   const location = useLocation();
+  const isMicOn = useMediaStore((state) => state.isMicOn);
+  const isCameraOn = useMediaStore((state) => state.isCameraOn);
+  const isScreenSharing = useMediaStore((state) => state.isScreenSharing);
+  const hasHydrated = useMediaStore((state) => state.hasHydrated);
+
   const { initDevice } = useMediaDeviceStore((state) => state.actions);
-  const { isMicOn, isCameraOn, isScreenSharing, hasHydrated, initialize, toggleScreenShare } =
-    useMediaStore();
+  const { initialize, toggleScreenShare } = useMediaStore((state) => state.actions);
   const { activeDialog, activeSidePanel, setActiveDialog, setActiveSidePanel } = useRoomUIStore();
   const myInfo = useRoomStore((state) => state.myInfo);
   const { setMyInfo } = useRoomStore((state) => state.actions);

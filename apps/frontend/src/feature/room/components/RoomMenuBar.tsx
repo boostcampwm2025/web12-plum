@@ -18,8 +18,11 @@ interface RoomMenuBarProps {
 }
 
 export function RoomMenuBar({ className, roomTitle = '강의실', onExit }: RoomMenuBarProps) {
-  const { isMicOn, isCameraOn, isScreenSharing, toggleMic, toggleCamera, toggleScreenShare } =
-    useMediaStore();
+  const isMicOn = useMediaStore((state) => state.isMicOn);
+  const isCameraOn = useMediaStore((state) => state.isCameraOn);
+  const isScreenSharing = useMediaStore((state) => state.isScreenSharing);
+
+  const { toggleMic, toggleCamera, toggleScreenShare } = useMediaStore((state) => state.actions);
   const { activeDialog, activeSidePanel, setActiveDialog, setActiveSidePanel } = useRoomUIStore();
 
   const menuButtons: MenuButton[] = [
