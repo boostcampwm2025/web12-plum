@@ -13,13 +13,18 @@ import {
   CreateRoomResponse,
   EnterLectureRequestBody,
   EnterRoomResponse,
+  MediasoupProducer,
+  MediasoupRoomInfo,
   Participant,
   ParticipantRole,
   Room,
   RoomValidationResponse,
 } from '@plum/shared-interfaces';
 import { InteractionService } from '../interaction/interaction.service.js';
-import { RoomManagerService } from '../redis/repository-manager/index.js';
+import {
+  ParticipantManagerService,
+  RoomManagerService,
+} from '../redis/repository-manager/index.js';
 import { MediasoupService } from '../mediasoup/mediasoup.service.js';
 
 const AUDIENCE_VIDEO_LIMIT = 5;
@@ -34,6 +39,7 @@ export class RoomService {
     private readonly configService: ConfigService,
     private readonly interactionService: InteractionService,
     private readonly roomManagerService: RoomManagerService,
+    private readonly participantManagerService: ParticipantManagerService,
     private readonly mediasoupService: MediasoupService,
   ) {
     this.region = configService.get<string>('AWS_S3_REGION') || '';
@@ -115,6 +121,69 @@ export class RoomService {
     return host;
   }
 
+  async getRoomInfo(roomId: string, participant: Participant): Promise<MediasoupRoomInfo> {
+    const rtpCapabilities = this.mediasoupService.getRouterRtpCapabilities(roomId);
+    const allParticipants = await this.roomManagerService.getParticipantsInRoom(roomId);
+
+    if (allParticipants.length === 0) {
+      // 조기 종료
+      return { routerRtpCapabilities: rtpCapabilities, existingProducers: [] };
+    }
+
+    const others = allParticipants.filter((p) => p.id !== participant.id);
+    const audienceVideoCandidates = others
+      .filter((p) => p.role === 'audience' && p.producers.video)
+      .sort((a, b) => new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime())
+      .slice(0, AUDIENCE_VIDEO_LIMIT - 1);
+
+    const videoTargetIds = new Set(audienceVideoCandidates.map((p) => p.id));
+    const existingProducers: MediasoupProducer[] = [];
+
+    for (const p of allParticipants) {
+      if (p.id === participant.id) continue; // 본인 제외
+
+      if (p.producers.audio) {
+        existingProducers.push({
+          producerId: p.producers.audio,
+          participantId: p.id,
+          kind: 'audio',
+          type: 'audio',
+        });
+      }
+
+      if (p.role === 'presenter') {
+        if (p.producers.video) {
+          existingProducers.push({
+            producerId: p.producers.video,
+            participantId: p.id,
+            kind: 'video',
+            type: 'video',
+          });
+        }
+        if (p.producers.screen) {
+          existingProducers.push({
+            producerId: p.producers.screen,
+            participantId: p.id,
+            kind: 'video',
+            type: 'screen',
+          });
+        }
+      } else if (videoTargetIds.has(p.id)) {
+        existingProducers.push({
+          producerId: p.producers.video,
+          participantId: p.id,
+          kind: 'video',
+          type: 'video',
+        });
+      }
+    }
+
+    return {
+      existingProducers,
+      routerRtpCapabilities: rtpCapabilities,
+    };
+  }
+
   async createRoom(
     body: CreateRoomRequest,
     files: Express.Multer.File[],
@@ -122,7 +191,7 @@ export class RoomService {
     const roomId = ulid();
     const hostId = ulid();
 
-    const [uploadFilesUrl, polls, qnas, router] = await Promise.all([
+    const [uploadFilesUrl, polls, qnas] = await Promise.all([
       this.multipleFileUpload(files),
       this.interactionService.createMultiplePoll(roomId, body.polls),
       this.interactionService.createMultipleQna(roomId, body.qnas),
@@ -145,6 +214,7 @@ export class RoomService {
 
     await this.roomManagerService.saveOne(roomId, room);
     const host = await this.createHost(roomId, hostId, body.hostName);
+    const mediasoup = await this.getRoomInfo(roomId, host);
 
     return {
       roomId: roomId,
@@ -153,10 +223,7 @@ export class RoomService {
         name: host.name,
         role: host.role,
       },
-      mediasoup: {
-        routerRtpCapabilities: router.rtpCapabilities,
-        existingProducers: [],
-      },
+      mediasoup,
     };
   }
 
@@ -165,69 +232,13 @@ export class RoomService {
     if (room.name !== body.name) throw new BadRequestException('Room name does not match');
 
     const participant = await this.createParticipant(roomId, body.nickname);
-    const rtpCapabilities = this.mediasoupService.getRouterRtpCapabilities(roomId);
-
-    const allParticipants = await this.roomManagerService.getParticipantsInRoom(roomId);
-    const others = allParticipants.filter((p) => p.id !== participant.id);
-    const audienceVideoCandidates = others
-      .filter((p) => p.role === 'audience' && p.producers.video && p.id !== participant.id)
-      .sort((a, b) => {
-        const dateA = new Date(a.joinedAt).getTime();
-        const dateB = new Date(b.joinedAt).getTime();
-        return dateA - dateB;
-      })
-      .slice(0, AUDIENCE_VIDEO_LIMIT - 1);
-
-    const videoTargetIds = new Set(audienceVideoCandidates.map((p) => p.id));
-
-    const existingProducers: any[] = [];
-    for (const p of allParticipants) {
-      if (p.id === participant.id) continue; // 본인 제외
-
-      // 오디오는 무조건 추가
-      if (p.producers.audio) {
-        existingProducers.push({
-          producerId: p.producers.audio,
-          participantId: p.id,
-          kind: 'audio',
-        });
-      }
-
-      // 발표자 특수 로직
-      if (p.role === 'presenter') {
-        if (p.producers.video) {
-          existingProducers.push({
-            producerId: p.producers.video,
-            participantId: p.id,
-            kind: 'video',
-          });
-        }
-        if (p.producers.screen) {
-          existingProducers.push({
-            producerId: p.producers.screen,
-            participantId: p.id,
-            kind: 'screen',
-          });
-        }
-      }
-      // 선별된 청중 비디오 추가
-      else if (videoTargetIds.has(p.id) && p.producers.video) {
-        existingProducers.push({
-          producerId: p.producers.video,
-          participantId: p.id,
-          kind: 'video',
-        });
-      }
-    }
+    const mediasoup = await this.getRoomInfo(room.id, participant);
 
     return {
       participantId: participant.id,
       name: participant.name,
       role: participant.role,
-      mediasoup: {
-        existingProducers,
-        routerRtpCapabilities: rtpCapabilities,
-      },
+      mediasoup,
     };
   }
 

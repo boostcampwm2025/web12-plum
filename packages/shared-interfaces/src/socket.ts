@@ -1,8 +1,11 @@
 import { ParticipantRole } from './participant.js';
-
-export type MediaKind = 'audio' | 'video'; // mediasoup에서 사용하는 미디어 타입
-export type MediaType = MediaKind | 'screen'; // 우리가 사용할 미디어 소스 타입
-export type ToggleActionType = 'pause' | 'resume';
+import {
+  MediaKind,
+  MediasoupProducer,
+  MediasoupRoomInfo,
+  MediaType,
+  ToggleActionType,
+} from './shared.js';
 
 // 클라이언트에서 보내는 데이터 페이로드
 
@@ -54,7 +57,12 @@ export interface BaseResponse {
   error?: string;
 }
 
-export type JoinRoomResponse = BaseResponse;
+export type JoinRoomResponse =
+  | BaseResponse
+  | {
+      success: boolean;
+      mediasoup: MediasoupRoomInfo;
+    };
 
 export type CreateTransportResponse<T1 = any, T2 = any, T3 = any> =
   | BaseResponse
@@ -115,11 +123,8 @@ export interface UserLeftPayload {
   leavedAt: Date;
 }
 
-export interface NewProducerPayload {
-  producerId: string;
-  participantId: string;
+export interface NewProducerPayload extends MediasoupProducer {
   participantRole: ParticipantRole;
-  kind: MediaKind;
   type: MediaType;
 }
 

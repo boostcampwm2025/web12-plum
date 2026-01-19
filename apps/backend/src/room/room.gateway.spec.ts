@@ -9,6 +9,8 @@ import {
   RoomManagerService,
   ParticipantManagerService,
 } from '../redis/repository-manager/index.js';
+import { SOCKET_TIMEOUT } from '../common/constants/socket.constants.js';
+import { RoomService } from './room.service.js';
 
 describe('RoomGateway', () => {
   let gateway: RoomGateway;
@@ -76,6 +78,12 @@ describe('RoomGateway', () => {
           },
         },
         {
+          provide: RoomService,
+          useValue: {
+            getRoomInfo: jest.fn(),
+          },
+        },
+        {
           provide: RoomManagerService,
           useValue: {
             removeParticipant: jest.fn(),
@@ -92,6 +100,11 @@ describe('RoomGateway', () => {
     }).compile();
 
     gateway = module.get<RoomGateway>(RoomGateway);
+    (gateway as any).server = {
+      to: jest.fn().mockReturnThis(),
+      emit: jest.fn(),
+    };
+
     mediasoupService = module.get<MediasoupService>(MediasoupService);
     participantManager = module.get<ParticipantManagerService>(ParticipantManagerService);
   });
@@ -236,6 +249,14 @@ describe('RoomGateway', () => {
 
   // 6. 연결 해제 및 정리 (cleanup)
   describe('cleanupSocket', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
     it('연결 해제 시 모든 미디어 리소스와 Redis 정보를 정리해야 함', async () => {
       const socket = createMockSocket();
       const transportIds = ['t-1', 't-2'];
@@ -250,9 +271,13 @@ describe('RoomGateway', () => {
 
       await gateway.handleDisconnect(socket);
 
-      expect(mediasoupService.closeTransport).toHaveBeenCalledTimes(2);
-      expect(mediasoupService.cleanupParticipantFromMaps).toHaveBeenCalledWith(['p-1'], ['c-1']);
+      expect(mediasoupService.closeTransport).not.toHaveBeenCalled();
+      expect(gateway['pendingDeletion'].has('user-1')).toBe(true);
+
+      await jest.advanceTimersByTimeAsync(SOCKET_TIMEOUT);
+
       expect(gateway['socketMetadata'].has(socket.id)).toBe(false);
+      expect(gateway['pendingDeletion'].has('user-1')).toBe(false);
     });
   });
 });
