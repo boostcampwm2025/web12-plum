@@ -12,23 +12,17 @@ interface MenuButton {
   onClick?: () => void;
 }
 
-interface RoomMenuBarProps {
-  className?: string;
-  roomTitle?: string;
-}
-
-export function RoomMenuBar({ className, roomTitle = '강의실' }: RoomMenuBarProps) {
+/**
+ * 메인 메뉴 컴포넌트
+ * 마이크, 카메라, 화면공유, 투표, Q&A, 랭킹 버튼
+ */
+function MainMenu() {
   const isMicOn = useMediaStore((state) => state.isMicOn);
   const isCameraOn = useMediaStore((state) => state.isCameraOn);
   const isScreenSharing = useMediaStore((state) => state.isScreenSharing);
 
   const { toggleMic, toggleCamera, toggleScreenShare } = useMediaStore((state) => state.actions);
-  const { activeDialog, activeSidePanel, setActiveDialog, setActiveSidePanel } = useRoomUIStore();
-
-  const handleExit = () => {
-    logger.ui.debug('강의실 나가기 요청');
-    // TODO: 방 나가기 로직
-  };
+  const { activeDialog, setActiveDialog } = useRoomUIStore();
 
   const menuButtons: MenuButton[] = [
     {
@@ -69,6 +63,28 @@ export function RoomMenuBar({ className, roomTitle = '강의실' }: RoomMenuBarP
     },
   ];
 
+  return (
+    <>
+      {menuButtons.map((button, index) => (
+        <RoomButton
+          key={`${button.icon}-${index}`}
+          icon={button.icon}
+          tooltip={button.tooltip}
+          isActive={button.isActive}
+          onClick={button.onClick}
+        />
+      ))}
+    </>
+  );
+}
+
+/**
+ * 사이드 메뉴 컴포넌트
+ * 채팅, 정보, 메뉴 버튼
+ */
+function SideMenu() {
+  const { activeSidePanel, setActiveSidePanel } = useRoomUIStore();
+
   const sideMenuButtons: MenuButton[] = [
     {
       icon: 'chat',
@@ -91,6 +107,45 @@ export function RoomMenuBar({ className, roomTitle = '강의실' }: RoomMenuBarP
   ];
 
   return (
+    <div className="flex items-center gap-1 justify-self-end">
+      {sideMenuButtons.map((button, index) => (
+        <RoomButton
+          key={`${button.icon}-${index}`}
+          icon={button.icon}
+          variant="ghost"
+          tooltip={button.tooltip}
+          isActive={button.isActive}
+          onClick={button.onClick}
+        />
+      ))}
+    </div>
+  );
+}
+
+function ExitButton() {
+  const handleExit = () => {
+    logger.ui.debug('강의실 나가기 요청');
+    // TODO: 방 나가기 로직
+  };
+
+  return (
+    <RoomButton
+      icon="exit"
+      tooltip="나가기"
+      variant="ghost"
+      onClick={handleExit}
+      className="text-error hover:bg-error/10"
+    />
+  );
+}
+
+interface RoomMenuBarProps {
+  className?: string;
+  roomTitle?: string;
+}
+
+export function RoomMenuBar({ className, roomTitle = '강의실' }: RoomMenuBarProps) {
+  return (
     <nav
       className={cn('grid h-20 w-full grid-cols-[1fr_auto_1fr] items-center px-4', className)}
       aria-label="강의실 메뉴바"
@@ -100,37 +155,12 @@ export function RoomMenuBar({ className, roomTitle = '강의실' }: RoomMenuBarP
       </div>
 
       <div className="flex items-center gap-3 justify-self-center">
-        {menuButtons.map((button, index) => (
-          <RoomButton
-            key={`${button.icon}-${index}`}
-            icon={button.icon}
-            tooltip={button.tooltip}
-            isActive={button.isActive}
-            onClick={button.onClick}
-          />
-        ))}
+        <MainMenu />
         <div className="mx-2 h-8 w-px bg-gray-400" />
-        <RoomButton
-          icon="exit"
-          tooltip="나가기"
-          variant="ghost"
-          onClick={handleExit}
-          className="text-error hover:bg-error/10"
-        />
+        <ExitButton />
       </div>
 
-      <div className="flex items-center gap-1 justify-self-end">
-        {sideMenuButtons.map((button, index) => (
-          <RoomButton
-            key={`${button.icon}-${index}`}
-            icon={button.icon}
-            variant="ghost"
-            tooltip={button.tooltip}
-            isActive={button.isActive}
-            onClick={button.onClick}
-          />
-        ))}
-      </div>
+      <SideMenu />
     </nav>
   );
 }
