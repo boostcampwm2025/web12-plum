@@ -1,4 +1,5 @@
 import { AnimatePresence } from 'motion/react';
+import { useLocation } from 'react-router';
 import { SidePanel } from './SidePanel';
 import { ChatPanel } from './ChatPanel';
 import { InfoPanel } from './InfoPanel';
@@ -12,10 +13,13 @@ interface RoomSideSectionProps {
 }
 
 // mock 데이터
-const mockUrl = 'https://plum.com/enter/qwer1234';
 const mockFileList = Array.from({ length: 5 }, (_, i) => ({ name: `파일_${i + 1}.pdf`, url: '#' }));
 
 export function RoomSideSection({ activeSidePanel, onClosePanel }: RoomSideSectionProps) {
+  const location = useLocation();
+  const joinPath = location.pathname.replace(/^\/rooms(\/|$)/, '/enter$1');
+  const joinLink = new URL(joinPath, window.location.origin).toString();
+
   return (
     <div
       className={cn(
@@ -29,7 +33,7 @@ export function RoomSideSection({ activeSidePanel, onClosePanel }: RoomSideSecti
             {activeSidePanel === 'chat' && <ChatPanel onClose={() => onClosePanel('chat')} />}
             {activeSidePanel === 'info' && (
               <InfoPanel
-                joinLink={mockUrl}
+                joinLink={joinLink}
                 files={mockFileList}
                 onClose={() => onClosePanel('info')}
               />
