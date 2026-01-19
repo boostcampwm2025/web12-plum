@@ -140,6 +140,7 @@ export function useRoomInit() {
 
       // 완료
       setIsSuccess(true);
+      setIsLoading(false);
       logger.custom.info('[RoomInit] 모든 초기화 시퀀스 완료');
     } catch (err) {
       const errorObj = err instanceof Error ? err : new Error('알 수 없는 초기화 실패');
