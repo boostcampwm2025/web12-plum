@@ -1,19 +1,19 @@
 import { AnimatePresence } from 'motion/react';
 import { Dialog as RoomDialog } from './Dialog';
-import { Dialog as DialogType } from '../stores/useRoomUIStore';
+import { useRoomUIStore } from '../stores/useRoomUIStore';
 
-interface RoomDialogsProps {
-  activeDialog: DialogType | null;
-  onClose: () => void;
-}
+export function RoomDialogs() {
+  const activeDialog = useRoomUIStore((state) => state.activeDialog);
+  const setActiveDialog = useRoomUIStore((state) => state.setActiveDialog);
 
-export function RoomDialogs({ activeDialog, onClose }: RoomDialogsProps) {
+  const handleCloseDialog = () => setActiveDialog(activeDialog!);
+
   return (
     <AnimatePresence>
       {activeDialog === 'vote' && (
         <RoomDialog
           title="투표"
-          onClose={onClose}
+          onClose={handleCloseDialog}
         >
           <div>투표 내용</div>
         </RoomDialog>
@@ -21,7 +21,7 @@ export function RoomDialogs({ activeDialog, onClose }: RoomDialogsProps) {
       {activeDialog === 'qna' && (
         <RoomDialog
           title="Q&A"
-          onClose={onClose}
+          onClose={handleCloseDialog}
         >
           <div>Q&A 내용</div>
         </RoomDialog>
@@ -29,7 +29,7 @@ export function RoomDialogs({ activeDialog, onClose }: RoomDialogsProps) {
       {activeDialog === 'ranking' && (
         <RoomDialog
           title="랭킹"
-          onClose={onClose}
+          onClose={handleCloseDialog}
         >
           <div>랭킹 내용</div>
         </RoomDialog>

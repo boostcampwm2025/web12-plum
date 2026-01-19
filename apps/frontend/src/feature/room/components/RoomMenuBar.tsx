@@ -3,6 +3,7 @@ import { RoomButton } from './RoomButton';
 import type { IconName } from '@/shared/components/icon/iconMap';
 import { useMediaStore } from '../stores/useMediaStore';
 import { useRoomUIStore } from '../stores/useRoomUIStore';
+import { logger } from '@/shared/lib/logger';
 
 interface MenuButton {
   icon: IconName;
@@ -14,16 +15,20 @@ interface MenuButton {
 interface RoomMenuBarProps {
   className?: string;
   roomTitle?: string;
-  onExit?: () => void;
 }
 
-export function RoomMenuBar({ className, roomTitle = '강의실', onExit }: RoomMenuBarProps) {
+export function RoomMenuBar({ className, roomTitle = '강의실' }: RoomMenuBarProps) {
   const isMicOn = useMediaStore((state) => state.isMicOn);
   const isCameraOn = useMediaStore((state) => state.isCameraOn);
   const isScreenSharing = useMediaStore((state) => state.isScreenSharing);
 
   const { toggleMic, toggleCamera, toggleScreenShare } = useMediaStore((state) => state.actions);
   const { activeDialog, activeSidePanel, setActiveDialog, setActiveSidePanel } = useRoomUIStore();
+
+  const handleExit = () => {
+    logger.ui.debug('강의실 나가기 요청');
+    // TODO: 방 나가기 로직
+  };
 
   const menuButtons: MenuButton[] = [
     {
@@ -109,7 +114,7 @@ export function RoomMenuBar({ className, roomTitle = '강의실', onExit }: Room
           icon="exit"
           tooltip="나가기"
           variant="ghost"
-          onClick={onExit}
+          onClick={handleExit}
           className="text-error hover:bg-error/10"
         />
       </div>

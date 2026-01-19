@@ -3,15 +3,13 @@ import { SidePanel } from './SidePanel';
 import { ChatPanel } from './ChatPanel';
 import { InfoPanel } from './InfoPanel';
 import { MenuPanel } from './MenuPanel';
-import { SidePanel as SidePanelType } from '../stores/useRoomUIStore';
+import { useRoomUIStore } from '../stores/useRoomUIStore';
 import { cn } from '@/shared/lib/utils';
 
-interface RoomSideSectionProps {
-  activeSidePanel: SidePanelType | null;
-  onClosePanel: (panel: SidePanelType) => void;
-}
+export function RoomSideSection() {
+  const activeSidePanel = useRoomUIStore((state) => state.activeSidePanel);
+  const setActiveSidePanel = useRoomUIStore((state) => state.setActiveSidePanel);
 
-export function RoomSideSection({ activeSidePanel, onClosePanel }: RoomSideSectionProps) {
   return (
     <div
       className={cn(
@@ -22,9 +20,9 @@ export function RoomSideSection({ activeSidePanel, onClosePanel }: RoomSideSecti
       <AnimatePresence>
         {activeSidePanel && (
           <SidePanel>
-            {activeSidePanel === 'chat' && <ChatPanel onClose={() => onClosePanel('chat')} />}
-            {activeSidePanel === 'info' && <InfoPanel onClose={() => onClosePanel('info')} />}
-            {activeSidePanel === 'menu' && <MenuPanel onClose={() => onClosePanel('menu')} />}
+            {activeSidePanel === 'chat' && <ChatPanel onClose={() => setActiveSidePanel('chat')} />}
+            {activeSidePanel === 'info' && <InfoPanel onClose={() => setActiveSidePanel('info')} />}
+            {activeSidePanel === 'menu' && <MenuPanel onClose={() => setActiveSidePanel('menu')} />}
           </SidePanel>
         )}
       </AnimatePresence>
