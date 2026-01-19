@@ -5,7 +5,6 @@ import iconsChat from '@/assets/icons/chat.svg?react';
 import iconsCheckBoxFilled from '@/assets/icons/check-box-filled.svg?react';
 import iconsCheckBox from '@/assets/icons/check-box.svg?react';
 import iconsCheck from '@/assets/icons/check.svg?react';
-import iconsCircleCheck from '@/assets/icons/circle-check.svg?react';
 import iconsChevron from '@/assets/icons/chevron.svg?react';
 import iconsCopy from '@/assets/icons/copy.svg?react';
 import iconsDownload from '@/assets/icons/download.svg?react';
@@ -30,8 +29,6 @@ import iconsSideOpen from '@/assets/icons/side-open.svg?react';
 import iconsSiren from '@/assets/icons/siren.svg?react';
 import iconsStart from '@/assets/icons/start.svg?react';
 import iconsStop from '@/assets/icons/stop.svg?react';
-import iconsThumbsDown from '@/assets/icons/thumbs-down.svg?react';
-import iconsThumbsUp from '@/assets/icons/thumbs-up.svg?react';
 import iconsTimer from '@/assets/icons/timer.svg?react';
 import iconsTrash from '@/assets/icons/trash.svg?react';
 import iconsTrend from '@/assets/icons/trend.svg?react';
@@ -39,6 +36,15 @@ import iconsUpload from '@/assets/icons/upload.svg?react';
 import iconsUsers from '@/assets/icons/users.svg?react';
 import iconsVote from '@/assets/icons/vote.svg?react';
 import iconsX from '@/assets/icons/x.svg?react';
+
+import iconsThumbsDown from '@/assets/icons/gesture/thumbs-down.svg?react';
+import iconsThumbsUp from '@/assets/icons/gesture/thumbs-up.svg?react';
+import iconsHandRaise from '@/assets/icons/gesture/hand-raise.svg?react';
+import iconsCircleCheck from '@/assets/icons/gesture/circle-check.svg?react';
+import iconOne from '@/assets/icons/gesture/one.svg?react';
+import iconTwo from '@/assets/icons/gesture/two.svg?react';
+import iconThree from '@/assets/icons/gesture/three.svg?react';
+import iconFour from '@/assets/icons/gesture/four.svg?react';
 
 import type { ComponentType, SVGProps } from 'react';
 
@@ -50,7 +56,6 @@ export const iconMap = {
   'check-box-filled': iconsCheckBoxFilled,
   'check-box': iconsCheckBox,
   check: iconsCheck,
-  'circle-check': iconsCircleCheck,
   chevron: iconsChevron,
   copy: iconsCopy,
   download: iconsDownload,
@@ -75,8 +80,6 @@ export const iconMap = {
   siren: iconsSiren,
   start: iconsStart,
   stop: iconsStop,
-  'thumbs-down': iconsThumbsDown,
-  'thumbs-up': iconsThumbsUp,
   timer: iconsTimer,
   trash: iconsTrash,
   trend: iconsTrend,
@@ -84,6 +87,16 @@ export const iconMap = {
   users: iconsUsers,
   vote: iconsVote,
   x: iconsX,
+
+  // hand gesture icons
+  'thumbs-down': iconsThumbsDown,
+  'thumbs-up': iconsThumbsUp,
+  'hand-raise': iconsHandRaise,
+  'circle-check': iconsCircleCheck,
+  one: iconOne,
+  two: iconTwo,
+  three: iconThree,
+  four: iconFour,
 };
 
 export type IconName = keyof typeof iconMap;
