@@ -6,13 +6,14 @@ import { logger } from '@/shared/lib/logger';
 import { isOkSign } from '../utils/gestureLandmarks';
 import { useRoomStore } from '../stores/useRoomStore';
 import { useSocketStore } from '@/store/useSocketStore';
+import { useGestureStore } from '../stores/useGestureStore';
 
 type GestureRecognitionOptions = {
   enabled: boolean;
   videoElement: HTMLVideoElement | null;
 };
 
-type GestureState = {
+type GestureRecognitionState = {
   gesture: GestureType | null;
   startedAt: number;
   confirmedGesture: GestureType | null;
@@ -40,7 +41,9 @@ export function useGestureRecognition({ enabled, videoElement }: GestureRecognit
   const { roomId } = useParams();
   const myInfo = useRoomStore((state) => state.myInfo);
   const { emit } = useSocketStore((state) => state.actions);
-  const gestureStateRef = useRef<GestureState>({
+  const { setGestureProgress, resetGestureProgress } = useGestureStore((state) => state.actions);
+
+  const gestureStateRef = useRef<GestureRecognitionState>({
     gesture: null,
     startedAt: 0,
     confirmedGesture: null,
@@ -49,6 +52,7 @@ export function useGestureRecognition({ enabled, videoElement }: GestureRecognit
   useEffect(() => {
     if (!enabled || !videoElement) {
       gestureStateRef.current = { gesture: null, startedAt: 0, confirmedGesture: null };
+      resetGestureProgress();
       return;
     }
 
@@ -92,6 +96,7 @@ export function useGestureRecognition({ enabled, videoElement }: GestureRecognit
       // 제스처가 인식되지 않는 경우 상태 초기화
       if (!nextGesture) {
         gestureStateRef.current = { gesture: null, startedAt: 0, confirmedGesture: null };
+        setGestureProgress({ gesture: null, progress: 0 });
         return;
       }
 
@@ -102,6 +107,7 @@ export function useGestureRecognition({ enabled, videoElement }: GestureRecognit
           startedAt: now,
           confirmedGesture: null,
         };
+        setGestureProgress({ gesture: nextGesture, progress: 0 });
         return;
       }
 
@@ -110,8 +116,13 @@ export function useGestureRecognition({ enabled, videoElement }: GestureRecognit
         return;
       }
 
+      // 진행률 계산 및 업데이트
+      const elapsed = now - state.startedAt;
+      const progress = Math.min(elapsed / HOLD_DURATION_MS, 1);
+      setGestureProgress({ gesture: nextGesture, progress });
+
       // 제스처가 일정 시간 이상 유지된 경우 확인된 제스처로 설정
-      if (now - state.startedAt >= HOLD_DURATION_MS) {
+      if (elapsed >= HOLD_DURATION_MS) {
         gestureStateRef.current = {
           gesture: nextGesture,
           startedAt: state.startedAt,
@@ -197,6 +208,7 @@ export function useGestureRecognition({ enabled, videoElement }: GestureRecognit
       videoElement.removeEventListener('loadeddata', handleLoadedData);
       recognizer?.close();
       gestureStateRef.current = { gesture: null, startedAt: 0, confirmedGesture: null };
+      resetGestureProgress();
     };
-  }, [enabled, videoElement]);
+  }, [enabled, videoElement, resetGestureProgress]);
 }
