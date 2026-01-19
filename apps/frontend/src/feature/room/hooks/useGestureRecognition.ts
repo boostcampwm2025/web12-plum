@@ -136,11 +136,10 @@ export function useGestureRecognition({ enabled, videoElement }: GestureRecognit
           });
           return;
         }
-        emit('action_gesture', {
-          roomId,
-          participantId: myInfo.id,
-          gesture: nextGesture,
-          performedAt: new Date().toISOString(),
+        emit('action_gesture', { gesture: nextGesture }, (res) => {
+          if (!res.success) {
+            logger.socket.warn('제스처 전송 실패', res.error);
+          }
         });
       }
     };
