@@ -12,6 +12,7 @@ import { RoomModule } from './room/room.module.js';
 import { PrometheusModule, MetricsInterceptor } from './prometheus/index.js';
 import { RedisModule } from './redis/redis.module.js';
 import { MediasoupModule } from './mediasoup/mediasoup.module.js';
+import { SocketMetadataModule } from './common/services/index.js';
 
 @Module({
   imports: [
@@ -24,6 +25,9 @@ import { MediasoupModule } from './mediasoup/mediasoup.module.js';
     WinstonModule.forRoot(winstonConfig),
     ConfigModule.forRoot({ isGlobal: true }),
     PrometheusModule,
+
+    // 소켓 메타데이터 공유 (전역 모듈)
+    SocketMetadataModule,
 
     // Gateway 모듈들 (Redis에 의존)
     MediaModule,

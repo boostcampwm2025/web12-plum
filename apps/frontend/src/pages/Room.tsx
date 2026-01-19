@@ -3,8 +3,9 @@ import { RoomDialogs } from '../feature/room/components/RoomDialogs';
 import { RoomMainSection } from '../feature/room/components/RoomMainSection';
 import { RoomSideSection } from '../feature/room/components/RoomSideSection';
 import { useRoom } from '../feature/room/hooks/useRoom';
+import { MediaConnectionProvider } from '@/feature/room/hooks/useMediaConnectionContext';
 
-export default function Room() {
+function RoomContent() {
   const {
     activeDialog,
     activeSidePanel,
@@ -47,5 +48,13 @@ export default function Room() {
         onExit={handleExit}
       />
     </div>
+  );
+}
+
+export default function Room() {
+  return (
+    <MediaConnectionProvider>
+      <RoomContent />
+    </MediaConnectionProvider>
   );
 }

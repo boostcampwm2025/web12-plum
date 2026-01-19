@@ -9,11 +9,13 @@ import {
   RoomManagerService,
   ParticipantManagerService,
 } from '../redis/repository-manager/index.js';
+import { SocketMetadataService } from '../common/services/socket-metadata.service.js';
 
 describe('RoomGateway', () => {
   let gateway: RoomGateway;
   let mediasoupService: MediasoupService;
   let participantManager: ParticipantManagerService;
+  let socketMetadataService: SocketMetadataService;
   let roomManager: RoomManagerService;
 
   const createMockSocket = (id: string = 'socket-123') =>
@@ -92,12 +94,22 @@ describe('RoomGateway', () => {
             updatePartial: jest.fn(),
           },
         },
+        {
+          provide: SocketMetadataService,
+          useValue: {
+            get: jest.fn(),
+            set: jest.fn(),
+            delete: jest.fn(),
+            has: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
     gateway = module.get<RoomGateway>(RoomGateway);
     mediasoupService = module.get<MediasoupService>(MediasoupService);
     participantManager = module.get<ParticipantManagerService>(ParticipantManagerService);
+    socketMetadataService = module.get<SocketMetadataService>(SocketMetadataService);
     roomManager = module.get<RoomManagerService>(RoomManagerService);
 
     (gateway as any).server = {
@@ -143,7 +155,7 @@ describe('RoomGateway', () => {
     it('정상적으로 Transport 파라미터를 반환해야 함', async () => {
       const socket = createMockSocket();
       // 먼저 조인된 상태를 메타데이터에 주입
-      gateway['socketMetadata'].set(socket.id, {
+      jest.spyOn(socketMetadataService, 'get').mockReturnValue({
         roomId: 'room-1',
         participantId: 'user-1',
         transportIds: [],
@@ -166,7 +178,7 @@ describe('RoomGateway', () => {
   describe('handleProduce', () => {
     it('Producer를 생성하고 새 프로듀서 알림을 브로드캐스트해야 함', async () => {
       const socket = createMockSocket();
-      gateway['socketMetadata'].set(socket.id, {
+      jest.spyOn(socketMetadataService, 'get').mockReturnValue({
         roomId: 'room-1',
         participantId: 'user-1',
         transportIds: [],
@@ -193,7 +205,7 @@ describe('RoomGateway', () => {
   describe('handleConsume', () => {
     it('Consumer 생성 시 필요한 RTP 파라미터를 반환해야 함', async () => {
       const socket = createMockSocket();
-      gateway['socketMetadata'].set(socket.id, {
+      jest.spyOn(socketMetadataService, 'get').mockReturnValue({
         roomId: 'room-1',
         participantId: 'user-1',
         transportIds: [],
@@ -227,7 +239,7 @@ describe('RoomGateway', () => {
   describe('handleToggleMedia', () => {
     it('pause 액션 시 producer를 일시정지시켜야 함', async () => {
       const socket = createMockSocket();
-      gateway['socketMetadata'].set(socket.id, {
+      jest.spyOn(socketMetadataService, 'get').mockReturnValue({
         roomId: 'room-1',
         participantId: 'user-1',
         transportIds: [],
@@ -252,7 +264,7 @@ describe('RoomGateway', () => {
     it('연결 해제 시 모든 미디어 리소스와 Redis 정보를 정리해야 함', async () => {
       const socket = createMockSocket();
       const transportIds = ['t-1', 't-2'];
-      gateway['socketMetadata'].set(socket.id, {
+      jest.spyOn(socketMetadataService, 'get').mockReturnValue({
         roomId: 'room-1',
         participantId: 'user-1',
         transportIds,
@@ -265,7 +277,7 @@ describe('RoomGateway', () => {
 
       expect(mediasoupService.closeTransport).toHaveBeenCalledTimes(2);
       expect(mediasoupService.cleanupParticipantFromMaps).toHaveBeenCalledWith(['p-1'], ['c-1']);
-      expect(gateway['socketMetadata'].has(socket.id)).toBe(false);
+      expect(socketMetadataService.delete).toHaveBeenCalledWith(socket.id);
     });
   });
 
