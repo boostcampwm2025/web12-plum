@@ -16,6 +16,12 @@ vi.mock('@/shared/lib/logger', () => ({
   },
 }));
 
+vi.mock('./ProducerSignaling', () => ({
+  ProducerSignaling: {
+    setupAllHandlers: vi.fn(),
+  },
+}));
+
 const createMockTransport = (overrides = {}): Mocked<Transport> =>
   ({
     id: `transport-${Math.random().toString(36).slice(2)}`,
@@ -58,7 +64,7 @@ describe('useMediaProducer', () => {
   describe('초기 상태', () => {
     it('activeProducers와 producerCount가 초기화되어야 한다', () => {
       const { result } = renderHook(() => useMediaProducer());
-      expect(result.current.activeProducers).toEqual({ video: false, audio: false });
+      expect(result.current.activeProducers).toEqual({ video: false, audio: false, screen: false });
       expect(result.current.producerCount).toBe(0);
     });
   });
@@ -73,9 +79,28 @@ describe('useMediaProducer', () => {
       ).rejects.toThrow('유효하지 않은 트랙 상태');
     });
 
+    it('화면 공유(screen) 송출 시 activeProducers.screen이 true가 되어야 한다', async () => {
+      const { result } = renderHook(() => useMediaProducer());
+      const screenTrack = createMockTrack({ kind: 'video' });
+      const mockProducer = createMockProducer({
+        kind: 'video',
+        appData: { type: 'screen' },
+      });
+
+      mockTransport.produce.mockResolvedValue(mockProducer);
+
+      await result.current.produce(mockTransport, screenTrack, { type: 'screen' });
+
+      await waitFor(() => {
+        expect(result.current.activeProducers.screen).toBe(true);
+        expect(result.current.activeProducers.video).toBe(true);
+      });
+    });
+
     it('동일한 type의 Producer가 있고 트랙이 다르면 replaceTrack을 호출해야 한다', async () => {
       const existingProducer = createMockProducer({
         track: { id: 'old-track' } as MediaStreamTrack,
+        appData: { type: 'video' },
       });
       mockTransport.produce.mockResolvedValue(existingProducer);
 
@@ -108,29 +133,39 @@ describe('useMediaProducer', () => {
   });
 
   describe('stopProducing & stopAll', () => {
-    it('stopProducing은 해당 kind의 Producer만 닫아야 한다', async () => {
-      const videoProducer = createMockProducer({ kind: 'video', appData: { type: 'video' } });
-      const audioProducer = createMockProducer({ kind: 'audio', appData: { type: 'audio' } });
+    it('stopProducing은 지정된 MediaType의 Producer만 닫아야 한다', async () => {
+      const videoProducer = createMockProducer({
+        id: 'v1',
+        kind: 'video',
+        appData: { type: 'video' },
+      });
+      const screenProducer = createMockProducer({
+        id: 's1',
+        kind: 'video',
+        appData: { type: 'screen' },
+      });
+
       mockTransport.produce
         .mockResolvedValueOnce(videoProducer)
-        .mockResolvedValueOnce(audioProducer);
+        .mockResolvedValueOnce(screenProducer);
 
       const { result } = renderHook(() => useMediaProducer());
 
-      await result.current.produce(mockTransport, createMockTrack({ kind: 'video' }), {
-        type: 'video',
-      });
-      await result.current.produce(mockTransport, createMockTrack({ kind: 'audio' }), {
-        type: 'audio',
-      });
+      await result.current.produce(mockTransport, createMockTrack(), { type: 'video' });
+      await result.current.produce(mockTransport, createMockTrack(), { type: 'screen' });
 
       result.current.stopProducing('video');
 
       expect(videoProducer.close).toHaveBeenCalled();
-      expect(audioProducer.close).not.toHaveBeenCalled();
+      expect(screenProducer.close).not.toHaveBeenCalled();
+
+      await waitFor(() => {
+        expect(result.current.activeProducers.video).toBe(true);
+        expect(result.current.activeProducers.screen).toBe(true);
+      });
     });
 
-    it('stopAll은 모든 Producer를 닫아야 한다', async () => {
+    it('stopAll은 모든 Producer를 닫고 상태를 초기화해야 한다', async () => {
       const p1 = createMockProducer();
       const p2 = createMockProducer();
       mockTransport.produce.mockResolvedValueOnce(p1).mockResolvedValueOnce(p2);
@@ -138,7 +173,9 @@ describe('useMediaProducer', () => {
       const { result } = renderHook(() => useMediaProducer());
 
       await result.current.produce(mockTransport, createMockTrack(), { type: 'video' });
-      await result.current.produce(mockTransport, createMockTrack(), { type: 'audio' });
+      await result.current.produce(mockTransport, createMockTrack({ kind: 'audio' }), {
+        type: 'audio',
+      });
 
       result.current.stopAll();
 
@@ -147,6 +184,11 @@ describe('useMediaProducer', () => {
 
       await waitFor(() => {
         expect(result.current.producerCount).toBe(0);
+        expect(result.current.activeProducers).toEqual({
+          video: false,
+          audio: false,
+          screen: false,
+        });
       });
     });
   });
