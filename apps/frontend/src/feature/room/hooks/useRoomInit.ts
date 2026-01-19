@@ -127,12 +127,20 @@ export function useRoomInit() {
 
       // 4. 미디어 스트림 획득 및 송출 시작
       try {
-        const stream = await startStream({ video: isCameraOn, audio: isMicOn });
-        if (stream) {
-          const videoTrack = stream.getVideoTracks()[0];
-          const audioTrack = stream.getAudioTracks()[0];
-          if (isCameraOn && videoTrack) await startProducing(videoTrack, 'video');
-          if (isMicOn && audioTrack) await startProducing(audioTrack, 'audio');
+        // 둘 중 하나라도 켜져 있을 때만 스트림 요청
+        if (isCameraOn || isMicOn) {
+          const stream = await startStream({ video: isCameraOn, audio: isMicOn });
+
+          if (stream) {
+            const videoTrack = stream.getVideoTracks()[0];
+            const audioTrack = stream.getAudioTracks()[0];
+
+            // 실제 트랙이 존재하고 사용자가 켰을 때만 Producing 시작
+            if (isCameraOn && videoTrack) await startProducing(videoTrack, 'video');
+            if (isMicOn && audioTrack) await startProducing(audioTrack, 'audio');
+          }
+        } else {
+          logger.custom.info('[RoomInit] 카메라와 마이크가 모두 꺼져 있어 스트림 획득을 건너뜀');
         }
       } catch (streamErr) {
         logger.custom.warn('[RoomInit] 미디어 획득 실패(입장은 유지):', streamErr);
