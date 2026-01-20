@@ -212,6 +212,16 @@ export interface UpdatePollStatusFullPayload {
 
 export type UpdatePollStatusSubPayload = Omit<UpdatePollStatusFullPayload, 'voter'>;
 
+export interface EndPollPayload {
+  pollId: string;
+  options: Omit<PollOption, 'voters'>[];
+}
+
+export interface EndPollDetailPayload {
+  pollId: string;
+  options: PollOption[];
+}
+
 /**
  * 서버 -> 클라이언트 이벤트
  */
@@ -234,7 +244,9 @@ export interface ServerToClientEvents {
 
   update_poll_detail: (data: UpdatePollStatusFullPayload) => void;
 
-  end_poll: (data: UpdatePollStatusFullPayload) => void;
+  end_poll: (data: EndPollPayload) => void;
+
+  end_poll_detail: (data: EndPollDetailPayload) => void;
 }
 
 /**

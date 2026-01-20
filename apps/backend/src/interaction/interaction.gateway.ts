@@ -6,6 +6,7 @@ import {
   ConnectedSocket,
   MessageBody,
 } from '@nestjs/websockets';
+import { OnEvent } from '@nestjs/event-emitter';
 import { Server, Socket } from 'socket.io';
 import {
   ActionGestureRequest,
@@ -21,6 +22,7 @@ import {
   BreakPollRequest,
   BreakPollResponse,
   UpdatePollStatusSubPayload,
+  PollOption,
 } from '@plum/shared-interfaces';
 
 import { SOCKET_CONFIG } from '../common/constants/socket.constants.js';
@@ -200,6 +202,25 @@ export class InteractionGateway {
         error instanceof BusinessException ? error.message : '투표 종료에 실패했습니다.';
       this.logger.error(`[break_poll] 실패:`, error);
       return { success: false, error: errorMessage };
+    }
+  }
+
+  @OnEvent('poll.autoClosed')
+  async handleAutoClosedEvent(payload: { pollId: string; options: PollOption[] }) {
+    try {
+      const poll = await this.interactionService.getPoll(payload.pollId);
+      this.logger.log(`[auto_close_poll] 전달 ${poll.roomId}: ${poll.id}`);
+
+      this.server.to(`${poll.roomId}:presenter`).emit('poll_end_detail', {
+        pollId: poll.id,
+        options: payload.options,
+      });
+      this.server.to(`${poll.roomId}:audience`).emit('poll_end', {
+        pollId: poll.id,
+        options: payload.options.map((o) => ({ id: o.id, count: o.count })),
+      });
+    } catch (error) {
+      this.logger.error(`[auto_close_poll] 전달 실패: `, error);
     }
   }
 

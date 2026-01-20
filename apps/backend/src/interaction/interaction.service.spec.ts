@@ -87,6 +87,23 @@ describe('InteractionService (투표 및 Q&A 생성 테스트)', () => {
     });
   });
 
+  describe('getPoll', () => {
+    it('존재하는 투표 ID를 넣으면 투표 정보를 반환해야 한다', async () => {
+      const mockPoll = { id: 'p1', title: 'test' };
+      mockPollManager.findOne.mockResolvedValue(mockPoll as any);
+
+      const result = await service.getPoll('p1');
+
+      expect(result).toEqual(mockPoll);
+    });
+
+    it('투표가 없으면 "Could not find poll" 에러를 던져야 한다', async () => {
+      mockPollManager.findOne.mockResolvedValue(null);
+
+      await expect(service.getPoll('none')).rejects.toThrow('Could not find poll');
+    });
+  });
+
   describe('getPolls (투표 목록 조회)', () => {
     it('roomId에 해당하는 투표 리스트 배열을 반환해야 한다', async () => {
       const roomId = 'room-123';

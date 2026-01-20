@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 import { Poll, PollOption, UpdatePollStatusSubPayload, Voter } from '@plum/shared-interfaces';
 import { RedisService } from '../redis.service.js';
 import { BaseRedisRepository } from './base-redis.repository.js';
@@ -9,7 +10,10 @@ const TTL_BOUNDS = 7200;
 export class PollManagerService extends BaseRedisRepository<Poll> {
   protected readonly keyPrefix = 'poll:';
 
-  constructor(redisService: RedisService) {
+  constructor(
+    redisService: RedisService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {
     super(redisService, PollManagerService.name);
   }
 
@@ -306,5 +310,27 @@ export class PollManagerService extends BaseRedisRepository<Poll> {
     if (!poll || poll.status !== 'ended' || !poll.options) return [];
 
     return poll.options;
+  }
+
+  @OnEvent('redis.expired.poll')
+  async handlePollAutoClose(key: string) {
+    const parts = key.split(':');
+
+    // 마지막 요소가 active인 경우에만 처리 (Shadow Key 역할)
+    if (parts[parts.length - 1] !== 'active') return;
+
+    const pollId = parts[1];
+    this.logger.log(`[Redis Expiry] 투표 ID: ${pollId} 시간 만료됨`);
+
+    try {
+      const finalResults = await this.closePoll(pollId);
+
+      this.eventEmitter.emit('poll.autoClosed', {
+        pollId,
+        results: finalResults,
+      });
+    } catch (error) {
+      this.logger.error(`[AutoClose Error] ${pollId}: ${error.message}`);
+    }
   }
 }

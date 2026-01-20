@@ -76,6 +76,13 @@ export class InteractionService {
     return polls;
   }
 
+  async getPoll(pollId: string): Promise<Poll> {
+    const poll = await this.pollManagerService.findOne(pollId);
+    if (!poll) throw new Error('Could not find poll');
+
+    return poll;
+  }
+
   async getPolls(roomId: string): Promise<Poll[]> {
     return await this.pollManagerService.getPollsInRoom(roomId);
   }

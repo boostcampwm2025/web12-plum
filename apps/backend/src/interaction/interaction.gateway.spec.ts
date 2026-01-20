@@ -47,6 +47,7 @@ describe('InteractionGateway', () => {
           provide: InteractionService,
           useValue: {
             createPoll: jest.fn(),
+            getPoll: jest.fn(),
             getPolls: jest.fn(),
             startPoll: jest.fn(),
             vote: jest.fn(),
@@ -394,6 +395,67 @@ describe('InteractionGateway', () => {
       } else {
         fail('성공하면 안 되는 테스트 케이스입니다.');
       }
+    });
+  });
+
+  describe('handleAutoClosedEvent (자동 종료 이벤트 수신)', () => {
+    const mockPayload = {
+      pollId: 'poll-123',
+      options: [
+        { id: 0, value: '옵션1', count: 10, voters: [{ id: 'u1', name: 'user1' }] },
+        { id: 1, value: '옵션2', count: 5, voters: [] },
+      ],
+    };
+
+    const mockPollData = {
+      id: 'poll-123',
+      roomId: 'room-1',
+      title: '자동 종료 테스트',
+    };
+
+    beforeEach(() => {
+      jest.spyOn(interactionService, 'getPoll').mockResolvedValue(mockPollData as any);
+
+      (gateway as any).server = {
+        to: jest.fn().mockReturnValue({ emit: jest.fn() }),
+      };
+    });
+
+    it('이벤트를 받으면 해당 방의 발표자와 청중에게 알맞은 데이터를 브로드캐스트해야 한다', async () => {
+      await gateway.handleAutoClosedEvent(mockPayload);
+
+      expect(interactionService.getPoll).toHaveBeenCalledWith(mockPayload.pollId);
+
+      expect((gateway as any).server.to).toHaveBeenCalledWith('room-1:presenter');
+      const presenterEmit = (gateway as any).server.to('room-1:presenter').emit;
+      expect(presenterEmit).toHaveBeenCalledWith('poll_end_detail', {
+        pollId: mockPollData.id,
+        options: mockPayload.options,
+      });
+
+      expect((gateway as any).server.to).toHaveBeenCalledWith('room-1:audience');
+      const audienceEmit = (gateway as any).server.to('room-1:audience').emit;
+      expect(audienceEmit).toHaveBeenCalledWith('poll_end', {
+        pollId: mockPollData.id,
+        options: [
+          { id: 0, count: 10 },
+          { id: 1, count: 5 },
+        ],
+      });
+    });
+
+    it('getPoll 실패 시 에러 로그를 남기고 중단되어야 한다', async () => {
+      const loggerSpy = jest.spyOn((gateway as any).logger, 'error');
+      jest.spyOn(interactionService, 'getPoll').mockRejectedValue(new Error('Poll Missing'));
+
+      await gateway.handleAutoClosedEvent(mockPayload);
+
+      expect(loggerSpy).toHaveBeenCalledWith(
+        expect.stringContaining('[auto_close_poll] 전달 실패:'),
+        expect.any(Error),
+      );
+
+      expect((gateway as any).server.to).not.toHaveBeenCalled();
     });
   });
 });

@@ -1,12 +1,15 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { EventEmitter2, EventEmitterModule } from '@nestjs/event-emitter';
+import { Poll } from '@plum/shared-interfaces';
+
 import { PollManagerService } from './poll-manager.service.js';
 import { RedisService } from '../redis.service.js';
-import { Poll } from '@plum/shared-interfaces';
 
 describe('PollManagerService', () => {
   let service: PollManagerService;
   let redisClient: any;
   let pipeline: any;
+  let eventEmitter: EventEmitter2;
 
   const mockPolls: Poll[] = [
     { id: 'poll-1', roomId: 'room-1', title: 'Test 1' } as Poll,
@@ -29,6 +32,7 @@ describe('PollManagerService', () => {
     };
 
     const module: TestingModule = await Test.createTestingModule({
+      imports: [EventEmitterModule.forRoot()],
       providers: [
         PollManagerService,
         {
@@ -41,6 +45,7 @@ describe('PollManagerService', () => {
     }).compile();
 
     service = module.get<PollManagerService>(PollManagerService);
+    eventEmitter = module.get<EventEmitter2>(EventEmitter2);
 
     jest.spyOn(service as any, 'addSaveToPipeline').mockImplementation(() => {});
     jest.spyOn(service as any, 'addDeleteToPipeline').mockImplementation(() => {});
@@ -320,6 +325,56 @@ describe('PollManagerService', () => {
       jest.spyOn(service, 'findOne').mockResolvedValue({ status: 'active' } as any);
       const result = await service.getFinalResults('p1');
       expect(result).toEqual([]);
+    });
+  });
+
+  describe('handlePollAutoClose', () => {
+    const pollId = 'poll-123';
+    const activeKey = `poll:${pollId}:active`;
+    const mockFinalResults = [{ id: 0, count: 2, voters: [{ id: 'u1', name: 'user1' }] }];
+
+    beforeEach(() => {
+      jest.spyOn(service, 'closePoll').mockResolvedValue(mockFinalResults as any);
+      jest.spyOn(eventEmitter, 'emit');
+    });
+
+    it('만료된 키가 active 키 형식이면 closePoll을 호출하고 이벤트를 발행해야 한다', async () => {
+      await service.handlePollAutoClose(activeKey);
+
+      expect(service.closePoll).toHaveBeenCalledWith(pollId);
+
+      expect(eventEmitter.emit).toHaveBeenCalledWith('poll.autoClosed', {
+        pollId,
+        results: mockFinalResults,
+      });
+    });
+
+    it('만료된 키가 active 형식이 아니면(예: 다른 접두사) 아무 작업도 하지 않아야 한다', async () => {
+      const invalidKey = `poll:${pollId}:voters`; // active가 아님
+
+      await service.handlePollAutoClose(invalidKey);
+
+      expect(service.closePoll).not.toHaveBeenCalled();
+      expect(eventEmitter.emit).not.toHaveBeenCalled();
+    });
+
+    it('키 구조가 올바르지 않으면 아무 작업도 하지 않아야 한다', async () => {
+      const wrongFormatKey = 'something:broken';
+
+      await service.handlePollAutoClose(wrongFormatKey);
+
+      expect(service.closePoll).not.toHaveBeenCalled();
+    });
+
+    it('closePoll 실패 시 에러를 로그로 남겨야 한다 (예외가 밖으로 던져지지 않음)', async () => {
+      jest.spyOn(service, 'closePoll').mockRejectedValue(new Error('Close Fail'));
+      const loggerSpy = jest.spyOn(service['logger'], 'error');
+
+      await service.handlePollAutoClose(activeKey);
+
+      expect(loggerSpy).toHaveBeenCalledWith(
+        expect.stringContaining(`[AutoClose Error] ${pollId}`),
+      );
     });
   });
 });
