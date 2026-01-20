@@ -1,12 +1,20 @@
 import { AnimatePresence } from 'motion/react';
+import { useLocation } from 'react-router';
 import { SidePanel } from './SidePanel';
 import { ChatPanel } from './ChatPanel';
 import { InfoPanel } from './InfoPanel';
 import { MenuPanel } from './MenuPanel';
 import { useRoomUIStore } from '../stores/useRoomUIStore';
 import { cn } from '@/shared/lib/utils';
+import { buildJoinLink } from '@/shared/lib/roomLinks';
+
+// mock 데이터
+const mockFileList = Array.from({ length: 5 }, (_, i) => ({ name: `파일_${i + 1}.pdf`, url: '#' }));
 
 export function RoomSideSection() {
+  const location = useLocation();
+  const joinLink = buildJoinLink(location.pathname, window.location.origin);
+
   const activeSidePanel = useRoomUIStore((state) => state.activeSidePanel);
   const setActiveSidePanel = useRoomUIStore((state) => state.setActiveSidePanel);
 
@@ -21,7 +29,13 @@ export function RoomSideSection() {
         {activeSidePanel && (
           <SidePanel>
             {activeSidePanel === 'chat' && <ChatPanel onClose={() => setActiveSidePanel('chat')} />}
-            {activeSidePanel === 'info' && <InfoPanel onClose={() => setActiveSidePanel('info')} />}
+            {activeSidePanel === 'info' && (
+              <InfoPanel
+                joinLink={joinLink}
+                files={mockFileList}
+                onClose={() => setActiveSidePanel('info')}
+              />
+            )}
             {activeSidePanel === 'menu' && <MenuPanel onClose={() => setActiveSidePanel('menu')} />}
           </SidePanel>
         )}

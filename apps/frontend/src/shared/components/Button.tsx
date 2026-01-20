@@ -21,26 +21,56 @@ const buttonVariants = cva(
   },
 );
 
-interface ButtonProps extends ComponentProps<'button'>, VariantProps<typeof buttonVariants> {
+type ButtonBaseProps = {
   children?: ReactNode;
   tooltip?: string;
   tooltipPosition?: 'top' | 'bottom' | 'left' | 'right';
-}
+  className?: string;
+} & VariantProps<typeof buttonVariants>;
 
-export function Button({
-  variant,
-  children,
-  tooltip,
-  tooltipPosition = 'top',
-  className,
-  type = 'button',
-  ...props
-}: ButtonProps) {
+type ButtonAsButtonProps = ButtonBaseProps &
+  Omit<ComponentProps<'button'>, 'className' | 'children'> & { as?: 'button' };
+
+type ButtonAsAnchorProps = ButtonBaseProps &
+  Omit<ComponentProps<'a'>, 'className' | 'children'> & { as: 'a' };
+
+type ButtonProps = ButtonAsButtonProps | ButtonAsAnchorProps;
+
+export function Button(props: ButtonProps) {
+  const { variant, children, tooltip, tooltipPosition = 'top', className } = props;
+  const sharedClassName = cn(buttonVariants({ variant }), className);
+
+  if (props.as === 'a') {
+    const { as: _as, ...anchorProps } = props as ButtonAsAnchorProps;
+    const button = (
+      <a
+        {...anchorProps}
+        className={sharedClassName}
+      >
+        {children}
+      </a>
+    );
+
+    if (tooltip) {
+      return (
+        <Tooltip
+          content={tooltip}
+          position={tooltipPosition}
+        >
+          {button}
+        </Tooltip>
+      );
+    }
+
+    return button;
+  }
+
+  const { as: _as, type, ...buttonProps } = props as ButtonAsButtonProps;
   const button = (
     <button
-      className={cn(buttonVariants({ variant }), className)}
-      type={type}
-      {...props}
+      {...buttonProps}
+      type={type ?? 'button'}
+      className={sharedClassName}
     >
       {children}
     </button>
