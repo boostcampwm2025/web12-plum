@@ -12,7 +12,7 @@ abstract class BaseZodPipe implements PipeTransform {
     if (!result.success) {
       this.handleException(result.error);
     }
-    return result;
+    return result.data;
   }
 }
 
