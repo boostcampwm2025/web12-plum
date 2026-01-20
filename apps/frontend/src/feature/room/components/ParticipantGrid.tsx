@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useMemo, useRef } from 'react';
 import { ParticipantVideo, VideoDisplayMode } from './ParticipantVideo';
 import { Icon } from '@/shared/components/icon/Icon';
 import { Button } from '@/shared/components/Button';
@@ -23,7 +23,23 @@ export function ParticipantGrid({ videoMode, currentUser, onModeChange }: Partic
 
   const { getParticipantList } = useRoomStore((state) => state.actions);
   const { getRemoteStreamsByParticipant } = useMediaStore((state) => state.actions);
+  const remoteStreams = useMediaStore((state) => state.remoteStreams);
   const participants = getParticipantList();
+
+  // 카메라 켜진 참가자를 위로, 꺼진 참가자를 아래로 정렬
+  const sortedParticipants = useMemo(() => {
+    return [...participants].sort((a, b) => {
+      const aHasVideo = getRemoteStreamsByParticipant(a.id).some(
+        (stream) => stream.type === 'video',
+      );
+      const bHasVideo = getRemoteStreamsByParticipant(b.id).some(
+        (stream) => stream.type === 'video',
+      );
+      if (aHasVideo && !bHasVideo) return -1;
+      if (!aHasVideo && bHasVideo) return 1;
+      return 0;
+    });
+  }, [participants, remoteStreams, getRemoteStreamsByParticipant]);
 
   const itemsPerPage = useItemsPerPage(containerRef, {
     buttonHeight: 24,
@@ -38,7 +54,7 @@ export function ParticipantGrid({ videoMode, currentUser, onModeChange }: Partic
     goToNextPage,
     hasPrevPage,
     hasNextPage,
-  } = usePagination<Participant>(participants, itemsPerPage);
+  } = usePagination<Participant>(sortedParticipants, itemsPerPage);
 
   if (videoMode !== 'side') return null;
 
