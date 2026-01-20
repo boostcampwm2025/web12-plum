@@ -33,8 +33,13 @@ export function ParticipantVideo({
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
-    if (mode !== 'minimize' && videoRef.current && stream && isCameraOn) {
+    if (!videoRef.current) return;
+
+    if (mode !== 'minimize' && stream && isCameraOn) {
       videoRef.current.srcObject = stream;
+    } else {
+      // 카메라 꺼지면 srcObject 정리 (마지막 프레임 제거)
+      videoRef.current.srcObject = null;
     }
   }, [isCameraOn, stream, mode]);
 
