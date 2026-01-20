@@ -10,6 +10,7 @@ import { useMediaStore } from '../stores/useMediaStore';
 import { useMediaTransport } from '../mediasoup/useMediaTransport';
 import { useMediaProducer } from '../mediasoup/useMediaProducer';
 import { useMediaConsumer } from '../mediasoup/useMediaConsumer';
+import { ProducerSignaling } from '../mediasoup/ProducerSignaling';
 
 interface MediaConnectionContextType {
   // 미디어 전송/수신 관련 기능
@@ -61,9 +62,8 @@ export function MediaConnectionProvider({ children }: MediaConnectionProviderPro
     (state) => state.actions,
   );
   const { setScreenSharing, setScreenStream } = useMediaStore((state) => state.actions);
-  const { addRemoteStream, resetRemoteStreams, toggleMic, toggleCamera } = useMediaStore(
-    (state) => state.actions,
-  );
+  const { addRemoteStream, removeRemoteStream, resetRemoteStreams, toggleMic, toggleCamera } =
+    useMediaStore((state) => state.actions);
 
   /**
    * [내부] 전송/수신용 Transport 확보 공통 로직
@@ -113,7 +113,13 @@ export function MediaConnectionProvider({ children }: MediaConnectionProviderPro
       if (!device || !socket) return;
       try {
         const transport = await ensureTransport('recv');
-        const { consumer, stream } = await consume(device, socket, transport, data.producerId);
+        const { consumer, stream } = await consume(
+          device,
+          socket,
+          transport,
+          data.producerId,
+          removeRemoteStream, // producer 종료 시 스토어에서 제거
+        );
 
         const remoteStream = {
           participantId: data.participantId,
@@ -126,7 +132,7 @@ export function MediaConnectionProvider({ children }: MediaConnectionProviderPro
         logger.media.error(`[MediaConnection] 원격 미디어 수신 실패:`, error);
       }
     },
-    [ensureTransport, consume, addRemoteStream],
+    [ensureTransport, consume, addRemoteStream, removeRemoteStream],
   );
 
   /**
@@ -134,6 +140,7 @@ export function MediaConnectionProvider({ children }: MediaConnectionProviderPro
    */
   const startMicProducer = useCallback(async () => {
     try {
+      const socket = useSocketStore.getState().socket;
       let localStream = useStreamStore.getState().localStream;
       let audioTrack = localStream?.getAudioTracks()[0];
 
@@ -151,6 +158,10 @@ export function MediaConnectionProvider({ children }: MediaConnectionProviderPro
       if (existingProducer) {
         // 이미 존재하면 resume (일시정지 해제)
         togglePause('audio', false);
+        // 서버에 미디어 상태 변경 알림
+        if (socket) {
+          await ProducerSignaling.toggleMedia(socket, existingProducer.id, 'resume', 'audio');
+        }
       } else {
         // 존재하지 않으면 신규 생성 (최초 1회)
         await startProducing(audioTrack, 'audio');
@@ -175,8 +186,16 @@ export function MediaConnectionProvider({ children }: MediaConnectionProviderPro
   /**
    * 마이크 송출 중단 (점유 유지 + Pause 전략)
    */
-  const stopMicProducer = useCallback(() => {
+  const stopMicProducer = useCallback(async () => {
     try {
+      const socket = useSocketStore.getState().socket;
+      const producer = getProducer('audio');
+
+      // 서버에 미디어 상태 변경 알림
+      if (socket && producer) {
+        await ProducerSignaling.toggleMedia(socket, producer.id, 'pause', 'audio');
+      }
+
       // 서버 송출 일시정지 (Producer Close 대신 Pause)
       togglePause('audio', true);
 
@@ -188,7 +207,7 @@ export function MediaConnectionProvider({ children }: MediaConnectionProviderPro
     } catch (error) {
       logger.media.error('[MediaConnection] 마이크 중단 에러:', error);
     }
-  }, [isCameraOn, isMicOn, togglePause, setTracksEnabled, toggleMic]);
+  }, [isCameraOn, isMicOn, getProducer, togglePause, setTracksEnabled, toggleMic]);
   /**
    * 카메라 송출 시작 (점유 해제 전략)
    */
@@ -214,8 +233,16 @@ export function MediaConnectionProvider({ children }: MediaConnectionProviderPro
   /**
    * 카메라 송출 중단 (점유 해제 전략)
    */
-  const stopCameraProducer = useCallback(() => {
+  const stopCameraProducer = useCallback(async () => {
     try {
+      const socket = useSocketStore.getState().socket;
+      const producer = getProducer('video');
+
+      // 서버에 미디어 상태 변경 알림
+      if (socket && producer) {
+        await ProducerSignaling.toggleMedia(socket, producer.id, 'pause', 'video');
+      }
+
       // 서버 송출 중단
       stopProducing('video');
 
@@ -229,7 +256,7 @@ export function MediaConnectionProvider({ children }: MediaConnectionProviderPro
     } catch (error) {
       logger.media.error('[MediaConnection] 카메라 중단 에러:', error);
     }
-  }, [isCameraOn, stopProducing, stopTrack, toggleCamera]);
+  }, [isCameraOn, getProducer, stopProducing, stopTrack, toggleCamera]);
 
   /**
    * 화면 공유 중지
