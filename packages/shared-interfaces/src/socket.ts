@@ -119,6 +119,8 @@ export type ToggleMediaResponse = BaseResponse;
 
 export type LeaveRoomResponse = BaseResponse;
 
+export type BreakRoomResponse = BaseResponse;
+
 // 서버에서 보내는 브로드캐스트 페이로드
 export interface UserJoinedPayload {
   id: string;
@@ -166,6 +168,8 @@ export interface ServerToClientEvents {
   media_state_changed: (data: MediaStateChangedPayload) => void;
 
   update_gesture_status: (data: UpdateGestureStatusPayload) => void;
+
+  room_end: () => void;
 }
 
 /**
@@ -197,4 +201,6 @@ export interface ClientToServerEvents {
   leave_room: (cb: (res: LeaveRoomResponse) => void) => void;
 
   action_gesture: (data: ActionGestureRequest, cb: (res: ActionGestureResponse) => void) => void;
+
+  break_room: (cb: (res: BreakRoomResponse) => void) => void;
 }

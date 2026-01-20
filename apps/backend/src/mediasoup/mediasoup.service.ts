@@ -191,6 +191,10 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
 
       // Map에 저장
       this.transports.set(transport.id, transport);
+      transport.observer.on('close', () => {
+        this.transports.delete(transport.id);
+        this.logger.log(`Transport 닫힘 (id: ${transport.id})`);
+      });
 
       this.logger.log(`✅ Transport 생성 완료 (id: ${transport.id}, room: ${roomId})`);
 
@@ -246,11 +250,7 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
    */
   closeTransport(transportId: string) {
     const transport = this.transports.get(transportId);
-    if (transport) {
-      transport.close();
-      this.transports.delete(transportId);
-      this.logger.log(`🗑️ Transport 닫힘 (id: ${transportId})`);
-    }
+    if (transport) transport.close();
   }
 
   async createProducer(
@@ -272,11 +272,9 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
       },
     });
     this.producers.set(producer.id, producer);
-
-    // Producer가 닫힐 때 Map에서 제거
-    producer.on('transportclose', () => {
-      this.logger.log(`Producer의 Transport가 닫혀 Producer 제거 (id: ${producer.id})`);
+    producer.observer.on('close', () => {
       this.producers.delete(producer.id);
+      this.logger.log(`Producer 닫힘 (id: ${producer.id})`);
     });
 
     return producer;
@@ -303,7 +301,6 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
     if (!producer) throw new Error(`${producerId} Producer를 찾을 수 없습니다.`);
 
     producer.close();
-    this.producers.delete(producer.id);
   }
 
   async createConsumer(
@@ -328,10 +325,9 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
       },
     });
     this.consumers.set(consumer.id, consumer);
-    consumer.on('transportclose', () => this.consumers.delete(consumer.id));
-    consumer.on('producerclose', () => {
-      consumer.close();
+    consumer.observer.on('close', () => {
       this.consumers.delete(consumer.id);
+      this.logger.log(`Consumer 닫힘 (id: ${consumer.id})`);
     });
 
     return consumer;
@@ -351,7 +347,6 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
     const consumer = this.getConsumer(consumerId);
     if (!consumer) throw new Error(`${consumerId} Consumer를 찾을 수 없습니다.`);
     consumer.close();
-    this.consumers.delete(consumer.id);
   }
 
   cleanupParticipantFromMaps(producers: string[] = [], consumers: string[] = []) {
@@ -361,9 +356,7 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
           this.closeProducer(producerId);
         }
       } catch (error) {
-        this.logger.warn(
-          `Producer ${producerId} 정리 중 오류 (이미 닫혔을 수 있음): ${error.message}`,
-        );
+        this.logger.warn(`Producer ${producerId} 정리 중 오류: ${error.message}`);
       }
     });
 

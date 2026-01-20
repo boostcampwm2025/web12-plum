@@ -16,6 +16,7 @@ describe('RoomGateway', () => {
   let mediasoupService: MediasoupService;
   let participantManager: ParticipantManagerService;
   let socketMetadataService: SocketMetadataService;
+  let roomManager: RoomManagerService;
 
   const createMockSocket = (id: string = 'socket-123') =>
     ({
@@ -55,6 +56,7 @@ describe('RoomGateway', () => {
             }),
             connectTransport: jest.fn().mockResolvedValue(undefined),
             closeTransport: jest.fn(),
+            closeRouter: jest.fn(),
 
             // Producer 관련
             createProducer: jest.fn().mockResolvedValue({ id: 'producer-id' }),
@@ -81,6 +83,8 @@ describe('RoomGateway', () => {
           provide: RoomManagerService,
           useValue: {
             removeParticipant: jest.fn(),
+            findOne: jest.fn(),
+            updatePartial: jest.fn(),
           },
         },
         {
@@ -106,6 +110,15 @@ describe('RoomGateway', () => {
     mediasoupService = module.get<MediasoupService>(MediasoupService);
     participantManager = module.get<ParticipantManagerService>(ParticipantManagerService);
     socketMetadataService = module.get<SocketMetadataService>(SocketMetadataService);
+    roomManager = module.get<RoomManagerService>(RoomManagerService);
+
+    (gateway as any).server = {
+      to: jest.fn().mockReturnThis(),
+      emit: jest.fn(),
+      in: jest.fn().mockReturnThis(),
+      socketsLeave: jest.fn(),
+      disconnectSockets: jest.fn(),
+    };
   });
 
   it('should be defined', () => {
@@ -265,6 +278,103 @@ describe('RoomGateway', () => {
       expect(mediasoupService.closeTransport).toHaveBeenCalledTimes(2);
       expect(mediasoupService.cleanupParticipantFromMaps).toHaveBeenCalledWith(['p-1'], ['c-1']);
       expect(socketMetadataService.delete).toHaveBeenCalledWith(socket.id);
+    });
+  });
+
+  describe('handleBreakRoom', () => {
+    it('발표자가 요청 시 방을 종료하고 리소스를 정리해야 함', async () => {
+      const socket = createMockSocket();
+      const roomId = 'room-123';
+      const presenterId = 'presenter-456';
+
+      // 1. 메타데이터 설정
+      jest.spyOn(socketMetadataService, 'get').mockReturnValue({
+        roomId: 'room-1',
+        participantId: presenterId,
+        transportIds: [],
+      });
+
+      // 2. Mock 데이터 설정 (발표자이며 활성화된 방)
+      jest.spyOn(participantManager, 'findOne').mockResolvedValue({
+        id: presenterId,
+        role: 'presenter',
+      } as any);
+      jest.spyOn(roomManager, 'findOne').mockResolvedValue({
+        id: roomId,
+        status: 'active',
+        presenter: presenterId,
+      } as any);
+
+      const updateSpy = jest.spyOn(roomManager, 'updatePartial').mockResolvedValue(undefined);
+      const closeRouterSpy = jest
+        .spyOn(mediasoupService, 'closeRouter')
+        .mockResolvedValue(undefined);
+
+      // 3. 실행
+      const result = await gateway.handleBreakRoom(socket);
+
+      // 4. 검증
+      expect(result.success).toBe(true);
+      expect(updateSpy).toHaveBeenCalledWith(roomId, { status: 'ended' });
+      expect(closeRouterSpy).toHaveBeenCalledWith(roomId);
+      expect((gateway as any).server.to).toHaveBeenCalledWith(roomId);
+      expect((gateway as any).server.emit).toHaveBeenCalledWith('room_end');
+      expect((gateway as any).server.in).toHaveBeenCalledWith(roomId);
+      expect((gateway as any).server.socketsLeave).toHaveBeenCalledWith(roomId);
+    });
+
+    it('발표자가 아닌 참가자가 요청할 경우 권한 에러를 반환해야 함', async () => {
+      const socket = createMockSocket();
+      jest.spyOn(socketMetadataService, 'get').mockReturnValue({
+        roomId: 'r1',
+        participantId: 'u1',
+        transportIds: [],
+      });
+
+      // 학생(student)으로 모킹
+      jest
+        .spyOn(participantManager, 'findOne')
+        .mockResolvedValue({ id: 'u1', role: 'student' } as any);
+      jest
+        .spyOn(roomManager, 'findOne')
+        .mockResolvedValue({ id: 'r1', presenter: 'other-user' } as any);
+
+      const result = await gateway.handleBreakRoom(socket);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('권한이 없습니다');
+    });
+
+    it('이미 종료된 방인 경우 에러를 반환해야 함', async () => {
+      const socket = createMockSocket();
+      jest.spyOn(socketMetadataService, 'get').mockReturnValue({
+        roomId: 'r1',
+        participantId: 'u1',
+        transportIds: [],
+      });
+
+      jest
+        .spyOn(participantManager, 'findOne')
+        .mockResolvedValue({ id: 'p1', role: 'presenter' } as any);
+      jest.spyOn(roomManager, 'findOne').mockResolvedValue({
+        id: 'r1',
+        status: 'ended', // 이미 종료됨
+        presenter: 'p1',
+      } as any);
+
+      const result = await gateway.handleBreakRoom(socket);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('이미 종료되었거나');
+    });
+
+    it('메타데이터가 없는 유효하지 않은 소켓 요청', async () => {
+      const socket = createMockSocket('unknown-socket');
+
+      const result = await gateway.handleBreakRoom(socket);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('유효하지 않은 접근');
     });
   });
 });
