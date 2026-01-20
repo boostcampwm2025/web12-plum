@@ -11,12 +11,14 @@ import { useMediaTransport } from '../mediasoup/useMediaTransport';
 import { useMediaProducer } from '../mediasoup/useMediaProducer';
 import { useMediaConsumer } from '../mediasoup/useMediaConsumer';
 import { ProducerSignaling } from '../mediasoup/ProducerSignaling';
+import { useRoomStore } from '../stores/useRoomStore';
 
 interface MediaConnectionContextType {
   // 미디어 전송/수신 관련 기능
   startProducing: (track: MediaStreamTrack, type: MediaType) => Promise<void>;
   stopProducing: (type: MediaType) => void;
   consumeRemoteProducer: (data: NewProducerPayload) => Promise<void>;
+  consumeExistingProducers: () => Promise<void>;
   cleanup: () => void;
 
   // 미디어 토글 기능
@@ -58,12 +60,13 @@ export function MediaConnectionProvider({ children }: MediaConnectionProviderPro
   const { consume, removeAll: removeConsumers } = useMediaConsumer();
 
   // 외부 스토어 액션
-  const { setTracksEnabled, ensureTracks, clearStream, stopTrack } = useStreamStore(
-    (state) => state.actions,
-  );
+  const { getParticipantList } = useRoomStore((state) => state.actions);
   const { setScreenSharing, setScreenStream } = useMediaStore((state) => state.actions);
   const { addRemoteStream, removeRemoteStream, resetRemoteStreams, toggleMic, toggleCamera } =
     useMediaStore((state) => state.actions);
+  const { setTracksEnabled, ensureTracks, clearStream, stopTrack } = useStreamStore(
+    (state) => state.actions,
+  );
 
   /**
    * [내부] 전송/수신용 Transport 확보 공통 로직
@@ -294,6 +297,32 @@ export function MediaConnectionProvider({ children }: MediaConnectionProviderPro
   }, [startProducing, setScreenStream, setScreenSharing, stopScreenShare]);
 
   /**
+   * 기존 참가자들의 모든 프로듀서 수신 시도
+   */
+  const consumeExistingProducers = useCallback(async () => {
+    const participants = getParticipantList();
+    logger.media.info(`[MediaConnection] 기존 참가자 미디어 수신 시도`);
+
+    const consumePromises: Promise<void>[] = [];
+
+    // 각 참가자의 모든 프로듀서에 대해 수신 시도
+    participants.forEach((participant) => {
+      participant.producers.forEach((producerId, type) => {
+        const payload: NewProducerPayload = {
+          producerId,
+          participantId: participant.id,
+          type: type as MediaType,
+          kind: type === 'audio' ? 'audio' : 'video',
+          participantRole: participant.role,
+        };
+        consumePromises.push(consumeRemoteProducer(payload));
+      });
+    });
+
+    await Promise.allSettled(consumePromises);
+  }, [consumeRemoteProducer]);
+
+  /**
    * 모든 미디어 자원 정리 (방을 나갈 때 호출)
    */
   const cleanup = useCallback(() => {
@@ -331,6 +360,7 @@ export function MediaConnectionProvider({ children }: MediaConnectionProviderPro
     startProducing,
     stopProducing,
     consumeRemoteProducer,
+    consumeExistingProducers,
     cleanup,
 
     startMicProducer,

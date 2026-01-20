@@ -48,6 +48,7 @@ export function useRoomInit() {
   const {
     startProducing,
     consumeRemoteProducer,
+    consumeExistingProducers,
     cleanup: cleanupMedia,
   } = useMediaConnectionContext();
 
@@ -90,7 +91,10 @@ export function useRoomInit() {
       // 4. Mediasoup Device 초기화
       await initDevice(routerRtpCapabilities);
 
-      // 5. 미디어 스트림 획득 및 송출 시작
+      // 5. 기존 참가자들의 화면 가져오기
+      await consumeExistingProducers();
+
+      // 6. 미디어 스트림 획득 및 송출 시작
       try {
         // 초기 입장 시 사용자가 설정한 값에 따라 트랙 확보
         if (isCameraOn || isMicOn) {
