@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Poll, UpdatePollStatusPayload } from '@plum/shared-interfaces';
+import { Poll, PollOption, UpdatePollStatusSubPayload, Voter } from '@plum/shared-interfaces';
 import { RedisService } from '../redis.service.js';
 import { BaseRedisRepository } from './base-redis.repository.js';
 
@@ -171,8 +171,9 @@ export class PollManagerService extends BaseRedisRepository<Poll> {
   async submitVote(
     pollId: string,
     participantId: string,
+    participantName: string,
     optionId: number,
-  ): Promise<Pick<UpdatePollStatusPayload, 'options'>> {
+  ): Promise<UpdatePollStatusSubPayload> {
     const client = this.redisService.getClient();
     const activeKey = this.getActiveKey(pollId);
     const voterKey = this.getVoterKey(pollId);
@@ -186,7 +187,11 @@ export class PollManagerService extends BaseRedisRepository<Poll> {
       throw new Error('Poll is not active');
     }
 
-    const isNewVoter = await client.sadd(voterKey, participantId);
+    const isNewVoter = await client.hsetnx(
+      voterKey,
+      participantId,
+      `${optionId}:${participantName}`,
+    );
     if (isNewVoter === 0) {
       this.logger.warn(
         `[SubmitVote] Reject: Duplicate vote attempt. Poll: ${pollId}, Participant: ${participantId}`,
@@ -197,15 +202,15 @@ export class PollManagerService extends BaseRedisRepository<Poll> {
     try {
       const pipeline = client.pipeline();
       pipeline.hincrby(countKey, optionId.toString(), 1);
-      pipeline.expire(voterKey, TTL_BOUNDS);
       pipeline.hgetall(countKey);
+      pipeline.expire(voterKey, TTL_BOUNDS);
 
       const results = await pipeline.exec();
       if (!results || results.some(([err]) => err !== null)) {
         throw new Error('Pipeline failed during voting');
       }
 
-      const hgetallResult = results[2][1];
+      const hgetallResult = results[1][1];
       if (!hgetallResult || typeof hgetallResult !== 'object') {
         throw new Error('Failed to retrieve count data');
       }
@@ -220,11 +225,11 @@ export class PollManagerService extends BaseRedisRepository<Poll> {
 
       this.logger.log(`[SubmitVote] Success: Poll ${pollId}, Participant ${participantId}`);
 
-      return { options };
+      return { pollId, options };
     } catch (error) {
       try {
         const rollbackPipeline = client.pipeline();
-        rollbackPipeline.srem(voterKey, participantId);
+        rollbackPipeline.hdel(voterKey, participantId);
         rollbackPipeline.hincrby(countKey, optionId.toString(), -1);
 
         await rollbackPipeline.exec();
@@ -238,5 +243,68 @@ export class PollManagerService extends BaseRedisRepository<Poll> {
       this.logger.error(`[SubmitVote] Error: Poll ${pollId}. Rollback executed.`, error.stack);
       throw error;
     }
+  }
+
+  /**
+   * 투표 종료
+   */
+  async closePoll(pollId: string): Promise<PollOption[]> {
+    const client = this.redisService.getClient();
+    const activeKey = this.getActiveKey(pollId);
+    const countKey = this.getVoteCountKey(pollId);
+    const voterKey = this.getVoterKey(pollId);
+
+    const poll: Poll | null = await this.findOne(pollId);
+    if (!poll) throw new Error('Poll not found');
+
+    try {
+      const pipeline = client.pipeline();
+      pipeline.hgetall(countKey);
+      pipeline.hgetall(voterKey);
+      pipeline.del(activeKey);
+
+      const results = await pipeline.exec();
+      if (!results || results.some(([err]) => err !== null)) throw new Error('Close failed');
+
+      const countsRaw = (results[0][1] as Record<string, string>) || {};
+      const votersRaw = (results[1][1] as Record<string, string>) || {};
+
+      const voterGroups = new Map<number, Voter[]>();
+      Object.entries(votersRaw).forEach(([pId, valueStr]) => {
+        const separatorIndex = valueStr.indexOf(':');
+        const oId = Number(valueStr.substring(0, separatorIndex));
+        const pName = valueStr.substring(separatorIndex + 1);
+
+        if (!voterGroups.has(oId)) voterGroups.set(oId, []);
+        voterGroups.get(oId)!.push({ id: pId, name: pName });
+      });
+
+      const finalOptions: PollOption[] = poll.options.map((option) => ({
+        ...option,
+        count: Number(countsRaw[option.id.toString()] || 0),
+        voters: voterGroups.get(option.id) || [],
+      }));
+
+      await this.updatePartial(pollId, {
+        status: 'ended',
+        options: finalOptions,
+        updatedAt: new Date().toISOString(),
+      });
+      this.logger.log(`[ClosePoll] Confirmed: ${pollId}`);
+      return finalOptions;
+    } catch (error) {
+      this.logger.error(`[ClosePoll] Failed: ${pollId}`, error.stack);
+      throw error;
+    }
+  }
+
+  /**
+   * 이미 종료된 투표의 결과를 조회 (저장된 options 배열 반환)
+   */
+  async getFinalResults(pollId: string): Promise<PollOption[]> {
+    const poll = await this.findOne(pollId);
+    if (!poll || poll.status !== 'ended' || !poll.options) return [];
+
+    return poll.options;
   }
 }

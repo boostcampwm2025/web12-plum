@@ -82,6 +82,10 @@ export interface VoteRequest {
   optionId: number;
 }
 
+export interface BreakPollRequest {
+  pollId: string;
+}
+
 // 클라이언트에서 보낸 요청에 따라 발생하는 이벤트 페이로드
 
 export interface BaseResponse {
@@ -160,6 +164,10 @@ export type EmitPollResponse =
 
 export type VoteResponse = BaseResponse;
 
+export type BreakPollResponse =
+  | (BaseResponse & { success: false })
+  | { success: true; options: PollOption[] };
+
 // 서버에서 보내는 브로드캐스트 페이로드
 export interface UserJoinedPayload {
   id: string;
@@ -192,10 +200,17 @@ export interface UpdateGestureStatusPayload {
 
 export type StartPollPayload = PollPayload;
 
-export interface UpdatePollStatusPayload {
+export interface UpdatePollStatusFullPayload {
   pollId: string;
   options: Pick<PollOption, 'id' | 'count'>[];
+  voter: {
+    participantId: string;
+    name: string;
+    optionId: number;
+  };
 }
+
+export type UpdatePollStatusSubPayload = Omit<UpdatePollStatusFullPayload, 'voter'>;
 
 /**
  * 서버 -> 클라이언트 이벤트
@@ -215,7 +230,11 @@ export interface ServerToClientEvents {
 
   start_poll: (data: StartPollPayload) => void;
 
-  update_poll: (data: UpdatePollStatusPayload) => void;
+  update_poll: (data: UpdatePollStatusSubPayload) => void;
+
+  update_poll_detail: (data: UpdatePollStatusFullPayload) => void;
+
+  end_poll: (data: UpdatePollStatusFullPayload) => void;
 }
 
 /**
@@ -257,4 +276,6 @@ export interface ClientToServerEvents {
   emit_poll: (data: EmitPollRequest, cb: (res: EmitPollResponse) => void) => void;
 
   vote: (data: VoteRequest, cb: (res: VoteResponse) => void) => void;
+
+  break_poll: (data: BreakPollRequest, cb: (res: BreakPollResponse) => void) => void;
 }

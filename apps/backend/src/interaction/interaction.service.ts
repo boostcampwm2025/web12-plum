@@ -1,6 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { ulid } from 'ulid';
-import { Poll, PollPayload, Qna, UpdatePollStatusPayload } from '@plum/shared-interfaces';
+import {
+  Poll,
+  PollOption,
+  PollPayload,
+  Qna,
+  UpdatePollStatusSubPayload,
+} from '@plum/shared-interfaces';
 
 import { CreatePollDto, CreateQnaDto } from './dto';
 import { PollManagerService, QnaManagerService } from '../redis/repository-manager/index.js';
@@ -28,6 +34,7 @@ export class InteractionService {
         id: index,
         value: option.value,
         count: 0,
+        voters: [],
       })),
       createdAt: now,
       updatedAt: now,
@@ -93,8 +100,9 @@ export class InteractionService {
   async vote(
     pollId: string,
     participantId: string,
+    participantName: string,
     optionId: number,
-  ): Promise<UpdatePollStatusPayload> {
+  ): Promise<UpdatePollStatusSubPayload> {
     const poll = await this.pollManagerService.findOne(pollId);
     if (!poll) throw new BusinessException('존재하지 않는 투표입니다.');
 
@@ -102,8 +110,22 @@ export class InteractionService {
       throw new BusinessException('유효하지 않은 선택지입니다.');
     }
 
-    const result = await this.pollManagerService.submitVote(pollId, participantId, optionId);
-    return { pollId, ...result };
+    const result = await this.pollManagerService.submitVote(
+      pollId,
+      participantId,
+      participantName,
+      optionId,
+    );
+    return { ...result };
+  }
+
+  async stopPoll(pollId: string): Promise<PollOption[]> {
+    const poll = await this.pollManagerService.findOne(pollId);
+    if (!poll) throw new BusinessException('존재하지 않는 투표입니다.');
+
+    if (poll.status === 'ended') return await this.pollManagerService.getFinalResults(pollId);
+
+    return await this.pollManagerService.closePoll(pollId);
   }
 
   // --- QnA Methods ---

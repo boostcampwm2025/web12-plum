@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { PollManagerService, QnaManagerService } from '../redis/repository-manager/index.js';
 import { InteractionService } from './interaction.service.js';
+import { BusinessException } from '../common/types';
 
 describe('InteractionService (투표 및 Q&A 생성 테스트)', () => {
   let service: InteractionService;
@@ -12,6 +13,8 @@ describe('InteractionService (투표 및 Q&A 생성 테스트)', () => {
     findOne: jest.fn(),
     startPoll: jest.fn(),
     submitVote: jest.fn(),
+    closePoll: jest.fn(),
+    getFinalResults: jest.fn(),
   };
 
   // 2. QnaManagerService 모킹
@@ -171,6 +174,7 @@ describe('InteractionService (투표 및 Q&A 생성 테스트)', () => {
   describe('vote (투표 제출)', () => {
     const pollId = 'poll-123';
     const participantId = 'user-999';
+    const participantName = 'user-999';
     const mockPoll = {
       id: pollId,
       status: 'active',
@@ -187,8 +191,9 @@ describe('InteractionService (투표 및 Q&A 생성 테스트)', () => {
     it('유효한 선택지에 투표하면 업데이트된 옵션 목록을 반환해야 한다', async () => {
       const optionId = 0;
       const mockUpdateResult = {
+        pollId,
         options: [
-          { id: 0, count: 5 },
+          { id: 0, count: 2 },
           { id: 1, count: 3 },
         ],
       };
@@ -196,10 +201,15 @@ describe('InteractionService (투표 및 Q&A 생성 테스트)', () => {
       mockPollManager.findOne.mockResolvedValue(mockPoll);
       mockPollManager.submitVote.mockResolvedValue(mockUpdateResult);
 
-      const result = await service.vote(pollId, participantId, optionId);
+      const result = await service.vote(pollId, participantId, participantName, optionId);
 
       expect(mockPollManager.findOne).toHaveBeenCalledWith(pollId);
-      expect(mockPollManager.submitVote).toHaveBeenCalledWith(pollId, participantId, optionId);
+      expect(mockPollManager.submitVote).toHaveBeenCalledWith(
+        pollId,
+        participantId,
+        participantName,
+        optionId,
+      );
       expect(result).toEqual({
         pollId,
         options: mockUpdateResult.options,
@@ -209,7 +219,7 @@ describe('InteractionService (투표 및 Q&A 생성 테스트)', () => {
     it('존재하지 않는 투표에 투표하려 하면 BusinessException을 던져야 한다', async () => {
       mockPollManager.findOne.mockResolvedValue(null);
 
-      await expect(service.vote('invalid-id', participantId, 0)).rejects.toThrow(
+      await expect(service.vote('invalid-id', participantId, participantName, 0)).rejects.toThrow(
         '존재하지 않는 투표입니다.',
       );
 
@@ -220,9 +230,9 @@ describe('InteractionService (투표 및 Q&A 생성 테스트)', () => {
       mockPollManager.findOne.mockResolvedValue(mockPoll);
       const invalidOptionId = 5; // mockPoll.options는 인덱스 0, 1만 존재
 
-      await expect(service.vote(pollId, participantId, invalidOptionId)).rejects.toThrow(
-        '유효하지 않은 선택지입니다.',
-      );
+      await expect(
+        service.vote(pollId, participantId, participantName, invalidOptionId),
+      ).rejects.toThrow('유효하지 않은 선택지입니다.');
 
       expect(mockPollManager.submitVote).not.toHaveBeenCalled();
     });
@@ -230,7 +240,7 @@ describe('InteractionService (투표 및 Q&A 생성 테스트)', () => {
     it('음수 옵션 ID로 투표하려 하면 에러를 던져야 한다', async () => {
       mockPollManager.findOne.mockResolvedValue(mockPoll);
 
-      await expect(service.vote(pollId, participantId, -1)).rejects.toThrow(
+      await expect(service.vote(pollId, participantId, participantName, -1)).rejects.toThrow(
         '유효하지 않은 선택지입니다.',
       );
     });
@@ -239,9 +249,49 @@ describe('InteractionService (투표 및 Q&A 생성 테스트)', () => {
       mockPollManager.findOne.mockResolvedValue(mockPoll);
       mockPollManager.submitVote.mockRejectedValue(new Error('Duplicate vote attempt'));
 
-      await expect(service.vote(pollId, participantId, 0)).rejects.toThrow(
+      await expect(service.vote(pollId, participantId, participantName, 0)).rejects.toThrow(
         'Duplicate vote attempt',
       );
+    });
+  });
+
+  describe('stopPoll (투표 종료)', () => {
+    const pollId = 'poll-123';
+    const mockOptions = [
+      { id: 0, value: '옵션1', count: 5, voters: ['user1'] },
+      { id: 1, value: '옵션2', count: 3, voters: ['user2'] },
+    ];
+
+    it('존재하지 않는 투표 ID인 경우 BusinessException을 던져야 한다', async () => {
+      mockPollManager.findOne.mockResolvedValue(null);
+
+      await expect(service.stopPoll(pollId)).rejects.toThrow(
+        new BusinessException('존재하지 않는 투표입니다.'),
+      );
+    });
+
+    it('이미 종료된(ended) 투표인 경우 getFinalResults를 호출하여 결과를 반환해야 한다', async () => {
+      const endedPoll = { id: pollId, status: 'ended' };
+      mockPollManager.findOne.mockResolvedValue(endedPoll);
+      mockPollManager.getFinalResults.mockResolvedValue(mockOptions);
+
+      const result = await service.stopPoll(pollId);
+
+      expect(mockPollManager.getFinalResults).toHaveBeenCalledWith(pollId);
+      expect(mockPollManager.closePoll).not.toHaveBeenCalled();
+      expect(result).toEqual(mockOptions);
+    });
+
+    it('진행 중인 투표인 경우 closePoll을 호출하여 투표를 마감하고 결과를 반환해야 한다', async () => {
+      const activePoll = { id: pollId, status: 'active' };
+      mockPollManager.findOne.mockResolvedValue(activePoll);
+      mockPollManager.closePoll.mockResolvedValue(mockOptions);
+
+      const result = await service.stopPoll(pollId);
+
+      expect(mockPollManager.closePoll).toHaveBeenCalledWith(pollId);
+      expect(mockPollManager.getFinalResults).not.toHaveBeenCalled(); // getFinalResults는 호출되면 안 됨
+      expect(result).toEqual(mockOptions);
     });
   });
 

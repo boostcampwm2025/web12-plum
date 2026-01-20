@@ -18,6 +18,9 @@ import {
   UpdateGestureStatusPayload,
   VoteRequest,
   VoteResponse,
+  BreakPollRequest,
+  BreakPollResponse,
+  UpdatePollStatusSubPayload,
 } from '@plum/shared-interfaces';
 
 import { SOCKET_CONFIG } from '../common/constants/socket.constants.js';
@@ -150,15 +153,52 @@ export class InteractionGateway {
       const payload = await this.interactionService.vote(
         data.pollId,
         participant.id,
+        participant.name,
         data.optionId,
       );
 
-      this.server.to(room.id).emit('update_poll', payload);
+      this.server.to(`${room.id}:audience`).emit('update_poll', payload);
+      this.server.to(`${room.id}:presenter`).emit('update_poll_detail', {
+        ...payload,
+        voter: {
+          participantId: participant.id,
+          name: participant.name,
+          optionsId: data.optionId,
+        },
+      });
+
       return { success: true };
     } catch (error) {
       const errorMessage =
         error instanceof BusinessException ? error.message : '투표에 실패했습니다.';
       this.logger.error(`[vote] 실패:`, error);
+      return { success: false, error: errorMessage };
+    }
+  }
+
+  @SubscribeMessage('break_poll')
+  async breakPoll(
+    @ConnectedSocket() socket: Socket,
+    @MessageBody() data: BreakPollRequest,
+  ): Promise<BreakPollResponse> {
+    try {
+      const { room } = await this.validatePresenterAction(socket.id);
+
+      const options = await this.interactionService.stopPoll(data.pollId);
+      const broadCastPayload: UpdatePollStatusSubPayload = {
+        pollId: data.pollId,
+        options: options.map((option) => ({
+          id: option.id,
+          count: option.count,
+        })),
+      };
+
+      socket.to(room.id).emit('poll_end', broadCastPayload);
+      return { success: true, options: options };
+    } catch (error) {
+      const errorMessage =
+        error instanceof BusinessException ? error.message : '투표 종료에 실패했습니다.';
+      this.logger.error(`[break_poll] 실패:`, error);
       return { success: false, error: errorMessage };
     }
   }

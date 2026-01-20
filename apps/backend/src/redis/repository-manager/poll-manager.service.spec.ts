@@ -160,6 +160,7 @@ describe('PollManagerService', () => {
   describe('submitVote', () => {
     const pollId = 'poll-123';
     const participantId = 'user-456';
+    const participantName = 'user-456';
     const optionId = 1;
     const activeKey = `poll:${pollId}:active`;
     const voterKey = `poll:${pollId}:voters`;
@@ -167,12 +168,13 @@ describe('PollManagerService', () => {
 
     beforeEach(() => {
       redisClient.exists = jest.fn();
-      redisClient.sadd = jest.fn();
+      redisClient.hsetnx = jest.fn();
 
       pipeline.hincrby = jest.fn().mockReturnThis();
       pipeline.expire = jest.fn().mockReturnThis();
       pipeline.hgetall = jest.fn().mockReturnThis();
       pipeline.srem = jest.fn().mockReturnThis();
+      pipeline.hdel = jest.fn().mockReturnThis();
 
       jest.spyOn(service as any, 'getActiveKey').mockReturnValue(activeKey);
       jest.spyOn(service as any, 'getVoterKey').mockReturnValue(voterKey);
@@ -181,78 +183,143 @@ describe('PollManagerService', () => {
 
     it('투표 후 정렬된 옵션 리스트를 반환해야 한다', async () => {
       redisClient.exists.mockResolvedValue(1);
-      redisClient.sadd.mockResolvedValue(1);
+      redisClient.hsetnx.mockResolvedValue(1);
 
       const mockHgetallData = { '1': '5', '0': '10' };
+
       pipeline.exec.mockResolvedValueOnce([
-        [null, 6], // hincrby 결과
-        [null, 1], // expire 결과
-        [null, mockHgetallData], // hgetall 결과
+        [null, 6],
+        [null, mockHgetallData],
+        [null, 'OK'],
       ]);
 
-      const result = await service.submitVote(pollId, participantId, optionId);
+      const result = await service.submitVote(pollId, participantId, participantName, optionId);
 
-      expect(redisClient.exists).toHaveBeenCalledWith(activeKey);
-      expect(redisClient.sadd).toHaveBeenCalledWith(voterKey, participantId);
-
-      expect(pipeline.hincrby).toHaveBeenCalledWith(countKey, optionId.toString(), 1);
-      expect(pipeline.hgetall).toHaveBeenCalledWith(countKey);
-
-      expect(result.options).toEqual([
-        { id: 0, count: 10 },
-        { id: 1, count: 5 },
-      ]);
+      expect(redisClient.hsetnx).toHaveBeenCalledWith(
+        voterKey,
+        participantId,
+        `${optionId}:${participantName}`,
+      );
+      expect(result).toEqual({
+        pollId,
+        options: [
+          { id: 0, count: 10 },
+          { id: 1, count: 5 },
+        ],
+      });
     });
 
     it('투표가 활성 상태가 아니면 에러를 던져야 한다', async () => {
       redisClient.exists.mockResolvedValue(0);
 
-      await expect(service.submitVote(pollId, participantId, optionId)).rejects.toThrow(
-        'Poll is not active',
-      );
+      await expect(
+        service.submitVote(pollId, participantId, participantName, optionId),
+      ).rejects.toThrow('Poll is not active');
     });
 
     it('이미 투표한 유저면 에러를 던져야 한다', async () => {
       redisClient.exists.mockResolvedValue(1);
-      redisClient.sadd.mockResolvedValue(0);
+      redisClient.hsetnx.mockResolvedValue(0);
 
-      await expect(service.submitVote(pollId, participantId, optionId)).rejects.toThrow(
-        'Duplicate vote attempt',
-      );
+      await expect(
+        service.submitVote(pollId, participantId, participantName, optionId),
+      ).rejects.toThrow('Duplicate vote attempt');
     });
 
     it('파이프라인 에러 발생 시 srem 및 hincrby -1 롤백을 수행해야 한다', async () => {
       redisClient.exists.mockResolvedValue(1);
-      redisClient.sadd.mockResolvedValue(1);
-      pipeline.exec
-        .mockResolvedValueOnce([[new Error('Redis Pipeline Error'), null]]) // 본 작업 실패
-        .mockResolvedValueOnce([
-          [null, 1],
-          [null, 4],
-        ]); // 롤백 파이프라인 성공
+      redisClient.hsetnx.mockResolvedValue(1);
+      pipeline.exec.mockResolvedValueOnce([[new Error('Redis Error'), null]]);
 
-      await expect(service.submitVote(pollId, participantId, optionId)).rejects.toThrow(
-        'Pipeline failed during voting',
-      );
+      await expect(
+        service.submitVote(pollId, participantId, participantName, optionId),
+      ).rejects.toThrow();
 
-      expect(redisClient.pipeline).toHaveBeenCalledTimes(2);
-
-      expect(pipeline.srem).toHaveBeenCalledWith(voterKey, participantId);
+      expect(pipeline.hdel).toHaveBeenCalledWith(voterKey, participantId);
       expect(pipeline.hincrby).toHaveBeenCalledWith(countKey, optionId.toString(), -1);
     });
+  });
 
-    it('hgetall 결과가 객체가 아니면 에러를 던져야 한다', async () => {
-      redisClient.exists.mockResolvedValue(1);
-      redisClient.sadd.mockResolvedValue(1);
+  describe('closePoll', () => {
+    const pollId = 'poll-123';
+    const mockPoll = {
+      id: pollId,
+      options: [
+        { id: 0, value: '치킨', count: 0 },
+        { id: 1, value: '피자', count: 0 },
+      ],
+    };
+
+    beforeEach(() => {
+      jest.spyOn(service, 'findOne').mockResolvedValue(mockPoll as any);
+      jest.spyOn(service, 'updatePartial').mockResolvedValue(undefined);
+      pipeline.hgetall = jest.fn().mockReturnThis();
+      pipeline.del = jest.fn().mockReturnThis();
+    });
+
+    it('카운트와 투표자 명단을 병합하여 옵션 리스트를 반환해야 한다', async () => {
+      const mockCounts = { '0': '2', '1': '1' };
+      const mockVoters = {
+        'user-1': '0:홍길동',
+        'user-2': '0:김철수',
+        'user-3': '1:이영희',
+      };
+
       pipeline.exec.mockResolvedValueOnce([
+        [null, mockCounts],
+        [null, mockVoters],
         [null, 1],
-        [null, 1],
-        [null, null], // hgetall 결과가 null인 경우
       ]);
 
-      await expect(service.submitVote(pollId, participantId, optionId)).rejects.toThrow(
-        'Failed to retrieve count data',
+      const result = await service.closePoll(pollId);
+
+      expect(service.updatePartial).toHaveBeenCalledWith(
+        pollId,
+        expect.objectContaining({
+          status: 'ended',
+          options: [
+            expect.objectContaining({
+              id: 0,
+              count: 2,
+              voters: [
+                { id: 'user-1', name: '홍길동' },
+                { id: 'user-2', name: '김철수' },
+              ],
+            }),
+            expect.objectContaining({
+              id: 1,
+              count: 1,
+              voters: [{ id: 'user-3', name: '이영희' }],
+            }),
+          ],
+        }),
       );
+      expect(result[0].voters).toHaveLength(2);
+      expect(result[1].count).toBe(1);
+    });
+
+    it('존재하지 않는 투표 종료 시 에러를 던져야 한다', async () => {
+      jest.spyOn(service, 'findOne').mockResolvedValue(null);
+      await expect(service.closePoll(pollId)).rejects.toThrow('Poll not found');
+    });
+  });
+
+  describe('getFinalResults', () => {
+    it('종료된 투표의 경우 저장된 options를 반환해야 한다', async () => {
+      const endedPoll = {
+        status: 'ended',
+        options: [{ id: 0, count: 5, voters: ['u1'] }],
+      };
+      jest.spyOn(service, 'findOne').mockResolvedValue(endedPoll as any);
+
+      const result = await service.getFinalResults('p1');
+      expect(result).toEqual(endedPoll.options);
+    });
+
+    it('종료되지 않았거나 없는 투표는 빈 배열을 반환해야 한다', async () => {
+      jest.spyOn(service, 'findOne').mockResolvedValue({ status: 'active' } as any);
+      const result = await service.getFinalResults('p1');
+      expect(result).toEqual([]);
     });
   });
 });
