@@ -1,4 +1,11 @@
 import { ParticipantRole } from './participant.js';
+import {
+  MediaKind,
+  MediasoupProducer,
+  MediasoupRoomInfo,
+  MediaType,
+  ToggleActionType,
+} from './shared.js';
 
 // 제스처 타입 정의
 export type GestureType =
@@ -12,10 +19,6 @@ export type GestureType =
   | 'two' // ✌️ 2번 투표
   | 'three' // 3번 투표
   | 'four'; // 4번 투표
-
-export type MediaKind = 'audio' | 'video'; // mediasoup에서 사용하는 미디어 타입
-export type MediaType = MediaKind | 'screen'; // 우리가 사용할 미디어 소스 타입
-export type ToggleActionType = 'pause' | 'resume';
 
 // 클라이언트에서 보내는 데이터 페이로드
 
@@ -72,12 +75,17 @@ export interface BaseResponse {
   error?: string;
 }
 
-export type JoinRoomResponse = BaseResponse;
+export type JoinRoomResponse =
+  | (BaseResponse & { success: false })
+  | {
+      success: true;
+      mediasoup: MediasoupRoomInfo;
+    };
 
 export type CreateTransportResponse<T1 = any, T2 = any, T3 = any> =
-  | BaseResponse
+  | (BaseResponse & { success: false })
   | {
-      success: boolean;
+      success: true;
       id: string;
       iceParameters: T1;
       iceCandidates: T2;
@@ -87,25 +95,25 @@ export type CreateTransportResponse<T1 = any, T2 = any, T3 = any> =
 export type ConnectTransportResponse = BaseResponse;
 
 export type ProduceResponse =
-  | BaseResponse
+  | (BaseResponse & { success: false })
   | {
-      success: boolean;
+      success: true;
       producerId: string;
       kind: MediaKind;
       type: MediaType;
     };
 
 export type GetProducerResponse =
-  | BaseResponse
+  | (BaseResponse & { success: false })
   | {
-      success: boolean;
+      success: true;
       producerId?: string;
     };
 
 export type ConsumeResponse<T = any> =
-  | BaseResponse
+  | (BaseResponse & { success: false })
   | {
-      success: boolean;
+      success: true;
       producerId: string;
       consumerId: string;
       kind: MediaKind;
@@ -135,9 +143,7 @@ export interface UserLeftPayload {
   leavedAt: Date;
 }
 
-export interface NewProducerPayload {
-  producerId: string;
-  participantId: string;
+export interface NewProducerPayload extends MediasoupProducer {
   participantRole: ParticipantRole;
   kind: MediaKind;
   type: MediaType;

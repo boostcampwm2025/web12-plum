@@ -9,13 +9,16 @@ import {
   RoomManagerService,
   ParticipantManagerService,
 } from '../redis/repository-manager/index.js';
-import { SocketMetadataService } from '../common/services/socket-metadata.service.js';
+import { SocketMetadataService, SocketDeletionMetadataService } from '../common/services/index.js';
+import { SOCKET_TIMEOUT } from '../common/constants/socket.constants.js';
+import { RoomService } from './room.service.js';
 
 describe('RoomGateway', () => {
   let gateway: RoomGateway;
   let mediasoupService: MediasoupService;
   let participantManager: ParticipantManagerService;
   let socketMetadataService: SocketMetadataService;
+  let socketDeletionMetadataService: SocketDeletionMetadataService;
   let roomManager: RoomManagerService;
 
   const createMockSocket = (id: string = 'socket-123') =>
@@ -80,6 +83,12 @@ describe('RoomGateway', () => {
           },
         },
         {
+          provide: RoomService,
+          useValue: {
+            getRoomInfo: jest.fn(),
+          },
+        },
+        {
           provide: RoomManagerService,
           useValue: {
             removeParticipant: jest.fn(),
@@ -103,6 +112,15 @@ describe('RoomGateway', () => {
             has: jest.fn(),
           },
         },
+        {
+          provide: SocketDeletionMetadataService,
+          useValue: {
+            get: jest.fn(),
+            set: jest.fn(),
+            delete: jest.fn(),
+            has: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
@@ -110,6 +128,9 @@ describe('RoomGateway', () => {
     mediasoupService = module.get<MediasoupService>(MediasoupService);
     participantManager = module.get<ParticipantManagerService>(ParticipantManagerService);
     socketMetadataService = module.get<SocketMetadataService>(SocketMetadataService);
+    socketDeletionMetadataService = module.get<SocketDeletionMetadataService>(
+      SocketDeletionMetadataService,
+    );
     roomManager = module.get<RoomManagerService>(RoomManagerService);
 
     (gateway as any).server = {
@@ -261,6 +282,14 @@ describe('RoomGateway', () => {
 
   // 6. 연결 해제 및 정리 (cleanup)
   describe('cleanupSocket', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
     it('연결 해제 시 모든 미디어 리소스와 Redis 정보를 정리해야 함', async () => {
       const socket = createMockSocket();
       const transportIds = ['t-1', 't-2'];
@@ -275,9 +304,19 @@ describe('RoomGateway', () => {
 
       await gateway.handleDisconnect(socket);
 
-      expect(mediasoupService.closeTransport).toHaveBeenCalledTimes(2);
-      expect(mediasoupService.cleanupParticipantFromMaps).toHaveBeenCalledWith(['p-1'], ['c-1']);
+      expect(mediasoupService.closeTransport).not.toHaveBeenCalled();
+      expect(socketDeletionMetadataService.set).toHaveBeenCalledWith(
+        'user-1',
+        expect.objectContaining({
+          socketId: socket.id,
+          roomId: 'room-1',
+        }),
+      );
+
+      await jest.advanceTimersByTimeAsync(SOCKET_TIMEOUT);
+
       expect(socketMetadataService.delete).toHaveBeenCalledWith(socket.id);
+      expect(socketDeletionMetadataService.delete).toHaveBeenCalledWith('user-1');
     });
   });
 

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { createLectureSchema, enterLectureSchema } from './room.js';
 import { nicknameValidate, ParticipantRole } from './participant.js';
+import { MediasoupRoomInfo } from './shared.js';
 
 /**
  * 강의실 생성 요청
@@ -23,14 +24,7 @@ export interface CreateRoomResponse {
     name: string;
     role: ParticipantRole;
   };
-  mediasoup: {
-    routerRtpCapabilities: unknown;
-    existingProducers: Array<{
-      producerId: string;
-      participantId: string;
-      kind: 'audio' | 'video' | 'screen';
-    }>;
-  };
+  mediasoup: MediasoupRoomInfo;
 }
 
 export type EnterLectureRequestBody = z.infer<typeof enterLectureSchema>;
@@ -52,14 +46,7 @@ export interface EnterRoomResponse {
   participantId: string;
   name: string;
   role: ParticipantRole;
-  mediasoup: {
-    routerRtpCapabilities: unknown;
-    existingProducers: Array<{
-      producerId: string;
-      participantId: string;
-      kind: 'audio' | 'video' | 'screen';
-    }>;
-  };
+  mediasoup: MediasoupRoomInfo;
 }
 
 /**

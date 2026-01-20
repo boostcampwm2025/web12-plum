@@ -3,3 +3,10 @@ export interface SocketMetadata {
   participantId: string;
   transportIds: string[];
 }
+
+export interface SocketDeletionMetadata {
+  socketId: string;
+  roomId: string;
+  transportIds: string[];
+  timer: NodeJS.Timeout;
+}

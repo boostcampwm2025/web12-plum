@@ -32,6 +32,7 @@ import {
   LeaveRoomResponse,
   MediaStateChangedPayload,
   NewProducerPayload,
+  Participant,
   ProduceRequest,
   ProduceResponse,
   ToggleMediaRequest,
@@ -40,14 +41,15 @@ import {
   UserLeftPayload,
 } from '@plum/shared-interfaces';
 
-import { SOCKET_CONFIG } from '../common/constants/socket.constants.js';
+import { SOCKET_CONFIG, SOCKET_TIMEOUT } from '../common/constants/socket.constants.js';
 import { WsExceptionFilter } from '../common/filters/index.js';
+import { SocketMetadataService, SocketDeletionMetadataService } from '../common/services/index.js';
 import { MediasoupService } from '../mediasoup/mediasoup.service.js';
 import {
   RoomManagerService,
   ParticipantManagerService,
 } from '../redis/repository-manager/index.js';
-import { SocketMetadataService } from '../common/services/index.js';
+import { RoomService } from './room.service.js';
 
 /**
  * 강의실 WebSocket Gateway
@@ -72,6 +74,8 @@ export class RoomGateway implements OnGatewayDisconnect {
     private readonly roomManagerService: RoomManagerService,
     private readonly participantManagerService: ParticipantManagerService,
     private readonly socketMetadataService: SocketMetadataService,
+    private readonly socketDeletionMetadataService: SocketDeletionMetadataService,
+    private readonly roomService: RoomService,
   ) {}
 
   // join_room: 강의실 입장
@@ -81,6 +85,26 @@ export class RoomGateway implements OnGatewayDisconnect {
     @MessageBody() data: JoinRoomRequest,
   ): Promise<JoinRoomResponse> {
     const { roomId, participantId } = data;
+
+    // 재입장 여부 판단
+    const pending = this.socketDeletionMetadataService.get(participantId);
+    if (pending) {
+      this.logger.log(`[reconnect] ${participantId} 유저 재접속 확인. 삭제 취소.`);
+      const participant = await this.participantManagerService.findOne(participantId);
+      await this.participantManagerService.updatePartial(participantId, {
+        producers: {
+          video: '',
+          audio: '',
+          screen: '',
+        },
+        consumers: [],
+      });
+
+      this.cleanupMediasoup(pending.transportIds, participant!);
+      clearTimeout(pending.timer);
+      this.socketDeletionMetadataService.delete(participantId);
+      this.socketMetadataService.delete(pending.socketId);
+    }
 
     try {
       // 1. 참가자 정보 조회
@@ -100,18 +124,21 @@ export class RoomGateway implements OnGatewayDisconnect {
       });
 
       // 4. 다른 참가자들에게 user_joined 브로드캐스트
-      const payload: UserJoinedPayload = {
-        id: participant.id,
-        name: participant.name,
-        role: participant.role,
-        joinedAt: new Date(),
-      };
+      if (!pending) {
+        const payload: UserJoinedPayload = {
+          id: participant.id,
+          name: participant.name,
+          role: participant.role,
+          joinedAt: new Date(),
+        };
 
-      socket.to(roomId).emit('user_joined', payload);
+        socket.to(roomId).emit('user_joined', payload);
+      }
 
       this.logger.log(`✅ [join_room] ${participant.name}님이 ${roomId} 강의실에 입장했습니다.`);
+      const mediasoup = await this.roomService.getRoomInfo(roomId, participant);
 
-      return { success: true };
+      return { success: true, mediasoup };
     } catch (error) {
       this.logger.error(`❌ [join_room] 실패:`, error);
       return { success: false, error: '강의실 입장에 실패했습니다.' };
@@ -341,7 +368,7 @@ export class RoomGateway implements OnGatewayDisconnect {
   // leave_room: 강의실 퇴장
   @SubscribeMessage('leave_room')
   async handleLeaveRoom(@ConnectedSocket() socket: Socket): Promise<LeaveRoomResponse> {
-    await this.cleanupSocket(socket, 'leave_room');
+    await this.cleanupSocket(socket.id, 'leave_room');
     return { success: true };
   }
 
@@ -385,12 +412,42 @@ export class RoomGateway implements OnGatewayDisconnect {
 
   // handleDisconnect: 비정상 퇴장 (브라우저 닫기 등)
   async handleDisconnect(socket: Socket) {
-    await this.cleanupSocket(socket, 'disconnect');
+    const metadata = this.socketMetadataService.get(socket.id);
+    if (!metadata) return;
+
+    const { participantId } = metadata;
+    const socketId = socket.id;
+    this.logger.log(`[disconnect] ${metadata.participantId} 유저 접속 끊김. 15초 대기...`);
+
+    const timer = setTimeout(async () => {
+      this.logger.log(
+        `[cleanup] ${metadata.participantId} 유저가 15초 내에 재접속하지 않아 정리합니다.`,
+      );
+      await this.cleanupSocket(socketId, 'disconnect_timeout');
+      this.socketDeletionMetadataService.delete(participantId);
+    }, SOCKET_TIMEOUT);
+
+    this.socketDeletionMetadataService.set(metadata.participantId, {
+      socketId: socketId,
+      roomId: metadata.roomId,
+      transportIds: metadata.transportIds,
+      timer,
+    });
   }
 
   // 공통 정리 로직
-  private async cleanupSocket(socket: Socket, reason: string) {
-    const metadata = this.socketMetadataService.get(socket.id);
+  private cleanupMediasoup(transportIds: string[], participant: Participant): void {
+    for (const transportId of transportIds) {
+      this.mediasoupService.closeTransport(transportId);
+    }
+    this.mediasoupService.cleanupParticipantFromMaps(
+      Object.values(participant.producers),
+      participant.consumers,
+    );
+  }
+
+  private async cleanupSocket(socketId: string, reason: string) {
+    const metadata = this.socketMetadataService.get(socketId);
     if (!metadata) return;
 
     const { roomId, participantId, transportIds } = metadata;
@@ -406,22 +463,16 @@ export class RoomGateway implements OnGatewayDisconnect {
         name: participant.name,
         leavedAt: new Date(),
       };
-      socket.to(roomId).emit('user_left', payload);
+      this.server.to(roomId).emit('user_left', payload);
 
       // 3. Transport 정리
-      for (const transportId of transportIds) {
-        this.mediasoupService.closeTransport(transportId);
-      }
-      this.mediasoupService.cleanupParticipantFromMaps(
-        Object.values(participant.producers),
-        participant.consumers,
-      );
+      this.cleanupMediasoup(transportIds, participant);
 
       // 4. Redis에서 참가자 제거
       await this.roomManagerService.removeParticipant(roomId, participantId);
 
       // 5. 메타데이터 삭제
-      this.socketMetadataService.delete(socket.id);
+      this.socketMetadataService.delete(socketId);
 
       this.logger.log(`[${reason}] ${participant?.name || participantId} left room ${roomId}`);
     } catch (error) {
