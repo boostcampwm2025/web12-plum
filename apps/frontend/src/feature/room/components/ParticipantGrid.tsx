@@ -7,24 +7,23 @@ import { usePagination } from '../hooks/usePagination';
 import { type Participant } from '../types';
 import { useMediaStore } from '../stores/useMediaStore';
 import { useStreamStore } from '@/store/useLocalStreamStore';
+import { useRoomStore } from '../stores/useRoomStore';
 
 interface ParticipantGridProps {
   videoMode: VideoDisplayMode;
   currentUser: Participant;
-  participants: Array<Participant>;
   onModeChange?: (mode: VideoDisplayMode) => void;
 }
 
-export function ParticipantGrid({
-  videoMode,
-  currentUser,
-  participants,
-  onModeChange,
-}: ParticipantGridProps) {
+export function ParticipantGrid({ videoMode, currentUser, onModeChange }: ParticipantGridProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   const isCameraOn = useMediaStore((state) => state.isCameraOn);
   const localStream = useStreamStore((state) => state.localStream);
+
+  const { getParticipantList } = useRoomStore((state) => state.actions);
+  const { getRemoteStreamsByParticipant } = useMediaStore((state) => state.actions);
+  const participants = getParticipantList();
 
   const itemsPerPage = useItemsPerPage(containerRef, {
     buttonHeight: 24,
@@ -39,7 +38,7 @@ export function ParticipantGrid({
     goToNextPage,
     hasPrevPage,
     hasNextPage,
-  } = usePagination(participants, itemsPerPage);
+  } = usePagination<Participant>(participants, itemsPerPage);
 
   if (videoMode !== 'side') return null;
 
@@ -55,7 +54,7 @@ export function ParticipantGrid({
           mode="side"
           isCurrentUser={true}
           onModeChange={onModeChange}
-          localStream={localStream}
+          stream={localStream}
           isCameraOn={isCameraOn}
         />
 
@@ -73,14 +72,20 @@ export function ParticipantGrid({
         </Button>
 
         <div className="flex flex-1 flex-col justify-center gap-3 overflow-hidden">
-          {currentParticipants.map((participant) => (
-            <ParticipantVideo
-              key={participant.id}
-              id={participant.id}
-              name={participant.name}
-              mode="side"
-            />
-          ))}
+          {currentParticipants.map((participant) => {
+            const remoteStreams = getRemoteStreamsByParticipant(participant.id);
+            const videoStream = remoteStreams.find((stream) => stream.type === 'video');
+            return (
+              <ParticipantVideo
+                key={participant.id}
+                id={participant.id}
+                name={participant.name}
+                mode="side"
+                stream={videoStream?.stream}
+                isCameraOn={!!videoStream}
+              />
+            );
+          })}
         </div>
 
         <Button
