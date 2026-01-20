@@ -3,6 +3,7 @@ import { Draggable } from './Draggable';
 import { ScreenShareBanner } from './ScreenShareBanner';
 import { ParticipantGrid } from './ParticipantGrid';
 import { ParticipantVideo, VideoDisplayMode } from './ParticipantVideo';
+import { ToastStack } from '@/shared/components/ToastStack';
 import { useStreamStore } from '@/store/useLocalStreamStore';
 import { useMediaStore } from '../stores/useMediaStore';
 import { MyInfo, useRoomStore } from '../stores/useRoomStore';
@@ -90,6 +91,7 @@ export function RoomMainSection() {
     <>
       <main className="relative flex grow flex-col text-sm">
         <ScreenShareBanner userName={currentUser.name} />
+        <ToastStack />
         <motion.div
           layout
           className="relative flex grow items-center justify-center"

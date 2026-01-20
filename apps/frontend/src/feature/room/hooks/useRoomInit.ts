@@ -11,10 +11,12 @@ import { logger } from '@/shared/lib/logger';
 import { useMediaDeviceStore } from '@/store/useMediaDeviceStore';
 import { useStreamStore } from '@/store/useLocalStreamStore';
 import { useSocketStore } from '@/store/useSocketStore';
+import { formatGestureMessage } from '@/shared/constants/gestureLabels';
 
 import { MyInfo, useRoomStore } from '../stores/useRoomStore';
 import { useMediaStore } from '../stores/useMediaStore';
 import { useMediaConnectionContext } from './useMediaConnectionContext';
+import { useToastStore } from '@/store/useToastStore';
 
 /**
  * Room 초기화 통합 훅
@@ -47,6 +49,7 @@ export function useRoomInit() {
     (state) => state.actions,
   );
   const { removeRemoteStreamByParticipant } = useMediaStore((state) => state.actions);
+  const { addToast } = useToastStore((state) => state.actions);
   const {
     connect: connectSocket,
     registerHandlers,
@@ -60,6 +63,14 @@ export function useRoomInit() {
     cleanup: cleanupMedia,
   } = useMediaConnectionContext();
 
+  const resolveParticipantName = (participantId: string) => {
+    const { participants, myInfo } = useRoomStore.getState();
+    const participant = participants.get(participantId);
+    if (participant?.name) return participant.name;
+    if (myInfo?.id === participantId && myInfo.name) return myInfo.name;
+    return '굴러 들어온 자두';
+  };
+
   // 소켓 이벤트 핸들러 모음
   const socketEventHandlers: Partial<ServerToClientEvents> = {
     user_joined: addParticipant,
@@ -67,6 +78,12 @@ export function useRoomInit() {
     new_producer: consumeRemoteProducer,
     media_state_changed: (data) => {
       if (data.action === 'pause') removeRemoteStreamByParticipant(data.participantId, data.type);
+    },
+    update_gesture_status: (data) => {
+      logger.socket.info('제스처 상태 업데이트 수신', data);
+      const name = resolveParticipantName(data.participantId);
+      const message = formatGestureMessage(name, data.gesture);
+      addToast({ type: 'gesture', title: message });
     },
   };
 
