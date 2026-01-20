@@ -22,22 +22,28 @@ function MainMenu() {
   const isCameraOn = useMediaStore((state) => state.isCameraOn);
   const isScreenSharing = useMediaStore((state) => state.isScreenSharing);
 
-  const { toggleMic, toggleCamera } = useMediaStore((state) => state.actions);
   const { activeDialog, setActiveDialog } = useRoomUIStore();
-  const { startScreenShare, stopScreenShare } = useMediaConnectionContext();
+  const {
+    startCameraProducer,
+    startMicProducer,
+    stopCameraProducer,
+    stopMicProducer,
+    startScreenShare,
+    stopScreenShare,
+  } = useMediaConnectionContext();
 
   const menuButtons: MenuButton[] = [
     {
       icon: isMicOn ? 'mic' : 'mic-disabled',
       tooltip: isMicOn ? '마이크 끄기' : '마이크 켜기',
       isActive: isMicOn,
-      onClick: toggleMic,
+      onClick: isMicOn ? stopMicProducer : startMicProducer,
     },
     {
       icon: isCameraOn ? 'cam' : 'cam-disabled',
       tooltip: isCameraOn ? '카메라 끄기' : '카메라 켜기',
       isActive: isCameraOn,
-      onClick: toggleCamera,
+      onClick: isCameraOn ? stopCameraProducer : startCameraProducer,
     },
     {
       icon: 'screen-share',
