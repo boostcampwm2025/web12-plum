@@ -4,21 +4,19 @@ import { SidePanel } from './SidePanel';
 import { ChatPanel } from './ChatPanel';
 import { InfoPanel } from './InfoPanel';
 import { MenuPanel } from './MenuPanel';
-import { SidePanel as SidePanelType } from '../stores/useRoomUIStore';
+import { useRoomUIStore } from '../stores/useRoomUIStore';
 import { cn } from '@/shared/lib/utils';
 import { buildJoinLink } from '@/shared/lib/roomLinks';
-
-interface RoomSideSectionProps {
-  activeSidePanel: SidePanelType | null;
-  onClosePanel: (panel: SidePanelType) => void;
-}
 
 // mock 데이터
 const mockFileList = Array.from({ length: 5 }, (_, i) => ({ name: `파일_${i + 1}.pdf`, url: '#' }));
 
-export function RoomSideSection({ activeSidePanel, onClosePanel }: RoomSideSectionProps) {
+export function RoomSideSection() {
   const location = useLocation();
   const joinLink = buildJoinLink(location.pathname, window.location.origin);
+
+  const activeSidePanel = useRoomUIStore((state) => state.activeSidePanel);
+  const setActiveSidePanel = useRoomUIStore((state) => state.setActiveSidePanel);
 
   return (
     <div
@@ -30,15 +28,15 @@ export function RoomSideSection({ activeSidePanel, onClosePanel }: RoomSideSecti
       <AnimatePresence>
         {activeSidePanel && (
           <SidePanel>
-            {activeSidePanel === 'chat' && <ChatPanel onClose={() => onClosePanel('chat')} />}
+            {activeSidePanel === 'chat' && <ChatPanel onClose={() => setActiveSidePanel('chat')} />}
             {activeSidePanel === 'info' && (
               <InfoPanel
                 joinLink={joinLink}
                 files={mockFileList}
-                onClose={() => onClosePanel('info')}
+                onClose={() => setActiveSidePanel('info')}
               />
             )}
-            {activeSidePanel === 'menu' && <MenuPanel onClose={() => onClosePanel('menu')} />}
+            {activeSidePanel === 'menu' && <MenuPanel onClose={() => setActiveSidePanel('menu')} />}
           </SidePanel>
         )}
       </AnimatePresence>

@@ -3,7 +3,7 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import type { MediaType, ParticipantRole, UserJoinedPayload } from '@plum/shared-interfaces';
 import { RtpCapabilities } from 'mediasoup-client/types';
 
-interface MyInfo {
+export interface MyInfo {
   id: string;
   name: string;
   role: ParticipantRole;

@@ -5,26 +5,37 @@ import { ParticipantGrid } from './ParticipantGrid';
 import { ParticipantVideo, VideoDisplayMode } from './ParticipantVideo';
 import { useStreamStore } from '@/store/useLocalStreamStore';
 import { useMediaStore } from '../stores/useMediaStore';
+import { useRoomStore } from '../stores/useRoomStore';
+import { logger } from '@/shared/lib/logger';
+import { useState } from 'react';
 
-interface RoomMainSectionProps {
-  isScreenSharing: boolean;
-  currentUser: { id: string; name: string };
-  participants: Array<{ id: string; name: string }>;
-  userVideoMode: VideoDisplayMode;
-  onModeChange: (mode: VideoDisplayMode) => void;
-  onStopScreenShare: () => void;
-}
+// Mock 데이터 (나중에 실제 데이터로 교체)
+const participants = [
+  { id: '1', name: '김자두' },
+  { id: '2', name: '김자두' },
+  { id: '3', name: '이자두' },
+  { id: '4', name: '박자두' },
+  { id: '5', name: '최자두' },
+  { id: '6', name: '정자두' },
+];
 
-export function RoomMainSection({
-  isScreenSharing,
-  currentUser,
-  participants,
-  userVideoMode,
-  onModeChange,
-  onStopScreenShare,
-}: RoomMainSectionProps) {
+export function RoomMainSection() {
+  const myInfo = useRoomStore((state) => state.myInfo);
+  const currentUser = myInfo ?? { id: '', name: '' };
+
+  const isScreenSharing = useMediaStore((state) => state.isScreenSharing);
   const localStream = useStreamStore((state) => state.localStream);
   const isCameraOn = useMediaStore((state) => state.isCameraOn);
+
+  const [userVideoMode, setUserVideoMode] = useState<VideoDisplayMode>('pip');
+
+  const { toggleScreenShare } = useMediaStore((state) => state.actions);
+
+  const handleStopScreenShare = () => {
+    logger.ui.debug('화면 공유 중지 요청');
+    toggleScreenShare();
+    // TODO: 화면 공유 중지 로직
+  };
 
   return (
     <>
@@ -32,7 +43,7 @@ export function RoomMainSection({
         {isScreenSharing && (
           <ScreenShareBanner
             userName={currentUser.name}
-            onStop={onStopScreenShare}
+            onStop={handleStopScreenShare}
           />
         )}
 
@@ -53,7 +64,7 @@ export function RoomMainSection({
                 name={currentUser.name}
                 mode={userVideoMode}
                 isCurrentUser={true}
-                onModeChange={onModeChange}
+                onModeChange={(mode) => setUserVideoMode(mode)}
                 localStream={localStream}
                 isCameraOn={isCameraOn}
               />
@@ -67,7 +78,7 @@ export function RoomMainSection({
           <ParticipantGrid
             currentUser={currentUser}
             participants={participants}
-            onModeChange={onModeChange}
+            onModeChange={(mode) => setUserVideoMode(mode)}
             localStream={localStream}
             isCameraOn={isCameraOn}
           />
