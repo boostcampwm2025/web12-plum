@@ -76,16 +76,16 @@ export interface BaseResponse {
 }
 
 export type JoinRoomResponse =
-  | BaseResponse
+  | (BaseResponse & { success: false })
   | {
-      success: boolean;
+      success: true;
       mediasoup: MediasoupRoomInfo;
     };
 
 export type CreateTransportResponse<T1 = any, T2 = any, T3 = any> =
-  | BaseResponse
+  | (BaseResponse & { success: false })
   | {
-      success: boolean;
+      success: true;
       id: string;
       iceParameters: T1;
       iceCandidates: T2;
@@ -95,25 +95,25 @@ export type CreateTransportResponse<T1 = any, T2 = any, T3 = any> =
 export type ConnectTransportResponse = BaseResponse;
 
 export type ProduceResponse =
-  | BaseResponse
+  | (BaseResponse & { success: false })
   | {
-      success: boolean;
+      success: true;
       producerId: string;
       kind: MediaKind;
       type: MediaType;
     };
 
 export type GetProducerResponse =
-  | BaseResponse
+  | (BaseResponse & { success: false })
   | {
-      success: boolean;
+      success: true;
       producerId?: string;
     };
 
 export type ConsumeResponse<T = any> =
-  | BaseResponse
+  | (BaseResponse & { success: false })
   | {
-      success: boolean;
+      success: true;
       producerId: string;
       consumerId: string;
       kind: MediaKind;
