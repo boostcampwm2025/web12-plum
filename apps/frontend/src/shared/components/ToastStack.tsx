@@ -1,8 +1,8 @@
-import { useEffect, useRef } from 'react';
+import { forwardRef, useEffect, useRef } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { Icon } from '@/shared/components/icon/Icon';
 import type { IconName } from '@/shared/components/icon/iconMap';
-import { TOAST_TTL_MS, type ToastType, useToastStore } from '@/store/useToastStore';
+import { TOAST_TTL_MS, type Toast, type ToastType, useToastStore } from '@/store/useToastStore';
 
 declare global {
   interface Window {
@@ -23,6 +23,32 @@ const TOAST_ACCENT_CLASS: Record<ToastType, string> = {
   error: 'text-error',
   gesture: 'text-primary',
 };
+
+const ToastItem = forwardRef<HTMLDivElement, { toast: Toast }>(({ toast }, ref) => {
+  return (
+    <motion.div
+      ref={ref}
+      layout
+      initial={{ opacity: 0, x: 20, scale: 0.95 }}
+      animate={{ opacity: 1, x: 0, scale: 1 }}
+      exit={{ opacity: 0, x: 20, scale: 0.95 }}
+      transition={{
+        layout: { duration: 0.2, ease: 'easeInOut' },
+        opacity: { duration: 0.15 },
+        scale: { duration: 0.15 },
+      }}
+      className="flex items-center gap-3 rounded-lg bg-gray-500/80 px-3 py-2 text-white shadow-md backdrop-blur"
+    >
+      <Icon
+        name={TOAST_ICON_MAP[toast.type]}
+        size={24}
+        className={`${TOAST_ACCENT_CLASS[toast.type]} fill-current`}
+        decorative
+      />
+      <span className="truncate text-xs font-bold tracking-tight">{toast.title}</span>
+    </motion.div>
+  );
+});
 
 export function ToastStack() {
   const toasts = useToastStore((state) => state.toasts);
@@ -88,27 +114,10 @@ export function ToastStack() {
         mode="popLayout"
       >
         {toasts.map((toast) => (
-          <motion.div
+          <ToastItem
             key={toast.id}
-            layout
-            initial={{ opacity: 0, x: 20, scale: 0.95 }}
-            animate={{ opacity: 1, x: 0, scale: 1 }}
-            exit={{ opacity: 0, x: 20, scale: 0.95 }}
-            transition={{
-              layout: { duration: 0.2, ease: 'easeInOut' },
-              opacity: { duration: 0.15 },
-              scale: { duration: 0.15 },
-            }}
-            className="flex items-center gap-3 rounded-lg bg-gray-500/80 px-3 py-2 text-white shadow-md backdrop-blur"
-          >
-            <Icon
-              name={TOAST_ICON_MAP[toast.type]}
-              size={24}
-              className={`${TOAST_ACCENT_CLASS[toast.type]} fill-current`}
-              decorative
-            />
-            <span className="truncate text-xs font-bold tracking-tight">{toast.title}</span>
-          </motion.div>
+            toast={toast}
+          />
         ))}
       </AnimatePresence>
     </div>
