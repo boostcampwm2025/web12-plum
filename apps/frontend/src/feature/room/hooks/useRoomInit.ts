@@ -46,6 +46,7 @@ export function useRoomInit() {
   const { setMyInfo, setRouterRtpCapabilities, addParticipant, removeParticipant } = useRoomStore(
     (state) => state.actions,
   );
+  const { removeRemoteStreamByParticipant } = useMediaStore((state) => state.actions);
   const {
     connect: connectSocket,
     registerHandlers,
@@ -64,6 +65,9 @@ export function useRoomInit() {
     user_joined: addParticipant,
     user_left: (data) => removeParticipant(data.id),
     new_producer: consumeRemoteProducer,
+    media_state_changed: (data) => {
+      if (data.action === 'pause') removeRemoteStreamByParticipant(data.participantId, data.type);
+    },
   };
 
   /**
