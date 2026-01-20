@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Icon } from '@/shared/components/icon/Icon';
+import { cn } from '@/shared/lib/utils';
 
 interface TimeLeftProps {
   timeLimitSeconds: number;
   startedAt: number;
+  className?: string;
+  iconSize?: number;
 }
 
 function formatSeconds(totalSeconds: number) {
@@ -19,7 +22,7 @@ function getRemainingSeconds(timeLimitSeconds: number, startedAt: number) {
   return Math.max(0, Math.ceil(remainingMs / 1000));
 }
 
-export function TimeLeft({ timeLimitSeconds, startedAt }: TimeLeftProps) {
+export function TimeLeft({ timeLimitSeconds, startedAt, className, iconSize = 16 }: TimeLeftProps) {
   const [remainingSeconds, setRemainingSeconds] = useState(() =>
     getRemainingSeconds(timeLimitSeconds, startedAt),
   );
@@ -39,10 +42,15 @@ export function TimeLeft({ timeLimitSeconds, startedAt }: TimeLeftProps) {
   }, [timeLimitSeconds, startedAt]);
 
   return (
-    <div className="text-text/60 flex w-full items-center justify-center gap-2 text-sm">
+    <div
+      className={cn(
+        'text-text/60 flex w-full items-center justify-center gap-2 text-sm',
+        className,
+      )}
+    >
       <Icon
         name="timer"
-        size={16}
+        size={iconSize}
       />
       {formatSeconds(remainingSeconds)}
     </div>
