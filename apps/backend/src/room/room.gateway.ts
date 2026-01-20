@@ -369,9 +369,8 @@ export class RoomGateway implements OnGatewayDisconnect {
 
     try {
       await this.roomManagerService.updatePartial(room.id, { status: 'ended' });
-      await this.mediasoupService.closeRouter(room.id);
       this.server.to(room.id).emit('room_end');
-
+      await this.mediasoupService.closeRouter(room.id);
       // TODO: 강의록 생성 기능 추가
 
       // 강의실 내부에 있는 모든 참가자 퇴장 처리
