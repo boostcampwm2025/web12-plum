@@ -3,12 +3,13 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "artillery": "artillery run artillery/socketio-smoke.yaml",
-    "artillery:phase1": "artillery run artillery/phase1-50users.yaml",
-    "artillery:phase1:report": "artillery run --output phase1-report.json artillery/phase1-50users.yaml && artillery report phase1-report.json",
+    "test": "artillery run artillery/plum-load-test.yaml",
+    "test:quick": "artillery run artillery/quick-test.yaml",
+    "test:http": "artillery run artillery/http-only-test.yaml",
+    "test:report": "artillery run --output load-test-report.json artillery/plum-load-test.yaml && artillery report load-test-report.json",
     "k6": "k6 run k6/mediasoup-smoke.ts",
     "playwright": "playwright test",
-    "clean": "rimraf reports/ tmp/ test-results/ phase1-report.json phase1-report.json.html"
+    "clean": "rimraf reports/ tmp/ test-results/ *.json *.html"
   },
   "devDependencies": {
     "@playwright/test": "^1.40.0",
