@@ -9,7 +9,7 @@ export interface MyInfo {
   role: ParticipantRole;
 }
 
-interface Participant {
+export interface Participant {
   id: string;
   name: string;
   role: ParticipantRole;
@@ -21,6 +21,7 @@ interface RoomActions {
   setMyInfo: (info: MyInfo) => void;
   setRouterRtpCapabilities: (capabilities: RtpCapabilities) => void;
 
+  initParticipants: (participantMap: Map<string, Participant>) => void;
   addParticipant: (data: UserJoinedPayload) => void;
   removeParticipant: (id: string) => void;
   addProducer: (participantId: string, type: MediaType, producerId: string) => void;
@@ -55,7 +56,12 @@ export const useRoomStore = create<RoomState>()(
         setMyInfo: (info) => set({ myInfo: info }),
         setRouterRtpCapabilities: (capabilities) => set({ routerRtpCapabilities: capabilities }),
 
-        /**  참가자 추가 */
+        /** 참가자 목록 초기화 */
+        initParticipants: (participantMap: Map<string, Participant>) => {
+          set({ participants: participantMap });
+        },
+
+        /** 참가자 추가 */
         addParticipant: (data) => {
           set((state) => {
             if (state.participants.has(data.id)) return state;
@@ -143,8 +149,7 @@ export const useRoomStore = create<RoomState>()(
       name: 'room-my-info',
       storage: createJSONStorage(() => sessionStorage),
       partialize: (state) => ({
-        myInfo: state.myInfo,
-        routerRtpCapabilities: state.routerRtpCapabilities,
+        myInfo: { id: state.myInfo?.id, name: state.myInfo?.name },
       }),
     },
   ),
