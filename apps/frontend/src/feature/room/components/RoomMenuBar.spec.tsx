@@ -6,35 +6,72 @@ import '@testing-library/jest-dom';
 import { RoomMenuBar } from './RoomMenuBar';
 import { useMediaStore } from '../stores/useMediaStore';
 import { useRoomUIStore } from '../stores/useRoomUIStore';
+import { useMediaConnectionContext } from '../hooks/useMediaConnectionContext';
 
 vi.mock('../stores/useMediaStore');
 vi.mock('../stores/useRoomUIStore');
+vi.mock('../hooks/useMediaConnectionContext');
 
 describe('RoomMenuBar', () => {
   const mockToggleMic = vi.fn();
   const mockToggleCamera = vi.fn();
-  const mockToggleScreenShare = vi.fn();
+  const mockStartScreenShare = vi.fn();
+  const mockStopScreenShare = vi.fn();
   const mockSetActiveDialog = vi.fn();
   const mockSetActiveSidePanel = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
 
-    vi.mocked(useMediaStore).mockReturnValue({
+    const mockMediaStoreState = {
       isMicOn: false,
       isCameraOn: false,
       isScreenSharing: false,
-      toggleMic: mockToggleMic,
-      toggleCamera: mockToggleCamera,
-      toggleScreenShare: mockToggleScreenShare,
-      initialize: vi.fn(),
-    });
+      screenStream: null,
+      remoteStreams: new Map(),
+      hasHydrated: true,
+      actions: {
+        toggleMic: mockToggleMic,
+        toggleCamera: mockToggleCamera,
+        toggleScreenShare: vi.fn(),
+        initialize: vi.fn(),
+        setHasHydrated: vi.fn(),
+        setScreenSharing: vi.fn(),
+        setScreenStream: vi.fn(),
+        addRemoteStream: vi.fn(),
+        removeRemoteStream: vi.fn(),
+        getRemoteStreamsByParticipant: vi.fn(),
+        getRemoteStream: vi.fn(),
+        resetRemoteStreams: vi.fn(),
+      },
+    };
+
+    vi.mocked(useMediaStore).mockImplementation(
+      (selector?: (state: typeof mockMediaStoreState) => unknown) => {
+        if (selector) {
+          return selector(mockMediaStoreState);
+        }
+        return mockMediaStoreState;
+      },
+    );
+    vi.mocked(useMediaStore).getState = vi.fn().mockReturnValue(mockMediaStoreState);
 
     vi.mocked(useRoomUIStore).mockReturnValue({
       activeDialog: null,
       activeSidePanel: null,
       setActiveDialog: mockSetActiveDialog,
       setActiveSidePanel: mockSetActiveSidePanel,
+    });
+
+    vi.mocked(useMediaConnectionContext).mockReturnValue({
+      startProducing: vi.fn(),
+      stopProducing: vi.fn(),
+      consumeRemoteProducer: vi.fn(),
+      cleanup: vi.fn(),
+      toggleMicProducer: vi.fn(),
+      toggleCameraProducer: vi.fn(),
+      startScreenShare: mockStartScreenShare,
+      stopScreenShare: mockStopScreenShare,
     });
   });
 
@@ -63,7 +100,7 @@ describe('RoomMenuBar', () => {
 
     expect(mockToggleMic).toHaveBeenCalledTimes(1);
     expect(mockToggleCamera).toHaveBeenCalledTimes(1);
-    expect(mockToggleScreenShare).toHaveBeenCalledTimes(1);
+    expect(mockStartScreenShare).toHaveBeenCalledTimes(1);
   });
 
   it('다이어로그 버튼(vote) 클릭 시 setActiveDialog가 호출된다', async () => {

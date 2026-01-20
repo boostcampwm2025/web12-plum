@@ -6,10 +6,14 @@ import '@testing-library/jest-dom';
 import { ParticipantGrid } from './ParticipantGrid';
 import { useItemsPerPage } from '../hooks/useItemsPerPage';
 import { usePagination } from '../hooks/usePagination';
+import { useMediaStore } from '../stores/useMediaStore';
+import { useStreamStore } from '../../../store/useLocalStreamStore';
 import type { Participant } from '../types';
 
 vi.mock('../hooks/useItemsPerPage');
 vi.mock('../hooks/usePagination');
+vi.mock('../stores/useMediaStore');
+vi.mock('../../../store/useLocalStreamStore');
 
 vi.mock('./ParticipantVideo', () => ({
   ParticipantVideo: ({
@@ -109,12 +113,23 @@ describe('ParticipantGrid', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(useItemsPerPage).mockReturnValue(3);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.mocked(useMediaStore).mockImplementation((selector: any) => {
+      const state = { isCameraOn: false };
+      return selector ? selector(state) : state;
+    });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.mocked(useStreamStore).mockImplementation((selector: any) => {
+      const state = { localStream: null };
+      return selector ? selector(state) : state;
+    });
     mockPagination();
   });
 
   it('현재 사용자 비디오가 렌더링된다', () => {
     render(
       <ParticipantGrid
+        videoMode="side"
         currentUser={currentUser}
         participants={participants}
       />,
@@ -130,6 +145,7 @@ describe('ParticipantGrid', () => {
   it('모든 참가자 비디오가 렌더링된다', () => {
     render(
       <ParticipantGrid
+        videoMode="side"
         currentUser={currentUser}
         participants={participants}
       />,
@@ -143,6 +159,7 @@ describe('ParticipantGrid', () => {
   it('이전/다음 페이지 버튼이 렌더링된다', () => {
     render(
       <ParticipantGrid
+        videoMode="side"
         currentUser={currentUser}
         participants={participants}
       />,
@@ -157,6 +174,7 @@ describe('ParticipantGrid', () => {
 
     const { rerender } = render(
       <ParticipantGrid
+        videoMode="side"
         currentUser={currentUser}
         participants={participants}
       />,
@@ -169,6 +187,7 @@ describe('ParticipantGrid', () => {
 
     rerender(
       <ParticipantGrid
+        videoMode="side"
         currentUser={currentUser}
         participants={participants}
       />,
@@ -184,6 +203,7 @@ describe('ParticipantGrid', () => {
 
     render(
       <ParticipantGrid
+        videoMode="side"
         currentUser={currentUser}
         participants={participants}
       />,
@@ -201,6 +221,7 @@ describe('ParticipantGrid', () => {
 
     render(
       <ParticipantGrid
+        videoMode="side"
         currentUser={currentUser}
         participants={participants}
         onModeChange={onModeChange}
@@ -223,6 +244,7 @@ describe('ParticipantGrid', () => {
 
     render(
       <ParticipantGrid
+        videoMode="side"
         currentUser={currentUser}
         participants={participants}
       />,
