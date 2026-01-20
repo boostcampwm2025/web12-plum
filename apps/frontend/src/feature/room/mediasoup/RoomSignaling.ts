@@ -1,5 +1,11 @@
 import { RtpCapabilities } from 'mediasoup-client/types';
-import { JoinRoomResponse, ParticipantRole } from '@plum/shared-interfaces';
+import {
+  JoinRoomResponse,
+  MediaStateChangedPayload,
+  NewProducerPayload,
+  ParticipantRole,
+  UserJoinedPayload,
+} from '@plum/shared-interfaces';
 
 import { logger } from '@/shared/lib/logger';
 import { MediaSocket } from '../types';
@@ -61,5 +67,55 @@ export const RoomSignaling = {
 
       socket.emit('join_room', payload, handleResponse);
     });
+  },
+
+  /**
+   * 방 세션 및 미디어 관련 모든 실시간 리스너 설정
+   */
+  setupAllHandlers: (
+    socket: MediaSocket,
+    actions: {
+      addParticipant: (data: UserJoinedPayload) => void;
+      removeParticipant: (id: string) => void;
+      consumeRemoteProducer: (data: NewProducerPayload) => void;
+      handleMediaStateChanged: (data: MediaStateChangedPayload) => void;
+    },
+  ) => {
+    // 참가자 입장
+    socket.on('user_joined', (data) => {
+      logger.media.info(`[Room] 참가자 입장: ${data.name}`);
+      actions.addParticipant(data);
+    });
+
+    // 참가자 퇴장
+    socket.on('user_left', (data) => {
+      logger.media.info(`[Room] 참가자 퇴장: ${data.id}`);
+      actions.removeParticipant(data.id);
+    });
+
+    // 미디어 스트림 발생 (다른 사람이 카메라/마이크 켰을 때)
+    socket.on('new_producer', (data) => {
+      logger.media.info(`[Room] 새로운 프로듀서 발생: ${data.participantId} - ${data.type}`);
+      actions.consumeRemoteProducer(data);
+    });
+
+    // 미디어 상태 변경 (다른 사람이 Mute/Unmute 했을 때)
+    socket.on('media_state_changed', (data) => {
+      logger.media.info(
+        `[Room] 미디어 상태 변경: ${data.participantId} [${data.type}: ${data.action}]`,
+      );
+      actions.handleMediaStateChanged(data);
+    });
+  },
+
+  /**
+   * 모든 리스너 일괄 해제 (메모리 누수 방지)
+   */
+  removeAllHandlers: (socket: MediaSocket) => {
+    socket.off('user_joined');
+    socket.off('user_left');
+    socket.off('new_producer');
+    socket.off('media_state_changed');
+    logger.media.info('[Room] 모든 시그널링 리스너 해제 완료');
   },
 };
