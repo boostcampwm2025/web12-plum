@@ -5,8 +5,9 @@ import {
   ConnectedSocket,
   MessageBody,
   OnGatewayDisconnect,
+  WebSocketServer,
 } from '@nestjs/websockets';
-import { Socket } from 'socket.io';
+import { Server, Socket } from 'socket.io';
 import {
   DtlsParameters,
   IceCandidate,
@@ -15,6 +16,7 @@ import {
   RtpParameters,
 } from 'mediasoup/node/lib/types';
 import {
+  BreakRoomResponse,
   ConnectTransportRequest,
   ConnectTransportResponse,
   ConsumeRequest,
@@ -61,6 +63,9 @@ import { SocketMetadataService } from '../common/services/index.js';
 @WebSocketGateway(SOCKET_CONFIG)
 export class RoomGateway implements OnGatewayDisconnect {
   private readonly logger = new Logger(RoomGateway.name);
+
+  @WebSocketServer()
+  private readonly server: Server;
 
   constructor(
     private readonly mediasoupService: MediasoupService,
@@ -338,6 +343,44 @@ export class RoomGateway implements OnGatewayDisconnect {
   async handleLeaveRoom(@ConnectedSocket() socket: Socket): Promise<LeaveRoomResponse> {
     await this.cleanupSocket(socket, 'leave_room');
     return { success: true };
+  }
+
+  @SubscribeMessage('break_room')
+  async handleBreakRoom(@ConnectedSocket() socket: Socket): Promise<BreakRoomResponse> {
+    const metadata = this.socketMetadataService.get(socket.id);
+    if (!metadata) {
+      return { success: false, error: '세션이 만료되었거나 유효하지 않은 접근입니다.' };
+    }
+
+    const participant = await this.participantManagerService.findOne(metadata.participantId);
+    const room = await this.roomManagerService.findOne(metadata.roomId);
+
+    if (!participant || !room) {
+      return { success: false, error: '방 정보를 찾을 수 없습니다.' };
+    }
+
+    if (participant.role !== 'presenter' || room.presenter !== participant.id) {
+      return { success: false, error: '강의를 종료할 권한이 없습니다.' };
+    }
+
+    if (room.status !== 'active') {
+      return { success: false, error: '이미 종료되었거나 진행 중인 강의가 아닙니다.' };
+    }
+
+    try {
+      await this.roomManagerService.updatePartial(room.id, { status: 'ended' });
+      this.server.to(room.id).emit('room_end');
+      await this.mediasoupService.closeRouter(room.id);
+      // TODO: 강의록 생성 기능 추가
+
+      // 강의실 내부에 있는 모든 참가자 퇴장 처리
+      this.server.in(room.id).socketsLeave(room.id);
+      this.server.in(room.id).disconnectSockets(true);
+      return { success: true };
+    } catch (error) {
+      this.logger.error(`[break_room] 실패:`, error);
+      return { success: false, error: `종료 처리 중 서버 내부 오류가 발생하였습니다.` };
+    }
   }
 
   // handleDisconnect: 비정상 퇴장 (브라우저 닫기 등)

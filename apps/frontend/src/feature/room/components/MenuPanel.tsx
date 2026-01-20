@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Button } from '@/shared/components/Button';
 import { SidePanelHeader, SidePanelContent } from './SidePanel';
+import { PollManagementTabs } from './PollManagementTabs';
 
 type SubPage = 'breakroom' | 'vote' | 'qna' | 'material' | 'participant';
 
@@ -53,7 +54,7 @@ export function MenuPanel({ onClose }: MenuPanelProps) {
             </div>
           )}
           {subPage === 'breakroom' && <div>소강의실</div>}
-          {subPage === 'vote' && <div>투표 관리</div>}
+          {subPage === 'vote' && <PollManagementTabs />}
           {subPage === 'qna' && <div>Q&A 관리</div>}
           {subPage === 'material' && <div>발표 자료 관리</div>}
           {subPage === 'participant' && <div>참가자 관리</div>}
