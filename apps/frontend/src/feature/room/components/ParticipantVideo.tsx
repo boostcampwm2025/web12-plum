@@ -8,25 +8,30 @@ import type { IconName } from '@/shared/components/icon/iconMap';
 
 export type VideoDisplayMode = 'minimize' | 'pip' | 'side';
 
-function GestureProgressOverlay({ gestureProgress }: { gestureProgress: GestureProgress }) {
-  const GESTURE_ICON_MAP: Record<NonNullable<GestureProgress['gesture']>, IconName> = {
-    thumbs_up: 'thumbs-up',
-    thumbs_down: 'thumbs-down',
-    hand_raise: 'hand-raise',
-    ok_sign: 'circle-check',
-    one: 'one',
-    two: 'two',
-    three: 'three',
-    four: 'four',
-    x_sign: 'gesture-x',
-    o_sign: 'gesture-o',
-  };
+const GESTURE_ICON_MAP: Record<NonNullable<GestureProgress['gesture']>, IconName> = {
+  thumbs_up: 'thumbs-up',
+  thumbs_down: 'thumbs-down',
+  hand_raise: 'hand-raise',
+  ok_sign: 'circle-check',
+  one: 'one',
+  two: 'two',
+  three: 'three',
+  four: 'four',
+  x_sign: 'gesture-x',
+  o_sign: 'gesture-o',
+};
 
-  const getGestureIconName = (gesture: GestureProgress['gesture']): IconName | null =>
-    gesture ? (GESTURE_ICON_MAP[gesture] ?? null) : null;
+function GestureProgressOverlay() {
+  const gestureProgress = useGestureStore((state) => state.gestureProgress);
+  const gesture = gestureProgress.gesture;
+  const progress = gestureProgress.progress;
 
-  const gestureIconName = getGestureIconName(gestureProgress.gesture);
-  const progressRatio = Math.min(1, Math.max(0, gestureProgress.progress));
+  if (!gesture || progress <= 0) {
+    return null;
+  }
+
+  const gestureIconName = GESTURE_ICON_MAP[gesture] ?? null;
+  const progressRatio = Math.min(1, Math.max(0, progress));
   const progressPercent = Math.round(progressRatio * 100);
 
   return (
@@ -103,11 +108,11 @@ export function ParticipantVideo({
   }, [isCameraOn, stream, mode]);
 
   useEffect(() => {
-    onVideoElementChange?.(localVideoRef.current);
+    onVideoElementChange?.(videoRef.current);
     return () => {
       onVideoElementChange?.(null);
     };
-  }, [onVideoElementChange, mode, localStream, isCameraOn]);
+  }, [onVideoElementChange, mode, stream, isCameraOn]);
 
   return (
     <motion.div
@@ -150,12 +155,7 @@ export function ParticipantVideo({
         ))}
 
       {/* 제스처 인식 프로그레스바 */}
-      {mode !== 'minimize' &&
-        isCurrentUser &&
-        gestureProgress?.gesture &&
-        gestureProgress.progress > 0 && (
-          <GestureProgressOverlay gestureProgress={gestureProgress} />
-        )}
+      {mode !== 'minimize' && isCurrentUser && <GestureProgressOverlay />}
 
       {/* 이름 표시 */}
       <div className="absolute bottom-2 left-2 rounded px-1 text-sm text-white">{name}</div>
