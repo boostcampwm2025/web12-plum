@@ -14,7 +14,6 @@ import {
 import { FilesInterceptor } from '@nestjs/platform-express';
 import {
   ALLOWED_FILE_MIME_TYPES,
-  createLectureSchema,
   CreateRoomRequest,
   CreateRoomResponse,
   EnterLectureRequestBody,
@@ -52,7 +51,7 @@ export class RoomController {
     }),
   )
   async createPost(
-    @Body(new CreateRoomValidationPipe(createLectureSchema)) body: CreateRoomRequest,
+    @Body(new CreateRoomValidationPipe()) body: CreateRoomRequest,
     @UploadedFiles() files: Express.Multer.File[],
   ): Promise<CreateRoomResponse> {
     return await this.roomService.createRoom(body, files);

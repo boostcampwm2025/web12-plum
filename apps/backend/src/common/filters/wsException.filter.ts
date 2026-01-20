@@ -11,7 +11,7 @@ export class WsExceptionFilter extends BaseWsExceptionFilter {
 
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToWs();
-    const client = host.switchToWs().getClient<Socket>();
+    const client = ctx.getClient<Socket>();
     const args = host.getArgs();
     const event = ctx.getPattern() || 'unknown';
 

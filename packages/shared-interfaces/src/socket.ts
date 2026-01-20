@@ -6,6 +6,8 @@ import {
   MediaType,
   ToggleActionType,
 } from './shared.js';
+import { z } from 'zod';
+import { pollFormSchema } from './poll.js';
 
 // 제스처 타입 정의
 export type GestureType =
@@ -68,6 +70,8 @@ export interface ActionGestureRequest {
   gesture: GestureType;
 }
 
+export type CreatePollRequest = z.infer<typeof pollFormSchema>;
+
 // 클라이언트에서 보낸 요청에 따라 발생하는 이벤트 페이로드
 
 export interface BaseResponse {
@@ -128,6 +132,8 @@ export type ToggleMediaResponse = BaseResponse;
 export type LeaveRoomResponse = BaseResponse;
 
 export type BreakRoomResponse = BaseResponse;
+
+export type CreatePollResponse = BaseResponse;
 
 // 서버에서 보내는 브로드캐스트 페이로드
 export interface UserJoinedPayload {
@@ -209,4 +215,6 @@ export interface ClientToServerEvents {
   action_gesture: (data: ActionGestureRequest, cb: (res: ActionGestureResponse) => void) => void;
 
   break_room: (cb: (res: BreakRoomResponse) => void) => void;
+
+  create_vote: (data: CreatePollRequest, cb: (res: CreatePollResponse) => void) => void;
 }
