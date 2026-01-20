@@ -5,6 +5,7 @@ import {
   SubscribeMessage,
   ConnectedSocket,
   MessageBody,
+  OnGatewayDisconnect,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import {
@@ -16,10 +17,11 @@ import { SOCKET_CONFIG } from '../common/constants/socket.constants.js';
 import { WsExceptionFilter } from '../common/filters/index.js';
 import { SocketMetadataService } from '../common/services/index.js';
 import { ParticipantManagerService } from '../redis/repository-manager/index.js';
+import { PrometheusService } from '../prometheus/prometheus.service.js';
 
 @UseFilters(WsExceptionFilter)
 @WebSocketGateway(SOCKET_CONFIG)
-export class InteractionGateway {
+export class InteractionGateway implements OnGatewayDisconnect {
   @WebSocketServer()
   private server: Server;
 
@@ -28,7 +30,24 @@ export class InteractionGateway {
   constructor(
     private readonly socketMetadataService: SocketMetadataService,
     private readonly participantManagerService: ParticipantManagerService,
+    private readonly prometheusService: PrometheusService,
   ) {}
+
+  /**
+   * Socket.IO 연결 시 메트릭 증가
+   */
+  handleConnection(socket: Socket) {
+    this.prometheusService.incrementSocketIOConnections();
+    this.logger.log(`Socket 연결됨 (Interaction): ${socket.id}`);
+  }
+
+  /**
+   * Socket.IO 해제 시 메트릭 감소
+   */
+  handleDisconnect(socket: Socket) {
+    this.prometheusService.decrementSocketIOConnections();
+    this.logger.log(`Socket 해제됨 (Interaction): ${socket.id}`);
+  }
 
   @SubscribeMessage('action_gesture')
   async handleActionGesture(

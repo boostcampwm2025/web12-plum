@@ -13,6 +13,7 @@ import {
 import { MediaType } from '@plum/shared-interfaces';
 import { mediasoupConfig } from './mediasoup.config.js';
 import { ConsumerAppData, ProducerAppData } from './mediasoup.type.js';
+import { PrometheusService } from '../prometheus/prometheus.service.js';
 
 /**
  * Mediasoup Worker 및 Router 관리 서비스
@@ -33,6 +34,8 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
   private producers: Map<string, Producer<ProducerAppData>> = new Map();
   private consumers: Map<string, Consumer<ConsumerAppData>> = new Map();
   private nextWorkerIdx = 0; // Round-robin Worker 선택 인덱스
+
+  constructor(private readonly prometheusService: PrometheusService) {}
 
   /**
    * 앱 시작 시 Mediasoup Worker 생성
@@ -66,6 +69,9 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
     }
 
     this.logger.log(`🎉 Mediasoup이 ${this.workers.length}개의 Worker로 초기화되었습니다.`);
+
+    // Prometheus 메트릭 업데이트
+    this.prometheusService.setMediasoupWorkers(this.workers.length);
   }
 
   /**
@@ -98,6 +104,9 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
 
       this.logger.log(`✅ Router이 ${roomId} 강의실에 생성되었습니다. (Worker PID: ${worker.pid})`);
 
+      // Prometheus 메트릭 업데이트
+      this.prometheusService.setMediasoupRouters(this.routers.size);
+
       return router;
     } catch (error) {
       this.logger.error(`❌ Router 생성 실패: room ${roomId}:`, error);
@@ -124,6 +133,9 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
       router.close();
       this.routers.delete(roomId);
       this.logger.log(`🗑️  Router이 ${roomId} 강의실에서 닫혔습니다.`);
+
+      // Prometheus 메트릭 업데이트
+      this.prometheusService.setMediasoupRouters(this.routers.size);
     }
   }
 
@@ -194,9 +206,15 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
       transport.observer.on('close', () => {
         this.transports.delete(transport.id);
         this.logger.log(`Transport 닫힘 (id: ${transport.id})`);
+
+        // Prometheus 메트릭 업데이트
+        this.prometheusService.setMediasoupTransports(this.transports.size);
       });
 
       this.logger.log(`✅ Transport 생성 완료 (id: ${transport.id}, room: ${roomId})`);
+
+      // Prometheus 메트릭 업데이트
+      this.prometheusService.setMediasoupTransports(this.transports.size);
 
       // 클라이언트에게 필요한 정보 반환
       return {
@@ -275,7 +293,13 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
     producer.observer.on('close', () => {
       this.producers.delete(producer.id);
       this.logger.log(`Producer 닫힘 (id: ${producer.id})`);
+
+      // Prometheus 메트릭 업데이트
+      this.prometheusService.setMediasoupProducers(this.producers.size);
     });
+
+    // Prometheus 메트릭 업데이트
+    this.prometheusService.setMediasoupProducers(this.producers.size);
 
     return producer;
   }
@@ -328,7 +352,13 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
     consumer.observer.on('close', () => {
       this.consumers.delete(consumer.id);
       this.logger.log(`Consumer 닫힘 (id: ${consumer.id})`);
+
+      // Prometheus 메트릭 업데이트
+      this.prometheusService.setMediasoupConsumers(this.consumers.size);
     });
+
+    // Prometheus 메트릭 업데이트
+    this.prometheusService.setMediasoupConsumers(this.consumers.size);
 
     return consumer;
   }

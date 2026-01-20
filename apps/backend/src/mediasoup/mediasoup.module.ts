@@ -1,5 +1,6 @@
 import { Module, Global } from '@nestjs/common';
 import { MediasoupService } from './mediasoup.service.js';
+import { PrometheusModule } from '../prometheus/prometheus.module.js';
 
 /**
  * Mediasoup 모듈
@@ -8,6 +9,7 @@ import { MediasoupService } from './mediasoup.service.js';
  */
 @Global()
 @Module({
+  imports: [PrometheusModule],
   providers: [MediasoupService],
   exports: [MediasoupService],
 })
