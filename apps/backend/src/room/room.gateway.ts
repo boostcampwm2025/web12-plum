@@ -4,6 +4,7 @@ import {
   SubscribeMessage,
   ConnectedSocket,
   MessageBody,
+  OnGatewayConnection,
   OnGatewayDisconnect,
   WebSocketServer,
 } from '@nestjs/websockets';
@@ -64,7 +65,7 @@ import { PrometheusService } from '../prometheus/prometheus.service.js';
  */
 @UseFilters(WsExceptionFilter)
 @WebSocketGateway(SOCKET_CONFIG)
-export class RoomGateway implements OnGatewayDisconnect {
+export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private readonly logger = new Logger(RoomGateway.name);
 
   @WebSocketServer()

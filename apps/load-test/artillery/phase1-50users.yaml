@@ -12,6 +12,7 @@ config:
     socketio:
       path: "/socket.io"
       transports: ["websocket"]
+      namespace: "/session"
 
 scenarios:
   - name: "Audience joins room and consumes media"
@@ -77,14 +78,13 @@ scenarios:
           channel: "leave_room"
 
 # 변수 정의
-# 사용 전 반드시 수정 필요:
 # - roomId: 테스트 전 생성한 강의실 ID
 # - presenterParticipantId: 발표자 참가자 ID
 variables:
   roomId:
-    - "test-room-1"  # 실제 테스트 시 변경 필요
+    - ""
   presenterParticipantId:
-    - "presenter-1"  # 실제 테스트 시 변경 필요
+    - ""
   gesture:
     - "thumbs_up"
     - "thumbs_down"
