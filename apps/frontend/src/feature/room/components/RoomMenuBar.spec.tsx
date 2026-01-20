@@ -68,8 +68,10 @@ describe('RoomMenuBar', () => {
       stopProducing: vi.fn(),
       consumeRemoteProducer: vi.fn(),
       cleanup: vi.fn(),
-      toggleMicProducer: vi.fn(),
-      toggleCameraProducer: vi.fn(),
+      startMicProducer: mockToggleMic,
+      stopMicProducer: vi.fn(),
+      startCameraProducer: mockToggleCamera,
+      stopCameraProducer: vi.fn(),
       startScreenShare: mockStartScreenShare,
       stopScreenShare: mockStopScreenShare,
     });

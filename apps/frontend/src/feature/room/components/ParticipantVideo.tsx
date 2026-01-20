@@ -17,7 +17,7 @@ export interface ParticipantVideoProps {
   mode: VideoDisplayMode;
   isCurrentUser?: boolean;
   onModeChange?: (mode: VideoDisplayMode) => void;
-  localStream?: MediaStream | null;
+  stream?: MediaStream | null;
   isCameraOn?: boolean;
 }
 
@@ -27,16 +27,21 @@ export function ParticipantVideo({
   mode,
   isCurrentUser = false,
   onModeChange,
-  localStream,
+  stream,
   isCameraOn = true,
 }: ParticipantVideoProps) {
-  const localVideoRef = useRef<HTMLVideoElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
-    if (mode !== 'minimize' && localVideoRef.current && localStream && isCameraOn) {
-      localVideoRef.current.srcObject = localStream;
+    if (!videoRef.current) return;
+
+    if (mode !== 'minimize' && stream && isCameraOn) {
+      videoRef.current.srcObject = stream;
+    } else {
+      // 카메라 꺼지면 srcObject 정리 (마지막 프레임 제거)
+      videoRef.current.srcObject = null;
     }
-  }, [isCameraOn, localStream, mode]);
+  }, [isCameraOn, stream, mode]);
 
   return (
     <motion.div
@@ -60,11 +65,11 @@ export function ParticipantVideo({
     >
       {/* 비디오 영역 */}
       {mode !== 'minimize' &&
-        (isCurrentUser && localStream && isCameraOn ? (
+        (stream && isCameraOn ? (
           <video
-            ref={localVideoRef}
+            ref={videoRef}
             autoPlay
-            muted
+            muted={isCurrentUser}
             playsInline
             className="h-full w-full object-cover"
           />

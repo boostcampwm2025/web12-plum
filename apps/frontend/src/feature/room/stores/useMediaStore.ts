@@ -24,6 +24,7 @@ interface MediaActions {
   // 원격 스트림 관리
   addRemoteStream: (consumerId: string, stream: RemoteStream) => void;
   removeRemoteStream: (consumerId: string) => void;
+  removeRemoteStreamByParticipant: (participantId: string, type: MediaType) => void;
   getRemoteStreamsByParticipant: (participantId: string) => RemoteStream[];
   getRemoteStream: (consumerId: string) => RemoteStream | undefined;
   resetRemoteStreams: () => void;
@@ -92,6 +93,23 @@ export const useMediaStore = create<MediaState>()(
 
             const newStreams = new Map(state.remoteStreams);
             newStreams.delete(consumerId);
+            return { remoteStreams: newStreams };
+          });
+        },
+
+        /**
+         * 참가자 ID와 타입으로 원격 스트림을 제거
+         */
+        removeRemoteStreamByParticipant: (participantId: string, type: MediaType) => {
+          set((state) => {
+            const newStreams = new Map(state.remoteStreams);
+            for (const [consumerId, stream] of newStreams) {
+              if (stream.participantId === participantId && stream.type === type) {
+                stream.stream.getTracks().forEach((track) => track.stop());
+                newStreams.delete(consumerId);
+                break;
+              }
+            }
             return { remoteStreams: newStreams };
           });
         },

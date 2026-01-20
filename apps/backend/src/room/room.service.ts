@@ -14,10 +14,10 @@ import {
   EnterLectureRequestBody,
   EnterRoomResponse,
   MediasoupProducer,
-  MediasoupRoomInfo,
   Participant,
   ParticipantRole,
   Room,
+  RoomInfo,
   RoomValidationResponse,
 } from '@plum/shared-interfaces';
 import { InteractionService } from '../interaction/interaction.service.js';
@@ -117,19 +117,26 @@ export class RoomService {
     return host;
   }
 
-  async getRoomInfo(roomId: string, participant: Participant): Promise<MediasoupRoomInfo> {
+  async getRoomInfo(roomId: string, participant: Participant): Promise<RoomInfo> {
     const rtpCapabilities = this.mediasoupService.getRouterRtpCapabilities(roomId);
-    const allParticipants = await this.roomManagerService.getParticipantsInRoom(roomId);
+    const allParticipants = (await this.roomManagerService.getParticipantsInRoom(roomId)).sort(
+      (a, b) => new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime(),
+    );
 
     if (allParticipants.length === 0) {
       // 조기 종료
-      return { routerRtpCapabilities: rtpCapabilities, existingProducers: [] };
+      return {
+        mediasoup: {
+          routerRtpCapabilities: rtpCapabilities,
+          existingProducers: [],
+        },
+        participants: [],
+      };
     }
 
     const others = allParticipants.filter((p) => p.id !== participant.id);
     const audienceVideoCandidates = others
       .filter((p) => p.role === 'audience' && p.producers.video)
-      .sort((a, b) => new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime())
       .slice(0, AUDIENCE_VIDEO_LIMIT - 1);
 
     const videoTargetIds = new Set(audienceVideoCandidates.map((p) => p.id));
@@ -175,8 +182,16 @@ export class RoomService {
     }
 
     return {
-      existingProducers,
-      routerRtpCapabilities: rtpCapabilities,
+      mediasoup: {
+        routerRtpCapabilities: rtpCapabilities,
+        existingProducers,
+      },
+      participants: allParticipants.map((p) => ({
+        id: p.id,
+        name: p.name,
+        role: p.role,
+        joinedAt: new Date(p.joinedAt),
+      })),
     };
   }
 
@@ -210,7 +225,7 @@ export class RoomService {
 
     await this.roomManagerService.saveOne(roomId, room);
     const host = await this.createHost(roomId, hostId, body.hostName);
-    const mediasoup = await this.getRoomInfo(roomId, host);
+    const roomInfo = await this.getRoomInfo(roomId, host);
 
     return {
       roomId: roomId,
@@ -219,7 +234,7 @@ export class RoomService {
         name: host.name,
         role: host.role,
       },
-      mediasoup,
+      ...roomInfo,
     };
   }
 
@@ -228,13 +243,13 @@ export class RoomService {
     if (room.name !== body.name) throw new BadRequestException('Room name does not match');
 
     const participant = await this.createParticipant(roomId, body.nickname);
-    const mediasoup = await this.getRoomInfo(room.id, participant);
+    const roomInfo = await this.getRoomInfo(room.id, participant);
 
     return {
       participantId: participant.id,
       name: participant.name,
       role: participant.role,
-      mediasoup,
+      ...roomInfo,
     };
   }
 

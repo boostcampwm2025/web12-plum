@@ -42,10 +42,11 @@ export function useRoomInit() {
 
   // 스토어 액션
   const { initDevice } = useMediaDeviceStore((state) => state.actions);
-  const { startStream } = useStreamStore((state) => state.actions);
+  const { ensureTracks } = useStreamStore((state) => state.actions);
   const { setMyInfo, setRouterRtpCapabilities, addParticipant, removeParticipant } = useRoomStore(
     (state) => state.actions,
   );
+  const { removeRemoteStreamByParticipant } = useMediaStore((state) => state.actions);
   const {
     connect: connectSocket,
     registerHandlers,
@@ -64,6 +65,9 @@ export function useRoomInit() {
     user_joined: addParticipant,
     user_left: (data) => removeParticipant(data.id),
     new_producer: consumeRemoteProducer,
+    media_state_changed: (data) => {
+      if (data.action === 'pause') removeRemoteStreamByParticipant(data.participantId, data.type);
+    },
   };
 
   /**
@@ -127,9 +131,12 @@ export function useRoomInit() {
 
       // 4. 미디어 스트림 획득 및 송출 시작
       try {
-        // 둘 중 하나라도 켜져 있을 때만 스트림 요청
+        // 초기 입장 시 사용자가 설정한 값에 따라 트랙 확보
         if (isCameraOn || isMicOn) {
-          const stream = await startStream({ video: isCameraOn, audio: isMicOn });
+          logger.custom.info('[RoomInit] 초기 미디어 스트림 확보 시작', { isCameraOn, isMicOn });
+
+          // 사용자의 초기 설정(isCameraOn, isMicOn)에 따라 필요한 트랙 요청
+          const stream = await ensureTracks({ video: isCameraOn, audio: isMicOn });
 
           if (stream) {
             const videoTrack = stream.getVideoTracks()[0];
