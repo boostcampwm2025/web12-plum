@@ -1,11 +1,5 @@
-import { ParticipantRole } from './participant.js';
-import {
-  MediaKind,
-  MediasoupProducer,
-  MediasoupRoomInfo,
-  MediaType,
-  ToggleActionType,
-} from './shared.js';
+import { ParticipantPayload, ParticipantRole } from './participant.js';
+import { MediaKind, MediasoupProducer, MediaType, RoomInfo, ToggleActionType } from './shared.js';
 
 // 제스처 타입 정의
 export type GestureType =
@@ -77,10 +71,9 @@ export interface BaseResponse {
 
 export type JoinRoomResponse =
   | (BaseResponse & { success: false })
-  | {
+  | ({
       success: true;
-      mediasoup: MediasoupRoomInfo;
-    };
+    } & RoomInfo);
 
 export type CreateTransportResponse<T1 = any, T2 = any, T3 = any> =
   | (BaseResponse & { success: false })
@@ -130,12 +123,7 @@ export type LeaveRoomResponse = BaseResponse;
 export type BreakRoomResponse = BaseResponse;
 
 // 서버에서 보내는 브로드캐스트 페이로드
-export interface UserJoinedPayload {
-  id: string;
-  name: string;
-  role: string;
-  joinedAt: Date;
-}
+export type UserJoinedPayload = ParticipantPayload;
 
 export interface UserLeftPayload {
   id: string;

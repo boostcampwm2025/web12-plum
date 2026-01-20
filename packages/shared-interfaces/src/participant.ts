@@ -27,6 +27,13 @@ export interface Participant {
   joinedAt: string;
 }
 
+export interface ParticipantPayload {
+  id: string;
+  name: string;
+  role: string;
+  joinedAt: Date;
+}
+
 export const nicknameValidate = z.object({
   nickname: z
     .string()
