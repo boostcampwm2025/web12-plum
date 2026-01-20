@@ -205,8 +205,8 @@ describe('RoomController', () => {
         mediasoup: {
           routerRtpCapabilities: { codecs: [] } as any,
           existingProducers: [
-            { producerId: 'p1', participantId: 'user1', kind: 'audio' },
-            { producerId: 'v1', participantId: 'user1', kind: 'video' },
+            { producerId: 'p1', participantId: 'user1', kind: 'audio', type: 'audio' },
+            { producerId: 'v1', participantId: 'user1', kind: 'video', type: 'video' },
           ],
         },
       };

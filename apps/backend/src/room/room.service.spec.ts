@@ -10,7 +10,10 @@ import { CreateRoomRequest, EnterLectureRequestBody, Room } from '@plum/shared-i
 
 import { RoomService } from './room.service.js';
 import { InteractionService } from '../interaction/interaction.service.js';
-import { RoomManagerService } from '../redis/repository-manager/index.js'; // 경로 수정
+import {
+  ParticipantManagerService,
+  RoomManagerService,
+} from '../redis/repository-manager/index.js'; // 경로 수정
 import { MediasoupService } from '../mediasoup/mediasoup.service.js';
 
 // S3 업로드 모킹
@@ -77,12 +80,20 @@ describe('RoomService', () => {
           },
         },
         {
+          provide: ParticipantManagerService,
+          useValue: {
+            findOne: jest.fn(),
+          },
+        },
+        {
           provide: MediasoupService,
           useValue: {
             createRouter: jest.fn().mockResolvedValue({
               rtpCapabilities: { codecs: [{ mimeType: 'audio/opus' }] },
             }),
-            getRouterRtpCapabilities: jest.fn(),
+            getRouterRtpCapabilities: jest.fn().mockReturnValue({
+              codecs: [{ mimeType: 'audio/opus' }],
+            }),
           },
         },
       ],
@@ -363,16 +374,19 @@ describe('RoomService', () => {
         producerId: 'a-h',
         participantId: 'host-id',
         kind: 'audio',
+        type: 'audio',
       });
       expect(producers).toContainEqual({
         producerId: 'v-h',
         participantId: 'host-id',
         kind: 'video',
+        type: 'video',
       });
       expect(producers).toContainEqual({
         producerId: 's-h',
         participantId: 'host-id',
-        kind: 'screen',
+        kind: 'video',
+        type: 'screen',
       });
 
       // [오디오 검증] 모든 유저의 오디오가 포함되어야 함 (5번 유저 포함)
@@ -381,6 +395,7 @@ describe('RoomService', () => {
         producerId: 'a-5',
         participantId: 'late-5',
         kind: 'audio',
+        type: 'audio',
       });
 
       // [비디오 슬롯 검증] 선착순 4명만 포함되어야 함 (1~4번)
@@ -394,6 +409,7 @@ describe('RoomService', () => {
         producerId: 'v-5',
         participantId: 'late-5',
         kind: 'video',
+        type: 'video',
       });
     });
 
