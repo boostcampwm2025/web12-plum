@@ -1,13 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useParams } from 'react-router';
-import type {
-  GestureRecognizer as GestureRecognizerType,
-  PoseLandmarker as PoseLandmarkerType,
-} from '@mediapipe/tasks-vision';
 import type { GestureType } from '@plum/shared-interfaces';
 import { logger } from '@/shared/lib/logger';
-import { isFourSign, isOkSign, isOneSign, isThreeSign, isTwoSign } from '../utils/gestureLandmarks';
-import { isPoseO, isPoseX } from '../utils/poseLandmarks';
 import { useRoomStore } from '../stores/useRoomStore';
 import { useSocketStore } from '@/store/useSocketStore';
 import { useGestureStore } from '../stores/useGestureStore';
@@ -23,30 +17,22 @@ type GestureRecognitionState = {
   confirmedGesture: GestureType | null;
 };
 
-const WASM_BASE_URL =
-  'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22-rc.20250304/wasm';
-const GESTURE_MODEL_URL =
-  'https://storage.googleapis.com/mediapipe-models/gesture_recognizer/gesture_recognizer/float16/latest/gesture_recognizer.task';
-const POSE_MODEL_URL =
-  'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/latest/pose_landmarker_lite.task';
-
-const GESTURE_NAME_MAP: Record<string, GestureType> = {
-  thumb_up: 'thumbs_up',
-  thumb_down: 'thumbs_down',
-  open_palm: 'hand_raise',
-  ok_sign: 'ok_sign',
-  one: 'one',
-  two: 'two',
-  three: 'three',
-  four: 'four',
-};
-
 const HOLD_DURATION_MS = 1500;
 const INFERENCE_FPS = 5;
 const INFERENCE_INTERVAL_MS = 1000 / INFERENCE_FPS;
-const MIN_GESTURE_SCORE = 0.5;
-const isVideoReady = (video: HTMLVideoElement) => video.readyState >= 2 && video.videoWidth > 0;
-const normalizeGestureName = (name: string) => name.trim().toLowerCase();
+const isVideoReady = (video: HTMLVideoElement) =>
+  video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA && video.videoWidth > 0;
+
+type GestureWorkerResult = {
+  type: 'result';
+  timestamp: number;
+  gesture: GestureType | null;
+};
+
+type GestureWorkerMessage =
+  | { type: 'ready' }
+  | { type: 'error'; message: string }
+  | GestureWorkerResult;
 
 export function useGestureRecognition({ enabled, videoElement }: GestureRecognitionOptions) {
   const { roomId } = useParams();
@@ -67,38 +53,53 @@ export function useGestureRecognition({ enabled, videoElement }: GestureRecognit
       return;
     }
 
+    if (typeof VideoFrame === 'undefined') {
+      logger.media.warn('VideoFrame을 지원하지 않아 제스처 인식을 시작할 수 없습니다.');
+      gestureStateRef.current = { gesture: null, startedAt: 0, confirmedGesture: null };
+      resetGestureProgress();
+      return;
+    }
+
     let animationFrameId = 0;
     let lastInferenceAt = 0;
-    let recognizer: GestureRecognizerType | null = null;
-    let poseLandmarker: PoseLandmarkerType | null = null;
     let isActive = true;
-    let hasRecognizer = false;
-    let hasStarted = false;
+    let isWorkerReady = false;
+    let isInferenceInFlight = false;
+    const tasksVisionBundleUrl = new URL(
+      '../../../../node_modules/@mediapipe/tasks-vision/vision_bundle.cjs',
+      import.meta.url,
+    ).toString();
+    const worker = new Worker(new URL('../workers/gestureWorker.ts', import.meta.url), {
+      type: 'classic',
+    });
 
-    const setupRecognizer = async () => {
-      try {
-        const { FilesetResolver, GestureRecognizer, PoseLandmarker } =
-          await import('@mediapipe/tasks-vision');
-        const vision = await FilesetResolver.forVisionTasks(WASM_BASE_URL);
-        recognizer = await GestureRecognizer.createFromOptions(vision, {
-          baseOptions: {
-            modelAssetPath: GESTURE_MODEL_URL,
-          },
-          runningMode: 'VIDEO',
-        });
-        poseLandmarker = await PoseLandmarker.createFromOptions(vision, {
-          baseOptions: {
-            modelAssetPath: POSE_MODEL_URL,
-          },
-          runningMode: 'VIDEO',
-          numPoses: 1,
-        });
-        hasRecognizer = true;
-        logger.media.info('MediaPipe GestureRecognizer 초기화 완료');
-        logger.media.info('MediaPipe PoseLandmarker 초기화 완료');
-      } catch (error) {
-        logger.media.error('MediaPipe GestureRecognizer 초기화 실패', error);
+    const handleWorkerResult = (payload: GestureWorkerResult) => {
+      updateGestureState(payload.gesture, payload.timestamp);
+    };
+
+    const startDetection = () => {
+      if (!animationFrameId && isVideoReady(videoElement) && isWorkerReady && isActive) {
+        detectLoop();
       }
+    };
+
+    const handleWorkerMessage = (event: MessageEvent<GestureWorkerMessage>) => {
+      const payload = event.data;
+
+      if (payload.type === 'ready') {
+        isWorkerReady = true;
+        startDetection();
+        return;
+      }
+
+      if (payload.type === 'error') {
+        isInferenceInFlight = false;
+        logger.media.error('MediaPipe Worker 오류', payload.message);
+        return;
+      }
+
+      isInferenceInFlight = false;
+      handleWorkerResult(payload);
     };
 
     const handleLoadedData = () => {
@@ -106,10 +107,7 @@ export function useGestureRecognition({ enabled, videoElement }: GestureRecognit
         width: videoElement.videoWidth,
         height: videoElement.videoHeight,
       });
-      if (isActive && hasRecognizer && !hasStarted && isVideoReady(videoElement)) {
-        hasStarted = true;
-        detectLoop();
-      }
+      startDetection();
     };
 
     const updateGestureState = (nextGesture: GestureType | null, now: number) => {
@@ -133,7 +131,7 @@ export function useGestureRecognition({ enabled, videoElement }: GestureRecognit
         return;
       }
 
-      // 동일한 제스처가 계속 인식되는 경우 확인된 제스처로 처리
+      // 이미 확정된 제스처는 무시
       if (state.confirmedGesture === nextGesture) {
         return;
       }
@@ -167,12 +165,12 @@ export function useGestureRecognition({ enabled, videoElement }: GestureRecognit
     };
 
     const detectLoop = () => {
-      if (!isActive || !videoElement || !recognizer || !poseLandmarker) {
+      if (!isActive || !videoElement) {
         return;
       }
 
       // 비디오가 준비되지 않은 경우 다음 프레임까지 대기
-      if (!isVideoReady(videoElement)) {
+      if (!isVideoReady(videoElement) || !isWorkerReady) {
         animationFrameId = requestAnimationFrame(detectLoop);
         return;
       }
@@ -180,63 +178,27 @@ export function useGestureRecognition({ enabled, videoElement }: GestureRecognit
       const timestamp = performance.now();
 
       // 지정된 FPS에 맞춰 추론 수행
-      if (timestamp - lastInferenceAt < INFERENCE_INTERVAL_MS) {
+      if (timestamp - lastInferenceAt < INFERENCE_INTERVAL_MS || isInferenceInFlight) {
         animationFrameId = requestAnimationFrame(detectLoop);
         return;
       }
       lastInferenceAt = timestamp;
-      const result = recognizer.recognizeForVideo(videoElement, timestamp);
-      const poseResult = poseLandmarker.detectForVideo(videoElement, timestamp);
-      const topGesture = result.gestures?.[0]?.[0];
-      let detectedGesture: GestureType | null = null;
-
-      // 신뢰도 기준으로 제스처 필터링
-      if (topGesture?.categoryName && topGesture.score >= MIN_GESTURE_SCORE) {
-        const normalized = normalizeGestureName(topGesture.categoryName);
-        detectedGesture = GESTURE_NAME_MAP[normalized] ?? null;
+      try {
+        const frame = new VideoFrame(videoElement);
+        isInferenceInFlight = true;
+        worker.postMessage({ type: 'frame', frame, timestamp }, [frame]);
+      } catch (error) {
+        isInferenceInFlight = false;
+        logger.media.warn('VideoFrame 생성 실패', error);
       }
-
-      // 랜드마크 기반 커스텀 제스처 인식
-      if (!detectedGesture && result.landmarks?.[0]) {
-        const landmarks = result.landmarks[0];
-
-        if (isOkSign(landmarks)) {
-          detectedGesture = 'ok_sign';
-        } else if (isOneSign(landmarks)) {
-          detectedGesture = 'one';
-        } else if (isTwoSign(landmarks)) {
-          detectedGesture = 'two';
-        } else if (isThreeSign(landmarks)) {
-          detectedGesture = 'three';
-        } else if (isFourSign(landmarks)) {
-          detectedGesture = 'four';
-        }
-      }
-
-      if (!detectedGesture && poseResult.landmarks?.[0]) {
-        const poseLandmarks = poseResult.landmarks[0];
-        if (isPoseO(poseLandmarks)) {
-          detectedGesture = 'o_sign';
-        } else if (isPoseX(poseLandmarks)) {
-          detectedGesture = 'x_sign';
-        }
-      } else if (!detectedGesture) {
-        logger.media.debug('Pose landmarks 미검출');
-      }
-
-      updateGestureState(detectedGesture, timestamp);
       animationFrameId = requestAnimationFrame(detectLoop);
     };
 
-    const start = async () => {
+    const start = () => {
       videoElement.addEventListener('loadeddata', handleLoadedData);
-      await setupRecognizer();
-      if (isActive) {
-        if (isVideoReady(videoElement) && !hasStarted) {
-          hasStarted = true;
-          detectLoop();
-        }
-      }
+      worker.addEventListener('message', handleWorkerMessage);
+      worker.postMessage({ type: 'init', bundleUrl: tasksVisionBundleUrl });
+      startDetection();
     };
 
     start();
@@ -247,8 +209,8 @@ export function useGestureRecognition({ enabled, videoElement }: GestureRecognit
         cancelAnimationFrame(animationFrameId);
       }
       videoElement.removeEventListener('loadeddata', handleLoadedData);
-      recognizer?.close();
-      poseLandmarker?.close();
+      worker.removeEventListener('message', handleWorkerMessage);
+      worker.terminate();
       gestureStateRef.current = { gesture: null, startedAt: 0, confirmedGesture: null };
       resetGestureProgress();
     };
