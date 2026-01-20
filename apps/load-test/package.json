@@ -4,9 +4,11 @@
   "private": true,
   "scripts": {
     "artillery": "artillery run artillery/socketio-smoke.yaml",
+    "artillery:phase1": "artillery run artillery/phase1-50users.yaml",
+    "artillery:phase1:report": "artillery run --output phase1-report.json artillery/phase1-50users.yaml && artillery report phase1-report.json",
     "k6": "k6 run k6/mediasoup-smoke.ts",
     "playwright": "playwright test",
-    "clean": "rimraf reports/ tmp/ test-results/"
+    "clean": "rimraf reports/ tmp/ test-results/ phase1-report.json phase1-report.json.html"
   },
   "devDependencies": {
     "@playwright/test": "^1.40.0",

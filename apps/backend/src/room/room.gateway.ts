@@ -50,6 +50,7 @@ import {
   ParticipantManagerService,
 } from '../redis/repository-manager/index.js';
 import { RoomService } from './room.service.js';
+import { PrometheusService } from '../prometheus/prometheus.service.js';
 
 /**
  * 강의실 WebSocket Gateway
@@ -76,7 +77,16 @@ export class RoomGateway implements OnGatewayDisconnect {
     private readonly socketMetadataService: SocketMetadataService,
     private readonly socketDeletionMetadataService: SocketDeletionMetadataService,
     private readonly roomService: RoomService,
+    private readonly prometheusService: PrometheusService,
   ) {}
+
+  /**
+   * Socket.IO 연결 시 메트릭 증가
+   */
+  handleConnection(socket: Socket) {
+    this.prometheusService.incrementSocketIOConnections();
+    this.logger.log(`Socket 연결됨: ${socket.id}`);
+  }
 
   // join_room: 강의실 입장
   @SubscribeMessage('join_room')
@@ -138,7 +148,7 @@ export class RoomGateway implements OnGatewayDisconnect {
       this.logger.log(`✅ [join_room] ${participant.name}님이 ${roomId} 강의실에 입장했습니다.`);
       const mediasoup = await this.roomService.getRoomInfo(roomId, participant);
 
-      return { success: true, mediasoup };
+      return { success: true, mediasoup } as JoinRoomResponse;
     } catch (error) {
       this.logger.error(`❌ [join_room] 실패:`, error);
       return { success: false, error: '강의실 입장에 실패했습니다.' };
@@ -412,6 +422,9 @@ export class RoomGateway implements OnGatewayDisconnect {
 
   // handleDisconnect: 비정상 퇴장 (브라우저 닫기 등)
   async handleDisconnect(socket: Socket) {
+    // Prometheus 메트릭 감소
+    this.prometheusService.decrementSocketIOConnections();
+
     const metadata = this.socketMetadataService.get(socket.id);
     if (!metadata) return;
 
