@@ -49,6 +49,7 @@ describe('InteractionGateway', () => {
             createPoll: jest.fn(),
             getPolls: jest.fn(),
             startPoll: jest.fn(),
+            vote: jest.fn(),
           },
         },
       ],
@@ -67,8 +68,7 @@ describe('InteractionGateway', () => {
       options: [{ value: '치킨' }, { value: '피자' }],
     };
 
-    it('성공: 발표자가 유효한 방에서 투표를 생성한다', async () => {
-      // Given
+    it('발표자가 유효한 방에서 투표를 생성한다', async () => {
       const metadata = { participantId: 'p1', roomId: 'r1' };
       const participant = { id: 'p1', role: 'presenter' };
       const room = { id: 'r1', presenter: 'p1', status: 'active' };
@@ -82,10 +82,8 @@ describe('InteractionGateway', () => {
         options: [],
       } as any);
 
-      // When
       const result = await gateway.creatPoll(mockSocket, createPollDto as any);
 
-      // Then
       expect(result).toEqual({ success: true });
       expect(interactionService.createPoll).toHaveBeenCalledWith('r1', createPollDto);
     });
@@ -131,7 +129,7 @@ describe('InteractionGateway', () => {
   });
 
   describe('get_poll', () => {
-    it('성공: 발표자가 해당 방의 모든 투표 목록을 조회한다', async () => {
+    it('발표자가 해당 방의 모든 투표 목록을 조회한다', async () => {
       const metadata = { participantId: 'p1', roomId: 'r1' };
       const participant = { id: 'p1', role: 'presenter' };
       const room = { id: 'r1', presenter: 'p1', status: 'active' };
@@ -152,7 +150,7 @@ describe('InteractionGateway', () => {
   describe('emit_poll (startPoll)', () => {
     const emitPollDto = { pollId: 'poll-123' };
 
-    it('성공: 투표를 활성화하고 방 전체에 start_poll 이벤트를 브로드캐스트한다', async () => {
+    it('투표를 활성화하고 방 전체에 start_poll 이벤트를 브로드캐스트한다', async () => {
       const metadata = { participantId: 'p1', roomId: 'r1' };
       const participant = { id: 'p1', role: 'presenter' };
       const room = { id: 'r1', presenter: 'p1', status: 'active' };
@@ -170,13 +168,17 @@ describe('InteractionGateway', () => {
 
       const result = await gateway.startPoll(mockSocket, emitPollDto);
 
-      expect(result).toEqual({ success: true });
+      expect(result).toEqual({
+        success: true,
+        startedAt: expect.any(String),
+        endedAt: expect.any(String),
+      });
       expect(interactionService.startPoll).toHaveBeenCalledWith(emitPollDto.pollId);
 
       expect(mockSocket.to).toHaveBeenCalledWith('r1');
     });
 
-    it('실패: 존재하지 않는 투표이거나 권한이 없을 때 에러 메시지를 반환한다', async () => {
+    it('존재하지 않는 투표이거나 권한이 없을 때 에러 메시지를 반환한다', async () => {
       const metadata = { participantId: 'p1', roomId: 'r1' };
       const participant = { id: 'p1', role: 'presenter' };
       const room = { id: 'r1', presenter: 'p1', status: 'active' };
@@ -191,13 +193,16 @@ describe('InteractionGateway', () => {
 
       const result = await gateway.startPoll(mockSocket, emitPollDto);
 
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('이미 시작된 투표입니다.');
+      if (result.success === false) {
+        expect(result.error).toBe('이미 시작된 투표입니다.');
+      } else {
+        fail('성공하면 안 되는 테스트 케이스입니다.');
+      }
     });
   });
 
   describe('handleActionGesture', () => {
-    it('성공: 제스처 카운트를 올리고 브로드캐스트한다', async () => {
+    it('제스처 카운트를 올리고 브로드캐스트한다', async () => {
       const metadata = { participantId: 'p1', roomId: 'r1' };
       const participant = { id: 'p1', name: '홍길동', gestureCount: 5 };
       const gestureData = { gesture: 'THUMBS_UP' };
@@ -215,6 +220,88 @@ describe('InteractionGateway', () => {
         gestureCount: 6,
       });
       expect((gateway as any).server.to).toHaveBeenCalledWith('r1');
+    });
+  });
+
+  describe('vote', () => {
+    const voteDto = { pollId: 'poll-123', optionId: 1 };
+
+    it('청중이 투표에 참여하면 결과를 브로드캐스트하고 성공을 반환한다', async () => {
+      const metadata = { participantId: 'p-student', roomId: 'r1' };
+      const participant = { id: 'p-student', role: 'audience' };
+      const room = { id: 'r1', status: 'active' };
+      const mockUpdatePayload = {
+        pollId: 'poll-123',
+        options: [{ id: 1, count: 5 }],
+      };
+
+      jest.spyOn(socketMetadataService, 'get').mockReturnValue(metadata as any);
+      jest.spyOn(participantManagerService, 'findOne').mockResolvedValue(participant as any);
+      jest.spyOn(roomManagerService, 'findOne').mockResolvedValue(room as any);
+      jest.spyOn(interactionService, 'vote').mockResolvedValue(mockUpdatePayload as any);
+
+      const mockEmit = jest.fn();
+      (gateway as any).server = {
+        to: jest.fn().mockReturnValue({ emit: mockEmit }),
+      };
+
+      const result = await gateway.vote(mockSocket, voteDto);
+
+      expect(result).toEqual({ success: true });
+      expect(interactionService.vote).toHaveBeenCalledWith(
+        voteDto.pollId,
+        participant.id,
+        voteDto.optionId,
+      );
+
+      expect((gateway as any).server.to).toHaveBeenCalledWith('r1');
+      expect(mockEmit).toHaveBeenCalledWith('update_poll', mockUpdatePayload);
+    });
+
+    it('발표자(presenter)가 투표를 시도할 경우 권한 에러를 반환해야 한다', async () => {
+      const metadata = { participantId: 'p-presenter', roomId: 'r1' };
+      const participant = { id: 'p-presenter', role: 'presenter' }; // audience가 아님
+      const room = { id: 'r1', status: 'active' };
+
+      jest.spyOn(socketMetadataService, 'get').mockReturnValue(metadata as any);
+      jest.spyOn(participantManagerService, 'findOne').mockResolvedValue(participant as any);
+      jest.spyOn(roomManagerService, 'findOne').mockResolvedValue(room as any);
+
+      const result = await gateway.vote(mockSocket, voteDto);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('권한이 없습니다');
+      expect(interactionService.vote).not.toHaveBeenCalled();
+    });
+
+    it('서비스 로직에서 BusinessException 발생 시 해당 메시지를 반환한다', async () => {
+      const metadata = { participantId: 'p-student', roomId: 'r1' };
+      const participant = { id: 'p-student', role: 'audience' };
+      const room = { id: 'r1', status: 'active' };
+
+      jest.spyOn(socketMetadataService, 'get').mockReturnValue(metadata as any);
+      jest.spyOn(participantManagerService, 'findOne').mockResolvedValue(participant as any);
+      jest.spyOn(roomManagerService, 'findOne').mockResolvedValue(room as any);
+
+      jest
+        .spyOn(interactionService, 'vote')
+        .mockRejectedValue(new BusinessException('이미 참여한 투표입니다.'));
+
+      const result = await gateway.vote(mockSocket, voteDto);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('이미 참여한 투표입니다.');
+    });
+
+    it('예기치 못한 에러 발생 시 기본 에러 메시지를 반환한다', async () => {
+      const metadata = { participantId: 'p-student', roomId: 'r1' };
+      jest.spyOn(socketMetadataService, 'get').mockReturnValue(metadata as any);
+      jest.spyOn(participantManagerService, 'findOne').mockRejectedValue(new Error('DB Crash'));
+
+      const result = await gateway.vote(mockSocket, voteDto);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('투표에 실패했습니다.');
     });
   });
 });

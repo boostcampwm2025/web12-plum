@@ -8,7 +8,7 @@ import {
   MediaType,
   ToggleActionType,
 } from './shared.js';
-import { Poll, pollFormSchema, PollPayload } from './poll.js';
+import { Poll, pollFormSchema, PollOption, PollPayload } from './poll.js';
 
 // 제스처 타입 정의
 export type GestureType =
@@ -75,6 +75,11 @@ export type CreatePollRequest = z.infer<typeof pollFormSchema>;
 
 export interface EmitPollRequest {
   pollId: string;
+}
+
+export interface VoteRequest {
+  pollId: string;
+  optionId: number;
 }
 
 // 클라이언트에서 보낸 요청에 따라 발생하는 이벤트 페이로드
@@ -149,7 +154,11 @@ export type GetPollResponse =
       polls: Poll[];
     };
 
-export type EmitPollResponse = BaseResponse;
+export type EmitPollResponse =
+  | (BaseResponse & { success: false })
+  | ({ success: true } & Pick<PollPayload, 'startedAt' | 'endedAt'>);
+
+export type VoteResponse = BaseResponse;
 
 // 서버에서 보내는 브로드캐스트 페이로드
 export interface UserJoinedPayload {
@@ -183,6 +192,11 @@ export interface UpdateGestureStatusPayload {
 
 export type StartPollPayload = PollPayload;
 
+export interface UpdatePollStatusPayload {
+  pollId: string;
+  options: Pick<PollOption, 'id' | 'count'>[];
+}
+
 /**
  * 서버 -> 클라이언트 이벤트
  */
@@ -200,6 +214,8 @@ export interface ServerToClientEvents {
   room_end: () => void;
 
   start_poll: (data: StartPollPayload) => void;
+
+  update_poll: (data: UpdatePollStatusPayload) => void;
 }
 
 /**
@@ -239,4 +255,6 @@ export interface ClientToServerEvents {
   get_poll: (cb: (res: GetPollResponse) => void) => void;
 
   emit_poll: (data: EmitPollRequest, cb: (res: EmitPollResponse) => void) => void;
+
+  vote: (data: VoteRequest, cb: (res: VoteResponse) => void) => void;
 }

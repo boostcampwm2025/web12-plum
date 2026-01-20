@@ -1,7 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { Poll } from '@plum/shared-interfaces';
+import { Poll, UpdatePollStatusPayload } from '@plum/shared-interfaces';
 import { RedisService } from '../redis.service.js';
 import { BaseRedisRepository } from './base-redis.repository.js';
+
+const TTL_BOUNDS = 7200;
 
 @Injectable()
 export class PollManagerService extends BaseRedisRepository<Poll> {
@@ -11,12 +13,34 @@ export class PollManagerService extends BaseRedisRepository<Poll> {
     super(redisService, PollManagerService.name);
   }
 
+  // --- Key Generators ---
+
+  /**
+   * 강의실에 속한 투표 집계용 키
+   */
   private getPollListKey(roomId: string): string {
     return `room:${roomId}:polls`;
   }
 
+  /**
+   * 활성화된 투표 확인용 키
+   */
   private getActiveKey(pollId: string): string {
     return `${this.keyPrefix}${pollId}:active`;
+  }
+
+  /**
+   * 투표 실시간 집계용
+   */
+  private getVoteCountKey(pollId: string): string {
+    return `${this.keyPrefix}${pollId}:counts`;
+  }
+
+  /**
+   * 투표 중복방지용
+   */
+  private getVoterKey(pollId: string): string {
+    return `${this.keyPrefix}${pollId}:voters`;
   }
 
   /**
@@ -88,6 +112,10 @@ export class PollManagerService extends BaseRedisRepository<Poll> {
   ): Promise<{ startedAt: string; endedAt: string }> {
     const client = this.redisService.getClient();
     const activeKey = this.getActiveKey(pollId);
+    const countKey = this.getVoteCountKey(pollId);
+
+    const poll = await this.findOne(pollId);
+    if (!poll) throw new Error('Poll does not exist');
 
     const now = new Date();
     const startedAt = now.toISOString();
@@ -95,6 +123,13 @@ export class PollManagerService extends BaseRedisRepository<Poll> {
 
     try {
       const pipeline = client.pipeline();
+      const initialCounts = poll.options.reduce(
+        (acc, opt) => {
+          acc[opt.id.toString()] = '0';
+          return acc;
+        },
+        {} as Record<string, string>,
+      );
 
       this.addUpdatePartialToPipeline(pipeline, pollId, {
         status: 'active',
@@ -103,6 +138,8 @@ export class PollManagerService extends BaseRedisRepository<Poll> {
         updatedAt: startedAt,
       });
       pipeline.set(activeKey, 'true', 'EX', timeLimit);
+      pipeline.hset(countKey, initialCounts);
+      pipeline.expire(countKey, timeLimit + TTL_BOUNDS); // 좀비 데이터를 방지하기 위해 넉넉한 TTL 부여
 
       const results = await pipeline.exec();
 
@@ -119,11 +156,86 @@ export class PollManagerService extends BaseRedisRepository<Poll> {
 
         this.addUpdatePartialToPipeline(rollbackPipeline, pollId, { status: 'pending' });
         rollbackPipeline.del(activeKey);
-
+        rollbackPipeline.del(countKey);
         await rollbackPipeline.exec();
       } catch (rollbackError) {
         this.logger.error(`[CRITICAL] StartPoll rollback failed: ${pollId}`, rollbackError.stack);
       }
+      throw error;
+    }
+  }
+
+  /**
+   * 투표 집계
+   */
+  async submitVote(
+    pollId: string,
+    participantId: string,
+    optionId: number,
+  ): Promise<Pick<UpdatePollStatusPayload, 'options'>> {
+    const client = this.redisService.getClient();
+    const activeKey = this.getActiveKey(pollId);
+    const voterKey = this.getVoterKey(pollId);
+    const countKey = this.getVoteCountKey(pollId);
+
+    const isActive = await client.exists(activeKey);
+    if (!isActive) {
+      this.logger.warn(
+        `[SubmitVote] Reject: Poll ${pollId} is not active. Participant: ${participantId}`,
+      );
+      throw new Error('Poll is not active');
+    }
+
+    const isNewVoter = await client.sadd(voterKey, participantId);
+    if (isNewVoter === 0) {
+      this.logger.warn(
+        `[SubmitVote] Reject: Duplicate vote attempt. Poll: ${pollId}, Participant: ${participantId}`,
+      );
+      throw new Error('Duplicate vote attempt');
+    }
+
+    try {
+      const pipeline = client.pipeline();
+      pipeline.hincrby(countKey, optionId.toString(), 1);
+      pipeline.expire(voterKey, TTL_BOUNDS);
+      pipeline.hgetall(countKey);
+
+      const results = await pipeline.exec();
+      if (!results || results.some(([err]) => err !== null)) {
+        throw new Error('Pipeline failed during voting');
+      }
+
+      const hgetallResult = results[2][1];
+      if (!hgetallResult || typeof hgetallResult !== 'object') {
+        throw new Error('Failed to retrieve count data');
+      }
+
+      const allCountsRaw = hgetallResult as Record<string, string>;
+      const options = Object.entries(allCountsRaw)
+        .map(([id, count]) => ({
+          id: Number(id),
+          count: Number(count),
+        }))
+        .sort((a, b) => a.id - b.id);
+
+      this.logger.log(`[SubmitVote] Success: Poll ${pollId}, Participant ${participantId}`);
+
+      return { options };
+    } catch (error) {
+      try {
+        const rollbackPipeline = client.pipeline();
+        rollbackPipeline.srem(voterKey, participantId);
+        rollbackPipeline.hincrby(countKey, optionId.toString(), -1);
+
+        await rollbackPipeline.exec();
+      } catch (rollbackError) {
+        this.logger.error(
+          `[CRITICAL] SubmitVote rollback failed: ${pollId}. Participant: ${participantId}`,
+          rollbackError.stack,
+        );
+      }
+
+      this.logger.error(`[SubmitVote] Error: Poll ${pollId}. Rollback executed.`, error.stack);
       throw error;
     }
   }

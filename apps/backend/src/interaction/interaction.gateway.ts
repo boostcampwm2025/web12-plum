@@ -16,6 +16,8 @@ import {
   EmitPollRequest,
   EmitPollResponse,
   UpdateGestureStatusPayload,
+  VoteRequest,
+  VoteResponse,
 } from '@plum/shared-interfaces';
 
 import { SOCKET_CONFIG } from '../common/constants/socket.constants.js';
@@ -26,7 +28,7 @@ import {
   RoomManagerService,
 } from '../redis/repository-manager/index.js';
 import { ZodValidationPipeSocket } from '../common/pipes/index.js';
-import { BusinessException } from '../common/types/index.js';
+import { BusinessException, SocketMetadata } from '../common/types/index.js';
 import { InteractionService } from './interaction.service.js';
 
 @UseFilters(WsExceptionFilter)
@@ -129,7 +131,7 @@ export class InteractionGateway {
 
       socket.to(room.id).emit('start_poll', payload);
 
-      return { success: true };
+      return { success: true, startedAt: payload.startedAt, endedAt: payload.endedAt };
     } catch (error) {
       const errorMessage =
         error instanceof BusinessException ? error.message : '투표 시작에 실패했습니다.';
@@ -138,11 +140,39 @@ export class InteractionGateway {
     }
   }
 
-  private async validatePresenterAction(socketId: string) {
+  @SubscribeMessage('vote')
+  async vote(
+    @ConnectedSocket() socket: Socket,
+    @MessageBody() data: VoteRequest,
+  ): Promise<VoteResponse> {
+    try {
+      const { room, participant } = await this.validateAudienceAction(socket.id);
+      const payload = await this.interactionService.vote(
+        data.pollId,
+        participant.id,
+        data.optionId,
+      );
+
+      this.server.to(room.id).emit('update_poll', payload);
+      return { success: true };
+    } catch (error) {
+      const errorMessage =
+        error instanceof BusinessException ? error.message : '투표에 실패했습니다.';
+      this.logger.error(`[vote] 실패:`, error);
+      return { success: false, error: errorMessage };
+    }
+  }
+
+  private validateMetadata(socketId: string): SocketMetadata {
     const metadata = this.socketMetadataService.get(socketId);
     if (!metadata) {
       throw new BusinessException('세션이 만료되었거나 유효하지 않은 접근입니다.');
     }
+    return metadata;
+  }
+
+  private async validatePresenterAction(socketId: string) {
+    const metadata = this.validateMetadata(socketId);
 
     const [participant, room] = await Promise.all([
       this.participantManagerService.findOne(metadata.participantId),
@@ -154,6 +184,29 @@ export class InteractionGateway {
     }
 
     if (participant.role !== 'presenter' || room.presenter !== participant.id) {
+      throw new BusinessException('해당 작업을 수행할 권한이 없습니다.');
+    }
+
+    if (room.status !== 'active') {
+      throw new BusinessException('이미 종료되었거나 진행 중인 강의가 아닙니다.');
+    }
+
+    return { participant, room, metadata };
+  }
+
+  private async validateAudienceAction(socketId: string) {
+    const metadata = this.validateMetadata(socketId);
+
+    const [participant, room] = await Promise.all([
+      this.participantManagerService.findOne(metadata.participantId),
+      this.roomManagerService.findOne(metadata.roomId),
+    ]);
+
+    if (!participant || !room) {
+      throw new BusinessException('방 정보를 찾을 수 없습니다.');
+    }
+
+    if (participant.role !== 'audience') {
       throw new BusinessException('해당 작업을 수행할 권한이 없습니다.');
     }
 
