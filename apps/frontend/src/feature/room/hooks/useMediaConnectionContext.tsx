@@ -19,8 +19,10 @@ interface MediaConnectionContextType {
   cleanup: () => void;
 
   // 미디어 토글 기능
-  toggleMicProducer: () => Promise<void>;
-  toggleCameraProducer: () => Promise<void>;
+  startMicProducer: () => Promise<void>;
+  stopMicProducer: () => void;
+  startCameraProducer: () => Promise<void>;
+  stopCameraProducer: () => void;
 
   // 화면 공유 기능
   startScreenShare: () => Promise<void>;
@@ -45,11 +47,19 @@ export function MediaConnectionProvider({ children }: MediaConnectionProviderPro
 
   // Mediasoup 훅
   const { createTransport, closeTransports } = useMediaTransport();
-  const { produce, stopProducing, stopAll: stopProducers } = useMediaProducer();
+  const {
+    produce,
+    stopProducing,
+    stopAll: stopProducers,
+    getProducer,
+    togglePause,
+  } = useMediaProducer();
   const { consume, removeAll: removeConsumers } = useMediaConsumer();
 
   // 외부 스토어 액션
-  const { setTracksEnabled, stopStream } = useStreamStore((state) => state.actions);
+  const { setTracksEnabled, ensureTracks, clearStream, stopTrack } = useStreamStore(
+    (state) => state.actions,
+  );
   const { setScreenSharing, setScreenStream } = useMediaStore((state) => state.actions);
   const { addRemoteStream, resetRemoteStreams, toggleMic, toggleCamera } = useMediaStore(
     (state) => state.actions,
@@ -120,64 +130,106 @@ export function MediaConnectionProvider({ children }: MediaConnectionProviderPro
   );
 
   /**
-   * 마이크 토글
-   * UI 상태, 하드웨어 트랙, Producer를 한번에 제어
+   * 마이크 송출 토글 (점유 유지 + Pause/Resume 전략)
    */
-  const toggleMicProducer = useCallback(async () => {
-    const localStream = useStreamStore.getState().localStream;
-    const track = localStream?.getAudioTracks()[0];
-    const nextState = !isMicOn;
-
-    // UI 상태 업데이트
-    toggleMic();
-
-    // 하드웨어 트랙 상태 업데이트
-    setTracksEnabled(isCameraOn, nextState);
-
+  const startMicProducer = useCallback(async () => {
     try {
-      // Producer 제어
-      if (nextState && track) await startProducing(track, 'audio');
-      else stopProducing('audio');
+      let localStream = useStreamStore.getState().localStream;
+      let audioTrack = localStream?.getAudioTracks()[0];
 
-      logger.media.info(`[MediaConnection] 마이크 ${nextState ? '켜짐' : '꺼짐'}`);
+      // 트랙이 없으면 확보 (최초 1회만 발생)
+      if (!audioTrack || audioTrack.readyState === 'ended') {
+        localStream = await ensureTracks({ audio: true });
+        audioTrack = localStream.getAudioTracks()[0];
+      }
+
+      // 하드웨어 트랙 활성화
+      setTracksEnabled(isCameraOn, true);
+
+      // Mediasoup Producer 처리
+      const existingProducer = getProducer('audio');
+      if (existingProducer) {
+        // 이미 존재하면 resume (일시정지 해제)
+        togglePause('audio', false);
+      } else {
+        // 존재하지 않으면 신규 생성 (최초 1회)
+        await startProducing(audioTrack, 'audio');
+      }
+
+      if (!isMicOn) toggleMic();
+      logger.media.info('[MediaConnection] 마이크 재개 완료');
     } catch (error) {
-      logger.media.error(`[MediaConnection] 마이크 송출 실패, 상태 복구 중:`, error);
-
-      // 상태 복구
-      toggleMic();
-      setTracksEnabled(isCameraOn, isMicOn);
+      logger.media.error('[MediaConnection] 마이크 시작 실패:', error);
     }
-  }, [isMicOn, isCameraOn, toggleMic, setTracksEnabled, startProducing, stopProducing]);
+  }, [
+    isCameraOn,
+    isMicOn,
+    ensureTracks,
+    setTracksEnabled,
+    getProducer,
+    togglePause,
+    startProducing,
+    toggleMic,
+  ]);
 
   /**
-   * 카메라 토글
-   * UI 상태, 하드웨어 트랙, Producer를 한번에 제어
+   * 마이크 송출 중단 (점유 유지 + Pause 전략)
    */
-  const toggleCameraProducer = useCallback(async () => {
-    const localStream = useStreamStore.getState().localStream;
-    const track = localStream?.getVideoTracks()[0];
-    const nextState = !isCameraOn;
-
-    // UI 상태 업데이트
-    toggleCamera();
-
-    // 하드웨어 트랙 상태 업데이트
-    setTracksEnabled(nextState, isMicOn);
-
+  const stopMicProducer = useCallback(() => {
     try {
-      // Producer 제어
-      if (nextState && track) await startProducing(track, 'video');
-      else stopProducing('video');
+      // 서버 송출 일시정지 (Producer Close 대신 Pause)
+      togglePause('audio', true);
 
-      logger.media.info(`[MediaConnection] 카메라 ${nextState ? '켜짐' : '꺼짐'}`);
+      // 하드웨어 점유 유지 + 데이터 차단
+      setTracksEnabled(isCameraOn, false);
+
+      if (isMicOn) toggleMic();
+      logger.media.info('[MediaConnection] 마이크 일시정지 완료');
     } catch (error) {
-      logger.media.error(`[MediaConnection] 카메라 송출 실패, 상태 복구 중:`, error);
-
-      // 상태 복구
-      toggleCamera();
-      setTracksEnabled(isCameraOn, isMicOn);
+      logger.media.error('[MediaConnection] 마이크 중단 에러:', error);
     }
-  }, [isCameraOn, isMicOn, toggleCamera, setTracksEnabled, startProducing, stopProducing]);
+  }, [isCameraOn, isMicOn, togglePause, setTracksEnabled, toggleMic]);
+  /**
+   * 카메라 송출 시작 (점유 해제 전략)
+   */
+  const startCameraProducer = useCallback(async () => {
+    try {
+      // 카메라를 다시 켤 때는 항상 신규 트랙을 확보
+      logger.media.info('[MediaConnection] 카메라 트랙 신규 확보 시도');
+      const localStream = await ensureTracks({ video: true });
+      const videoTrack = localStream.getVideoTracks()[0];
+
+      // UI 및 하드웨어 트랙 상태 동기화
+      if (!isCameraOn) toggleCamera();
+      setTracksEnabled(true, isMicOn);
+
+      // 서버 송출 시작
+      if (videoTrack) await startProducing(videoTrack, 'video');
+      logger.media.info('[MediaConnection] 카메라 송출 시작 완료 (신규 획득)');
+    } catch (error) {
+      logger.media.error('[MediaConnection] 카메라 시작 실패:', error);
+    }
+  }, [isMicOn, isCameraOn, ensureTracks, toggleCamera, setTracksEnabled, startProducing]);
+
+  /**
+   * 카메라 송출 중단 (점유 해제 전략)
+   */
+  const stopCameraProducer = useCallback(() => {
+    try {
+      // 서버 송출 중단
+      stopProducing('video');
+
+      // 하드웨어 점유 완전히 해제 (LED Off)
+      stopTrack('video');
+
+      // UI 상태 업데이트
+      if (isCameraOn) toggleCamera();
+
+      logger.media.info('[MediaConnection] 카메라 하드웨어 점유 해제 완료');
+    } catch (error) {
+      logger.media.error('[MediaConnection] 카메라 중단 에러:', error);
+    }
+  }, [isCameraOn, stopProducing, stopTrack, toggleCamera]);
 
   /**
    * 화면 공유 중지
@@ -231,7 +283,7 @@ export function MediaConnectionProvider({ children }: MediaConnectionProviderPro
     resetRemoteStreams();
 
     // 로컬 스트림 정리
-    stopStream();
+    clearStream();
     setScreenStream(null);
 
     // 상태 초기화
@@ -239,7 +291,7 @@ export function MediaConnectionProvider({ children }: MediaConnectionProviderPro
 
     logger.media.info('[MediaConnection] 모든 미디어 자원(Transport/Producer/Consumer) 정리 완료');
   }, [
-    stopStream,
+    clearStream,
     stopProducers,
     removeConsumers,
     closeTransports,
@@ -254,8 +306,11 @@ export function MediaConnectionProvider({ children }: MediaConnectionProviderPro
     consumeRemoteProducer,
     cleanup,
 
-    toggleMicProducer,
-    toggleCameraProducer,
+    startMicProducer,
+    stopMicProducer,
+    startCameraProducer,
+    stopCameraProducer,
+
     startScreenShare,
     stopScreenShare,
   };
