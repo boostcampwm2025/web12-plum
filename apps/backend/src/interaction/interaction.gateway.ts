@@ -13,6 +13,8 @@ import {
   CreatePollRequest,
   CreatePollResponse,
   pollFormSchema,
+  EmitPollRequest,
+  EmitPollResponse,
   UpdateGestureStatusPayload,
 } from '@plum/shared-interfaces';
 
@@ -112,6 +114,26 @@ export class InteractionGateway {
       const errorMessage =
         error instanceof BusinessException ? error.message : '투표 조회에 실패했습니다.';
       this.logger.error(`[get_poll] 실패:`, error);
+      return { success: false, error: errorMessage };
+    }
+  }
+
+  @SubscribeMessage('emit_poll')
+  async startPoll(
+    @ConnectedSocket() socket: Socket,
+    @MessageBody() data: EmitPollRequest,
+  ): Promise<EmitPollResponse> {
+    try {
+      const { room } = await this.validatePresenterAction(socket.id);
+      const payload = await this.interactionService.startPoll(data.pollId);
+
+      socket.to(room.id).emit('start_poll', payload);
+
+      return { success: true };
+    } catch (error) {
+      const errorMessage =
+        error instanceof BusinessException ? error.message : '투표 시작에 실패했습니다.';
+      this.logger.error(`[start_poll] 실패:`, error);
       return { success: false, error: errorMessage };
     }
   }

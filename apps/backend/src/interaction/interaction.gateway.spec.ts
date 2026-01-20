@@ -8,6 +8,7 @@ import {
   RoomManagerService,
 } from '../redis/repository-manager/index.js';
 import { Socket } from 'socket.io';
+import { BusinessException } from '../common/types/index.js';
 
 describe('InteractionGateway', () => {
   let gateway: InteractionGateway;
@@ -16,7 +17,11 @@ describe('InteractionGateway', () => {
   let roomManagerService: RoomManagerService;
   let interactionService: InteractionService;
 
-  const mockSocket = { id: 'socket-id' } as Socket;
+  const mockSocket = {
+    id: 'socket-id',
+    to: jest.fn().mockReturnThis(),
+    emit: jest.fn(),
+  } as unknown as Socket;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -42,6 +47,8 @@ describe('InteractionGateway', () => {
           provide: InteractionService,
           useValue: {
             createPoll: jest.fn(),
+            getPolls: jest.fn(),
+            startPoll: jest.fn(),
           },
         },
       ],
@@ -120,6 +127,72 @@ describe('InteractionGateway', () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toContain('진행 중인 강의가 아닙니다');
+    });
+  });
+
+  describe('get_poll', () => {
+    it('성공: 발표자가 해당 방의 모든 투표 목록을 조회한다', async () => {
+      const metadata = { participantId: 'p1', roomId: 'r1' };
+      const participant = { id: 'p1', role: 'presenter' };
+      const room = { id: 'r1', presenter: 'p1', status: 'active' };
+      const mockPolls = [{ id: 'poll-1', title: '투표1' }];
+
+      jest.spyOn(socketMetadataService, 'get').mockReturnValue(metadata as any);
+      jest.spyOn(participantManagerService, 'findOne').mockResolvedValue(participant as any);
+      jest.spyOn(roomManagerService, 'findOne').mockResolvedValue(room as any);
+      jest.spyOn(interactionService, 'getPolls').mockResolvedValue(mockPolls as any);
+
+      const result = await gateway.getPoll(mockSocket);
+
+      expect(result).toEqual({ success: true, polls: mockPolls });
+      expect(interactionService.getPolls).toHaveBeenCalledWith('r1');
+    });
+  });
+
+  describe('emit_poll (startPoll)', () => {
+    const emitPollDto = { pollId: 'poll-123' };
+
+    it('성공: 투표를 활성화하고 방 전체에 start_poll 이벤트를 브로드캐스트한다', async () => {
+      const metadata = { participantId: 'p1', roomId: 'r1' };
+      const participant = { id: 'p1', role: 'presenter' };
+      const room = { id: 'r1', presenter: 'p1', status: 'active' };
+      const mockPayload = { id: 'poll-123', startedAt: '...', endedAt: '...' };
+
+      jest.spyOn(socketMetadataService, 'get').mockReturnValue(metadata as any);
+      jest.spyOn(participantManagerService, 'findOne').mockResolvedValue(participant as any);
+      jest.spyOn(roomManagerService, 'findOne').mockResolvedValue(room as any);
+      jest.spyOn(interactionService, 'startPoll').mockResolvedValue(mockPayload as any);
+
+      const mockEmit = jest.fn();
+      (gateway as any).server = {
+        to: jest.fn().mockReturnValue({ emit: mockEmit }),
+      };
+
+      const result = await gateway.startPoll(mockSocket, emitPollDto);
+
+      expect(result).toEqual({ success: true });
+      expect(interactionService.startPoll).toHaveBeenCalledWith(emitPollDto.pollId);
+
+      expect(mockSocket.to).toHaveBeenCalledWith('r1');
+    });
+
+    it('실패: 존재하지 않는 투표이거나 권한이 없을 때 에러 메시지를 반환한다', async () => {
+      const metadata = { participantId: 'p1', roomId: 'r1' };
+      const participant = { id: 'p1', role: 'presenter' };
+      const room = { id: 'r1', presenter: 'p1', status: 'active' };
+
+      jest.spyOn(socketMetadataService, 'get').mockReturnValue(metadata as any);
+      jest.spyOn(participantManagerService, 'findOne').mockResolvedValue(participant as any);
+      jest.spyOn(roomManagerService, 'findOne').mockResolvedValue(room as any);
+
+      jest
+        .spyOn(interactionService, 'startPoll')
+        .mockRejectedValue(new BusinessException('이미 시작된 투표입니다.'));
+
+      const result = await gateway.startPoll(mockSocket, emitPollDto);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('이미 시작된 투표입니다.');
     });
   });
 

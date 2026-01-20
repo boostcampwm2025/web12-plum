@@ -87,4 +87,55 @@ describe('PollManagerService', () => {
       expect(service.findMany).not.toHaveBeenCalled();
     });
   });
+
+  describe('startPoll', () => {
+    const pollId = 'poll-123';
+    const timeLimit = 60;
+    const activeKey = `poll:${pollId}:active`;
+
+    beforeEach(() => {
+      jest.spyOn(service as any, 'addUpdatePartialToPipeline').mockImplementation(() => {});
+      jest.spyOn(service as any, 'getActiveKey').mockReturnValue(activeKey);
+    });
+
+    it('투표 상태를 active로 변경하고 TTL 키를 생성해야 한다', async () => {
+      pipeline.set = jest.fn().mockReturnThis();
+      pipeline.exec.mockResolvedValueOnce([
+        [null, 'OK'],
+        [null, 'OK'],
+      ]);
+
+      await service.startPoll(pollId, timeLimit);
+
+      expect(service['addUpdatePartialToPipeline']).toHaveBeenCalledWith(pipeline, pollId, {
+        status: 'active',
+        startedAt: expect.any(String),
+        endedAt: expect.any(String),
+        updatedAt: expect.any(String),
+      });
+      expect(pipeline.set).toHaveBeenCalledWith(activeKey, 'true', 'EX', timeLimit);
+      expect(pipeline.exec).toHaveBeenCalled();
+    });
+
+    it('파이프라인 에러 발생 시 상태를 pending으로 롤백해야 한다', async () => {
+      pipeline.set = jest.fn().mockReturnThis();
+      pipeline.del = jest.fn().mockReturnThis();
+
+      pipeline.exec
+        .mockResolvedValueOnce([[new Error('Redis Error'), null]]) // 메인 실패
+        .mockResolvedValueOnce([[null, 'OK']]); // 롤백 성공
+
+      await expect(service.startPoll(pollId, timeLimit)).rejects.toThrow();
+
+      expect(redisClient.pipeline).toHaveBeenCalledTimes(2);
+
+      expect(service['addUpdatePartialToPipeline']).toHaveBeenCalledWith(
+        expect.anything(),
+        pollId,
+        { status: 'pending' },
+      );
+
+      expect(pipeline.del).toHaveBeenCalledWith(activeKey);
+    });
+  });
 });

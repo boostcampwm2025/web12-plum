@@ -88,4 +88,15 @@ export interface Poll {
   timeLimit: number;
   createdAt: string;
   updatedAt: string;
+  startedAt: string;
+  endedAt: string;
+}
+
+export interface PollPayload {
+  id: string;
+  title: string;
+  options: PollOption[];
+  timeLimit: number;
+  startedAt: string;
+  endedAt: string;
 }

@@ -1,9 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { ulid } from 'ulid';
-import { Poll, Qna } from '@plum/shared-interfaces';
+import { Poll, PollPayload, Qna } from '@plum/shared-interfaces';
 
 import { CreatePollDto, CreateQnaDto } from './dto';
 import { PollManagerService, QnaManagerService } from '../redis/repository-manager/index.js';
+import { BusinessException } from '../common/types';
 
 @Injectable()
 export class InteractionService {
@@ -30,6 +31,8 @@ export class InteractionService {
       })),
       createdAt: now,
       updatedAt: now,
+      startedAt: '',
+      endedAt: '',
     };
   }
 
@@ -68,6 +71,23 @@ export class InteractionService {
 
   async getPolls(roomId: string): Promise<Poll[]> {
     return await this.pollManagerService.getPollsInRoom(roomId);
+  }
+
+  async startPoll(pollId: string): Promise<PollPayload> {
+    const poll = await this.pollManagerService.findOne(pollId);
+    if (!poll) throw new BusinessException('존재하지 않는 투표입니다.');
+    if (poll.status !== 'pending')
+      throw new BusinessException('이미 시작되거나 종료된 투표입니다.');
+
+    const { startedAt, endedAt } = await this.pollManagerService.startPoll(pollId, poll.timeLimit);
+    return {
+      id: pollId,
+      title: poll.title,
+      options: poll.options,
+      timeLimit: poll.timeLimit,
+      startedAt,
+      endedAt,
+    };
   }
 
   // --- QnA Methods ---

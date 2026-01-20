@@ -9,6 +9,8 @@ describe('InteractionService (투표 및 Q&A 생성 테스트)', () => {
   const mockPollManager = {
     addPollToRoom: jest.fn(),
     getPollsInRoom: jest.fn(),
+    findOne: jest.fn(),
+    startPoll: jest.fn(),
   };
 
   // 2. QnaManagerService 모킹
@@ -105,6 +107,63 @@ describe('InteractionService (투표 및 Q&A 생성 테스트)', () => {
 
       expect(result).toEqual([]);
       expect(mockPollManager.getPollsInRoom).toHaveBeenCalledWith('empty-room');
+    });
+  });
+
+  describe('startPoll (투표 시작)', () => {
+    const pollId = 'poll-ulid-123';
+    const mockPoll = {
+      id: pollId,
+      title: '테스트 투표',
+      status: 'pending',
+      timeLimit: 60,
+      options: [{ id: 0, value: '옵션1', count: 0 }],
+    };
+
+    it('대기 중인 투표를 시작하고 PollPayload를 반환해야 한다', async () => {
+      const startedAt = new Date().toISOString();
+      const endedAt = new Date(Date.now() + 60000).toISOString();
+
+      mockPollManager.findOne.mockResolvedValue(mockPoll);
+      mockPollManager.startPoll.mockResolvedValue({ startedAt, endedAt });
+
+      const result = await service.startPoll(pollId);
+
+      expect(mockPollManager.findOne).toHaveBeenCalledWith(pollId);
+      expect(mockPollManager.startPoll).toHaveBeenCalledWith(pollId, mockPoll.timeLimit);
+
+      expect(result).toEqual({
+        id: pollId,
+        title: mockPoll.title,
+        options: mockPoll.options,
+        timeLimit: mockPoll.timeLimit,
+        startedAt,
+        endedAt,
+      });
+    });
+
+    it('존재하지 않는 투표인 경우 BusinessException을 던져야 한다', async () => {
+      mockPollManager.findOne.mockResolvedValue(null);
+
+      await expect(service.startPoll('invalid-id')).rejects.toThrow('존재하지 않는 투표입니다.');
+    });
+
+    it('이미 진행 중(active)인 투표를 시작하려 하면 BusinessException을 던져야 한다', async () => {
+      mockPollManager.findOne.mockResolvedValue({
+        ...mockPoll,
+        status: 'active',
+      });
+
+      await expect(service.startPoll(pollId)).rejects.toThrow('이미 시작되거나 종료된 투표입니다.');
+    });
+
+    it('이미 종료(closed)된 투표를 시작하려 하면 BusinessException을 던져야 한다', async () => {
+      mockPollManager.findOne.mockResolvedValue({
+        ...mockPoll,
+        status: 'closed',
+      });
+
+      await expect(service.startPoll(pollId)).rejects.toThrow('이미 시작되거나 종료된 투표입니다.');
     });
   });
 

@@ -15,6 +15,10 @@ export class PollManagerService extends BaseRedisRepository<Poll> {
     return `room:${roomId}:polls`;
   }
 
+  private getActiveKey(pollId: string): string {
+    return `${this.keyPrefix}${pollId}:active`;
+  }
+
   /**
    * 투표 정보 등록
    */
@@ -73,5 +77,54 @@ export class PollManagerService extends BaseRedisRepository<Poll> {
     if (!pollIds || pollIds.length === 0) return [];
 
     return await this.findMany(pollIds);
+  }
+
+  /**
+   * 투표 시작
+   */
+  async startPoll(
+    pollId: string,
+    timeLimit: number,
+  ): Promise<{ startedAt: string; endedAt: string }> {
+    const client = this.redisService.getClient();
+    const activeKey = this.getActiveKey(pollId);
+
+    const now = new Date();
+    const startedAt = now.toISOString();
+    const endedAt = new Date(now.getTime() + timeLimit * 1000).toISOString();
+
+    try {
+      const pipeline = client.pipeline();
+
+      this.addUpdatePartialToPipeline(pipeline, pollId, {
+        status: 'active',
+        startedAt,
+        endedAt,
+        updatedAt: startedAt,
+      });
+      pipeline.set(activeKey, 'true', 'EX', timeLimit);
+
+      const results = await pipeline.exec();
+
+      const hasError = results?.some(([err]) => err !== null);
+      if (hasError) throw new Error('Pipeline execution failed');
+
+      this.logger.log(`[StartPoll] Success: ${pollId} for ${timeLimit}s`);
+      return { startedAt, endedAt };
+    } catch (error) {
+      this.logger.error(`[StartPoll] Failed: ${pollId}. Rolling back...`, error.stack);
+
+      try {
+        const rollbackPipeline = client.pipeline();
+
+        this.addUpdatePartialToPipeline(rollbackPipeline, pollId, { status: 'pending' });
+        rollbackPipeline.del(activeKey);
+
+        await rollbackPipeline.exec();
+      } catch (rollbackError) {
+        this.logger.error(`[CRITICAL] StartPoll rollback failed: ${pollId}`, rollbackError.stack);
+      }
+      throw error;
+    }
   }
 }
