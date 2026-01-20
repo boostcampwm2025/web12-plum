@@ -204,7 +204,6 @@ const isPoseX = (landmarks: PoseLandmark[]) => {
   return wristsAboveElbows && wristsCrossed;
 };
 
-// 커스텀 손 제스처 감지기 맵
 const HAND_GESTURE_DETECTORS: Array<{
   name: string;
   detector: (landmarks: HandLandmark[]) => boolean;
@@ -216,7 +215,6 @@ const HAND_GESTURE_DETECTORS: Array<{
   { name: 'four', detector: isFourSign },
 ];
 
-// 전신 포즈 감지기 맵
 const POSE_GESTURE_DETECTORS: Array<{
   name: string;
   detector: (landmarks: PoseLandmark[]) => boolean;
@@ -309,7 +307,6 @@ self.addEventListener('message', async (event: MessageEvent<WorkerMessage>) => {
     return;
   }
 
-  // isReady가 true면 recognizer와 poseLandmarker는 항상 존재함
   if (!isReady || !recognizer || !poseLandmarker) {
     return;
   }
@@ -321,12 +318,12 @@ self.addEventListener('message', async (event: MessageEvent<WorkerMessage>) => {
     const topGesture = result.gestures?.[0]?.[0];
     let detectedGesture: string | null = null;
 
-    // Step 1: MediaPipe 기본 제스처 인식
+    // 1. MediaPipe 기본 제스처 인식
     if (topGesture?.categoryName && topGesture.score >= MIN_GESTURE_SCORE) {
       detectedGesture = GESTURE_NAME_MAP[topGesture.categoryName];
     }
 
-    // Step 2: 커스텀 손 제스처 인식 (랜드마크 기반)
+    // 2. 커스텀 손 제스처 인식 (랜드마크 기반)
     if (!detectedGesture && result.landmarks?.[0]) {
       const landmarks = result.landmarks[0];
       for (const { name, detector } of HAND_GESTURE_DETECTORS) {
@@ -337,7 +334,7 @@ self.addEventListener('message', async (event: MessageEvent<WorkerMessage>) => {
       }
     }
 
-    // Step 3: 전신 포즈 인식 (O, X)
+    // 3. 전신 포즈 인식 (O, X)
     if (!detectedGesture) {
       const poseResult = poseLandmarker.detectForVideo(frame, timestamp);
       if (poseResult.landmarks?.[0]) {

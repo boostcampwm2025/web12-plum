@@ -47,6 +47,10 @@ import iconOne from '@/assets/icons/gesture/one.svg?react';
 import iconTwo from '@/assets/icons/gesture/two.svg?react';
 import iconThree from '@/assets/icons/gesture/three.svg?react';
 import iconFour from '@/assets/icons/gesture/four.svg?react';
+import iconsToastCheck from '@/assets/icons/gesture/toast-check.svg?react';
+import iconsToastExclamation from '@/assets/icons/gesture/toast-exclamation.svg?react';
+import iconsToastGesture from '@/assets/icons/gesture/toast-gesture.svg?react';
+import iconsToastInfo from '@/assets/icons/gesture/toast-info.svg?react';
 
 import type { ComponentType, SVGProps } from 'react';
 
@@ -101,6 +105,10 @@ export const iconMap = {
   four: iconFour,
   'gesture-o': iconsGestureO,
   'gesture-x': iconsGestureX,
+  'toast-check': iconsToastCheck,
+  'toast-exclamation': iconsToastExclamation,
+  'toast-gesture': iconsToastGesture,
+  'toast-info': iconsToastInfo,
 };
 
 export type IconName = keyof typeof iconMap;
