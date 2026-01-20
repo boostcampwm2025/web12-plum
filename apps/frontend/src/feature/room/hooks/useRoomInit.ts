@@ -48,7 +48,6 @@ export function useRoomInit() {
   const {
     startProducing,
     consumeRemoteProducer,
-    consumeExistingProducers,
     cleanup: cleanupMedia,
   } = useMediaConnectionContext();
 
@@ -92,7 +91,7 @@ export function useRoomInit() {
       await initDevice(routerRtpCapabilities);
 
       // 5. 기존 참가자들의 화면 가져오기
-      await consumeExistingProducers();
+      // await consumeExistingProducers();
 
       // 6. 미디어 스트림 획득 및 송출 시작
       try {

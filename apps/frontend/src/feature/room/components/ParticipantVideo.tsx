@@ -3,6 +3,8 @@ import { motion } from 'motion/react';
 import { cn } from '@/shared/lib/utils';
 import { Icon } from '@/shared/components/icon/Icon';
 import { Button } from '@/shared/components/Button';
+import { MediaType, ParticipantRole } from '@plum/shared-interfaces';
+import { useMediaConnectionContext } from '../hooks/useMediaConnectionContext';
 
 export type VideoDisplayMode = 'minimize' | 'pip' | 'side';
 
@@ -19,6 +21,8 @@ export interface ParticipantVideoProps {
   onModeChange?: (mode: VideoDisplayMode) => void;
   stream?: MediaStream | null;
   isCameraOn?: boolean;
+  videoProducerId?: string;
+  participantRole?: ParticipantRole;
 }
 
 export function ParticipantVideo({
@@ -28,18 +32,40 @@ export function ParticipantVideo({
   isCurrentUser = false,
   onModeChange,
   stream,
-  isCameraOn = true,
+  isCameraOn = false,
+  videoProducerId,
+  participantRole,
 }: ParticipantVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const { consumeRemoteProducer, stopConsuming } = useMediaConnectionContext();
 
+  // 화면에 마운트될 때만 비디오 수신 요청
   useEffect(() => {
-    if (!videoRef.current) return;
+    if (isCurrentUser || !videoProducerId || !participantRole) return;
+    consumeRemoteProducer({
+      participantId: id,
+      producerId: videoProducerId,
+      type: 'video' as MediaType,
+      kind: 'video',
+      participantRole: participantRole,
+    });
+
+    // 언마운트(페이지 이동 등) 시 수신 중단
+    return () => {
+      stopConsuming(videoProducerId, 'video');
+    };
+  }, [id, videoProducerId, participantRole, isCurrentUser, consumeRemoteProducer, stopConsuming]);
+
+  // 스트림 연결 처리
+  useEffect(() => {
+    const videoElement = videoRef.current;
+    if (!videoElement) return;
 
     if (mode !== 'minimize' && stream && isCameraOn) {
-      videoRef.current.srcObject = stream;
+      videoElement.srcObject = stream;
     } else {
       // 카메라 꺼지면 srcObject 정리 (마지막 프레임 제거)
-      videoRef.current.srcObject = null;
+      videoElement.srcObject = null;
     }
   }, [isCameraOn, stream, mode]);
 

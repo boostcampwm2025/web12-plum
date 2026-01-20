@@ -4,10 +4,9 @@ import { Icon } from '@/shared/components/icon/Icon';
 import { Button } from '@/shared/components/Button';
 import { useItemsPerPage } from '../hooks/useItemsPerPage';
 import { usePagination } from '../hooks/usePagination';
-import { type Participant } from '../types';
 import { useMediaStore } from '../stores/useMediaStore';
 import { useStreamStore } from '@/store/useLocalStreamStore';
-import { useRoomStore } from '../stores/useRoomStore';
+import { Participant, useRoomStore } from '../stores/useRoomStore';
 
 interface ParticipantGridProps {
   videoMode: VideoDisplayMode;
@@ -20,26 +19,21 @@ export function ParticipantGrid({ videoMode, currentUser, onModeChange }: Partic
 
   const isCameraOn = useMediaStore((state) => state.isCameraOn);
   const localStream = useStreamStore((state) => state.localStream);
-
   const { getParticipantList } = useRoomStore((state) => state.actions);
   const { getRemoteStreamsByParticipant } = useMediaStore((state) => state.actions);
-  const remoteStreams = useMediaStore((state) => state.remoteStreams);
+
   const participants = getParticipantList();
 
   // 카메라 켜진 참가자를 위로, 꺼진 참가자를 아래로 정렬
   const sortedParticipants = useMemo(() => {
     return [...participants].sort((a, b) => {
-      const aHasVideo = getRemoteStreamsByParticipant(a.id).some(
-        (stream) => stream.type === 'video',
-      );
-      const bHasVideo = getRemoteStreamsByParticipant(b.id).some(
-        (stream) => stream.type === 'video',
-      );
+      const aHasVideo = a.producers.has('video');
+      const bHasVideo = b.producers.has('video');
       if (aHasVideo && !bHasVideo) return -1;
       if (!aHasVideo && bHasVideo) return 1;
       return 0;
     });
-  }, [participants, remoteStreams, getRemoteStreamsByParticipant]);
+  }, [participants]);
 
   const itemsPerPage = useItemsPerPage(containerRef, {
     buttonHeight: 24,
@@ -74,6 +68,7 @@ export function ParticipantGrid({ videoMode, currentUser, onModeChange }: Partic
           isCameraOn={isCameraOn}
         />
 
+        {/* 이전 페이지 버튼 */}
         <Button
           onClick={goToPrevPage}
           disabled={!hasPrevPage}
@@ -90,7 +85,9 @@ export function ParticipantGrid({ videoMode, currentUser, onModeChange }: Partic
         <div className="flex flex-1 flex-col justify-center gap-3 overflow-hidden">
           {currentParticipants.map((participant) => {
             const remoteStreams = getRemoteStreamsByParticipant(participant.id);
-            const videoStream = remoteStreams.find((stream) => stream.type === 'video');
+            const videoStream = remoteStreams.find((s) => s.type === 'video');
+            const videoProducerId = participant.producers.get('video');
+
             return (
               <ParticipantVideo
                 key={participant.id}
@@ -99,6 +96,8 @@ export function ParticipantGrid({ videoMode, currentUser, onModeChange }: Partic
                 mode="side"
                 stream={videoStream?.stream}
                 isCameraOn={!!videoStream}
+                videoProducerId={videoProducerId}
+                participantRole={participant.role}
               />
             );
           })}
