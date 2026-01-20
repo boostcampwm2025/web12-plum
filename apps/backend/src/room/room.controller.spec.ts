@@ -209,6 +209,7 @@ describe('RoomController', () => {
             { producerId: 'v1', participantId: 'user1', kind: 'video', type: 'video' },
           ],
         },
+        participants: [{ id: 'user1', name: 'user1', role: 'presenter', joinedAt: new Date() }],
       };
 
       mockRoomService.joinRoom = jest.fn().mockResolvedValue(expectedResponse);
