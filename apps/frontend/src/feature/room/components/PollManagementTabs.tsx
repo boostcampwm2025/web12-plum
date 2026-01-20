@@ -305,7 +305,7 @@ function CompletedVoteSection() {
                   transition={{ duration: 0.2, ease: 'easeInOut' }}
                   className="grid overflow-hidden rounded-lg bg-gray-500 px-4 text-sm text-white"
                 >
-                  <div className="min-h-0">
+                  <div className="max-h-26 min-h-0 overflow-y-auto">
                     {voters.length === 0 ? (
                       <div className="text-subtext">투표자가 없습니다.</div>
                     ) : (
