@@ -7,6 +7,7 @@ import { useStreamStore } from '@/store/useLocalStreamStore';
 import { useMediaStore } from '../stores/useMediaStore';
 import { MyInfo, useRoomStore } from '../stores/useRoomStore';
 import { useEffect, useRef, useState } from 'react';
+import { useGestureRecognition } from '../hooks/useGestureRecognition';
 
 /**
  * 화면공유 영상을 표시하는 컴포넌트
@@ -39,13 +40,14 @@ interface MyVideoProps {
   currentUser: MyInfo;
   videoMode: VideoDisplayMode;
   onModeChange: (mode: VideoDisplayMode) => void;
+  onVideoElementChange?: (element: HTMLVideoElement | null) => void;
 }
 
 /**
  * 내 비디오 컴포넌트
  * 비디오 모드가 'pip' 또는 'minimize'일 때만 렌더링
  */
-function MyVideo({ currentUser, videoMode, onModeChange }: MyVideoProps) {
+function MyVideo({ currentUser, videoMode, onModeChange, onVideoElementChange }: MyVideoProps) {
   const isCameraOn = useMediaStore((state) => state.isCameraOn);
   const localStream = useStreamStore((state) => state.localStream);
 
@@ -61,6 +63,7 @@ function MyVideo({ currentUser, videoMode, onModeChange }: MyVideoProps) {
         onModeChange={onModeChange}
         stream={localStream}
         isCameraOn={isCameraOn}
+        onVideoElementChange={onVideoElementChange}
       />
     </Draggable>
   );
@@ -72,9 +75,16 @@ function MyVideo({ currentUser, videoMode, onModeChange }: MyVideoProps) {
  */
 export function RoomMainSection() {
   const [userVideoMode, setUserVideoMode] = useState<VideoDisplayMode>('pip');
+  const [gestureVideoElement, setGestureVideoElement] = useState<HTMLVideoElement | null>(null);
+  const isCameraOn = useMediaStore((state) => state.isCameraOn);
 
   const myInfo = useRoomStore((state) => state.myInfo);
   const currentUser = myInfo ?? { id: '', name: '', role: 'audience' };
+
+  useGestureRecognition({
+    enabled: isCameraOn && userVideoMode !== 'minimize',
+    videoElement: gestureVideoElement,
+  });
 
   return (
     <>
@@ -93,6 +103,7 @@ export function RoomMainSection() {
             currentUser={currentUser}
             videoMode={userVideoMode}
             onModeChange={setUserVideoMode}
+            onVideoElementChange={setGestureVideoElement}
           />
         </motion.div>
       </main>
@@ -101,6 +112,7 @@ export function RoomMainSection() {
         currentUser={currentUser}
         videoMode={userVideoMode}
         onModeChange={setUserVideoMode}
+        onCurrentUserVideoElementChange={setGestureVideoElement}
       />
     </>
   );
