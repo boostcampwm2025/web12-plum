@@ -40,7 +40,9 @@ describe('InteractionGateway', () => {
         },
         {
           provide: InteractionService,
-          useValue: { createPoll: jest.fn() },
+          useValue: {
+            createPoll: jest.fn(),
+          },
         },
       ],
     }).compile();

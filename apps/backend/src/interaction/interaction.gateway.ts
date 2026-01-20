@@ -91,6 +91,7 @@ export class InteractionGateway {
     try {
       const { room } = await this.validatePresenterAction(socket.id);
       await this.interactionService.createPoll(room.id, data);
+
       return { success: true };
     } catch (error) {
       const errorMessage =

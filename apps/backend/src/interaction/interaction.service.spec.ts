@@ -7,8 +7,7 @@ describe('InteractionService (투표 및 Q&A 생성 테스트)', () => {
 
   // 1. PollManagerService 모킹
   const mockPollManager = {
-    saveOne: jest.fn().mockResolvedValue(undefined),
-    saveMany: jest.fn().mockResolvedValue(undefined),
+    addPollToRoom: jest.fn(),
   };
 
   // 2. QnaManagerService 모킹
@@ -54,7 +53,7 @@ describe('InteractionService (투표 및 Q&A 생성 테스트)', () => {
       expect(result.options[0]).toMatchObject({ id: 0, value: '치킨', count: 0 });
 
       // 저장 함수 호출 확인
-      expect(mockPollManager.saveOne).toHaveBeenCalledWith(result.id, result);
+      expect(mockPollManager.addPollToRoom).toHaveBeenCalledWith(roomId, [result]);
     });
   });
 
@@ -70,14 +69,14 @@ describe('InteractionService (투표 및 Q&A 생성 테스트)', () => {
 
       expect(results).toHaveLength(2);
       // saveMany가 한 번 호출되었는지 확인 (Pipeline 방식)
-      expect(mockPollManager.saveMany).toHaveBeenCalledTimes(1);
-      expect(mockPollManager.saveMany).toHaveBeenCalledWith(results);
+      expect(mockPollManager.addPollToRoom).toHaveBeenCalledTimes(1);
+      expect(mockPollManager.addPollToRoom).toHaveBeenCalledWith(roomId, results);
     });
 
     it('빈 배열이 입력되면 빈 배열을 반환하고 저장 로직을 타지 않아야 한다', async () => {
       const result = await service.createMultiplePoll('room-1', []);
       expect(result).toEqual([]);
-      expect(mockPollManager.saveMany).not.toHaveBeenCalled();
+      expect(mockPollManager.addPollToRoom).not.toHaveBeenCalled();
     });
   });
 

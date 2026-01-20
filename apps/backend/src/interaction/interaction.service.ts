@@ -52,7 +52,7 @@ export class InteractionService {
   // --- Poll Methods ---
   async createPoll(roomId: string, dto: CreatePollDto): Promise<Poll> {
     const poll = this.preparePoll(roomId, dto);
-    await this.pollMangerService.saveOne(poll.id, poll);
+    await this.pollMangerService.addPollToRoom(roomId, [poll]);
     return poll;
   }
 
@@ -61,9 +61,13 @@ export class InteractionService {
 
     const polls = data.map((dto) => this.preparePoll(roomId, dto));
 
-    await this.pollMangerService.saveMany(polls);
+    await this.pollMangerService.addPollToRoom(roomId, polls);
 
     return polls;
+  }
+
+  async getPolls(roomId: string): Promise<Poll[]> {
+    return await this.pollMangerService.getPollsInRoom(roomId);
   }
 
   // --- QnA Methods ---
