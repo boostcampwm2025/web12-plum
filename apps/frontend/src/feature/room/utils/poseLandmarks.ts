@@ -33,7 +33,7 @@ export const isPoseX = (landmarks: PoseLandmark[]) => {
   const rightElbow = landmarks[14];
 
   const wristsAboveElbows = leftWrist.y < leftElbow.y && rightWrist.y < rightElbow.y;
-  const wristsCrossed = leftWrist.x > rightWrist.x;
+  const wristsCrossed = leftWrist.x < rightWrist.x;
 
   return wristsAboveElbows && wristsCrossed;
 };

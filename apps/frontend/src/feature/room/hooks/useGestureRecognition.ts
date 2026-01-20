@@ -1,6 +1,9 @@
 import { useEffect, useRef } from 'react';
 import { useParams } from 'react-router';
-import { FilesetResolver, GestureRecognizer, PoseLandmarker } from '@mediapipe/tasks-vision';
+import type {
+  GestureRecognizer as GestureRecognizerType,
+  PoseLandmarker as PoseLandmarkerType,
+} from '@mediapipe/tasks-vision';
 import type { GestureType } from '@plum/shared-interfaces';
 import { logger } from '@/shared/lib/logger';
 import { isFourSign, isOkSign, isOneSign, isThreeSign, isTwoSign } from '../utils/gestureLandmarks';
@@ -66,14 +69,16 @@ export function useGestureRecognition({ enabled, videoElement }: GestureRecognit
 
     let animationFrameId = 0;
     let lastInferenceAt = 0;
-    let recognizer: GestureRecognizer | null = null;
-    let poseLandmarker: PoseLandmarker | null = null;
+    let recognizer: GestureRecognizerType | null = null;
+    let poseLandmarker: PoseLandmarkerType | null = null;
     let isActive = true;
     let hasRecognizer = false;
     let hasStarted = false;
 
     const setupRecognizer = async () => {
       try {
+        const { FilesetResolver, GestureRecognizer, PoseLandmarker } =
+          await import('@mediapipe/tasks-vision');
         const vision = await FilesetResolver.forVisionTasks(WASM_BASE_URL);
         recognizer = await GestureRecognizer.createFromOptions(vision, {
           baseOptions: {
