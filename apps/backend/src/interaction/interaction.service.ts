@@ -8,7 +8,7 @@ import { PollManagerService, QnaManagerService } from '../redis/repository-manag
 @Injectable()
 export class InteractionService {
   constructor(
-    private readonly pollMangerService: PollManagerService,
+    private readonly pollManagerService: PollManagerService,
     private readonly qnaManagerService: QnaManagerService,
   ) {}
 
@@ -52,7 +52,7 @@ export class InteractionService {
   // --- Poll Methods ---
   async createPoll(roomId: string, dto: CreatePollDto): Promise<Poll> {
     const poll = this.preparePoll(roomId, dto);
-    await this.pollMangerService.addPollToRoom(roomId, [poll]);
+    await this.pollManagerService.addPollToRoom(roomId, [poll]);
     return poll;
   }
 
@@ -61,13 +61,13 @@ export class InteractionService {
 
     const polls = data.map((dto) => this.preparePoll(roomId, dto));
 
-    await this.pollMangerService.addPollToRoom(roomId, polls);
+    await this.pollManagerService.addPollToRoom(roomId, polls);
 
     return polls;
   }
 
   async getPolls(roomId: string): Promise<Poll[]> {
-    return await this.pollMangerService.getPollsInRoom(roomId);
+    return await this.pollManagerService.getPollsInRoom(roomId);
   }
 
   // --- QnA Methods ---

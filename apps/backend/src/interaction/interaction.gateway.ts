@@ -24,8 +24,8 @@ import {
   RoomManagerService,
 } from '../redis/repository-manager/index.js';
 import { ZodValidationPipeSocket } from '../common/pipes/index.js';
+import { BusinessException } from '../common/types/index.js';
 import { InteractionService } from './interaction.service.js';
-import { BusinessException } from '../common/types';
 
 @UseFilters(WsExceptionFilter)
 @WebSocketGateway(SOCKET_CONFIG)
@@ -97,6 +97,21 @@ export class InteractionGateway {
       const errorMessage =
         error instanceof BusinessException ? error.message : '투표 생성에 실패했습니다.';
       this.logger.error(`[create_poll] 실패:`, error);
+      return { success: false, error: errorMessage };
+    }
+  }
+
+  @SubscribeMessage('get_poll')
+  async getPoll(@ConnectedSocket() socket: Socket) {
+    try {
+      const { room } = await this.validatePresenterAction(socket.id);
+      const polls = await this.interactionService.getPolls(room.id);
+
+      return { success: true, polls };
+    } catch (error) {
+      const errorMessage =
+        error instanceof BusinessException ? error.message : '투표 조회에 실패했습니다.';
+      this.logger.error(`[get_poll] 실패:`, error);
       return { success: false, error: errorMessage };
     }
   }

@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 import { ParticipantRole } from './participant.js';
 import {
   MediaKind,
@@ -6,8 +8,7 @@ import {
   MediaType,
   ToggleActionType,
 } from './shared.js';
-import { z } from 'zod';
-import { pollFormSchema } from './poll.js';
+import { Poll, pollFormSchema } from './poll.js';
 
 // 제스처 타입 정의
 export type GestureType =
@@ -135,6 +136,13 @@ export type BreakRoomResponse = BaseResponse;
 
 export type CreatePollResponse = BaseResponse;
 
+export type GetPollResponse =
+  | (BaseResponse & { success: false })
+  | {
+      success: true;
+      polls: Poll[];
+    };
+
 // 서버에서 보내는 브로드캐스트 페이로드
 export interface UserJoinedPayload {
   id: string;
@@ -216,5 +224,7 @@ export interface ClientToServerEvents {
 
   break_room: (cb: (res: BreakRoomResponse) => void) => void;
 
-  create_vote: (data: CreatePollRequest, cb: (res: CreatePollResponse) => void) => void;
+  create_poll: (data: CreatePollRequest, cb: (res: CreatePollResponse) => void) => void;
+
+  get_poll: (cb: (res: GetPollResponse) => void) => void;
 }

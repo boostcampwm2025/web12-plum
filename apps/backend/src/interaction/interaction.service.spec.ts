@@ -8,6 +8,7 @@ describe('InteractionService (투표 및 Q&A 생성 테스트)', () => {
   // 1. PollManagerService 모킹
   const mockPollManager = {
     addPollToRoom: jest.fn(),
+    getPollsInRoom: jest.fn(),
   };
 
   // 2. QnaManagerService 모킹
@@ -77,6 +78,33 @@ describe('InteractionService (투표 및 Q&A 생성 테스트)', () => {
       const result = await service.createMultiplePoll('room-1', []);
       expect(result).toEqual([]);
       expect(mockPollManager.addPollToRoom).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getPolls (투표 목록 조회)', () => {
+    it('roomId에 해당하는 투표 리스트 배열을 반환해야 한다', async () => {
+      const roomId = 'room-123';
+      const mockPolls = [
+        { id: 'poll-1', title: '질문 1', options: [] },
+        { id: 'poll-2', title: '질문 2', options: [] },
+      ];
+
+      mockPollManager.getPollsInRoom.mockResolvedValue(mockPolls);
+
+      const result = await service.getPolls(roomId);
+
+      expect(result).toHaveLength(2);
+      expect(result).toEqual(mockPolls);
+      expect(mockPollManager.getPollsInRoom).toHaveBeenCalledWith(roomId);
+    });
+
+    it('투표가 없는 경우 빈 배열을 반환해야 한다', async () => {
+      mockPollManager.getPollsInRoom.mockResolvedValue([]);
+
+      const result = await service.getPolls('empty-room');
+
+      expect(result).toEqual([]);
+      expect(mockPollManager.getPollsInRoom).toHaveBeenCalledWith('empty-room');
     });
   });
 
