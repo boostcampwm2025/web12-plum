@@ -37,7 +37,13 @@ export const useMediaConsumer = () => {
    * 6. 스트림 생성 및 상태 업데이트
    */
   const consume = useCallback(
-    async (device: Device, socket: MediaSocket, transport: Transport, remoteProducerId: string) => {
+    async (
+      device: Device,
+      socket: MediaSocket,
+      transport: Transport,
+      remoteProducerId: string,
+      onCleanup?: (consumerId: string) => void,
+    ) => {
       /**
        * 1. 사전 검증
        * Device가 로드되어야 내 브라우저가 수신 가능한 코덱 정보(rtpCapabilities)를 서버에 전달할 수 있음
@@ -62,6 +68,8 @@ export const useMediaConsumer = () => {
         consumersRef.current.delete(consumer.id);
         streamsRef.current.delete(consumer.id);
         syncConsumerIds();
+        onCleanup?.(consumer.id);
+        logger.media.info(`[Consumer] 리소스 정리 완료: ${consumer.id}`);
       };
       ConsumerSignaling.setupAllHandlers(consumer, cleanup);
 

@@ -8,16 +8,6 @@ import { useMediaStore } from '../stores/useMediaStore';
 import { MyInfo, useRoomStore } from '../stores/useRoomStore';
 import { useEffect, useRef, useState } from 'react';
 
-// Mock 데이터 (나중에 실제 데이터로 교체)
-const participants = [
-  { id: '1', name: '김자두' },
-  { id: '2', name: '김자두' },
-  { id: '3', name: '이자두' },
-  { id: '4', name: '박자두' },
-  { id: '5', name: '최자두' },
-  { id: '6', name: '정자두' },
-];
-
 /**
  * 화면공유 영상을 표시하는 컴포넌트
  */
@@ -69,7 +59,7 @@ function MyVideo({ currentUser, videoMode, onModeChange }: MyVideoProps) {
         mode={videoMode}
         isCurrentUser={true}
         onModeChange={onModeChange}
-        localStream={localStream}
+        stream={localStream}
         isCameraOn={isCameraOn}
       />
     </Draggable>
@@ -110,7 +100,6 @@ export function RoomMainSection() {
       <ParticipantGrid
         currentUser={currentUser}
         videoMode={userVideoMode}
-        participants={participants}
         onModeChange={setUserVideoMode}
       />
     </>

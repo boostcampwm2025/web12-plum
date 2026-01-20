@@ -7,12 +7,14 @@ import { ParticipantGrid } from './ParticipantGrid';
 import { useItemsPerPage } from '../hooks/useItemsPerPage';
 import { usePagination } from '../hooks/usePagination';
 import { useMediaStore } from '../stores/useMediaStore';
+import { useRoomStore } from '../stores/useRoomStore';
 import { useStreamStore } from '../../../store/useLocalStreamStore';
 import type { Participant } from '../types';
 
 vi.mock('../hooks/useItemsPerPage');
 vi.mock('../hooks/usePagination');
 vi.mock('../stores/useMediaStore');
+vi.mock('../stores/useRoomStore');
 vi.mock('../../../store/useLocalStreamStore');
 
 vi.mock('./ParticipantVideo', () => ({
@@ -113,11 +115,31 @@ describe('ParticipantGrid', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(useItemsPerPage).mockReturnValue(3);
+
+    const mockGetRemoteStreamsByParticipant = vi.fn().mockReturnValue([]);
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     vi.mocked(useMediaStore).mockImplementation((selector: any) => {
-      const state = { isCameraOn: false };
+      const state = {
+        isCameraOn: false,
+        remoteStreams: new Map(),
+        actions: {
+          getRemoteStreamsByParticipant: mockGetRemoteStreamsByParticipant,
+        },
+      };
       return selector ? selector(state) : state;
     });
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.mocked(useRoomStore).mockImplementation((selector: any) => {
+      const state = {
+        actions: {
+          getParticipantList: () => participants,
+        },
+      };
+      return selector ? selector(state) : state;
+    });
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     vi.mocked(useStreamStore).mockImplementation((selector: any) => {
       const state = { localStream: null };
@@ -131,7 +153,6 @@ describe('ParticipantGrid', () => {
       <ParticipantGrid
         videoMode="side"
         currentUser={currentUser}
-        participants={participants}
       />,
     );
 
@@ -147,7 +168,6 @@ describe('ParticipantGrid', () => {
       <ParticipantGrid
         videoMode="side"
         currentUser={currentUser}
-        participants={participants}
       />,
     );
 
@@ -161,7 +181,6 @@ describe('ParticipantGrid', () => {
       <ParticipantGrid
         videoMode="side"
         currentUser={currentUser}
-        participants={participants}
       />,
     );
 
@@ -176,7 +195,6 @@ describe('ParticipantGrid', () => {
       <ParticipantGrid
         videoMode="side"
         currentUser={currentUser}
-        participants={participants}
       />,
     );
 
@@ -189,7 +207,6 @@ describe('ParticipantGrid', () => {
       <ParticipantGrid
         videoMode="side"
         currentUser={currentUser}
-        participants={participants}
       />,
     );
 
@@ -205,7 +222,6 @@ describe('ParticipantGrid', () => {
       <ParticipantGrid
         videoMode="side"
         currentUser={currentUser}
-        participants={participants}
       />,
     );
 
@@ -223,7 +239,6 @@ describe('ParticipantGrid', () => {
       <ParticipantGrid
         videoMode="side"
         currentUser={currentUser}
-        participants={participants}
         onModeChange={onModeChange}
       />,
     );
@@ -246,7 +261,6 @@ describe('ParticipantGrid', () => {
       <ParticipantGrid
         videoMode="side"
         currentUser={currentUser}
-        participants={participants}
       />,
     );
 
