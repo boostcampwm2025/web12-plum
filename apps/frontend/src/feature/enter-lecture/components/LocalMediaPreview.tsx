@@ -15,7 +15,7 @@ import { ENTER_LECTURE_KEYS } from '../schema';
 export function LocalMediaPreview() {
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const localStream = useStreamStore((state) => state.localStream);
-  const { startStream, stopStream, setTracksEnabled } = useStreamStore((state) => state.actions);
+  const { ensureTracks, clearStream, setTracksEnabled } = useStreamStore((state) => state.actions);
 
   const { setValue } = useFormContext();
   const isAudioOn = useWatch({ name: ENTER_LECTURE_KEYS.isAudioOn });
@@ -25,7 +25,7 @@ export function LocalMediaPreview() {
     const syncStream = async () => {
       // 둘 다 꺼진 경우 스트림 중지
       if (!isVideoOn && !isAudioOn) {
-        stopStream();
+        clearStream();
         return;
       }
 
@@ -37,7 +37,7 @@ export function LocalMediaPreview() {
 
       // 스트림이 없는 경우에만 새로 요청
       try {
-        await startStream({ video: true, audio: true });
+        await ensureTracks({ video: true, audio: true });
         // 권한은 둘 다 받아두고, 실제 활성화는 현재 폼 상태에 맞춤
         setTracksEnabled(isVideoOn, isAudioOn);
       } catch (error) {

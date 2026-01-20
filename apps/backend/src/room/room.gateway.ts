@@ -137,9 +137,9 @@ export class RoomGateway implements OnGatewayDisconnect {
       }
 
       this.logger.log(`✅ [join_room] ${participant.name}님이 ${roomId} 강의실에 입장했습니다.`);
-      const mediasoup = await this.roomService.getRoomInfo(roomId, participant);
+      const roomInfo = await this.roomService.getRoomInfo(roomId, participant);
 
-      return { success: true, mediasoup };
+      return { success: true, ...roomInfo };
     } catch (error) {
       this.logger.error(`❌ [join_room] 실패:`, error);
       return { success: false, error: '강의실 입장에 실패했습니다.' };

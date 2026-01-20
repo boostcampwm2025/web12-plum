@@ -1,13 +1,7 @@
 import { z } from 'zod';
 
-import { ParticipantRole } from './participant.js';
-import {
-  MediaKind,
-  MediasoupProducer,
-  MediasoupRoomInfo,
-  MediaType,
-  ToggleActionType,
-} from './shared.js';
+import { ParticipantPayload, ParticipantRole } from './participant.js';
+import { MediaKind, MediasoupProducer, MediaType, RoomInfo, ToggleActionType } from './shared.js';
 import { Poll, pollFormSchema, PollOption, PollPayload } from './poll.js';
 
 // 제스처 타입 정의
@@ -95,10 +89,9 @@ export interface BaseResponse {
 
 export type JoinRoomResponse =
   | (BaseResponse & { success: false })
-  | {
+  | ({
       success: true;
-      mediasoup: MediasoupRoomInfo;
-    };
+    } & RoomInfo);
 
 export type CreateTransportResponse<T1 = any, T2 = any, T3 = any> =
   | (BaseResponse & { success: false })
@@ -169,12 +162,7 @@ export type BreakPollResponse =
   | { success: true; options: PollOption[] };
 
 // 서버에서 보내는 브로드캐스트 페이로드
-export interface UserJoinedPayload {
-  id: string;
-  name: string;
-  role: string;
-  joinedAt: Date;
-}
+export type UserJoinedPayload = ParticipantPayload;
 
 export interface UserLeftPayload {
   id: string;
@@ -244,9 +232,9 @@ export interface ServerToClientEvents {
 
   update_poll_detail: (data: UpdatePollStatusFullPayload) => void;
 
-  end_poll: (data: EndPollPayload) => void;
+  poll_end: (data: EndPollPayload) => void;
 
-  end_poll_detail: (data: EndPollDetailPayload) => void;
+  poll_end_detail: (data: EndPollDetailPayload) => void;
 }
 
 /**
