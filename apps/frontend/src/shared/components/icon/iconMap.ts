@@ -6,6 +6,7 @@ import iconsCheckBoxFilled from '@/assets/icons/check-box-filled.svg?react';
 import iconsCheckBox from '@/assets/icons/check-box.svg?react';
 import iconsCheck from '@/assets/icons/check.svg?react';
 import iconsChevron from '@/assets/icons/chevron.svg?react';
+import iconsCopy from '@/assets/icons/copy.svg?react';
 import iconsDownload from '@/assets/icons/download.svg?react';
 import iconsExit from '@/assets/icons/exit.svg?react';
 import iconsInfo from '@/assets/icons/info.svg?react';
@@ -47,6 +48,7 @@ export const iconMap = {
   'check-box': iconsCheckBox,
   check: iconsCheck,
   chevron: iconsChevron,
+  copy: iconsCopy,
   download: iconsDownload,
   exit: iconsExit,
   info: iconsInfo,

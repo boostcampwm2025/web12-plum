@@ -10,11 +10,23 @@ export interface RemoteStream {
 }
 
 interface MediaActions {
+  // 로컬 미디어 토글
   toggleMic: () => void;
   toggleCamera: () => void;
   toggleScreenShare: () => void;
   initialize: (mic: boolean, camera: boolean) => void;
   setHasHydrated: (hydrated: boolean) => void;
+
+  // 화면 공유 상태 설정
+  setScreenSharing: (value: boolean) => void;
+  setScreenStream: (stream: MediaStream | null) => void;
+
+  // 원격 스트림 관리
+  addRemoteStream: (consumerId: string, stream: RemoteStream) => void;
+  removeRemoteStream: (consumerId: string) => void;
+  getRemoteStreamsByParticipant: (participantId: string) => RemoteStream[];
+  getRemoteStream: (consumerId: string) => RemoteStream | undefined;
+  resetRemoteStreams: () => void;
 }
 
 interface MediaState {
@@ -23,6 +35,9 @@ interface MediaState {
   isCameraOn: boolean;
   isScreenSharing: boolean;
   hasHydrated: boolean;
+
+  // 화면 공유 스트림
+  screenStream: MediaStream | null;
 
   // 원격 스트림
   remoteStreams: Map<string, RemoteStream>; // consumerId -> RemoteStream
@@ -35,6 +50,7 @@ const initialState: Omit<MediaState, 'actions'> = {
   isMicOn: false,
   isCameraOn: false,
   isScreenSharing: false,
+  screenStream: null,
   hasHydrated: false,
   remoteStreams: new Map(),
 };
@@ -50,6 +66,12 @@ export const useMediaStore = create<MediaState>()(
         initialize: (mic, camera) =>
           set({ isMicOn: mic, isCameraOn: camera, isScreenSharing: false }),
         setHasHydrated: (hydrated) => set({ hasHydrated: hydrated }),
+
+        /** 화면 공유 상태 설정 */
+        setScreenSharing: (value) => set({ isScreenSharing: value }),
+
+        /** 화면 공유 스트림 설정 */
+        setScreenStream: (stream) => set({ screenStream: stream }),
 
         /** 원격 스트림을 추가 */
         addRemoteStream: (consumerId: string, stream: RemoteStream) => {

@@ -5,37 +5,91 @@ import { ParticipantGrid } from './ParticipantGrid';
 import { ParticipantVideo, VideoDisplayMode } from './ParticipantVideo';
 import { useStreamStore } from '@/store/useLocalStreamStore';
 import { useMediaStore } from '../stores/useMediaStore';
+import { MyInfo, useRoomStore } from '../stores/useRoomStore';
+import { useEffect, useRef, useState } from 'react';
 
-interface RoomMainSectionProps {
-  isScreenSharing: boolean;
-  currentUser: { id: string; name: string };
-  participants: Array<{ id: string; name: string }>;
-  userVideoMode: VideoDisplayMode;
-  onModeChange: (mode: VideoDisplayMode) => void;
-  onStopScreenShare: () => void;
+// Mock 데이터 (나중에 실제 데이터로 교체)
+const participants = [
+  { id: '1', name: '김자두' },
+  { id: '2', name: '김자두' },
+  { id: '3', name: '이자두' },
+  { id: '4', name: '박자두' },
+  { id: '5', name: '최자두' },
+  { id: '6', name: '정자두' },
+];
+
+/**
+ * 화면공유 영상을 표시하는 컴포넌트
+ */
+function ScreenShareVideo() {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const isScreenSharing = useMediaStore((state) => state.isScreenSharing);
+  const screenStream = useMediaStore((state) => state.screenStream);
+
+  useEffect(() => {
+    if (videoRef.current && screenStream) {
+      videoRef.current.srcObject = screenStream;
+    }
+  }, [screenStream]);
+
+  if (!isScreenSharing) return <div className="aspect-video w-full rounded-2xl bg-gray-200"></div>;
+
+  return (
+    <video
+      ref={videoRef}
+      autoPlay
+      playsInline
+      muted
+      className="h-full w-full rounded-2xl bg-black object-contain"
+    />
+  );
 }
 
-export function RoomMainSection({
-  isScreenSharing,
-  currentUser,
-  participants,
-  userVideoMode,
-  onModeChange,
-  onStopScreenShare,
-}: RoomMainSectionProps) {
-  const localStream = useStreamStore((state) => state.localStream);
+interface MyVideoProps {
+  currentUser: MyInfo;
+  videoMode: VideoDisplayMode;
+  onModeChange: (mode: VideoDisplayMode) => void;
+}
+
+/**
+ * 내 비디오 컴포넌트
+ * 비디오 모드가 'pip' 또는 'minimize'일 때만 렌더링
+ */
+function MyVideo({ currentUser, videoMode, onModeChange }: MyVideoProps) {
   const isCameraOn = useMediaStore((state) => state.isCameraOn);
+  const localStream = useStreamStore((state) => state.localStream);
+
+  if (videoMode !== 'pip' && videoMode !== 'minimize') return null;
+
+  return (
+    <Draggable>
+      <ParticipantVideo
+        id={currentUser.id}
+        name={currentUser.name}
+        mode={videoMode}
+        isCurrentUser={true}
+        onModeChange={onModeChange}
+        localStream={localStream}
+        isCameraOn={isCameraOn}
+      />
+    </Draggable>
+  );
+}
+
+/**
+ * 강의실 메인 섹션 컴포넌트
+ * 강의 화면과 참가자 비디오를 포함
+ */
+export function RoomMainSection() {
+  const [userVideoMode, setUserVideoMode] = useState<VideoDisplayMode>('pip');
+
+  const myInfo = useRoomStore((state) => state.myInfo);
+  const currentUser = myInfo ?? { id: '', name: '', role: 'audience' };
 
   return (
     <>
       <main className="relative flex grow flex-col text-sm">
-        {isScreenSharing && (
-          <ScreenShareBanner
-            userName={currentUser.name}
-            onStop={onStopScreenShare}
-          />
-        )}
-
+        <ScreenShareBanner userName={currentUser.name} />
         <motion.div
           layout
           className="relative flex grow items-center justify-center"
@@ -44,35 +98,21 @@ export function RoomMainSection({
             ease: 'easeInOut',
           }}
         >
-          <div className="aspect-video w-full rounded-2xl bg-gray-200"></div>
-
-          {(userVideoMode === 'pip' || userVideoMode === 'minimize') && (
-            <Draggable>
-              <ParticipantVideo
-                id={currentUser.id}
-                name={currentUser.name}
-                mode={userVideoMode}
-                isCurrentUser={true}
-                onModeChange={onModeChange}
-                localStream={localStream}
-                isCameraOn={isCameraOn}
-              />
-            </Draggable>
-          )}
+          <ScreenShareVideo />
+          <MyVideo
+            currentUser={currentUser}
+            videoMode={userVideoMode}
+            onModeChange={setUserVideoMode}
+          />
         </motion.div>
       </main>
 
-      {userVideoMode === 'side' && (
-        <aside className="bg-gray-700">
-          <ParticipantGrid
-            currentUser={currentUser}
-            participants={participants}
-            onModeChange={onModeChange}
-            localStream={localStream}
-            isCameraOn={isCameraOn}
-          />
-        </aside>
-      )}
+      <ParticipantGrid
+        currentUser={currentUser}
+        videoMode={userVideoMode}
+        participants={participants}
+        onModeChange={setUserVideoMode}
+      />
     </>
   );
 }
