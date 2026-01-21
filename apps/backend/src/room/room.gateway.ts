@@ -248,6 +248,10 @@ export class RoomGateway implements OnGatewayDisconnect {
 
       socket.to(metadata.roomId).emit('new_producer', payload);
 
+      this.logger.log(
+        `✅ [produce] ${participant.name} - ${data.type} 송출 시작 (ID: ${producer.id})`,
+      );
+
       return { success: true, kind: kind, producerId: producer.id, type: data.type };
     } catch (error) {
       this.logger.error(`❌ [produce] 실패:`, error);
@@ -303,6 +307,10 @@ export class RoomGateway implements OnGatewayDisconnect {
       });
       const producer = this.mediasoupService.getProducer(data.producerId)!;
 
+      this.logger.log(
+        `✅ [consume] ${participant.name} - Consumer 생성 (ID: ${consumer.id}, 구독 대상 Producer: ${data.producerId})`,
+      );
+
       return {
         success: true,
         producerId: producer.id,
@@ -349,6 +357,8 @@ export class RoomGateway implements OnGatewayDisconnect {
 
       if (data.action === 'pause') await this.mediasoupService.pauseProducer(data.producerId);
       else await this.mediasoupService.resumeProducer(data.producerId);
+
+      this.logger.log(`✅ [toggle_media] ${participant.name} - ${data.type} ${data.action} 완료`);
 
       const payload: MediaStateChangedPayload = {
         producerId: data.producerId,
@@ -402,6 +412,8 @@ export class RoomGateway implements OnGatewayDisconnect {
       // TODO: 강의록 생성 기능 추가
 
       // 강의실 내부에 있는 모든 참가자 퇴장 처리
+      this.logger.log(`🚨 [break_room] 발표자 ${participant.name}에 의해 강의실 ${room.id} 종료`);
+
       this.server.in(room.id).socketsLeave(room.id);
       this.server.in(room.id).disconnectSockets(true);
       return { success: true };

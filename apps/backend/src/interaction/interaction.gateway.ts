@@ -112,7 +112,9 @@ export class InteractionGateway {
   ): Promise<CreatePollResponse> {
     try {
       const { room } = await this.validatePresenterAction(socket.id);
-      await this.interactionService.createPoll(room.id, data);
+      const poll = await this.interactionService.createPoll(room.id, data);
+
+      this.logger.log(`[create_poll] ${room.id}에서 새 투표 생성: ${data.title} (${poll.id})`);
 
       return { success: true };
     } catch (error) {
@@ -149,6 +151,8 @@ export class InteractionGateway {
 
       socket.to(room.id).emit('start_poll', payload);
 
+      this.logger.log(`[start_poll] ${room.id}에서 투표 시작: ${data.pollId}`);
+
       return { success: true, startedAt: payload.startedAt, endedAt: payload.endedAt };
     } catch (error) {
       const errorMessage =
@@ -182,6 +186,10 @@ export class InteractionGateway {
         },
       });
 
+      this.logger.log(
+        `[vote] ${participant.name}님이 투표 참여: ${data.pollId} (항목: ${data.optionId})`,
+      );
+
       return { success: true };
     } catch (error) {
       const errorMessage =
@@ -209,6 +217,7 @@ export class InteractionGateway {
       };
 
       socket.to(room.id).emit('poll_end', broadCastPayload);
+      this.logger.log(`[break_poll] ${room.id}에서 투표 수동 종료: ${data.pollId}`);
       return { success: true, options: options };
     } catch (error) {
       const errorMessage =
@@ -225,8 +234,9 @@ export class InteractionGateway {
   ): Promise<CreateQnaResponse> {
     try {
       const { room } = await this.validatePresenterAction(socket.id);
-      await this.interactionService.createQna(room.id, data);
+      const qna = await this.interactionService.createQna(room.id, data);
 
+      this.logger.log(`[create_poll] ${room.id}에서 새 질문 생성: ${data.title} (${qna.id})`);
       return { success: true };
     } catch (error) {
       const errorMessage =
@@ -262,6 +272,7 @@ export class InteractionGateway {
 
       socket.to(room.id).emit('start_qna', payload);
 
+      this.logger.log(`[start_qna] ${room.id}에서 질문 시작: ${data.qnaId}`);
       return { success: true, startedAt: payload.startedAt, endedAt: payload.endedAt };
     } catch (error) {
       const errorMessage =
@@ -287,6 +298,7 @@ export class InteractionGateway {
 
       this.server.to(`${room.id}:audience`).emit('update_qna', result.audience);
       this.server.to(`${room.id}:presenter`).emit('update_qna_detail', result.presenter);
+      this.logger.log(`[answer] ${participant.name}님이 질문 답변 제출: ${data.qnaId}`);
 
       return { success: true };
     } catch (error) {
@@ -308,6 +320,8 @@ export class InteractionGateway {
       const payload = await this.interactionService.stopQna(data.qnaId);
 
       socket.to(room.id).emit('qna_end', payload.audience);
+
+      this.logger.log(`[break_qna] ${room.id}에서 질문 수동 종료: ${data.qnaId}`);
       return { success: true, answers: payload.presenter.answers, count: payload.presenter.count };
     } catch (error) {
       const errorMessage =
