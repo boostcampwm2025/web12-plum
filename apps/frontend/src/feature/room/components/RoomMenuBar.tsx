@@ -5,11 +5,13 @@ import { useMediaStore } from '../stores/useMediaStore';
 import { useRoomUIStore } from '../stores/useRoomUIStore';
 import { logger } from '@/shared/lib/logger';
 import { useMediaConnectionContext } from '../hooks/useMediaConnectionContext';
+import { usePollStore } from '../stores/usePollStore';
 
 interface MenuButton {
   icon: IconName;
   tooltip: string;
   isActive?: boolean;
+  hasAlarm?: boolean;
   onClick?: () => void;
 }
 
@@ -23,6 +25,9 @@ function MainMenu() {
   const isScreenSharing = useMediaStore((state) => state.isScreenSharing);
 
   const { activeDialog, setActiveDialog } = useRoomUIStore();
+  const hasActivePoll = usePollStore((state) =>
+    state.polls.some((poll) => poll.status === 'active'),
+  );
   const {
     startCameraProducer,
     startMicProducer,
@@ -55,6 +60,7 @@ function MainMenu() {
       icon: 'vote',
       tooltip: '투표',
       isActive: activeDialog === 'vote',
+      hasAlarm: hasActivePoll,
       onClick: () => setActiveDialog('vote'),
     },
     {
@@ -79,6 +85,7 @@ function MainMenu() {
           icon={button.icon}
           tooltip={button.tooltip}
           isActive={button.isActive}
+          hasAlarm={button.hasAlarm}
           onClick={button.onClick}
         />
       ))}
