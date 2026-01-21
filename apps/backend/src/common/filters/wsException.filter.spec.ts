@@ -7,6 +7,7 @@ describe('WsExceptionFilter', () => {
   let mockClient: any;
   let mockArgumentsHost: any;
   let mockLogger: any;
+  let mockWsContext: any;
 
   beforeEach(() => {
     mockLogger = {
@@ -15,71 +16,79 @@ describe('WsExceptionFilter', () => {
 
     filter = new WsExceptionFilter(mockLogger);
 
-    // 소켓 클라이언트 Mocking
     mockClient = {
       emit: jest.fn(),
     };
 
-    // ArgumentsHost Mocking
+    // switchToWs가 반환할 객체
+    mockWsContext = {
+      getClient: jest.fn().mockReturnValue(mockClient),
+      getPattern: jest.fn().mockReturnValue('test_event'),
+    };
+
+    // ArgumentsHost Mocking 수정
     mockArgumentsHost = {
-      switchToWs: jest.fn().mockReturnValue({
-        getClient: () => mockClient,
-      }),
+      switchToWs: jest.fn().mockReturnValue(mockWsContext),
       getArgs: jest.fn().mockReturnValue([{}, { event: 'test_event' }]),
     };
   });
 
-  it('객체로 WsException 발생 시 정의된 에러 객체를 emit 해야 한다', () => {
-    const errorData = { message: '잘못된 요청입니다' };
-    const exception = new WsException(errorData);
+  it('Ack 콜백이 있을 경우 콜백을 호출해야 한다', () => {
+    const ackCallback = jest.fn();
+    // 마지막 인자에 콜백 함수 추가
+    mockArgumentsHost.getArgs.mockReturnValue([{}, {}, ackCallback]);
 
+    const exception = new WsException('검증 에러');
+    filter.catch(exception, mockArgumentsHost as ArgumentsHost);
+
+    // 콜백이 호출되었는지 확인
+    expect(ackCallback).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: false,
+        error: '검증 에러',
+      }),
+    );
+    // 콜백이 호출되었다면 emit은 발생하지 않아야 함 (구현에 따라 다름)
+    expect(mockClient.emit).not.toHaveBeenCalledWith('error_occurred', expect.anything());
+  });
+
+  it('Ack 콜백이 없을 경우 error_occurred 이벤트를 emit 해야 한다', () => {
+    mockArgumentsHost.getArgs.mockReturnValue([{}, {}]);
+
+    const exception = new WsException('검증 에러');
     filter.catch(exception, mockArgumentsHost as ArgumentsHost);
 
     expect(mockClient.emit).toHaveBeenCalledWith(
       'error_occurred',
       expect.objectContaining({
-        event: 'test_event',
-        ...errorData,
+        success: false,
+        error: '검증 에러',
       }),
     );
   });
 
-  it('문자열로 WsException 발생 시 정의된 에러 메시지를 포함한 객체를 emit 해야 한다', () => {
-    const errorData = '잘못된 요청입니다';
-    const exception = new WsException(errorData);
-
+  it('WsException 발생 시 메시지를 추출하여 응답해야 한다', () => {
+    const exception = new WsException('잘못된 요청입니다');
     filter.catch(exception, mockArgumentsHost as ArgumentsHost);
 
     expect(mockClient.emit).toHaveBeenCalledWith(
       'error_occurred',
       expect.objectContaining({
-        event: 'test_event',
-        message: errorData,
+        success: false,
+        error: '잘못된 요청입니다',
       }),
     );
   });
 
-  it('일반 Error 발생 시 internal server error를 emit 해야 한다', () => {
-    const exception = new Error('서버 에러 발생');
-
+  it('일반 Error 발생 시 메시지를 추출하여 응답해야 한다', () => {
+    const exception = new Error('DB 접속 실패');
     filter.catch(exception, mockArgumentsHost as ArgumentsHost);
 
     expect(mockClient.emit).toHaveBeenCalledWith(
       'error_occurred',
       expect.objectContaining({
-        status: 'error',
-        message: 'internal server error',
-      }),
-    );
-  });
-
-  it('알 수 없는 예외 발생 시 internal server error를 emit 해야 한다', () => {
-    filter.catch('Unexpected String', mockArgumentsHost as ArgumentsHost);
-
-    expect(mockClient.emit).toHaveBeenCalledWith(
-      'error_occurred',
-      expect.objectContaining({
-        message: 'internal server error',
+        success: false,
+        error: 'DB 접속 실패',
       }),
     );
   });

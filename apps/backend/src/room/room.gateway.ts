@@ -115,6 +115,7 @@ export class RoomGateway implements OnGatewayDisconnect {
 
       // 2. Socket.IO room에 join
       socket.join(roomId);
+      socket.join(`${roomId}:${participant.role}`);
 
       // 3. 메타데이터 저장
       this.socketMetadataService.set(socket.id, {
