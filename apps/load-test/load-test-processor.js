@@ -123,7 +123,7 @@ export async function joinAsParticipant(context) {
 /**
  * 3단계: Socket.IO 연결 + join_room 이벤트
  */
-export function connectAndJoinRoom(context) {
+export async function connectAndJoinRoom(context) {
   const roomId = context.vars.roomId;
   const participantId = context.vars.participantId;
 
@@ -187,11 +187,13 @@ export function connectAndJoinRoom(context) {
  * 4단계: WebRTC Transport 생성 및 Consumer 연결
  */
 export async function createWebRTCTransportAndConsume(context) {
+  console.log(`🚀 [createWebRTCTransportAndConsume] 시작: ${context.vars.participantName}`);
+
   const socket = context.vars.socket;
   const roomInfo = context.vars.roomInfo;
 
   if (!socket || !roomInfo) {
-    console.error('❌ Socket 또는 RoomInfo 없음');
+    console.error(`❌ Socket 또는 RoomInfo 없음 - socket: ${!!socket}, roomInfo: ${!!roomInfo}`);
     return;
   }
 
