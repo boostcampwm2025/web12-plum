@@ -744,7 +744,7 @@ describe('InteractionGateway', () => {
       expect((gateway as any).server.to).toHaveBeenCalledWith('r1:audience');
       expect((gateway as any).server.to('r1:audience').emit).toHaveBeenCalledWith(
         'qna_end',
-        expect.objectContaining({ answers: mockEventPayload.answers }),
+        expect.objectContaining({ text: mockEventPayload.answers.map((a) => a.text) }),
       );
     });
 

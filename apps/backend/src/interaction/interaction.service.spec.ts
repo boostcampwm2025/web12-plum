@@ -486,7 +486,7 @@ describe('InteractionService (투표 및 Q&A 생성 테스트)', () => {
       };
 
       expect(result).toEqual({
-        audience: expectedPayload,
+        audience: { qnaId, text, count: 5 },
         presenter: expectedPayload,
       });
     });
@@ -519,7 +519,7 @@ describe('InteractionService (투표 및 Q&A 생성 테스트)', () => {
       mockQnaManager.findOne.mockResolvedValue(null);
 
       await expect(service.answer(qnaId, participantId, participantName, text)).rejects.toThrow(
-        new BusinessException('존재하지 않는 투표입니다.'),
+        new BusinessException('존재하지 않는 질문입니다.'),
       );
 
       expect(mockQnaManager.submitAnswer).not.toHaveBeenCalled();
@@ -562,7 +562,7 @@ describe('InteractionService (투표 및 Q&A 생성 테스트)', () => {
 
       expect(mockQnaManager.closeQna).toHaveBeenCalledWith(qnaId);
       expect(result).toEqual({
-        audience: expectedPayload,
+        audience: { qnaId, count: mockAnswers.length, text: mockAnswers.map((a) => a.text) },
         presenter: expectedPayload,
       });
     });
@@ -600,7 +600,7 @@ describe('InteractionService (투표 및 Q&A 생성 테스트)', () => {
       mockQnaManager.findOne.mockResolvedValue(null);
 
       await expect(service.stopQna('invalid-id')).rejects.toThrow(
-        new BusinessException('존재하지 않는 투표입니다.'),
+        new BusinessException('존재하지 않는 질문입니다.'),
       );
     });
   });

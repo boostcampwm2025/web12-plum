@@ -237,9 +237,16 @@ export interface UpdatePollStatusFullPayload {
 
 export type UpdatePollStatusSubPayload = Omit<UpdatePollStatusFullPayload, 'voter'>;
 
-export type UpdateQnaFullPayload = { qnaId: string; count: number } & Answer;
+export type UpdateQnaFullPayload = Answer & {
+  qnaId: string;
+  count: number;
+};
 
-export type UpdateQnaSubPayload = { qnaId: string; count: number } | UpdateQnaFullPayload;
+export type UpdateQnaSubPayload = {
+  qnaId: string;
+  count: number;
+  text?: string;
+};
 
 export interface EndPollPayload {
   pollId: string;
@@ -257,12 +264,11 @@ export interface EndQnaDetailPayload {
   answers: Answer[];
 }
 
-export type EndQnaPayload =
-  | {
-      qnaId: string;
-      count: number;
-    }
-  | EndQnaDetailPayload;
+export type EndQnaPayload = {
+  qnaId: string;
+  count: number;
+  text?: string[];
+};
 
 /**
  * 서버 -> 클라이언트 이벤트

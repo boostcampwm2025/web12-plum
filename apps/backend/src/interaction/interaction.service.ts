@@ -192,7 +192,7 @@ export class InteractionService {
     presenter: UpdateQnaFullPayload;
   }> {
     const qna = await this.qnaManagerService.findOne(qnaId);
-    if (!qna) throw new BusinessException('존재하지 않는 투표입니다.');
+    if (!qna) throw new BusinessException('존재하지 않는 질문입니다.');
 
     const result = await this.qnaManagerService.submitAnswer(
       qnaId,
@@ -200,6 +200,12 @@ export class InteractionService {
       participantName,
       text,
     );
+
+    const audiencePayload: UpdateQnaSubPayload = {
+      qnaId: qnaId,
+      text,
+      count: result.count,
+    };
 
     const payload: UpdateQnaFullPayload = {
       qnaId: qnaId,
@@ -210,7 +216,7 @@ export class InteractionService {
     };
 
     if (qna.isPublic) {
-      return { audience: payload, presenter: payload };
+      return { audience: audiencePayload, presenter: payload };
     } else {
       return {
         audience: { qnaId: payload.qnaId, count: payload.count },
@@ -223,12 +229,18 @@ export class InteractionService {
     qnaId: string,
   ): Promise<{ audience: EndQnaPayload; presenter: EndQnaDetailPayload }> {
     const qna = await this.qnaManagerService.findOne(qnaId);
-    if (!qna) throw new BusinessException('존재하지 않는 투표입니다.');
+    if (!qna) throw new BusinessException('존재하지 않는 질문입니다.');
 
     const answers =
       qna.status === 'ended'
         ? await this.qnaManagerService.getFinalResults(qnaId)
         : await this.qnaManagerService.closeQna(qnaId);
+
+    const audiencePayload: EndQnaPayload = {
+      qnaId: qna.id,
+      count: answers.length,
+      text: answers.map((a) => a.text),
+    };
     const payload: EndQnaDetailPayload = {
       qnaId: qna.id,
       count: answers.length,
@@ -236,7 +248,7 @@ export class InteractionService {
     };
 
     if (qna.isPublic) {
-      return { audience: payload, presenter: payload };
+      return { audience: audiencePayload, presenter: payload };
     } else {
       return {
         audience: { qnaId: payload.qnaId, count: payload.count },
