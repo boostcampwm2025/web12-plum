@@ -5,6 +5,7 @@ import {
   SubscribeMessage,
   ConnectedSocket,
   MessageBody,
+  OnGatewayDisconnect,
 } from '@nestjs/websockets';
 import { OnEvent } from '@nestjs/event-emitter';
 import { Server, Socket } from 'socket.io';
@@ -38,7 +39,7 @@ import { InteractionService } from './interaction.service.js';
 
 @UseFilters(WsExceptionFilter)
 @WebSocketGateway(SOCKET_CONFIG)
-export class InteractionGateway {
+export class InteractionGateway implements OnGatewayDisconnect {
   @WebSocketServer()
   private server: Server;
 
@@ -50,6 +51,14 @@ export class InteractionGateway {
     private readonly participantManagerService: ParticipantManagerService,
     private readonly roomManagerService: RoomManagerService,
   ) {}
+
+  /**
+   * Socket.IO 해제 이벤트
+   * 참고: 연결/해제 메트릭은 RoomGateway에서 중앙 관리
+   */
+  handleDisconnect(socket: Socket) {
+    this.logger.log(`Socket 해제됨 (Interaction): ${socket.id}`);
+  }
 
   @SubscribeMessage('action_gesture')
   async handleActionGesture(

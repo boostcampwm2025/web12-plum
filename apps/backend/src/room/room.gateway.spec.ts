@@ -11,6 +11,7 @@ import {
 } from '../redis/repository-manager/index.js';
 import { SocketMetadataService } from '../common/services/index.js';
 import { RoomService } from './room.service.js';
+import { PrometheusService } from '../prometheus/prometheus.service.js';
 
 describe('RoomGateway', () => {
   let gateway: RoomGateway;
@@ -111,6 +112,13 @@ describe('RoomGateway', () => {
             set: jest.fn(),
             delete: jest.fn(),
             has: jest.fn(),
+          },
+        },
+        {
+          provide: PrometheusService,
+          useValue: {
+            incrementSocketIOConnections: jest.fn(),
+            decrementSocketIOConnections: jest.fn(),
           },
         },
       ],
