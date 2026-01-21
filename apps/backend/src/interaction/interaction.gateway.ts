@@ -36,6 +36,7 @@ import {
   Answer,
   EndQnaPayload,
   EndQnaDetailPayload,
+  GetQnaResponse,
 } from '@plum/shared-interfaces';
 
 import { SOCKET_CONFIG } from '../common/constants/socket.constants.js';
@@ -247,7 +248,7 @@ export class InteractionGateway {
   }
 
   @SubscribeMessage('get_qna')
-  async getQna(@ConnectedSocket() socket: Socket) {
+  async getQna(@ConnectedSocket() socket: Socket): Promise<GetQnaResponse> {
     try {
       const { room } = await this.validatePresenterAction(socket.id);
       const qnas = await this.interactionService.getQnas(room.id);
