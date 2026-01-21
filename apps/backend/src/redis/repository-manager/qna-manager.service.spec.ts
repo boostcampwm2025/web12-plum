@@ -25,6 +25,7 @@ describe('QnaManagerService', () => {
 
     redisClient = {
       pipeline: jest.fn().mockReturnValue(pipeline),
+      lrange: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -43,6 +44,7 @@ describe('QnaManagerService', () => {
 
     jest.spyOn(service as any, 'addSaveToPipeline').mockImplementation(() => {});
     jest.spyOn(service as any, 'addDeleteToPipeline').mockImplementation(() => {});
+    jest.spyOn(service as any, 'findMany').mockResolvedValue(mockQnas);
   });
 
   describe('addQnaToRoom', () => {
@@ -99,6 +101,28 @@ describe('QnaManagerService', () => {
         expect.stringContaining('[CRITICAL] Rollback failed'),
         expect.any(String),
       );
+    });
+  });
+
+  describe('getQnasInRoom', () => {
+    it('lrange로 ID를 조회한 후 상세 데이터를 반환해야 한다', async () => {
+      const qnaIds = ['qna-1', 'qna-2'];
+      redisClient.lrange.mockResolvedValue(qnaIds);
+
+      const result = await service.getQnasInRoom('room-1');
+
+      expect(redisClient.lrange).toHaveBeenCalledWith('room:room-1:qna', 0, -1);
+      expect(service.findMany).toHaveBeenCalledWith(qnaIds);
+      expect(result).toEqual(mockQnas);
+    });
+
+    it('빈 결과: 저장된 투표가 없으면 빈 배열을 반환해야 한다', async () => {
+      redisClient.lrange.mockResolvedValue([]);
+
+      const result = await service.getQnasInRoom('room-1');
+
+      expect(result).toEqual([]);
+      expect(service.findMany).not.toHaveBeenCalled();
     });
   });
 });

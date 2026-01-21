@@ -147,4 +147,15 @@ export class InteractionService {
     await this.qnaManagerService.addQnaToRoom(roomId, qnas);
     return qnas;
   }
+
+  async getQna(qnaId: string): Promise<Qna> {
+    const poll = await this.qnaManagerService.findOne(qnaId);
+    if (!poll) throw new Error('Could not find qna');
+
+    return poll;
+  }
+
+  async getQnas(roomId: string): Promise<Qna[]> {
+    return await this.qnaManagerService.getQnasInRoom(roomId);
+  }
 }

@@ -26,6 +26,7 @@ import {
   CreateQnaResponse,
   CreateQnaRequest,
   qnaFormSchema,
+  GetPollResponse,
 } from '@plum/shared-interfaces';
 
 import { SOCKET_CONFIG } from '../common/constants/socket.constants.js';
@@ -114,7 +115,7 @@ export class InteractionGateway {
   }
 
   @SubscribeMessage('get_poll')
-  async getPoll(@ConnectedSocket() socket: Socket) {
+  async getPoll(@ConnectedSocket() socket: Socket): Promise<GetPollResponse> {
     try {
       const { room } = await this.validatePresenterAction(socket.id);
       const polls = await this.interactionService.getPolls(room.id);
@@ -222,6 +223,21 @@ export class InteractionGateway {
       const errorMessage =
         error instanceof BusinessException ? error.message : '질문 생성에 실패했습니다.';
       this.logger.error(`[create_poll] 실패:`, error);
+      return { success: false, error: errorMessage };
+    }
+  }
+
+  @SubscribeMessage('get_qna')
+  async getQna(@ConnectedSocket() socket: Socket) {
+    try {
+      const { room } = await this.validatePresenterAction(socket.id);
+      const qnas = await this.interactionService.getQnas(room.id);
+
+      return { success: true, qnas };
+    } catch (error) {
+      const errorMessage =
+        error instanceof BusinessException ? error.message : '질문 조회에 실패했습니다.';
+      this.logger.error(`[get_poll] 실패:`, error);
       return { success: false, error: errorMessage };
     }
   }

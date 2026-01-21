@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { ParticipantPayload, ParticipantRole } from './participant.js';
 import { MediaKind, MediasoupProducer, MediaType, RoomInfo, ToggleActionType } from './shared.js';
 import { Poll, pollFormSchema, PollOption, PollPayload } from './poll.js';
-import { qnaFormSchema } from './qna.js';
+import { Qna, qnaFormSchema } from './qna.js';
 
 // 제스처 타입 정의
 export type GestureType =
@@ -156,6 +156,13 @@ export type GetPollResponse =
       polls: Poll[];
     };
 
+export type GetQnaResponse =
+  | (BaseResponse & { success: false })
+  | {
+      success: true;
+      qnas: Qna[];
+    };
+
 export type EmitPollResponse =
   | (BaseResponse & { success: false })
   | ({ success: true } & Pick<PollPayload, 'startedAt' | 'endedAt'>);
@@ -279,6 +286,8 @@ export interface ClientToServerEvents {
   create_qna: (data: CreateQnaRequest, cb: (res: CreateQnaResponse) => void) => void;
 
   get_poll: (cb: (res: GetPollResponse) => void) => void;
+
+  get_qna: (cb: (res: GetQnaResponse) => void) => void;
 
   emit_poll: (data: EmitPollRequest, cb: (res: EmitPollResponse) => void) => void;
 

@@ -20,6 +20,8 @@ describe('InteractionService (투표 및 Q&A 생성 테스트)', () => {
   // 2. QnaManagerService 모킹
   const mockQnaManager = {
     addQnaToRoom: jest.fn(),
+    getQnasInRoom: jest.fn(),
+    findOne: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -340,6 +342,50 @@ describe('InteractionService (투표 및 Q&A 생성 테스트)', () => {
 
       expect(results).toHaveLength(2);
       expect(mockQnaManager.addQnaToRoom).toHaveBeenCalledWith(roomId, results);
+    });
+  });
+
+  describe('getQna', () => {
+    it('존재하는 질문 ID를 넣으면 질문 정보를 반환해야 한다', async () => {
+      const mockQna = { id: 'q1', title: 'test' };
+      mockQnaManager.findOne.mockResolvedValue(mockQna as any);
+
+      const result = await service.getQna('q1');
+
+      expect(result).toEqual(mockQna);
+    });
+
+    it('질문이 없으면 "Could not find qna" 에러를 던져야 한다', async () => {
+      mockQnaManager.findOne.mockResolvedValue(null);
+
+      await expect(service.getQna('none')).rejects.toThrow('Could not find qna');
+    });
+  });
+
+  describe('getQnas (질문 목록 조회)', () => {
+    it('roomId에 해당하는 질문 리스트 배열을 반환해야 한다', async () => {
+      const roomId = 'room-123';
+      const mockQnas = [
+        { id: 'qna-1', title: '질문 1' },
+        { id: 'qna-2', title: '질문 2' },
+      ];
+
+      mockQnaManager.getQnasInRoom.mockResolvedValue(mockQnas);
+
+      const result = await service.getQnas(roomId);
+
+      expect(result).toHaveLength(2);
+      expect(result).toEqual(mockQnas);
+      expect(mockQnaManager.getQnasInRoom).toHaveBeenCalledWith(roomId);
+    });
+
+    it('질문이 없는 경우 빈 배열을 반환해야 한다', async () => {
+      mockQnaManager.getQnasInRoom.mockResolvedValue([]);
+
+      const result = await service.getQnas('empty-room');
+
+      expect(result).toEqual([]);
+      expect(mockQnaManager.getQnasInRoom).toHaveBeenCalledWith('empty-room');
     });
   });
 });

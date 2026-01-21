@@ -53,6 +53,8 @@ describe('InteractionGateway', () => {
             vote: jest.fn(),
             stopPoll: jest.fn(),
             createQna: jest.fn(),
+            getQna: jest.fn(),
+            getQnas: jest.fn(),
           },
         },
       ],
@@ -65,7 +67,29 @@ describe('InteractionGateway', () => {
     interactionService = module.get(InteractionService);
   });
 
-  describe('createPoll', () => {
+  describe('handleActionGesture', () => {
+    it('제스처 카운트를 올리고 브로드캐스트한다', async () => {
+      const metadata = { participantId: 'p1', roomId: 'r1' };
+      const participant = { id: 'p1', name: '홍길동', gestureCount: 5 };
+      const gestureData = { gesture: 'THUMBS_UP' };
+
+      jest.spyOn(socketMetadataService, 'get').mockReturnValue(metadata as any);
+      jest.spyOn(participantManagerService, 'findOne').mockResolvedValue(participant as any);
+
+      // Gateway 내 server 객체 모킹
+      (gateway as any).server = { to: jest.fn().mockReturnThis(), emit: jest.fn() };
+
+      const result = await gateway.handleActionGesture(mockSocket, gestureData as any);
+
+      expect(result).toEqual({ success: true });
+      expect(participantManagerService.updatePartial).toHaveBeenCalledWith('p1', {
+        gestureCount: 6,
+      });
+      expect((gateway as any).server.to).toHaveBeenCalledWith('r1');
+    });
+  });
+
+  describe('create_poll', () => {
     const createPollDto = {
       title: '오늘 점심 뭐 먹을까요?',
       options: [{ value: '치킨' }, { value: '피자' }],
@@ -201,28 +225,6 @@ describe('InteractionGateway', () => {
       } else {
         fail('성공하면 안 되는 테스트 케이스입니다.');
       }
-    });
-  });
-
-  describe('handleActionGesture', () => {
-    it('제스처 카운트를 올리고 브로드캐스트한다', async () => {
-      const metadata = { participantId: 'p1', roomId: 'r1' };
-      const participant = { id: 'p1', name: '홍길동', gestureCount: 5 };
-      const gestureData = { gesture: 'THUMBS_UP' };
-
-      jest.spyOn(socketMetadataService, 'get').mockReturnValue(metadata as any);
-      jest.spyOn(participantManagerService, 'findOne').mockResolvedValue(participant as any);
-
-      // Gateway 내 server 객체 모킹
-      (gateway as any).server = { to: jest.fn().mockReturnThis(), emit: jest.fn() };
-
-      const result = await gateway.handleActionGesture(mockSocket, gestureData as any);
-
-      expect(result).toEqual({ success: true });
-      expect(participantManagerService.updatePartial).toHaveBeenCalledWith('p1', {
-        gestureCount: 6,
-      });
-      expect((gateway as any).server.to).toHaveBeenCalledWith('r1');
     });
   });
 
@@ -460,7 +462,7 @@ describe('InteractionGateway', () => {
     });
   });
 
-  describe('createPoll', () => {
+  describe('create_qna', () => {
     const createQnaDto = {
       title: '오늘 점심 뭐 먹을까요?',
       isPublic: false,
@@ -484,6 +486,25 @@ describe('InteractionGateway', () => {
 
       expect(result).toEqual({ success: true });
       expect(interactionService.createQna).toHaveBeenCalledWith('r1', createQnaDto);
+    });
+  });
+
+  describe('get_qna', () => {
+    it('발표자가 해당 방의 모든 질문 목록을 조회한다', async () => {
+      const metadata = { participantId: 'p1', roomId: 'r1' };
+      const participant = { id: 'p1', role: 'presenter' };
+      const room = { id: 'r1', presenter: 'p1', status: 'active' };
+      const mockQnas = [{ id: 'qna-1', title: '질문1' }];
+
+      jest.spyOn(socketMetadataService, 'get').mockReturnValue(metadata as any);
+      jest.spyOn(participantManagerService, 'findOne').mockResolvedValue(participant as any);
+      jest.spyOn(roomManagerService, 'findOne').mockResolvedValue(room as any);
+      jest.spyOn(interactionService, 'getQnas').mockResolvedValue(mockQnas as any);
+
+      const result = await gateway.getQna(mockSocket);
+
+      expect(result).toEqual({ success: true, qnas: mockQnas });
+      expect(interactionService.getQnas).toHaveBeenCalledWith('r1');
     });
   });
 });

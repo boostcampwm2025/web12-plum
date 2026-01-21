@@ -20,6 +20,9 @@ export class QnaManagerService extends BaseRedisRepository<Qna> {
     return `room:${roomId}:qna`;
   }
 
+  /**
+   * 질문 정보 등록
+   */
   async addQnaToRoom(roomId: string, qnas: Qna[]): Promise<void> {
     const client = this.redisService.getClient();
     const listKey = this.getPollListKey(roomId);
@@ -62,5 +65,18 @@ export class QnaManagerService extends BaseRedisRepository<Qna> {
 
       throw error;
     }
+  }
+
+  /**
+   * 질문 정보 조회
+   */
+  async getQnasInRoom(roomId: string): Promise<Qna[]> {
+    const client = this.redisService.getClient();
+    const listKey = this.getPollListKey(roomId);
+    const pollIds = await client.lrange(listKey, 0, -1);
+
+    if (!pollIds || pollIds.length === 0) return [];
+
+    return await this.findMany(pollIds);
   }
 }
