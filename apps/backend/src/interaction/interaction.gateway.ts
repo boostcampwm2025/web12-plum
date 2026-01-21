@@ -33,7 +33,6 @@ import {
   ParticipantManagerService,
   RoomManagerService,
 } from '../redis/repository-manager/index.js';
-import { PrometheusService } from '../prometheus/prometheus.service.js';
 import { ZodValidationPipeSocket } from '../common/pipes/index.js';
 import { BusinessException, SocketMetadata } from '../common/types/index.js';
 import { InteractionService } from './interaction.service.js';
@@ -50,23 +49,14 @@ export class InteractionGateway implements OnGatewayDisconnect {
     private readonly socketMetadataService: SocketMetadataService,
     private readonly interactionService: InteractionService,
     private readonly participantManagerService: ParticipantManagerService,
-    private readonly prometheusService: PrometheusService,
     private readonly roomManagerService: RoomManagerService,
   ) {}
 
   /**
-   * Socket.IO 연결 시 메트릭 증가
-   */
-  handleConnection(socket: Socket) {
-    this.prometheusService.incrementSocketIOConnections();
-    this.logger.log(`Socket 연결됨 (Interaction): ${socket.id}`);
-  }
-
-  /**
-   * Socket.IO 해제 시 메트릭 감소
+   * Socket.IO 해제 이벤트
+   * 참고: 연결/해제 메트릭은 RoomGateway에서 중앙 관리
    */
   handleDisconnect(socket: Socket) {
-    this.prometheusService.decrementSocketIOConnections();
     this.logger.log(`Socket 해제됨 (Interaction): ${socket.id}`);
   }
 

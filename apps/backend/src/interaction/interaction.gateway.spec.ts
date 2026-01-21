@@ -9,7 +9,6 @@ import {
 } from '../redis/repository-manager/index.js';
 import { Socket } from 'socket.io';
 import { BusinessException } from '../common/types/index.js';
-import { PrometheusService } from '../prometheus/prometheus.service.js';
 
 describe('InteractionGateway', () => {
   let gateway: InteractionGateway;
@@ -53,13 +52,6 @@ describe('InteractionGateway', () => {
             startPoll: jest.fn(),
             vote: jest.fn(),
             stopPoll: jest.fn(),
-          },
-        },
-        {
-          provide: PrometheusService,
-          useValue: {
-            incrementSocketIOConnections: jest.fn(),
-            decrementSocketIOConnections: jest.fn(),
           },
         },
       ],
