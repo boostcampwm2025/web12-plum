@@ -105,6 +105,9 @@ jobs:
             update_env "REDIS_PORT" "${{ secrets.NCP_DEV_REDIS_PORT }}"
             update_env "ANNOUNCED_IP" "${{ secrets.NCP_DEV_HOST }}"
 
+            # 기존 컨테이너 중지 및 제거 (포트 충돌 방지)
+            docker compose -f docker-compose.yml -f docker-compose.develop.yml down || true
+
             docker compose -f docker-compose.yml -f docker-compose.develop.yml pull
             docker compose -f docker-compose.yml -f docker-compose.develop.yml up -d
 
@@ -190,6 +193,9 @@ jobs:
             update_env "REDIS_HOST" "${{ secrets.NCP_PROD_REDIS_HOST }}"
             update_env "REDIS_PORT" "${{ secrets.NCP_PROD_REDIS_PORT }}"
             update_env "ANNOUNCED_IP" "${{ secrets.NCP_PROD_HOST }}"
+
+            # 기존 컨테이너 중지 및 제거 (포트 충돌 방지)
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml down || true
 
             docker compose -f docker-compose.yml -f docker-compose.prod.yml pull
             docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
