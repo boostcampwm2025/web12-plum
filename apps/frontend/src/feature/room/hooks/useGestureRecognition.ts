@@ -5,7 +5,6 @@ import { logger } from '@/shared/lib/logger';
 import { useRoomStore } from '../stores/useRoomStore';
 import { useSocketStore } from '@/store/useSocketStore';
 import { useGestureStore } from '../stores/useGestureStore';
-import gestureWorkerUrl from '../workers/gestureWorker.ts?worker&url';
 
 type GestureRecognitionOptions = {
   enabled: boolean;
@@ -66,7 +65,7 @@ export function useGestureRecognition({ enabled, videoElement }: GestureRecognit
     let isActive = true;
     let isWorkerReady = false;
     let isInferenceInFlight = false;
-    const worker = new Worker(gestureWorkerUrl, {
+    const worker = new Worker(new URL('../workers/gestureWorker.ts', import.meta.url), {
       type: 'classic',
     });
 
