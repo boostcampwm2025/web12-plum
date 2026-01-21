@@ -3,23 +3,10 @@ import { motion } from 'motion/react';
 import { cn } from '@/shared/lib/utils';
 import { Icon } from '@/shared/components/icon/Icon';
 import { Button } from '@/shared/components/Button';
-import { useGestureStore, type GestureProgress } from '../stores/useGestureStore';
-import type { IconName } from '@/shared/components/icon/iconMap';
+import { useGestureStore } from '../stores/useGestureStore';
+import { GESTURE_ICON_MAP } from '@/shared/constants/gesture';
 
 export type VideoDisplayMode = 'minimize' | 'pip' | 'side';
-
-const GESTURE_ICON_MAP: Record<NonNullable<GestureProgress['gesture']>, IconName> = {
-  thumbs_up: 'thumbs-up',
-  thumbs_down: 'thumbs-down',
-  hand_raise: 'hand-raise',
-  ok_sign: 'circle-check',
-  one: 'one',
-  two: 'two',
-  three: 'three',
-  four: 'four',
-  x_sign: 'gesture-x',
-  o_sign: 'gesture-o',
-};
 
 function GestureProgressOverlay() {
   const gestureProgress = useGestureStore((state) => state.gestureProgress);

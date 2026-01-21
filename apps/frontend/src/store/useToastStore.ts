@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import type { GestureType } from '@plum/shared-interfaces';
 
 export type ToastType = 'info' | 'success' | 'error' | 'gesture';
 
@@ -6,6 +7,7 @@ export type Toast = {
   id: string;
   type: ToastType;
   title: string;
+  gesture?: GestureType;
   createdAt: number;
 };
 

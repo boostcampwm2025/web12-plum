@@ -2,13 +2,9 @@ import { forwardRef, useEffect, useRef } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { Icon } from '@/shared/components/icon/Icon';
 import type { IconName } from '@/shared/components/icon/iconMap';
+import { cn } from '@/shared/lib/utils';
 import { TOAST_TTL_MS, type Toast, type ToastType, useToastStore } from '@/store/useToastStore';
-
-declare global {
-  interface Window {
-    __toastTest?: (type: ToastType, title: string, count?: number, intervalMs?: number) => void;
-  }
-}
+import { GESTURE_BG_CLASS, GESTURE_ICON_MAP } from '../constants/gesture';
 
 const TOAST_ICON_MAP: Record<ToastType, IconName> = {
   info: 'toast-info',
@@ -25,6 +21,10 @@ const TOAST_ACCENT_CLASS: Record<ToastType, string> = {
 };
 
 const ToastItem = forwardRef<HTMLDivElement, { toast: Toast }>(({ toast }, ref) => {
+  const isGestureToast = toast.type === 'gesture';
+  const gesture = toast.gesture;
+  const iconName: IconName =
+    isGestureToast && gesture ? GESTURE_ICON_MAP[gesture] : TOAST_ICON_MAP[toast.type];
   return (
     <motion.div
       ref={ref}
@@ -37,12 +37,18 @@ const ToastItem = forwardRef<HTMLDivElement, { toast: Toast }>(({ toast }, ref) 
         opacity: { duration: 0.15 },
         scale: { duration: 0.15 },
       }}
-      className="flex items-center gap-3 rounded-lg bg-gray-500/80 px-3 py-2 text-white shadow-md backdrop-blur"
+      className={cn(
+        'flex items-center gap-3 rounded-lg px-3 py-2 text-white shadow-md backdrop-blur',
+        isGestureToast && gesture ? GESTURE_BG_CLASS[gesture] : 'bg-gray-500/80',
+      )}
     >
       <Icon
-        name={TOAST_ICON_MAP[toast.type]}
+        name={iconName}
         size={24}
-        className={`${TOAST_ACCENT_CLASS[toast.type]} fill-current`}
+        className={cn(
+          'fill-current',
+          isGestureToast ? 'text-text' : TOAST_ACCENT_CLASS[toast.type],
+        )}
         decorative
       />
       <span className="truncate text-xs font-bold tracking-tight">{toast.title}</span>
@@ -84,26 +90,6 @@ export function ToastStack() {
     return () => {
       timersRef.current.forEach((timerId) => window.clearTimeout(timerId));
       timersRef.current.clear();
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!import.meta.env.DEV) {
-      return;
-    }
-
-    window.__toastTest = (type, title, count = 1, intervalMs = 200) => {
-      const total = Math.max(1, count);
-      const interval = Math.max(0, intervalMs);
-      for (let i = 0; i < total; i += 1) {
-        window.setTimeout(() => {
-          useToastStore.getState().actions.addToast({ type, title });
-        }, i * interval);
-      }
-    };
-
-    return () => {
-      delete window.__toastTest;
     };
   }, []);
 

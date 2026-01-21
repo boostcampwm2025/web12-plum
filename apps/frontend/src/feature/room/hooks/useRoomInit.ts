@@ -11,7 +11,6 @@ import { logger } from '@/shared/lib/logger';
 import { useMediaDeviceStore } from '@/store/useMediaDeviceStore';
 import { useStreamStore } from '@/store/useLocalStreamStore';
 import { useSocketStore } from '@/store/useSocketStore';
-import { formatGestureMessage } from '@/shared/constants/gestureLabels';
 
 import { MyInfo, useRoomStore } from '../stores/useRoomStore';
 import { useMediaStore } from '../stores/useMediaStore';
@@ -82,8 +81,7 @@ export function useRoomInit() {
     update_gesture_status: (data) => {
       logger.socket.info('제스처 상태 업데이트 수신', data);
       const name = resolveParticipantName(data.participantId);
-      const message = formatGestureMessage(name, data.gesture);
-      addToast({ type: 'gesture', title: message });
+      addToast({ type: 'gesture', title: name, gesture: data.gesture });
     },
   };
 
