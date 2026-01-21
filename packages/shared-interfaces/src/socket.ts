@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { ParticipantPayload, ParticipantRole } from './participant.js';
 import { MediaKind, MediasoupProducer, MediaType, RoomInfo, ToggleActionType } from './shared.js';
 import { Poll, pollFormSchema, PollOption, PollPayload } from './poll.js';
-import { Qna, qnaFormSchema, QnaPayload } from './qna.js';
+import { Answer, Qna, qnaFormSchema, QnaPayload } from './qna.js';
 
 // 제스처 타입 정의
 export type GestureType =
@@ -82,6 +82,11 @@ export interface VoteRequest {
   pollId: string;
   optionId: number;
 }
+
+export type AnswerRequest = {
+  qnaId: string;
+  text: string;
+};
 
 export interface BreakPollRequest {
   pollId: string;
@@ -177,6 +182,8 @@ export type EmitQnaResponse =
 
 export type VoteResponse = BaseResponse;
 
+export type AnswerResponse = BaseResponse;
+
 export type BreakPollResponse =
   | (BaseResponse & { success: false })
   | { success: true; options: PollOption[] };
@@ -222,6 +229,10 @@ export interface UpdatePollStatusFullPayload {
 
 export type UpdatePollStatusSubPayload = Omit<UpdatePollStatusFullPayload, 'voter'>;
 
+export type UpdateQnaFullPayload = { qnaId: string; count: number } & Answer;
+
+export type UpdateQnaSubPayload = { qnaId: string; count: number } | UpdateQnaFullPayload;
+
 export interface EndPollPayload {
   pollId: string;
   options: Omit<PollOption, 'voters'>[];
@@ -255,6 +266,10 @@ export interface ServerToClientEvents {
   update_poll: (data: UpdatePollStatusSubPayload) => void;
 
   update_poll_detail: (data: UpdatePollStatusFullPayload) => void;
+
+  update_qna: (data: UpdateQnaSubPayload) => void;
+
+  update_qna_detail: (data: UpdateQnaFullPayload) => void;
 
   poll_end: (data: EndPollPayload) => void;
 
@@ -306,6 +321,8 @@ export interface ClientToServerEvents {
   emit_qna: (data: EmitQnaRequest, cb: (res: EmitQnaResponse) => void) => void;
 
   vote: (data: VoteRequest, cb: (res: VoteResponse) => void) => void;
+
+  answer: (data: AnswerRequest, cb: (res: AnswerResponse) => void) => void;
 
   break_poll: (data: BreakPollRequest, cb: (res: BreakPollResponse) => void) => void;
 }

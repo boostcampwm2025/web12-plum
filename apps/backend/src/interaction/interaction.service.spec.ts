@@ -23,6 +23,7 @@ describe('InteractionService (투표 및 Q&A 생성 테스트)', () => {
     getQnasInRoom: jest.fn(),
     findOne: jest.fn(),
     startQna: jest.fn(),
+    submitAnswer: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -451,6 +452,83 @@ describe('InteractionService (투표 및 Q&A 생성 테스트)', () => {
 
       await expect(service.startQna(qnaId)).rejects.toThrow(
         new BusinessException('이미 시작되거나 종료된 질문입니다.'),
+      );
+    });
+  });
+
+  describe('answer (Q&A 답변 제출)', () => {
+    const qnaId = 'qna-123';
+    const participantId = 'user-777';
+    const participantName = '답변자';
+    const text = '이것은 답변 내용입니다.';
+
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it('성공: 공개 질문(isPublic: true)인 경우 청중과 발표자에게 동일한 상세 페이로드를 반환해야 한다', async () => {
+      const mockQna = { id: qnaId, status: 'active', isPublic: true };
+      const mockResult = { count: 5 };
+
+      mockQnaManager.findOne.mockResolvedValue(mockQna);
+      mockQnaManager.submitAnswer.mockResolvedValue(mockResult);
+
+      const result = await service.answer(qnaId, participantId, participantName, text);
+
+      const expectedPayload = {
+        qnaId,
+        participantId,
+        participantName,
+        text,
+        count: 5,
+      };
+
+      expect(result).toEqual({
+        audience: expectedPayload,
+        presenter: expectedPayload,
+      });
+    });
+
+    it('성공: 비공개 질문(isPublic: false)인 경우 청중에게는 카운트만, 발표자에게는 상세 내용을 반환해야 한다', async () => {
+      const mockQna = { id: qnaId, isPublic: false };
+      const mockSubmitResult = { count: 5 };
+
+      mockQnaManager.findOne.mockResolvedValue(mockQna);
+      mockQnaManager.submitAnswer.mockResolvedValue(mockSubmitResult);
+
+      const result = await service.answer(qnaId, participantId, participantName, text);
+
+      expect(result).toEqual({
+        audience: {
+          qnaId: qnaId,
+          count: 5,
+        },
+        presenter: {
+          qnaId,
+          participantId,
+          participantName,
+          text,
+          count: 5,
+        },
+      });
+    });
+
+    it('실패: 존재하지 않는 질문 ID인 경우 BusinessException을 던져야 한다', async () => {
+      mockQnaManager.findOne.mockResolvedValue(null);
+
+      await expect(service.answer(qnaId, participantId, participantName, text)).rejects.toThrow(
+        new BusinessException('존재하지 않는 투표입니다.'),
+      );
+
+      expect(mockQnaManager.submitAnswer).not.toHaveBeenCalled();
+    });
+
+    it('실패: QnaManagerService에서 발생한 에러(중복 답변, 비활성 등)는 그대로 위로 던져져야 한다', async () => {
+      mockQnaManager.findOne.mockResolvedValue({ id: qnaId });
+      mockQnaManager.submitAnswer.mockRejectedValue(new Error('Qna is not active'));
+
+      await expect(service.answer(qnaId, participantId, participantName, text)).rejects.toThrow(
+        'Qna is not active',
       );
     });
   });

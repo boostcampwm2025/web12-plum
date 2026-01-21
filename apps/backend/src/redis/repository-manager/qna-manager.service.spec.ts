@@ -210,5 +210,89 @@ describe('QnaManagerService', () => {
       );
     });
   });
-  // });
+
+  describe('submitAnswer', () => {
+    const qnaId = 'qna-123';
+    const participantId = 'user-456';
+    const participantName = '홍길동';
+    const text = '질문에 대한 답변입니다.';
+
+    const activeKey = `qna:${qnaId}:active`;
+    const answerKey = `qna:${qnaId}:answers`;
+    const answererKey = `qna:${qnaId}:answerers`;
+
+    beforeEach(() => {
+      jest.spyOn(service as any, 'getActiveKey').mockReturnValue(activeKey);
+      jest.spyOn(service as any, 'getAnswerListKey').mockReturnValue(answerKey);
+      jest.spyOn(service as any, 'getAnswererSetKey').mockReturnValue(answererKey);
+
+      redisClient.exists = jest.fn();
+      redisClient.sadd = jest.fn();
+      redisClient.rpush = jest.fn();
+      redisClient.expire = jest.fn();
+      redisClient.srem = jest.fn();
+    });
+
+    it('성공: 활성화된 질문에 처음 답변하는 경우 count를 반환해야 한다', async () => {
+      redisClient.exists.mockResolvedValue(1); // 활성화됨
+      redisClient.sadd.mockResolvedValue(1); // 처음 답변함
+      redisClient.rpush.mockResolvedValue(5); // 현재 5번째 답변
+
+      const result = await service.submitAnswer(qnaId, participantId, participantName, text);
+
+      expect(redisClient.exists).toHaveBeenCalledWith(activeKey);
+      expect(redisClient.sadd).toHaveBeenCalledWith(answererKey, participantId);
+      expect(redisClient.rpush).toHaveBeenCalledWith(answerKey, expect.any(String));
+      expect(result).toEqual({ count: 5 });
+    });
+
+    it('실패: 질문이 활성화 상태가 아니면 에러를 던져야 한다', async () => {
+      redisClient.exists.mockResolvedValue(0); // 비활성화됨
+
+      await expect(
+        service.submitAnswer(qnaId, participantId, participantName, text),
+      ).rejects.toThrow('Qna is not active');
+
+      expect(redisClient.sadd).not.toHaveBeenCalled();
+      expect(redisClient.rpush).not.toHaveBeenCalled();
+    });
+
+    it('실패: 이미 답변한 유저(중복)인 경우 에러를 던져야 한다', async () => {
+      redisClient.exists.mockResolvedValue(1);
+      redisClient.sadd.mockResolvedValue(0); // 이미 존재함
+
+      await expect(
+        service.submitAnswer(qnaId, participantId, participantName, text),
+      ).rejects.toThrow('Duplicate answer attempt');
+
+      expect(redisClient.rpush).not.toHaveBeenCalled();
+    });
+
+    it('롤백: rpush 중 에러 발생 시 sadd했던 유저 정보를 삭제해야 한다', async () => {
+      redisClient.exists.mockResolvedValue(1);
+      redisClient.sadd.mockResolvedValue(1);
+      redisClient.rpush.mockRejectedValue(new Error('Redis Connection Fail'));
+
+      await expect(
+        service.submitAnswer(qnaId, participantId, participantName, text),
+      ).rejects.toThrow('Redis Connection Fail');
+
+      expect(redisClient.srem).toHaveBeenCalledWith(answererKey, participantId);
+    });
+
+    it('답변 데이터에 참가자 정보가 올바르게 포함되어야 한다', async () => {
+      redisClient.exists.mockResolvedValue(1);
+      redisClient.sadd.mockResolvedValue(1);
+      redisClient.rpush.mockResolvedValue(1);
+
+      await service.submitAnswer(qnaId, participantId, participantName, text);
+
+      const pushedData = JSON.parse(redisClient.rpush.mock.calls[0][1]);
+      expect(pushedData).toEqual({
+        participantId,
+        participantName,
+        text,
+      });
+    });
+  });
 });

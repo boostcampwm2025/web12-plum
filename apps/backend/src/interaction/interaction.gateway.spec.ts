@@ -56,6 +56,7 @@ describe('InteractionGateway', () => {
             getQna: jest.fn(),
             getQnas: jest.fn(),
             startQna: jest.fn(),
+            answer: jest.fn(),
           },
         },
       ],
@@ -572,6 +573,94 @@ describe('InteractionGateway', () => {
       expect(result).toEqual({
         success: false,
         error: '질문 시작에 실패했습니다.',
+      });
+    });
+  });
+
+  describe('answer', () => {
+    const answerDto = { qnaId: 'qna-123', text: '이것은 답변입니다.' };
+
+    beforeEach(() => {
+      (gateway as any).server = {
+        to: jest.fn().mockReturnThis(),
+        emit: jest.fn(),
+      };
+      jest.clearAllMocks();
+    });
+
+    it('청중이 답변을 제출하면 성공 응답을 반환하고 각 채널에 알맞은 페이로드를 브로드캐스트한다', async () => {
+      const mockRoom = { id: 'r1' };
+      const mockParticipant = { id: 'p-1', name: '홍길동' };
+      const mockResult = {
+        audience: { qnaId: 'qna-123', count: 5 },
+        presenter: {
+          qnaId: 'qna-123',
+          participantId: 'p-1',
+          participantName: '홍길동',
+          text: '이것은 답변입니다.',
+          count: 5,
+        },
+      };
+
+      jest.spyOn(gateway as any, 'validateAudienceAction').mockResolvedValue({
+        room: mockRoom,
+        participant: mockParticipant,
+      });
+      jest.spyOn(interactionService, 'answer').mockResolvedValue(mockResult as any);
+
+      const result = await gateway.answer(mockSocket, answerDto);
+
+      expect(gateway['validateAudienceAction']).toHaveBeenCalledWith(mockSocket.id);
+      expect(interactionService.answer).toHaveBeenCalledWith(
+        answerDto.qnaId,
+        mockParticipant.id,
+        mockParticipant.name,
+        answerDto.text,
+      );
+
+      expect((gateway as any).server.to).toHaveBeenCalledWith('r1:audience');
+      expect((gateway as any).server.to('r1:audience').emit).toHaveBeenCalledWith(
+        'update_qna',
+        mockResult.audience,
+      );
+
+      expect((gateway as any).server.to).toHaveBeenCalledWith('r1:presenter');
+      expect((gateway as any).server.to('r1:presenter').emit).toHaveBeenCalledWith(
+        'update_qna_detail',
+        mockResult.presenter,
+      );
+
+      expect(result).toEqual({ success: true });
+    });
+
+    it('BusinessException 발생 시 에러 메시지를 반환한다', async () => {
+      jest.spyOn(gateway as any, 'validateAudienceAction').mockResolvedValue({
+        room: { id: 'r1' },
+        participant: { id: 'p1', name: 'user' },
+      });
+      jest
+        .spyOn(interactionService, 'answer')
+        .mockRejectedValue(new BusinessException('이미 답변한 질문입니다.'));
+
+      const result = await gateway.answer(mockSocket, answerDto);
+
+      expect(result).toEqual({
+        success: false,
+        error: '이미 답변한 질문입니다.',
+      });
+      expect((gateway as any).server.to).not.toHaveBeenCalled();
+    });
+
+    it('예기치 못한 일반 에러 발생 시 기본 실패 메시지를 반환한다', async () => {
+      jest
+        .spyOn(gateway as any, 'validateAudienceAction')
+        .mockRejectedValue(new Error('Unknown Error'));
+
+      const result = await gateway.answer(mockSocket, answerDto);
+
+      expect(result).toEqual({
+        success: false,
+        error: '투표에 실패했습니다.',
       });
     });
   });

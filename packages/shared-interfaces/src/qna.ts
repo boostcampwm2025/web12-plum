@@ -15,6 +15,15 @@ export const QNA_VALIDATION_CONSTRAINTS = {
 } as const;
 
 /**
+ * Answer 폼 유효성 검사 제약 조건
+ */
+export const ANSWER_VALIDATION_CONSTRAINTS = {
+  TEXT: {
+    MAX_LENGTH: 300,
+  },
+} as const;
+
+/**
  * QnA 폼 스키마
  */
 export const qnaFormSchema = z.object({
@@ -39,13 +48,24 @@ export const qnaFormSchema = z.object({
   isPublic: z.boolean(),
 });
 
+export const answerFromSchema = z.object({
+  text: z
+    .string()
+    .trim()
+    .min(1, '응답 내용을 적어주세요')
+    .max(
+      ANSWER_VALIDATION_CONSTRAINTS.TEXT.MAX_LENGTH,
+      `응답 내용은 ${ANSWER_VALIDATION_CONSTRAINTS.TEXT.MAX_LENGTH}자 이하여야 합니다`,
+    ),
+});
+
 export interface Qna {
   id: string;
   roomId: string;
   status: Status;
   title: string;
   timeLimit: number;
-  isPublic: boolean;
+  isPublic: boolean; // true = 익명 false = 비공개
   createdAt: string;
   updatedAt: string;
   startedAt: string;
@@ -58,4 +78,10 @@ export interface QnaPayload {
   timeLimit: number;
   startedAt: string;
   endedAt: string;
+}
+
+export interface Answer {
+  participantId: string;
+  participantName: string;
+  text: string;
 }

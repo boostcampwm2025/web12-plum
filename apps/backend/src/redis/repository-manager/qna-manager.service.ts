@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Qna } from '@plum/shared-interfaces';
+import { TTL_BOUNDS } from '../redis.constants.js';
 import { RedisService } from '../redis.service.js';
 import { BaseRedisRepository } from './base-redis.repository.js';
 
@@ -32,6 +33,13 @@ export class QnaManagerService extends BaseRedisRepository<Qna> {
    */
   private getAnswerListKey(qnaId: string): string {
     return `${this.keyPrefix}${qnaId}:answers`;
+  }
+
+  /**
+   * 답변 중복 검사용 키
+   */
+  private getAnswererSetKey(qnaId: string): string {
+    return `${this.keyPrefix}${qnaId}:answerers`;
   }
 
   /**
@@ -145,6 +153,52 @@ export class QnaManagerService extends BaseRedisRepository<Qna> {
       } catch (rollbackError) {
         this.logger.error(`[CRITICAL] StartQna rollback failed: ${qnaId}`, rollbackError.stack);
       }
+      throw error;
+    }
+  }
+
+  /**
+   * 응답 집계
+   */
+  async submitAnswer(
+    qnaId: string,
+    participantId: string,
+    participantName: string,
+    text: string,
+  ): Promise<{ count: number }> {
+    const client = this.redisService.getClient();
+    const activeKey = this.getActiveKey(qnaId);
+    const answerKey = this.getAnswerListKey(qnaId);
+    const answererKey = this.getAnswererSetKey(qnaId);
+
+    const isActive = await client.exists(activeKey);
+    if (!isActive) {
+      this.logger.warn(
+        `[SubmitAnswer] Reject: Qna ${qnaId} is not active. Participant: ${participantId}`,
+      );
+      throw new Error('Qna is not active');
+    }
+
+    const newAnswerer = await client.sadd(answererKey, participantId);
+    if (newAnswerer === 0) {
+      this.logger.warn(
+        `[SubmitAnswer] Reject: Duplicate answer attempt. Qna: ${qnaId}, Participant: ${participantId}`,
+      );
+      throw new Error('Duplicate answer attempt');
+    }
+
+    const answer = JSON.stringify({ participantId, participantName, text });
+
+    try {
+      const count = await client.rpush(answerKey, answer);
+      await client.expire(answererKey, TTL_BOUNDS);
+
+      this.logger.log(`[SubmitAnswer] Success: Qna ${qnaId}, Participant ${participantId}`);
+
+      return { count };
+    } catch (error) {
+      this.logger.error(`[SubmitAnswer] Error: Qna ${qnaId}. Rollback executed.`, error.stack);
+      await client.srem(answererKey, participantId);
       throw error;
     }
   }

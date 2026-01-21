@@ -7,6 +7,8 @@ import {
   Qna,
   QnaPayload,
   UpdatePollStatusSubPayload,
+  UpdateQnaFullPayload,
+  UpdateQnaSubPayload,
 } from '@plum/shared-interfaces';
 
 import { CreatePollDto, CreateQnaDto } from './dto';
@@ -175,5 +177,45 @@ export class InteractionService {
       startedAt,
       endedAt,
     };
+  }
+
+  async answer(
+    qnaId: string,
+    participantId: string,
+    participantName: string,
+    text: string,
+  ): Promise<{
+    audience: UpdateQnaSubPayload;
+    presenter: UpdateQnaFullPayload;
+  }> {
+    const qna = await this.qnaManagerService.findOne(qnaId);
+    if (!qna) throw new BusinessException('존재하지 않는 투표입니다.');
+
+    const result = await this.qnaManagerService.submitAnswer(
+      qnaId,
+      participantId,
+      participantName,
+      text,
+    );
+
+    const payload: UpdateQnaFullPayload = {
+      qnaId: qnaId,
+      participantId,
+      participantName,
+      text,
+      count: result.count,
+    };
+
+    if (qna.isPublic) {
+      return { audience: payload, presenter: payload };
+    } else {
+      return {
+        audience: {
+          qnaId: payload.qnaId,
+          count: payload.count,
+        },
+        presenter: payload,
+      };
+    }
   }
 }
