@@ -139,6 +139,10 @@ describe('RoomGateway', () => {
     it('참가자가 존재하면 방 입장에 성공해야 함', async () => {
       const socket = createMockSocket();
       const data = { roomId: 'room-1', participantId: 'user-1' };
+      jest.spyOn(roomManager, 'findOne').mockResolvedValue({
+        id: 'room-1',
+        status: 'active',
+      } as any);
       jest
         .spyOn(participantManager, 'findOne')
         .mockResolvedValue({ id: 'user-1', name: '홍길동', role: 'student' } as any);
@@ -334,6 +338,9 @@ describe('RoomGateway', () => {
         consumers: ['c1'],
       };
 
+      jest
+        .spyOn(roomManager, 'findOne')
+        .mockResolvedValue({ id: 'room-1', status: 'active' } as any);
       jest.spyOn(participantManager, 'popReconnectMetadata').mockResolvedValue(pendingMetadata);
       jest.spyOn(participantManager, 'findOne').mockResolvedValue(mockParticipant as any);
 
