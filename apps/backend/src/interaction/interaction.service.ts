@@ -70,9 +70,7 @@ export class InteractionService {
     if (!data || data.length === 0) return [];
 
     const polls = data.map((dto) => this.preparePoll(roomId, dto));
-
     await this.pollManagerService.addPollToRoom(roomId, polls);
-
     return polls;
   }
 
@@ -138,14 +136,15 @@ export class InteractionService {
   // --- QnA Methods ---
   async createQna(roomId: string, dto: CreateQnaDto): Promise<Qna> {
     const qna = this.prepareQna(roomId, dto);
-    await this.qnaManagerService.saveOne(qna.id, qna);
+    await this.qnaManagerService.addQnaToRoom(roomId, [qna]);
     return qna;
   }
 
   async createMultipleQna(roomId: string, data: CreateQnaDto[]): Promise<Qna[]> {
     if (!data || data.length === 0) return [];
+
     const qnas = data.map((dto) => this.prepareQna(roomId, dto));
-    await this.qnaManagerService.saveMany(qnas);
+    await this.qnaManagerService.addQnaToRoom(roomId, qnas);
     return qnas;
   }
 }

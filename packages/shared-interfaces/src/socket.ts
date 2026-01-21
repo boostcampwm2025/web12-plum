@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { ParticipantPayload, ParticipantRole } from './participant.js';
 import { MediaKind, MediasoupProducer, MediaType, RoomInfo, ToggleActionType } from './shared.js';
 import { Poll, pollFormSchema, PollOption, PollPayload } from './poll.js';
+import { qnaFormSchema } from './qna.js';
 
 // 제스처 타입 정의
 export type GestureType =
@@ -66,6 +67,8 @@ export interface ActionGestureRequest {
 }
 
 export type CreatePollRequest = z.infer<typeof pollFormSchema>;
+
+export type CreateQnaRequest = z.infer<typeof qnaFormSchema>;
 
 export interface EmitPollRequest {
   pollId: string;
@@ -143,6 +146,8 @@ export type BreakRoomResponse = BaseResponse;
 export type ActionGestureResponse = BaseResponse;
 
 export type CreatePollResponse = BaseResponse;
+
+export type CreateQnaResponse = BaseResponse;
 
 export type GetPollResponse =
   | (BaseResponse & { success: false })
@@ -270,6 +275,8 @@ export interface ClientToServerEvents {
   break_room: (cb: (res: BreakRoomResponse) => void) => void;
 
   create_poll: (data: CreatePollRequest, cb: (res: CreatePollResponse) => void) => void;
+
+  create_qna: (data: CreateQnaRequest, cb: (res: CreateQnaResponse) => void) => void;
 
   get_poll: (cb: (res: GetPollResponse) => void) => void;
 

@@ -52,6 +52,7 @@ describe('InteractionGateway', () => {
             startPoll: jest.fn(),
             vote: jest.fn(),
             stopPoll: jest.fn(),
+            createQna: jest.fn(),
           },
         },
       ],
@@ -456,6 +457,33 @@ describe('InteractionGateway', () => {
       );
 
       expect((gateway as any).server.to).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('createPoll', () => {
+    const createQnaDto = {
+      title: '오늘 점심 뭐 먹을까요?',
+      isPublic: false,
+    };
+
+    it('발표자가 유효한 방에서 질문을 생성한다', async () => {
+      const metadata = { participantId: 'p1', roomId: 'r1' };
+      const participant = { id: 'p1', role: 'presenter' };
+      const room = { id: 'r1', presenter: 'p1', status: 'active' };
+
+      jest.spyOn(socketMetadataService, 'get').mockReturnValue(metadata as any);
+      jest.spyOn(participantManagerService, 'findOne').mockResolvedValue(participant as any);
+      jest.spyOn(roomManagerService, 'findOne').mockResolvedValue(room as any);
+      jest.spyOn(interactionService, 'createQna').mockResolvedValue({
+        id: 'poll-id',
+        title: '오늘 점심 뭐 먹을까요?',
+        options: [],
+      } as any);
+
+      const result = await gateway.createQna(mockSocket, createQnaDto as any);
+
+      expect(result).toEqual({ success: true });
+      expect(interactionService.createQna).toHaveBeenCalledWith('r1', createQnaDto);
     });
   });
 });

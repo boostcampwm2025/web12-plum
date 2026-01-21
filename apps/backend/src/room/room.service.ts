@@ -202,7 +202,7 @@ export class RoomService {
     const roomId = ulid();
     const hostId = ulid();
 
-    const [uploadFilesUrl, _polls, qnas] = await Promise.all([
+    const [uploadFilesUrl] = await Promise.all([
       this.multipleFileUpload(files),
       this.interactionService.createMultiplePoll(roomId, body.polls),
       this.interactionService.createMultipleQna(roomId, body.qnas),
@@ -218,7 +218,6 @@ export class RoomService {
       startedAt: new Date().toISOString(),
       endedAt: '',
       files: uploadFilesUrl,
-      qnas: qnas.map((qna) => qna.id),
       aiSummery: '',
     };
 

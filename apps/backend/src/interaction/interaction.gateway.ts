@@ -23,6 +23,9 @@ import {
   BreakPollResponse,
   UpdatePollStatusSubPayload,
   PollOption,
+  CreateQnaResponse,
+  CreateQnaRequest,
+  qnaFormSchema,
 } from '@plum/shared-interfaces';
 
 import { SOCKET_CONFIG } from '../common/constants/socket.constants.js';
@@ -201,6 +204,24 @@ export class InteractionGateway {
       const errorMessage =
         error instanceof BusinessException ? error.message : '투표 종료에 실패했습니다.';
       this.logger.error(`[break_poll] 실패:`, error);
+      return { success: false, error: errorMessage };
+    }
+  }
+
+  @SubscribeMessage('create_qna')
+  async createQna(
+    @ConnectedSocket() socket: Socket,
+    @MessageBody(new ZodValidationPipeSocket(qnaFormSchema)) data: CreateQnaRequest,
+  ): Promise<CreateQnaResponse> {
+    try {
+      const { room } = await this.validatePresenterAction(socket.id);
+      await this.interactionService.createQna(room.id, data);
+
+      return { success: true };
+    } catch (error) {
+      const errorMessage =
+        error instanceof BusinessException ? error.message : '질문 생성에 실패했습니다.';
+      this.logger.error(`[create_poll] 실패:`, error);
       return { success: false, error: errorMessage };
     }
   }

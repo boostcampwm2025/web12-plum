@@ -312,7 +312,7 @@ export class PollManagerService extends BaseRedisRepository<Poll> {
     return poll.options;
   }
 
-  @OnEvent('redis.expired.poll')
+  @OnEvent('redis.expired.poll:*')
   async handlePollAutoClose(key: string) {
     const parts = key.split(':');
 

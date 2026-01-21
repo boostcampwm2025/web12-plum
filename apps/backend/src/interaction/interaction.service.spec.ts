@@ -19,8 +19,7 @@ describe('InteractionService (투표 및 Q&A 생성 테스트)', () => {
 
   // 2. QnaManagerService 모킹
   const mockQnaManager = {
-    saveOne: jest.fn().mockResolvedValue(undefined),
-    saveMany: jest.fn().mockResolvedValue(undefined),
+    addQnaToRoom: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -325,7 +324,7 @@ describe('InteractionService (투표 및 Q&A 생성 테스트)', () => {
 
       expect(result).toHaveProperty('id');
       expect(result.roomId).toBe(roomId);
-      expect(mockQnaManager.saveOne).toHaveBeenCalledWith(result.id, result);
+      expect(mockQnaManager.addQnaToRoom).toHaveBeenCalledWith(roomId, [result]);
     });
   });
 
@@ -340,8 +339,7 @@ describe('InteractionService (투표 및 Q&A 생성 테스트)', () => {
       const results = await service.createMultipleQna(roomId, qnasDto);
 
       expect(results).toHaveLength(2);
-      expect(mockQnaManager.saveMany).toHaveBeenCalledTimes(1);
-      expect(mockQnaManager.saveMany).toHaveBeenCalledWith(results);
+      expect(mockQnaManager.addQnaToRoom).toHaveBeenCalledWith(roomId, results);
     });
   });
 });
