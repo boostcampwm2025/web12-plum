@@ -1,10 +1,24 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { CreateLectureForm } from './CreateLectureForm';
+import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 
+import { CreateLectureForm } from './CreateLectureForm';
+import { useCreateRoom } from '../hooks/useCreateRoom';
+import { useRoomStore } from '../../../feature/room/stores/useRoomStore';
+import { useNavigate } from 'react-router';
+import { logger } from '../../../shared/lib/logger';
+
+type RoomStoreState = Parameters<Parameters<typeof useRoomStore>[0]>[0];
+
+vi.mock('../hooks/useCreateRoom');
+vi.mock('@/feature/room/stores/useRoomStore');
+vi.mock('react-router', () => ({
+  useNavigate: vi.fn(),
+}));
+
 vi.mock('./ActivityList', () => ({
-  ActivityList: () => <div>ActivityList Mock</div>,
+  ActivityList: () => <div data-testid="activity-list">ActivityList Mock</div>,
 }));
 
 vi.mock('./ActivityModals', () => ({
@@ -13,7 +27,11 @@ vi.mock('./ActivityModals', () => ({
 
 vi.mock('./LecturePresentationUpload', () => ({
   LecturePresentationUpload: ({ onFileSelect }: { onFileSelect: (file: File) => void }) => (
-    <button onClick={() => onFileSelect(new File(['test'], 'test.pdf'))}>파일 업로드 Mock</button>
+    <button
+      onClick={() => onFileSelect(new File(['content'], 'test.pdf', { type: 'application/pdf' }))}
+    >
+      파일 업로드 버튼
+    </button>
   ),
 }));
 
@@ -22,131 +40,111 @@ vi.mock('./LecturePresentationList', () => ({
 }));
 
 vi.mock('@/shared/lib/logger', () => ({
-  logger: {
-    ui: {
-      info: vi.fn(),
-      error: vi.fn(),
-    },
-  },
+  logger: { ui: { error: vi.fn(), info: vi.fn() } },
 }));
 
-describe('CreateLectureForm 테스트', () => {
+describe('CreateLectureForm (비즈니스 로직 테스트)', () => {
+  const mockCreateRoom = vi.fn();
+  const mockSetMyInfo = vi.fn();
+  const mockNavigate = vi.fn();
+
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(useNavigate).mockReturnValue(mockNavigate);
+    vi.mocked(useCreateRoom).mockReturnValue({
+      createRoom: mockCreateRoom,
+      isSubmitting: false,
+    });
+    vi.mocked(useRoomStore).mockImplementation((selector) =>
+      selector({
+        actions: {
+          setMyInfo: mockSetMyInfo,
+        },
+      } as unknown as RoomStoreState),
+    );
   });
 
-  it('폼의 모든 섹션이 렌더링되어야 한다.', () => {
-    render(<CreateLectureForm />);
+  describe('파일 업로드 로직', () => {
+    it('파일 업로드 시 동일한 파일이 있으면 에러 로그를 남긴다', async () => {
+      const user = userEvent.setup();
+      render(<CreateLectureForm />);
 
-    expect(screen.getByText('강의실 이름')).toBeInTheDocument();
-    expect(screen.getByText('호스트 이름')).toBeInTheDocument();
-    expect(screen.getByText('데이터 수집 동의')).toBeInTheDocument();
-    expect(screen.getByText('강의 활동 구성')).toBeInTheDocument();
-    expect(screen.getByText('발표 자료')).toBeInTheDocument();
-  });
+      const uploadBtn = screen.getByText('파일 업로드 버튼');
 
-  it('강의실 이름 입력 필드가 렌더링되어야 한다.', () => {
-    render(<CreateLectureForm />);
+      await user.click(uploadBtn);
+      await user.click(uploadBtn);
 
-    const input = screen.getByPlaceholderText('예: 네이버부스트캠프 웹 풀스택');
-    expect(input).toBeInTheDocument();
-  });
-
-  it('호스트 이름 입력 필드가 렌더링되어야 한다.', () => {
-    render(<CreateLectureForm />);
-
-    const input = screen.getByPlaceholderText('예: 호눅스');
-    expect(input).toBeInTheDocument();
-  });
-
-  it('데이터 수집 동의 체크박스가 렌더링되어야 한다.', () => {
-    render(<CreateLectureForm />);
-
-    const checkbox = screen.getByRole('checkbox');
-    expect(checkbox).toBeInTheDocument();
-    expect(screen.getByText('데이터 수집에 동의합니다.')).toBeInTheDocument();
-  });
-
-  it('투표 추가 버튼과 Q&A 추가 버튼이 렌더링되어야 한다.', () => {
-    render(<CreateLectureForm />);
-
-    expect(screen.getByRole('button', { name: /투표 추가/ })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Q&A 추가/ })).toBeInTheDocument();
-  });
-
-  it('강의실 생성하기 버튼이 렌더링되어야 한다.', () => {
-    render(<CreateLectureForm />);
-
-    expect(screen.getByRole('button', { name: '강의실 생성하기' })).toBeInTheDocument();
-  });
-
-  it('초기 상태에서 강의실 생성하기 버튼이 비활성화되어야 한다.', () => {
-    render(<CreateLectureForm />);
-
-    const submitButton = screen.getByRole('button', { name: '강의실 생성하기' });
-    expect(submitButton).toBeDisabled();
-  });
-
-  it('강의실 이름을 입력할 수 있어야 한다.', async () => {
-    render(<CreateLectureForm />);
-
-    const input = screen.getByPlaceholderText('예: 네이버부스트캠프 웹 풀스택') as HTMLInputElement;
-
-    fireEvent.change(input, { target: { value: '테스트 강의실' } });
-
-    await waitFor(() => {
-      expect(input.value).toBe('테스트 강의실');
+      expect(logger.ui.error).toHaveBeenCalledWith(
+        '파일 업로드 에러:',
+        '이미 동일한 파일이 업로드되어 있습니다.',
+      );
     });
   });
 
-  it('호스트 이름을 입력할 수 있어야 한다.', async () => {
-    render(<CreateLectureForm />);
+  describe('폼 제출 프로세스', () => {
+    it('유효한 데이터를 입력하고 제출하면 createRoom과 후속 조치가 실행된다', async () => {
+      const user = userEvent.setup();
+      const mockResponse = {
+        roomId: 'room-123',
+        host: { id: 'host-1', name: '호눅스' },
+      };
+      mockCreateRoom.mockResolvedValueOnce(mockResponse);
 
-    const input = screen.getByPlaceholderText('예: 호눅스') as HTMLInputElement;
+      render(<CreateLectureForm />);
 
-    fireEvent.change(input, { target: { value: '테스트 호스트' } });
+      const nameInput = screen.getByPlaceholderText('예: 네이버부스트캠프 웹 풀스택');
+      const hostInput = screen.getByPlaceholderText('예: 호눅스');
+      const checkbox = screen.getByRole('checkbox');
+      const submitButton = screen.getByRole('button', { name: '강의실 생성하기' });
 
-    await waitFor(() => {
-      expect(input.value).toBe('테스트 호스트');
+      await user.type(nameInput, '신규 웹 풀스택 강의실');
+      await user.type(hostInput, '호눅스');
+      await user.click(checkbox);
+
+      await waitFor(() => expect(submitButton).not.toBeDisabled());
+      await user.click(submitButton);
+
+      await waitFor(() => {
+        expect(mockCreateRoom).toHaveBeenCalled();
+        expect(mockSetMyInfo).toHaveBeenCalledWith(mockResponse.host);
+        expect(mockNavigate).toHaveBeenCalledWith(expect.stringContaining('room-123'));
+      });
     });
-  });
 
-  it('데이터 수집 동의 체크박스를 클릭할 수 있어야 한다.', async () => {
-    render(<CreateLectureForm />);
+    it('제출 중(isSubmitting)일 때 버튼이 비활성화되고 문구가 변경된다', () => {
+      vi.mocked(useCreateRoom).mockReturnValue({
+        createRoom: mockCreateRoom,
+        isSubmitting: true,
+      });
 
-    const checkbox = screen.getByRole('checkbox') as HTMLInputElement;
+      render(<CreateLectureForm />);
 
-    expect(checkbox.checked).toBe(false);
-
-    fireEvent.click(checkbox);
-
-    await waitFor(() => {
-      expect(checkbox.checked).toBe(true);
+      const submitButton = screen.getByRole('button', { name: '생성 중...' });
+      expect(submitButton).toBeDisabled();
     });
-  });
 
-  it('모든 필수 필드가 유효하면 제출 버튼이 활성화되어야 한다.', async () => {
-    render(<CreateLectureForm />);
+    it('생성 실패 시 alert 창이 나타나야 한다', async () => {
+      const user = userEvent.setup();
+      const mockError = '서버 에러';
+      mockCreateRoom.mockRejectedValueOnce(mockError);
 
-    const nameInput = screen.getByPlaceholderText('예: 네이버부스트캠프 웹 풀스택');
-    const hostInput = screen.getByPlaceholderText('예: 호눅스');
-    const checkbox = screen.getByRole('checkbox');
-    const submitButton = screen.getByRole('button', { name: '강의실 생성하기' });
+      const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
 
-    fireEvent.change(nameInput, { target: { value: '테스트 강의실' } });
-    fireEvent.change(hostInput, { target: { value: '테스트호스트' } });
-    fireEvent.click(checkbox);
+      render(<CreateLectureForm />);
 
-    await waitFor(() => {
-      expect(submitButton).not.toBeDisabled();
+      await user.type(screen.getByPlaceholderText(/네이버부스트캠프/), '테스트용 강의실 이름');
+      await user.type(screen.getByPlaceholderText(/호눅스/), '호스트');
+      await user.click(screen.getByRole('checkbox'));
+
+      const submitButton = screen.getByRole('button', { name: '강의실 생성하기' });
+      await waitFor(() => expect(submitButton).not.toBeDisabled());
+      await user.click(submitButton);
+
+      await waitFor(() => {
+        expect(alertSpy).toHaveBeenCalledWith(expect.stringContaining(mockError));
+      });
+
+      alertSpy.mockRestore();
     });
-  });
-
-  it('데이터 수집 동의 항목들이 표시되어야 한다.', () => {
-    render(<CreateLectureForm />);
-
-    expect(screen.getByText(/참여도·발화 분석 데이터를 수집합니다/)).toBeInTheDocument();
-    expect(screen.getByText(/투표·질문 응답 데이터를 수집합니다/)).toBeInTheDocument();
-    expect(screen.getByText(/제스처·반응 데이터를 수집합니다/)).toBeInTheDocument();
   });
 });

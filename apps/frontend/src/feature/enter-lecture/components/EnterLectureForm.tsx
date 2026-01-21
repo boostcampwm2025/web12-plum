@@ -1,11 +1,6 @@
-import { useEffect } from 'react';
 import { FormProvider, useForm, useFormContext, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import {
-  EnterLectureRequestBody,
-  EnterRoomResponse,
-  enterLectureSchema,
-} from '@plum/shared-interfaces';
+import { EnterLectureRequestBody, enterLectureSchema } from '@plum/shared-interfaces';
 
 import { FormField } from '@/shared/components/FormField';
 import { logger } from '@/shared/lib/logger';
@@ -171,14 +166,9 @@ function MediaDeviceCheckSection() {
 interface EnterLectureFormProps {
   roomId: string;
   lectureName?: string;
-  onEnterSuccess?: (response: EnterRoomResponse) => void;
 }
 
-export function EnterLectureForm({
-  roomId,
-  lectureName = '예시 강의실',
-  onEnterSuccess,
-}: EnterLectureFormProps) {
+export function EnterLectureForm({ roomId, lectureName = '예시 강의실' }: EnterLectureFormProps) {
   const { enterRoom, isSubmitting } = useEnterRoom();
   const { initialize } = useMediaStore((state) => state.actions);
 
@@ -191,7 +181,7 @@ export function EnterLectureForm({
     mode: 'onChange',
   });
 
-  const { handleSubmit, formState, setValue, getValues, trigger, control } = formMethods;
+  const { handleSubmit, formState, getValues, setError, trigger, control } = formMethods;
   const {
     nicknameValue,
     checkMessage,
@@ -202,24 +192,23 @@ export function EnterLectureForm({
     requireCheck,
   } = useNicknameValidation({ roomId, control, trigger, getValues });
 
-  useEffect(() => {
-    setValue(ENTER_LECTURE_KEYS.name, lectureName, { shouldValidate: true });
-  }, [lectureName, setValue]);
-
   const onSubmit = async (data: EnterLectureRequestBody) => {
-    if (!roomId || !lectureName) {
-      logger.ui.warn('EnterLectureForm: 강의실 정보를 확인할 수 없습니다.', data);
-      return;
-    }
     if (!hasCheckedNickname || !isNicknameAvailable) {
       requireCheck();
+      setError(
+        ENTER_LECTURE_KEYS.nickname,
+        {
+          type: 'manual',
+          message: '닉네임 중복 확인을 해주세요.',
+        },
+        { shouldFocus: true },
+      );
       return;
     }
 
     try {
-      const response = await enterRoom(roomId, data);
       initialize(data.isAudioOn, data.isVideoOn);
-      onEnterSuccess?.(response);
+      await enterRoom(data);
     } catch (error) {
       logger.ui.error('강의실 입장 실패:', error);
     }

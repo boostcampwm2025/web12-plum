@@ -1,14 +1,21 @@
 import { Injectable } from '@nestjs/common';
 import { ulid } from 'ulid';
-import { Poll, Qna } from '@plum/shared-interfaces';
+import {
+  Poll,
+  PollOption,
+  PollPayload,
+  Qna,
+  UpdatePollStatusSubPayload,
+} from '@plum/shared-interfaces';
 
 import { CreatePollDto, CreateQnaDto } from './dto';
 import { PollManagerService, QnaManagerService } from '../redis/repository-manager/index.js';
+import { BusinessException } from '../common/types/index.js';
 
 @Injectable()
 export class InteractionService {
   constructor(
-    private readonly pollMangerService: PollManagerService,
+    private readonly pollManagerService: PollManagerService,
     private readonly qnaManagerService: QnaManagerService,
   ) {}
 
@@ -27,9 +34,12 @@ export class InteractionService {
         id: index,
         value: option.value,
         count: 0,
+        voters: [],
       })),
       createdAt: now,
       updatedAt: now,
+      startedAt: '',
+      endedAt: '',
     };
   }
 
@@ -52,7 +62,7 @@ export class InteractionService {
   // --- Poll Methods ---
   async createPoll(roomId: string, dto: CreatePollDto): Promise<Poll> {
     const poll = this.preparePoll(roomId, dto);
-    await this.pollMangerService.saveOne(poll.id, poll);
+    await this.pollManagerService.addPollToRoom(roomId, [poll]);
     return poll;
   }
 
@@ -61,9 +71,68 @@ export class InteractionService {
 
     const polls = data.map((dto) => this.preparePoll(roomId, dto));
 
-    await this.pollMangerService.saveMany(polls);
+    await this.pollManagerService.addPollToRoom(roomId, polls);
 
     return polls;
+  }
+
+  async getPoll(pollId: string): Promise<Poll> {
+    const poll = await this.pollManagerService.findOne(pollId);
+    if (!poll) throw new Error('Could not find poll');
+
+    return poll;
+  }
+
+  async getPolls(roomId: string): Promise<Poll[]> {
+    return await this.pollManagerService.getPollsInRoom(roomId);
+  }
+
+  async startPoll(pollId: string): Promise<PollPayload> {
+    const poll = await this.pollManagerService.findOne(pollId);
+    if (!poll) throw new BusinessException('존재하지 않는 투표입니다.');
+    if (poll.status !== 'pending')
+      throw new BusinessException('이미 시작되거나 종료된 투표입니다.');
+
+    const { startedAt, endedAt } = await this.pollManagerService.startPoll(pollId, poll.timeLimit);
+    return {
+      id: pollId,
+      title: poll.title,
+      options: poll.options,
+      timeLimit: poll.timeLimit,
+      startedAt,
+      endedAt,
+    };
+  }
+
+  async vote(
+    pollId: string,
+    participantId: string,
+    participantName: string,
+    optionId: number,
+  ): Promise<UpdatePollStatusSubPayload> {
+    const poll = await this.pollManagerService.findOne(pollId);
+    if (!poll) throw new BusinessException('존재하지 않는 투표입니다.');
+
+    if (optionId < 0 || optionId >= poll.options.length) {
+      throw new BusinessException('유효하지 않은 선택지입니다.');
+    }
+
+    const result = await this.pollManagerService.submitVote(
+      pollId,
+      participantId,
+      participantName,
+      optionId,
+    );
+    return { ...result };
+  }
+
+  async stopPoll(pollId: string): Promise<PollOption[]> {
+    const poll = await this.pollManagerService.findOne(pollId);
+    if (!poll) throw new BusinessException('존재하지 않는 투표입니다.');
+
+    if (poll.status === 'ended') return await this.pollManagerService.getFinalResults(pollId);
+
+    return await this.pollManagerService.closePoll(pollId);
   }
 
   // --- QnA Methods ---

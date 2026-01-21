@@ -73,10 +73,16 @@ export const pollFormSchema = z.object({
     ),
 });
 
+export interface Voter {
+  id: string;
+  name: string;
+}
+
 export interface PollOption {
   id: number;
   value: string;
   count: number;
+  voters: Voter[];
 }
 
 export interface Poll {
@@ -88,4 +94,15 @@ export interface Poll {
   timeLimit: number;
   createdAt: string;
   updatedAt: string;
+  startedAt: string;
+  endedAt: string;
+}
+
+export interface PollPayload {
+  id: string;
+  title: string;
+  options: PollOption[];
+  timeLimit: number;
+  startedAt: string;
+  endedAt: string;
 }
