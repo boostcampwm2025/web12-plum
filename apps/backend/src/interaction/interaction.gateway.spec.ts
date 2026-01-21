@@ -9,6 +9,7 @@ import {
 } from '../redis/repository-manager/index.js';
 import { Socket } from 'socket.io';
 import { BusinessException } from '../common/types/index.js';
+import { PrometheusService } from '../prometheus/prometheus.service.js';
 
 describe('InteractionGateway', () => {
   let gateway: InteractionGateway;
@@ -55,7 +56,7 @@ describe('InteractionGateway', () => {
           },
         },
         {
-          provide: 'PrometheusService',
+          provide: PrometheusService,
           useValue: {
             incrementSocketIOConnections: jest.fn(),
             decrementSocketIOConnections: jest.fn(),
