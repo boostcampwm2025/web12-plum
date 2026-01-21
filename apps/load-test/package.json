@@ -10,6 +10,7 @@
     "test:report": "artillery run --output load-test-report.json artillery/plum-load-test.yaml && artillery report load-test-report.json",
     "k6": "k6 run k6/mediasoup-smoke.ts",
     "playwright": "playwright test",
+    "build:bundle": "esbuild node_modules/mediasoup-client/lib/index.js --bundle --format=iife --global-name=mediasoupClient --outfile=bundle-mediasoup.js",
     "phase1": "tsx playwright/phase1-orchestrator.ts",
     "phase1:host": "tsx playwright/phase1-host-only.ts",
     "phase1:audience": "artillery run artillery/phase1-audience.yaml",

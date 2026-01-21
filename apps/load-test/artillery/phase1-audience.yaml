@@ -8,9 +8,10 @@ config:
   target: "https://tiki-plum.n-e.kr"
   phases:
     # 1단계: 60초 동안 60명 입장 (초당 1명)
-    - duration: 60
-      arrivalRate: 1
-
+    # - duration: 60
+    #   arrivalRate: 1
+    - duration: 1
+      arrivalRate: 200
     # 2단계: 2분(120초) 동안 연결 유지
     - duration: 120
       arrivalRate: 0
