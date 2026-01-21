@@ -96,6 +96,10 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() data: JoinRoomRequest,
   ): Promise<JoinRoomResponse> {
     const { roomId, participantId } = data;
+    const room = await this.roomManagerService.findOne(roomId);
+    if (!room) return { success: false, error: '강의실을 찾을 수 없습니다.' };
+    if (room.status === 'pending')
+      await this.roomManagerService.updatePartial(roomId, { status: 'active' });
 
     // 재입장 여부 판단
     const pending = await this.participantManagerService.popReconnectMetadata(participantId);
