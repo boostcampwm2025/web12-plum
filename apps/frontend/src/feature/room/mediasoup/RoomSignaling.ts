@@ -5,7 +5,6 @@ import {
   MediaType,
   NewProducerPayload,
   ParticipantRole,
-  UpdateGestureStatusPayload,
   UserJoinedPayload,
 } from '@plum/shared-interfaces';
 
@@ -82,7 +81,6 @@ export const RoomSignaling = {
       addProducer: (participantId: string, type: MediaType, producerId: string) => void;
       consumeRemoteProducer: (data: NewProducerPayload) => void;
       handleMediaStateChanged: (data: MediaStateChangedPayload) => void;
-      handleUpdateGestureStatus: (data: UpdateGestureStatusPayload) => void;
     },
   ) => {
     // 참가자 입장
@@ -114,12 +112,6 @@ export const RoomSignaling = {
         `[Room] 미디어 상태 변경: ${data.participantId} [${data.type}: ${data.action}]`,
       );
       actions.handleMediaStateChanged(data);
-    });
-
-    // 제스처 상태 변경 (다른 사람이 제스처를 변경했을 때)
-    socket.on('update_gesture_status', (data) => {
-      logger.socket.info('제스처 상태 업데이트 수신', data);
-      actions.handleUpdateGestureStatus(data);
     });
   },
 
