@@ -7,6 +7,7 @@ const ALLOWED_ORIGINS = [
   'https://tiki-plum.o-r.kr',
   // 로컬 개발
   'http://localhost:5173',
+  'http://localhost:4173',
 ];
 
 export const CORS_CONFIG = {
