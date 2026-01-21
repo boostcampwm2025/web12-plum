@@ -22,6 +22,9 @@ export default defineConfig(({ mode }) => {
     build: {
       sourcemap: true,
     },
+    worker: {
+      format: 'iife',
+    },
     base: '/',
     resolve: {
       alias: {

@@ -1,7 +1,8 @@
 /// <reference lib="webworker" />
 
 const TASKS_VISION_VERSION = '0.10.22-rc.20250304';
-const WASM_BASE_URL = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${TASKS_VISION_VERSION}/wasm`;
+const WASM_BASE_URL = `https://unpkg.com/@mediapipe/tasks-vision@${TASKS_VISION_VERSION}/wasm`;
+const TASKS_VISION_BUNDLE_URL = `https://unpkg.com/@mediapipe/tasks-vision@${TASKS_VISION_VERSION}/vision_bundle.cjs`;
 const GESTURE_MODEL_URL =
   'https://storage.googleapis.com/mediapipe-models/gesture_recognizer/gesture_recognizer/float16/latest/gesture_recognizer.task';
 const POSE_MODEL_URL =
@@ -223,7 +224,7 @@ const POSE_GESTURE_DETECTORS: Array<{
   { name: 'x_sign', detector: isPoseX },
 ];
 
-type InitMessage = { type: 'init'; bundleUrl: string };
+type InitMessage = { type: 'init' };
 type FrameMessage = { type: 'frame'; frame: VideoFrame; timestamp: number };
 type WorkerMessage = InitMessage | FrameMessage;
 
@@ -239,7 +240,6 @@ let recognizer: GestureRecognizerInstance | null = null;
 let poseLandmarker: PoseLandmarkerInstance | null = null;
 let isReady = false;
 let tasksVision: TasksVisionModule | null = null;
-let tasksVisionBundleUrl: string | null = null;
 
 const loadTasksVision = () => {
   if (tasksVision) {
@@ -262,11 +262,7 @@ const loadTasksVision = () => {
     moduleShim.exports = workerGlobal.exports;
   }
 
-  if (!tasksVisionBundleUrl) {
-    throw new Error('MediaPipe 번들 URL이 설정되지 않았습니다.');
-  }
-
-  workerGlobal.importScripts(tasksVisionBundleUrl);
+  workerGlobal.importScripts(TASKS_VISION_BUNDLE_URL);
   tasksVision = (workerGlobal.module as { exports: Record<string, unknown> })
     .exports as TasksVisionModule;
   return tasksVision;
@@ -302,7 +298,6 @@ self.addEventListener('message', async (event: MessageEvent<WorkerMessage>) => {
   const payload = event.data;
 
   if (payload.type === 'init') {
-    tasksVisionBundleUrl = payload.bundleUrl;
     await initTasks();
     return;
   }

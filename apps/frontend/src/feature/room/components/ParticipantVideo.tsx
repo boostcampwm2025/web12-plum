@@ -175,11 +175,13 @@ export function ParticipantVideo({
   }, [activeStream, isVideoEnabled, mode]);
 
   useEffect(() => {
-    onVideoElementChange?.(videoRef.current);
-    return () => {
+    const videoElement = videoRef.current;
+    if (videoElement && mode !== 'minimize' && activeStream && isVideoEnabled) {
+      onVideoElementChange?.(videoElement);
+    } else {
       onVideoElementChange?.(null);
-    };
-  }, [onVideoElementChange, mode]);
+    }
+  }, [onVideoElementChange, mode, activeStream, isVideoEnabled]);
 
   return (
     <motion.div
