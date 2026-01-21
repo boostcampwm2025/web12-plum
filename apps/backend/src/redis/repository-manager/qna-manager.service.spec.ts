@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { Qna } from '@plum/shared-interfaces';
 import { QnaManagerService } from './qna-manager.service.js';
 import { RedisService } from '../redis.service.js';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 
 describe('QnaManagerService', () => {
   let service: QnaManagerService;
@@ -29,6 +30,7 @@ describe('QnaManagerService', () => {
     };
 
     const module: TestingModule = await Test.createTestingModule({
+      imports: [EventEmitterModule.forRoot()],
       providers: [
         QnaManagerService,
         {
@@ -293,6 +295,135 @@ describe('QnaManagerService', () => {
         participantName,
         text,
       });
+    });
+  });
+
+  describe('closeQna', () => {
+    const qnaId = 'qna-123';
+    const activeKey = `qna:${qnaId}:active`;
+    const answerKey = `qna:${qnaId}:answers`;
+    const answererKey = `qna:${qnaId}:answerers`;
+
+    const mockAnswers = [
+      JSON.stringify({ participantId: 'u1', participantName: 'A', text: '답변1' }),
+    ];
+
+    beforeEach(() => {
+      jest.spyOn(service as any, 'getActiveKey').mockReturnValue(activeKey);
+      jest.spyOn(service as any, 'getAnswerListKey').mockReturnValue(answerKey);
+      jest.spyOn(service as any, 'getAnswererSetKey').mockReturnValue(answererKey);
+
+      pipeline.del = jest.fn().mockReturnThis();
+      pipeline.lrange = jest.fn().mockReturnThis();
+      redisClient.del = jest.fn();
+
+      jest.spyOn(service, 'findOne').mockResolvedValue({ id: qnaId } as any);
+      jest.spyOn(service, 'updatePartial').mockResolvedValue(undefined);
+    });
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    it('성공: 질문을 종료하고 답변 목록을 반환해야 한다', async () => {
+      pipeline.exec.mockResolvedValueOnce([
+        [null, 1],
+        [null, mockAnswers],
+      ]);
+
+      const result = await service.closeQna(qnaId);
+
+      expect(result).toHaveLength(1);
+      expect(service.updatePartial).toHaveBeenCalled();
+    });
+
+    it('실패: 파이프라인 실행 중 에러가 발생하면 예외를 던져야 한다', async () => {
+      pipeline.exec.mockResolvedValueOnce([[new Error('Redis Fail'), null]]);
+
+      await expect(service.closeQna(qnaId)).rejects.toThrow('Close failed');
+    });
+
+    it('실패: 존재하지 않는 질문 ID인 경우 에러를 던져야 한다', async () => {
+      jest.spyOn(service, 'findOne').mockResolvedValue(null);
+
+      await expect(service.closeQna(qnaId)).rejects.toThrow('Qna not found');
+    });
+  });
+
+  describe('getFinalResults', () => {
+    it('종료된 질문의 경우 저장된 답변 배열을 반환해야 한다', async () => {
+      const mockAnswers = [{ participantId: 'u1', text: 'test' }];
+      jest.spyOn(service, 'findOne').mockResolvedValue({
+        status: 'ended',
+        answers: mockAnswers,
+      } as any);
+
+      const result = await service.getFinalResults('q1');
+      expect(result).toEqual(mockAnswers);
+    });
+
+    it('진행 중이거나 답변이 없는 경우 빈 배열을 반환해야 한다', async () => {
+      jest.spyOn(service, 'findOne').mockResolvedValue({ status: 'active' } as any);
+
+      const result = await service.getFinalResults('q1');
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('handleQnaAutoClose', () => {
+    const expiredKey = 'qna:qna-123:active';
+    let findOneSpy: jest.SpyInstance;
+    let closeQnaSpy: jest.SpyInstance;
+
+    beforeEach(() => {
+      (service as any).eventEmitter = { emit: jest.fn() };
+
+      findOneSpy = jest.spyOn(service, 'findOne');
+      closeQnaSpy = jest.spyOn(service, 'closeQna').mockResolvedValue([]);
+    });
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    it('성공: active 키 만료 시 이벤트를 발행해야 한다', async () => {
+      const mockQna = { id: 'qna-123', status: 'active', isPublic: true };
+      findOneSpy.mockResolvedValue(mockQna as any);
+
+      await service.handleQnaAutoClose(expiredKey);
+
+      expect(closeQnaSpy).toHaveBeenCalledWith('qna-123');
+      expect((service as any).eventEmitter.emit).toHaveBeenCalledWith(
+        'poll.autoClosed',
+        expect.objectContaining({ qnaId: 'qna-123' }),
+      );
+    });
+
+    it('무시: 만료된 키가 active가 아닌 경우 아무 작업도 하지 않아야 한다', async () => {
+      await service.handleQnaAutoClose('qna:qna-123:other');
+
+      // 이제 findOneSpy는 Mock 함수이므로 정상적으로 체크 가능합니다.
+      expect(findOneSpy).not.toHaveBeenCalled();
+    });
+
+    it('무시: 이미 종료된 질문인 경우 closeQna를 호출하지 않아야 한다', async () => {
+      findOneSpy.mockResolvedValue({ status: 'ended' } as any);
+
+      await service.handleQnaAutoClose(expiredKey);
+
+      expect(closeQnaSpy).not.toHaveBeenCalled();
+    });
+
+    it('에러 처리: closeQna 실패 시 로그를 남겨야 한다', async () => {
+      findOneSpy.mockResolvedValue({ id: 'q1', status: 'active' } as any);
+      closeQnaSpy.mockRejectedValue(new Error('Close Fail'));
+
+      // logger 역시 spyOn으로 래핑
+      const loggerSpy = jest.spyOn(service['logger'], 'error').mockImplementation();
+
+      await service.handleQnaAutoClose(expiredKey);
+
+      expect(loggerSpy).toHaveBeenCalledWith(expect.stringContaining('[AutoClose Error]'));
     });
   });
 });

@@ -24,6 +24,8 @@ describe('InteractionService (투표 및 Q&A 생성 테스트)', () => {
     findOne: jest.fn(),
     startQna: jest.fn(),
     submitAnswer: jest.fn(),
+    closeQna: jest.fn(),
+    getFinalResults: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -529,6 +531,76 @@ describe('InteractionService (투표 및 Q&A 생성 테스트)', () => {
 
       await expect(service.answer(qnaId, participantId, participantName, text)).rejects.toThrow(
         'Qna is not active',
+      );
+    });
+  });
+
+  describe('stopQna (질문 종료)', () => {
+    const qnaId = 'qna-123';
+    const mockAnswers = [
+      { participantId: 'u1', participantName: 'A', text: '답변1' },
+      { participantId: 'u2', participantName: 'B', text: '답변2' },
+    ];
+
+    beforeEach(() => {
+      mockQnaManager.closeQna = jest.fn();
+      mockQnaManager.getFinalResults = jest.fn();
+    });
+
+    it('성공: 공개 질문(isPublic: true)을 종료하면 청중과 발표자 모두 상세 답변을 받아야 한다', async () => {
+      const activeQna = { id: qnaId, status: 'active', isPublic: true };
+      mockQnaManager.findOne.mockResolvedValue(activeQna);
+      mockQnaManager.closeQna.mockResolvedValue(mockAnswers);
+
+      const result = await service.stopQna(qnaId);
+
+      const expectedPayload = {
+        qnaId,
+        count: mockAnswers.length,
+        answers: mockAnswers,
+      };
+
+      expect(mockQnaManager.closeQna).toHaveBeenCalledWith(qnaId);
+      expect(result).toEqual({
+        audience: expectedPayload,
+        presenter: expectedPayload,
+      });
+    });
+
+    it('성공: 비공개 질문(isPublic: false)을 종료하면 청중에게는 통계(ID, count)만 반환해야 한다', async () => {
+      const activeQna = { id: qnaId, status: 'active', isPublic: false };
+      mockQnaManager.findOne.mockResolvedValue(activeQna);
+      mockQnaManager.closeQna.mockResolvedValue(mockAnswers);
+
+      const result = await service.stopQna(qnaId);
+
+      expect(result).toEqual({
+        audience: { qnaId: qnaId, count: mockAnswers.length },
+        presenter: {
+          qnaId,
+          count: mockAnswers.length,
+          answers: mockAnswers,
+        },
+      });
+    });
+
+    it('성공: 이미 종료된(ended) 질문을 다시 종료하려 하면 closeQna 대신 getFinalResults를 호출해야 한다', async () => {
+      const endedQna = { id: qnaId, status: 'ended', isPublic: true };
+      mockQnaManager.findOne.mockResolvedValue(endedQna);
+      mockQnaManager.getFinalResults.mockResolvedValue(mockAnswers);
+
+      const result = await service.stopQna(qnaId);
+
+      expect(mockQnaManager.getFinalResults).toHaveBeenCalledWith(qnaId);
+      expect(mockQnaManager.closeQna).not.toHaveBeenCalled();
+      expect(result.presenter.answers).toEqual(mockAnswers);
+    });
+
+    it('실패: 존재하지 않는 질문 ID인 경우 BusinessException을 던져야 한다', async () => {
+      mockQnaManager.findOne.mockResolvedValue(null);
+
+      await expect(service.stopQna('invalid-id')).rejects.toThrow(
+        new BusinessException('존재하지 않는 투표입니다.'),
       );
     });
   });

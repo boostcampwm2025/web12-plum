@@ -31,6 +31,11 @@ import {
   EmitQnaResponse,
   AnswerRequest,
   AnswerResponse,
+  BreakQnaRequest,
+  BreakQnaResponse,
+  Answer,
+  EndQnaPayload,
+  EndQnaDetailPayload,
 } from '@plum/shared-interfaces';
 
 import { SOCKET_CONFIG } from '../common/constants/socket.constants.js';
@@ -292,11 +297,30 @@ export class InteractionGateway {
     }
   }
 
+  @SubscribeMessage('break_qna')
+  async breakQna(
+    @ConnectedSocket() socket: Socket,
+    @MessageBody() data: BreakQnaRequest,
+  ): Promise<BreakQnaResponse> {
+    try {
+      const { room } = await this.validatePresenterAction(socket.id);
+
+      const payload = await this.interactionService.stopQna(data.qnaId);
+
+      socket.to(room.id).emit('qna_end', payload.audience);
+      return { success: true, answers: payload.presenter.answers, count: payload.presenter.count };
+    } catch (error) {
+      const errorMessage =
+        error instanceof BusinessException ? error.message : '질문 종료에 실패했습니다.';
+      this.logger.error(`[break_qna] 실패:`, error);
+      return { success: false, error: errorMessage };
+    }
+  }
+
   @OnEvent('poll.autoClosed')
-  async handleAutoClosedEvent(payload: { pollId: string; options: PollOption[] }) {
+  async handleAutoClosedPollEvent(payload: { pollId: string; options: PollOption[] }) {
     try {
       const poll = await this.interactionService.getPoll(payload.pollId);
-      this.logger.log(`[auto_close_poll] 전달 ${poll.roomId}: ${poll.id}`);
 
       this.server.to(`${poll.roomId}:presenter`).emit('poll_end_detail', {
         pollId: poll.id,
@@ -306,6 +330,30 @@ export class InteractionGateway {
         pollId: poll.id,
         options: payload.options.map((o) => ({ id: o.id, count: o.count })),
       });
+      this.logger.log(`[auto_close_poll] 전달 ${poll.roomId}: ${poll.id}`);
+    } catch (error) {
+      this.logger.error(`[auto_close_poll] 전달 실패: `, error);
+    }
+  }
+
+  @OnEvent('qna.autoClosed')
+  async handleAutoClosedQnaEvent(payload: { qnaId: string; answers: Answer[] }) {
+    try {
+      const qna = await this.interactionService.getQna(payload.qnaId);
+
+      const audiencePayload: EndQnaPayload = {
+        qnaId: qna.id,
+        count: payload.answers.length,
+        ...(qna.isPublic && { answers: payload.answers }),
+      };
+      const presenterPayload: EndQnaDetailPayload = {
+        qnaId: qna.id,
+        count: payload.answers.length,
+        answers: payload.answers,
+      };
+      this.server.to(`${qna.roomId}:presenter`).emit('qna_end_detail', presenterPayload);
+      this.server.to(`${qna.roomId}:audience`).emit('qna_end', audiencePayload);
+      this.logger.log(`[auto_close_qna] 전달 ${qna.roomId}: ${qna.id}`);
     } catch (error) {
       this.logger.error(`[auto_close_poll] 전달 실패: `, error);
     }

@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { ulid } from 'ulid';
 import {
+  EndQnaDetailPayload,
+  EndQnaPayload,
   Poll,
   PollOption,
   PollPayload,
@@ -57,6 +59,7 @@ export class InteractionService {
       roomId,
       status: 'pending',
       ...dto,
+      answers: [],
       createdAt: now,
       updatedAt: now,
       startedAt: '',
@@ -210,10 +213,33 @@ export class InteractionService {
       return { audience: payload, presenter: payload };
     } else {
       return {
-        audience: {
-          qnaId: payload.qnaId,
-          count: payload.count,
-        },
+        audience: { qnaId: payload.qnaId, count: payload.count },
+        presenter: payload,
+      };
+    }
+  }
+
+  async stopQna(
+    qnaId: string,
+  ): Promise<{ audience: EndQnaPayload; presenter: EndQnaDetailPayload }> {
+    const qna = await this.qnaManagerService.findOne(qnaId);
+    if (!qna) throw new BusinessException('존재하지 않는 투표입니다.');
+
+    const answers =
+      qna.status === 'ended'
+        ? await this.qnaManagerService.getFinalResults(qnaId)
+        : await this.qnaManagerService.closeQna(qnaId);
+    const payload: EndQnaDetailPayload = {
+      qnaId: qna.id,
+      count: answers.length,
+      answers,
+    };
+
+    if (qna.isPublic) {
+      return { audience: payload, presenter: payload };
+    } else {
+      return {
+        audience: { qnaId: payload.qnaId, count: payload.count },
         presenter: payload,
       };
     }

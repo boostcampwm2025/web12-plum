@@ -324,6 +324,10 @@ export class PollManagerService extends BaseRedisRepository<Poll> {
     if (parts[parts.length - 1] !== 'active') return;
 
     const pollId = parts[1];
+
+    const poll = await this.findOne(pollId);
+    if (!poll || poll.status === 'ended') return;
+
     this.logger.log(`[Redis Expiry] 투표 ID: ${pollId} 시간 만료됨`);
 
     try {

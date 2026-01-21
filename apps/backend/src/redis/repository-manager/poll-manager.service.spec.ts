@@ -29,6 +29,7 @@ describe('PollManagerService', () => {
     redisClient = {
       pipeline: jest.fn().mockReturnValue(pipeline),
       lrange: jest.fn(),
+      hgetall: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -338,40 +339,65 @@ describe('PollManagerService', () => {
     const activeKey = `poll:${pollId}:active`;
     const mockFinalResults = [{ id: 0, count: 2, voters: [{ id: 'u1', name: 'user1' }] }];
 
+    let findOneSpy: jest.SpyInstance;
+    let closePollSpy: jest.SpyInstance;
+
     beforeEach(() => {
-      jest.spyOn(service, 'closePoll').mockResolvedValue(mockFinalResults as any);
-      jest.spyOn(eventEmitter, 'emit');
+      findOneSpy = jest.spyOn(service, 'findOne');
+      closePollSpy = jest.spyOn(service, 'closePoll');
+
+      closePollSpy.mockResolvedValue(mockFinalResults as any);
+      jest.spyOn(eventEmitter, 'emit').mockImplementation();
     });
 
-    it('만료된 키가 active 키 형식이면 closePoll을 호출하고 이벤트를 발행해야 한다', async () => {
+    afterEach(() => {
+      // 다음 테스트에 영향을 주지 않도록 스파이 해제
+      findOneSpy.mockRestore();
+      closePollSpy.mockRestore();
+    });
+
+    it('성공: 만료된 키가 active 키 형식이고 투표가 종료되지 않았다면 closePoll을 호출하고 이벤트를 발행해야 한다', async () => {
+      jest.spyOn(service, 'findOne').mockResolvedValue({ id: pollId, status: 'active' } as any);
+
       await service.handlePollAutoClose(activeKey);
 
+      expect(service.findOne).toHaveBeenCalledWith(pollId);
       expect(service.closePoll).toHaveBeenCalledWith(pollId);
-
       expect(eventEmitter.emit).toHaveBeenCalledWith('poll.autoClosed', {
         pollId,
         results: mockFinalResults,
       });
     });
 
-    it('만료된 키가 active 형식이 아니면(예: 다른 접두사) 아무 작업도 하지 않아야 한다', async () => {
-      const invalidKey = `poll:${pollId}:voters`; // active가 아님
+    it('무시: 투표의 상태가 이미 ended인 경우 로직을 수행하지 않고 중단해야 한다', async () => {
+      jest.spyOn(service, 'findOne').mockResolvedValue({ id: pollId, status: 'ended' } as any);
 
-      await service.handlePollAutoClose(invalidKey);
+      await service.handlePollAutoClose(activeKey);
 
+      expect(service.findOne).toHaveBeenCalledWith(pollId);
       expect(service.closePoll).not.toHaveBeenCalled();
       expect(eventEmitter.emit).not.toHaveBeenCalled();
     });
 
-    it('키 구조가 올바르지 않으면 아무 작업도 하지 않아야 한다', async () => {
-      const wrongFormatKey = 'something:broken';
+    it('무시: 투표 정보가 존재하지 않는 경우 중단해야 한다', async () => {
+      jest.spyOn(service, 'findOne').mockResolvedValue(null);
 
-      await service.handlePollAutoClose(wrongFormatKey);
+      await service.handlePollAutoClose(activeKey);
 
       expect(service.closePoll).not.toHaveBeenCalled();
     });
 
-    it('closePoll 실패 시 에러를 로그로 남겨야 한다 (예외가 밖으로 던져지지 않음)', async () => {
+    it('무시: 만료된 키가 active 형식이 아니면 아무 작업도 하지 않아야 한다', async () => {
+      const invalidKey = `poll:${pollId}:voters`;
+
+      await service.handlePollAutoClose(invalidKey);
+
+      expect(service.findOne).not.toHaveBeenCalled();
+      expect(service.closePoll).not.toHaveBeenCalled();
+    });
+
+    it('에러 처리: closePoll 실패 시 에러 로그를 남겨야 한다', async () => {
+      jest.spyOn(service, 'findOne').mockResolvedValue({ id: pollId, status: 'active' } as any);
       jest.spyOn(service, 'closePoll').mockRejectedValue(new Error('Close Fail'));
       const loggerSpy = jest.spyOn(service['logger'], 'error');
 

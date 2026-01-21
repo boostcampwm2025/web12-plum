@@ -92,6 +92,10 @@ export interface BreakPollRequest {
   pollId: string;
 }
 
+export interface BreakQnaRequest {
+  qnaId: string;
+}
+
 // 클라이언트에서 보낸 요청에 따라 발생하는 이벤트 페이로드
 
 export interface BaseResponse {
@@ -188,6 +192,10 @@ export type BreakPollResponse =
   | (BaseResponse & { success: false })
   | { success: true; options: PollOption[] };
 
+export type BreakQnaResponse =
+  | (BaseResponse & { success: false })
+  | { success: true; answers: Answer[]; count: number };
+
 // 서버에서 보내는 브로드캐스트 페이로드
 export type UserJoinedPayload = ParticipantPayload;
 
@@ -243,6 +251,19 @@ export interface EndPollDetailPayload {
   options: PollOption[];
 }
 
+export interface EndQnaDetailPayload {
+  qnaId: string;
+  count: number;
+  answers: Answer[];
+}
+
+export type EndQnaPayload =
+  | {
+      qnaId: string;
+      count: number;
+    }
+  | EndQnaDetailPayload;
+
 /**
  * 서버 -> 클라이언트 이벤트
  */
@@ -274,6 +295,10 @@ export interface ServerToClientEvents {
   poll_end: (data: EndPollPayload) => void;
 
   poll_end_detail: (data: EndPollDetailPayload) => void;
+
+  qna_end: (data: EndQnaPayload) => void;
+
+  qna_end_detail: (data: EndQnaDetailPayload) => void;
 }
 
 /**
@@ -325,4 +350,6 @@ export interface ClientToServerEvents {
   answer: (data: AnswerRequest, cb: (res: AnswerResponse) => void) => void;
 
   break_poll: (data: BreakPollRequest, cb: (res: BreakPollResponse) => void) => void;
+
+  break_qna: (data: BreakQnaRequest, cb: (res: BreakQnaResponse) => void) => void;
 }

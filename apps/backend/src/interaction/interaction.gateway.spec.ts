@@ -57,6 +57,7 @@ describe('InteractionGateway', () => {
             getQnas: jest.fn(),
             startQna: jest.fn(),
             answer: jest.fn(),
+            stopQna: jest.fn(),
           },
         },
       ],
@@ -427,7 +428,7 @@ describe('InteractionGateway', () => {
     });
 
     it('이벤트를 받으면 해당 방의 발표자와 청중에게 알맞은 데이터를 브로드캐스트해야 한다', async () => {
-      await gateway.handleAutoClosedEvent(mockPayload);
+      await gateway.handleAutoClosedPollEvent(mockPayload);
 
       expect(interactionService.getPoll).toHaveBeenCalledWith(mockPayload.pollId);
 
@@ -453,7 +454,7 @@ describe('InteractionGateway', () => {
       const loggerSpy = jest.spyOn((gateway as any).logger, 'error');
       jest.spyOn(interactionService, 'getPoll').mockRejectedValue(new Error('Poll Missing'));
 
-      await gateway.handleAutoClosedEvent(mockPayload);
+      await gateway.handleAutoClosedPollEvent(mockPayload);
 
       expect(loggerSpy).toHaveBeenCalledWith(
         expect.stringContaining('[auto_close_poll] 전달 실패:'),
@@ -662,6 +663,120 @@ describe('InteractionGateway', () => {
         success: false,
         error: '투표에 실패했습니다.',
       });
+    });
+  });
+
+  describe('break_qna (질문 종료)', () => {
+    const breakQnaDto = { qnaId: 'qna-123' };
+
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it('성공: 질문을 종료하고 청중에게 알림을 보낸 뒤 발표자에게 상세 답변 리스트를 반환해야 한다', async () => {
+      const mockRoom = { id: 'room-1' };
+      const mockPayload = {
+        audience: { qnaId: 'qna-123', count: 2, answers: [{ text: '답변' }] }, // 공개 질문 가정
+        presenter: { qnaId: 'qna-123', count: 2, answers: [{ text: '답변' }] },
+      };
+
+      jest.spyOn(gateway as any, 'validatePresenterAction').mockResolvedValue({ room: mockRoom });
+      jest.spyOn(interactionService, 'stopQna').mockResolvedValue(mockPayload as any);
+
+      const mockEmit = jest.fn();
+      mockSocket.to = jest.fn().mockReturnValue({ emit: mockEmit });
+
+      const result = await gateway.breakQna(mockSocket, breakQnaDto);
+
+      expect(interactionService.stopQna).toHaveBeenCalledWith(breakQnaDto.qnaId);
+      expect(mockSocket.to).toHaveBeenCalledWith(mockRoom.id);
+      expect(mockEmit).toHaveBeenCalledWith('qna_end', mockPayload.audience);
+
+      expect(result).toEqual({
+        success: true,
+        answers: mockPayload.presenter.answers,
+        count: mockPayload.presenter.count,
+      });
+    });
+
+    it('실패: BusinessException 발생 시 해당 에러 메시지를 반환해야 한다', async () => {
+      jest
+        .spyOn(gateway as any, 'validatePresenterAction')
+        .mockResolvedValue({ room: { id: 'r1' } });
+      jest
+        .spyOn(interactionService, 'stopQna')
+        .mockRejectedValue(new BusinessException('종료할 수 없는 질문입니다.'));
+
+      const result = await gateway.breakQna(mockSocket, breakQnaDto);
+
+      expect(result).toEqual({
+        success: false,
+        error: '종료할 수 없는 질문입니다.',
+      });
+    });
+  });
+
+  describe('handleAutoClosedQnaEvent (질문 자동 종료 이벤트)', () => {
+    const mockEventPayload = {
+      qnaId: 'qna-123',
+      answers: [{ participantId: 'u1', participantName: 'u1', text: '답변 내용' }],
+    };
+
+    beforeEach(() => {
+      (gateway as any).server = {
+        to: jest.fn().mockReturnValue({ emit: jest.fn() }),
+      };
+      jest.clearAllMocks();
+    });
+
+    it('성공(공개 질문): isPublic이 true면 청중에게 answers를 포함하여 브로드캐스트해야 한다', async () => {
+      const mockQna = { id: 'qna-123', roomId: 'r1', isPublic: true };
+      jest.spyOn(interactionService, 'getQna').mockResolvedValue(mockQna as any);
+
+      await gateway.handleAutoClosedQnaEvent(mockEventPayload);
+
+      expect((gateway as any).server.to).toHaveBeenCalledWith('r1:presenter');
+      expect((gateway as any).server.to('r1:presenter').emit).toHaveBeenCalledWith(
+        'qna_end_detail',
+        expect.objectContaining({ answers: mockEventPayload.answers }),
+      );
+
+      expect((gateway as any).server.to).toHaveBeenCalledWith('r1:audience');
+      expect((gateway as any).server.to('r1:audience').emit).toHaveBeenCalledWith(
+        'qna_end',
+        expect.objectContaining({ answers: mockEventPayload.answers }),
+      );
+    });
+
+    it('성공(비공개 질문): isPublic이 false면 청중 페이로드에 answers가 없어야 한다', async () => {
+      const mockQna = { id: 'qna-123', roomId: 'r1', isPublic: false };
+      jest.spyOn(interactionService, 'getQna').mockResolvedValue(mockQna as any);
+
+      await gateway.handleAutoClosedQnaEvent(mockEventPayload);
+
+      expect((gateway as any).server.to).toHaveBeenCalledWith('r1:presenter');
+      expect((gateway as any).server.to('r1:presenter').emit).toHaveBeenCalledWith(
+        'qna_end_detail',
+        expect.objectContaining({ answers: mockEventPayload.answers }),
+      );
+
+      expect((gateway as any).server.to).toHaveBeenCalledWith('r1:audience');
+      expect((gateway as any).server.to('r1:audience').emit).toHaveBeenCalledWith(
+        'qna_end',
+        expect.not.objectContaining({ answers: expect.anything() }), // answers 필드가 없어야 함
+      );
+    });
+
+    it('실패: 데이터 조회 실패 시 에러 로그를 남겨야 한다', async () => {
+      const loggerSpy = jest.spyOn((gateway as any).logger, 'error');
+      jest.spyOn(interactionService, 'getQna').mockRejectedValue(new Error('Fetch Fail'));
+
+      await gateway.handleAutoClosedQnaEvent(mockEventPayload);
+
+      expect(loggerSpy).toHaveBeenCalledWith(
+        expect.stringContaining('[auto_close_poll] 전달 실패:'),
+        expect.any(Error),
+      );
     });
   });
 });

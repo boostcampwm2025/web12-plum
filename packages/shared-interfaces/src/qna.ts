@@ -70,6 +70,7 @@ export interface Qna {
   updatedAt: string;
   startedAt: string;
   endedAt: string;
+  answers: Answer[];
 }
 
 export interface QnaPayload {

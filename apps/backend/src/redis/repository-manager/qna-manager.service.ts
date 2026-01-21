@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { Qna } from '@plum/shared-interfaces';
+import { Answer, Qna } from '@plum/shared-interfaces';
+import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 import { TTL_BOUNDS } from '../redis.constants.js';
 import { RedisService } from '../redis.service.js';
 import { BaseRedisRepository } from './base-redis.repository.js';
@@ -8,7 +9,10 @@ import { BaseRedisRepository } from './base-redis.repository.js';
 export class QnaManagerService extends BaseRedisRepository<Qna> {
   protected readonly keyPrefix = 'qna:';
 
-  constructor(redisService: RedisService) {
+  constructor(
+    redisService: RedisService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {
     super(redisService, QnaManagerService.name);
   }
 
@@ -200,6 +204,83 @@ export class QnaManagerService extends BaseRedisRepository<Qna> {
       this.logger.error(`[SubmitAnswer] Error: Qna ${qnaId}. Rollback executed.`, error.stack);
       await client.srem(answererKey, participantId);
       throw error;
+    }
+  }
+
+  /**
+   * 질문 종료
+   */
+  async closeQna(qnaId: string): Promise<Answer[]> {
+    const client = this.redisService.getClient();
+    const activeKey = this.getActiveKey(qnaId);
+    const answerKey = this.getAnswerListKey(qnaId);
+    const answererKey = this.getAnswererSetKey(qnaId);
+
+    const qna: Qna | null = await this.findOne(qnaId);
+    if (!qna) {
+      throw new Error('Qna not found');
+    }
+
+    try {
+      const pipeline = client.pipeline();
+      pipeline.del(activeKey);
+      pipeline.lrange(answerKey, 0, -1);
+
+      const results = await pipeline.exec();
+      if (!results || results.some(([err]) => err !== null)) throw new Error('Close failed');
+
+      const rawAnswers = (results[1][1] as string[]) || [];
+      const answers: Answer[] = rawAnswers.map((raw) => JSON.parse(raw));
+
+      await this.updatePartial(qnaId, {
+        status: 'ended',
+        answers,
+        updatedAt: new Date().toISOString(),
+      });
+
+      await client.del(answererKey);
+
+      this.logger.log(`[CloseQna] Successfully closed: ${qnaId}, Total answers: ${answers.length}`);
+      return answers;
+    } catch (error) {
+      this.logger.error(`[CloseQna] Failed to close qna ${qnaId}`, error.stack);
+      throw error;
+    }
+  }
+
+  /**
+   * 이미 종료된 질문의 결과를 조회 (저장된 answers 배열 반환)
+   */
+  async getFinalResults(qnaId: string): Promise<Answer[]> {
+    const qna = await this.findOne(qnaId);
+    if (!qna || qna.status !== 'ended' || !qna.answers) return [];
+
+    return qna.answers;
+  }
+
+  @OnEvent('redis.expired.qna:*')
+  async handleQnaAutoClose(key: string) {
+    const parts = key.split(':');
+
+    // 마지막 요소가 active인 경우에만 처리 (Shadow Key 역할)
+    if (parts[parts.length - 1] !== 'active') return;
+
+    const qnaId = parts[1];
+
+    const qna = await this.findOne(qnaId);
+    if (!qna || qna.status === 'ended') return;
+
+    this.logger.log(`[Redis Expiry] 질문 ID: ${qnaId} 시간 만료됨`);
+
+    try {
+      const finalResults = await this.closeQna(qnaId);
+
+      this.eventEmitter.emit('poll.autoClosed', {
+        qnaId,
+        answers: finalResults,
+      });
+    } catch (error) {
+      this.logger.error(`[AutoClose Error] ${qnaId}: ${error.message}`);
     }
   }
 }
