@@ -9,8 +9,6 @@ services:
     container_name: plum-backend-develop
     ports:
       - "${BACKEND_PORT:-3000}:3000" # 호스트 포트를 환경변수로 관리 (기본값: 3000)
-      - "40000-49999:40000-49999/udp" # WebRTC 미디어 스트림 (UDP)
-      - "40000-49999:40000-49999/tcp" # WebRTC 미디어 스트림 (TCP fallback)
     env_file:
       - .env
     environment:
