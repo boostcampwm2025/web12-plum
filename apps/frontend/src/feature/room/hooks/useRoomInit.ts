@@ -5,6 +5,7 @@ import { logger } from '@/shared/lib/logger';
 import { useMediaDeviceStore } from '@/store/useMediaDeviceStore';
 import { useStreamStore } from '@/store/useLocalStreamStore';
 import { useSocketStore } from '@/store/useSocketStore';
+import { useToastStore } from '@/store/useToastStore';
 
 import { useRoomStore } from '../stores/useRoomStore';
 import { useMediaStore } from '../stores/useMediaStore';
@@ -43,6 +44,7 @@ export function useRoomInit() {
   );
   const { removeRemoteStreamByParticipant } = useMediaStore((state) => state.actions);
   const { connect: connectSocket } = useSocketStore((state) => state.actions);
+  const { addToast } = useToastStore((state) => state.actions);
 
   // 미디어 컨트롤러
   const {
@@ -51,6 +53,14 @@ export function useRoomInit() {
     consumeExistingAudioProducers,
     cleanup: cleanupMedia,
   } = useMediaConnectionContext();
+
+  const resolveParticipantName = (participantId: string) => {
+    const { participants, myInfo } = useRoomStore.getState();
+    const participant = participants.get(participantId);
+    if (participant?.name) return participant.name;
+    if (myInfo?.id === participantId && myInfo.name) return myInfo.name;
+    return '굴러 들어온 자두';
+  };
 
   /**
    * 메인 초기화 파이프라인
@@ -78,6 +88,10 @@ export function useRoomInit() {
           if (data.action === 'pause') {
             removeRemoteStreamByParticipant(data.participantId, data.type);
           }
+        },
+        handleUpdateGestureStatus: (data) => {
+          const name = resolveParticipantName(data.participantId);
+          addToast({ type: 'gesture', title: name, gesture: data.gesture });
         },
       });
 

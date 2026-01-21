@@ -12,9 +12,15 @@ interface ParticipantGridProps {
   videoMode: VideoDisplayMode;
   currentUser: MyInfo;
   onModeChange?: (mode: VideoDisplayMode) => void;
+  onCurrentUserVideoElementChange?: (element: HTMLVideoElement | null) => void;
 }
 
-export function ParticipantGrid({ videoMode, currentUser, onModeChange }: ParticipantGridProps) {
+export function ParticipantGrid({
+  videoMode,
+  currentUser,
+  onModeChange,
+  onCurrentUserVideoElementChange,
+}: ParticipantGridProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   const isCameraOn = useMediaStore((state) => state.isCameraOn);
@@ -54,6 +60,7 @@ export function ParticipantGrid({ videoMode, currentUser, onModeChange }: Partic
           onModeChange={onModeChange}
           stream={localStream}
           isCameraOn={isCameraOn}
+          onVideoElementChange={onCurrentUserVideoElementChange}
         />
 
         {/* 이전 페이지 버튼 */}

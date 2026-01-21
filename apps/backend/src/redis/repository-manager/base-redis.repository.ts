@@ -161,6 +161,26 @@ export abstract class BaseRedisRepository<T extends { id: string } & Record<stri
     }
   }
 
+  addUpdatePartialToPipeline(
+    pipeline: ChainableCommander,
+    id: string,
+    partialData: Partial<T>,
+  ): void {
+    const key = this.createKey(id);
+    const flatData = Object.entries(partialData).reduce(
+      (acc, [k, v]) => {
+        if (v === null || v === undefined) return acc;
+        acc[k] = typeof v === 'object' ? JSON.stringify(v) : String(v);
+        return acc;
+      },
+      {} as Record<string, string>,
+    );
+
+    if (Object.keys(flatData).length > 0) {
+      pipeline.hset(key, flatData);
+    }
+  }
+
   async delete(id: string): Promise<void> {
     const key = this.createKey(id);
     try {

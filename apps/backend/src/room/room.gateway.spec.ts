@@ -9,8 +9,7 @@ import {
   RoomManagerService,
   ParticipantManagerService,
 } from '../redis/repository-manager/index.js';
-import { SocketMetadataService, SocketDeletionMetadataService } from '../common/services/index.js';
-import { SOCKET_TIMEOUT } from '../common/constants/socket.constants.js';
+import { SocketMetadataService } from '../common/services/index.js';
 import { RoomService } from './room.service.js';
 
 describe('RoomGateway', () => {
@@ -18,7 +17,6 @@ describe('RoomGateway', () => {
   let mediasoupService: MediasoupService;
   let participantManager: ParticipantManagerService;
   let socketMetadataService: SocketMetadataService;
-  let socketDeletionMetadataService: SocketDeletionMetadataService;
   let roomManager: RoomManagerService;
 
   const createMockSocket = (id: string = 'socket-123') =>
@@ -27,6 +25,7 @@ describe('RoomGateway', () => {
       join: jest.fn(),
       to: jest.fn().mockReturnThis(),
       emit: jest.fn(),
+      leave: jest.fn(),
     }) as unknown as Socket;
 
   beforeEach(async () => {
@@ -101,19 +100,12 @@ describe('RoomGateway', () => {
           useValue: {
             findOne: jest.fn(),
             updatePartial: jest.fn(),
+            popReconnectMetadata: jest.fn(),
+            setReconnectPending: jest.fn(),
           },
         },
         {
           provide: SocketMetadataService,
-          useValue: {
-            get: jest.fn(),
-            set: jest.fn(),
-            delete: jest.fn(),
-            has: jest.fn(),
-          },
-        },
-        {
-          provide: SocketDeletionMetadataService,
           useValue: {
             get: jest.fn(),
             set: jest.fn(),
@@ -128,9 +120,6 @@ describe('RoomGateway', () => {
     mediasoupService = module.get<MediasoupService>(MediasoupService);
     participantManager = module.get<ParticipantManagerService>(ParticipantManagerService);
     socketMetadataService = module.get<SocketMetadataService>(SocketMetadataService);
-    socketDeletionMetadataService = module.get<SocketDeletionMetadataService>(
-      SocketDeletionMetadataService,
-    );
     roomManager = module.get<RoomManagerService>(RoomManagerService);
 
     (gateway as any).server = {
@@ -280,43 +269,115 @@ describe('RoomGateway', () => {
     });
   });
 
-  // 6. 연결 해제 및 정리 (cleanup)
-  describe('cleanupSocket', () => {
-    beforeEach(() => {
-      jest.useFakeTimers();
-    });
-
-    afterEach(() => {
-      jest.useRealTimers();
-    });
-
-    it('연결 해제 시 모든 미디어 리소스와 Redis 정보를 정리해야 함', async () => {
+  // 비정상 퇴장 시 Redis 예약 테스트
+  describe('handleDisconnect', () => {
+    it('소켓 연결이 끊기면 Redis에 15초 타이머와 메타데이터를 예약해야 함', async () => {
       const socket = createMockSocket();
-      const transportIds = ['t-1', 't-2'];
-      jest.spyOn(socketMetadataService, 'get').mockReturnValue({
-        roomId: 'room-1',
-        participantId: 'user-1',
-        transportIds,
-      });
+      const metadata = { roomId: 'room-1', participantId: 'user-1', transportIds: ['t1'] };
 
-      const mockParticipant = { id: 'user-1', producers: { video: 'p-1' }, consumers: ['c-1'] };
-      jest.spyOn(participantManager, 'findOne').mockResolvedValue(mockParticipant as any);
+      jest.spyOn(socketMetadataService, 'get').mockReturnValue(metadata);
+      const setPendingSpy = jest
+        .spyOn(participantManager, 'setReconnectPending')
+        .mockResolvedValue(undefined);
+      const deleteMetaSpy = jest.spyOn(socketMetadataService, 'delete');
 
       await gateway.handleDisconnect(socket);
 
-      expect(mediasoupService.closeTransport).not.toHaveBeenCalled();
-      expect(socketDeletionMetadataService.set).toHaveBeenCalledWith(
+      expect(setPendingSpy).toHaveBeenCalledWith('user-1', metadata);
+      expect(deleteMetaSpy).toHaveBeenCalledWith(socket.id);
+    });
+  });
+
+  // Redis 만료 이벤트 발생 시 최종 정리 테스트
+  describe('handleReconnectExpired', () => {
+    it('Redis TTL 만료 이벤트가 발생하면 cleanup을 수행해야 함', async () => {
+      const participantId = 'user-1';
+      const redisKey = `reconnect:pending:${participantId}`;
+      const metadata = { roomId: 'room-1', participantId: 'user-1', transportIds: ['t1', 't2'] };
+      const mockParticipant = {
+        id: 'user-1',
+        name: '홍길동',
+        producers: { v: 'p1' },
+        consumers: [],
+      };
+
+      jest.spyOn(participantManager, 'popReconnectMetadata').mockResolvedValue(metadata);
+      jest.spyOn(participantManager, 'findOne').mockResolvedValue(mockParticipant as any);
+
+      const removeParticipantSpy = jest
+        .spyOn(roomManager, 'removeParticipant')
+        .mockResolvedValue(undefined);
+      const closeTransportSpy = jest.spyOn(mediasoupService, 'closeTransport');
+
+      await gateway.handleReconnectExpired(redisKey);
+
+      expect((gateway as any).server.to).toHaveBeenCalledWith('room-1');
+      expect((gateway as any).server.emit).toHaveBeenCalledWith('user_left', expect.any(Object));
+
+      expect(closeTransportSpy).toHaveBeenCalledTimes(2);
+
+      expect(removeParticipantSpy).toHaveBeenCalledWith('room-1', participantId);
+    });
+  });
+
+  // 재접속(Reconnect) 성공 시나리오 테스트
+  describe('handleJoinRoom - Reconnect Scenario', () => {
+    it('재접속한 유저인 경우 이전 리소스를 정리하고 이벤트를 브로드캐스트하지 않아야 함', async () => {
+      const socket = createMockSocket();
+      const data = { roomId: 'room-1', participantId: 'user-1' };
+      const pendingMetadata = { ...data, transportIds: ['old-t1'] };
+      const mockParticipant = {
+        id: 'user-1',
+        name: '홍길동',
+        role: 'student',
+        producers: { video: 'p1', audio: 'a1', screen: '' },
+        consumers: ['c1'],
+      };
+
+      jest.spyOn(participantManager, 'popReconnectMetadata').mockResolvedValue(pendingMetadata);
+      jest.spyOn(participantManager, 'findOne').mockResolvedValue(mockParticipant as any);
+
+      const updateSpy = jest
+        .spyOn(participantManager, 'updatePartial')
+        .mockResolvedValue(undefined);
+      const closeTransportSpy = jest.spyOn(mediasoupService, 'closeTransport');
+
+      await gateway.handleJoinRoom(socket, data);
+
+      expect(updateSpy).toHaveBeenCalledWith(
         'user-1',
         expect.objectContaining({
-          socketId: socket.id,
-          roomId: 'room-1',
+          producers: { video: '', audio: '', screen: '' },
         }),
       );
 
-      await jest.advanceTimersByTimeAsync(SOCKET_TIMEOUT);
+      expect(closeTransportSpy).toHaveBeenCalledWith('old-t1');
 
+      expect(socket.to).not.toHaveBeenCalled();
+    });
+  });
+
+  // 정상 퇴장(Leave Room) 테스트
+  describe('handleLeaveRoom', () => {
+    it('정상 퇴장 시 즉시 cleanup을 수행하고 소켓을 방에서 나가게 해야 함', async () => {
+      const socket = createMockSocket();
+      const metadata = { roomId: 'room-1', participantId: 'user-1', transportIds: ['t1'] };
+      const mockParticipant = {
+        id: 'user-1',
+        name: '홍길동',
+        producers: {},
+        consumers: [],
+      };
+
+      jest.spyOn(socketMetadataService, 'get').mockReturnValue(metadata);
+      jest.spyOn(participantManager, 'findOne').mockResolvedValue(mockParticipant as any);
+      jest.spyOn(roomManager, 'removeParticipant').mockResolvedValue(undefined);
+
+      await gateway.handleLeaveRoom(socket);
+
+      expect(socket.leave).toHaveBeenCalledWith('room-1');
+      expect(roomManager.removeParticipant).toHaveBeenCalledWith('room-1', 'user-1');
       expect(socketMetadataService.delete).toHaveBeenCalledWith(socket.id);
-      expect(socketDeletionMetadataService.delete).toHaveBeenCalledWith('user-1');
     });
   });
 

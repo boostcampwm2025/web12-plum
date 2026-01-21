@@ -16,12 +16,14 @@ const scheduledVotes: Poll[] = [
     status: 'pending',
     title: '오늘 저녁 메뉴로 가장 적절한 것은?',
     options: [
-      { id: 1, value: '삼겹살에 된장찌개', count: 0 },
-      { id: 2, value: '연어 포케', count: 0 },
+      { id: 1, value: '삼겹살에 된장찌개', count: 0, voters: [] },
+      { id: 2, value: '연어 포케', count: 0, voters: [] },
     ],
     timeLimit: 180,
     createdAt: '2024-08-01T09:00:00.000Z',
     updatedAt: '2024-08-01T09:00:00.000Z',
+    startedAt: '',
+    endedAt: '',
   },
   {
     id: 'poll-2',
@@ -29,12 +31,14 @@ const scheduledVotes: Poll[] = [
     status: 'pending',
     title: '다음 팀 회의 날짜는 언제가 좋을까요?',
     options: [
-      { id: 1, value: '수요일 오후', count: 0 },
-      { id: 2, value: '금요일 오전', count: 0 },
+      { id: 1, value: '수요일 오후', count: 0, voters: [] },
+      { id: 2, value: '금요일 오전', count: 0, voters: [] },
     ],
     timeLimit: 300,
     createdAt: '2024-08-01T10:00:00.000Z',
     updatedAt: '2024-08-01T10:00:00.000Z',
+    startedAt: '',
+    endedAt: '',
   },
 ];
 
@@ -44,13 +48,15 @@ const activeVote: Poll | null = {
   status: 'active',
   title: '오늘 저녁 메뉴로 가장 적절한 것은?',
   options: [
-    { id: 1, value: '삼겹살에 된장찌개', count: 12 },
-    { id: 2, value: '연어 포케', count: 7 },
-    { id: 3, value: '토마토 파스타', count: 10 },
+    { id: 1, value: '삼겹살에 된장찌개', count: 12, voters: [] },
+    { id: 2, value: '연어 포케', count: 7, voters: [] },
+    { id: 3, value: '토마토 파스타', count: 10, voters: [] },
   ],
   timeLimit: 300,
   createdAt: '2024-08-01T11:00:00.000Z',
   updatedAt: '2024-08-01T11:00:00.000Z',
+  startedAt: '2024-08-01T11:00:00.000Z',
+  endedAt: '',
 };
 
 const activeStartedAt = Date.now();
@@ -62,12 +68,14 @@ const completedVotes: Poll[] = [
     status: 'ended',
     title: '지난 회의 만족도는 어땠나요?',
     options: [
-      { id: 1, value: '만족', count: 18 },
-      { id: 2, value: '보통', count: 5 },
+      { id: 1, value: '만족', count: 18, voters: [] },
+      { id: 2, value: '보통', count: 5, voters: [] },
     ],
     timeLimit: 120,
     createdAt: '2024-08-01T08:00:00.000Z',
     updatedAt: '2024-08-01T08:30:00.000Z',
+    startedAt: '2024-08-01T08:30:00.000Z',
+    endedAt: '2024-08-01T08:30:00.000Z',
   },
 ];
 

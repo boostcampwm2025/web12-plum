@@ -7,8 +7,57 @@ import { MediaType, ParticipantRole } from '@plum/shared-interfaces';
 import { useMediaConnectionContext } from '../hooks/useMediaConnectionContext';
 import { logger } from '@/shared/lib/logger';
 import { useMediaStore } from '../stores/useMediaStore';
+import { useGestureStore } from '../stores/useGestureStore';
+import { GESTURE_ICON_MAP } from '@/shared/constants/gesture';
 
 export type VideoDisplayMode = 'minimize' | 'pip' | 'side';
+
+function GestureProgressOverlay() {
+  const gestureProgress = useGestureStore((state) => state.gestureProgress);
+  const gesture = gestureProgress.gesture;
+  const progress = gestureProgress.progress;
+
+  if (!gesture || progress <= 0) {
+    return null;
+  }
+
+  const gestureIconName = GESTURE_ICON_MAP[gesture] ?? null;
+  const progressRatio = Math.min(1, Math.max(0, progress));
+  const progressPercent = Math.round(progressRatio * 100);
+
+  return (
+    <div className="pointer-events-none absolute right-2 bottom-2">
+      <div className="flex items-center gap-2 rounded-full bg-gray-700/80 p-2">
+        {gestureIconName && (
+          <div className="relative inline-flex items-center justify-center">
+            <Icon
+              name={gestureIconName}
+              size={24}
+              className="fill-current text-white/50"
+              decorative
+            />
+            <motion.div
+              className="absolute inset-0 overflow-hidden"
+              initial={{ clipPath: 'inset(0 100% 0 0)' }}
+              animate={{ clipPath: `inset(0 ${100 - progressPercent}% 0 0)` }}
+              transition={{
+                duration: 0.2,
+                ease: 'linear',
+              }}
+            >
+              <Icon
+                name={gestureIconName}
+                size={24}
+                className="text-primary fill-current"
+                decorative
+              />
+            </motion.div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 const VIDEO_HEIGHTS = {
   MINIMIZED: 36,
@@ -42,6 +91,7 @@ export interface ParticipantVideoProps {
   participantRole?: ParticipantRole;
   isActive?: boolean;
   isCurrentlyVisible?: boolean;
+  onVideoElementChange?: (element: HTMLVideoElement | null) => void;
 }
 
 export function ParticipantVideo({
@@ -56,6 +106,7 @@ export function ParticipantVideo({
   participantRole,
   isActive = true,
   isCurrentlyVisible = true,
+  onVideoElementChange,
 }: ParticipantVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const { consumeRemoteProducer, stopConsuming } = useMediaConnectionContext();
@@ -123,6 +174,13 @@ export function ParticipantVideo({
     }
   }, [activeStream, isVideoEnabled, mode]);
 
+  useEffect(() => {
+    onVideoElementChange?.(videoRef.current);
+    return () => {
+      onVideoElementChange?.(null);
+    };
+  }, [onVideoElementChange, mode]);
+
   return (
     <motion.div
       layout="position"
@@ -163,6 +221,9 @@ export function ParticipantVideo({
             />
           </div>
         ))}
+
+      {/* 제스처 인식 프로그레스바 */}
+      {mode !== 'minimize' && isCurrentUser && <GestureProgressOverlay />}
 
       {/* 이름 표시 */}
       <div className="absolute bottom-2 left-2 rounded px-1 text-sm text-white">{name}</div>

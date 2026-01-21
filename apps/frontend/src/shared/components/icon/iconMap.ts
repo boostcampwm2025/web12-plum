@@ -36,6 +36,21 @@ import iconsUpload from '@/assets/icons/upload.svg?react';
 import iconsUsers from '@/assets/icons/users.svg?react';
 import iconsVote from '@/assets/icons/vote.svg?react';
 import iconsX from '@/assets/icons/x.svg?react';
+import iconsGestureO from '@/assets/icons/gesture/o.svg?react';
+import iconsGestureX from '@/assets/icons/gesture/x.svg?react';
+
+import iconsThumbsDown from '@/assets/icons/gesture/thumbs-down.svg?react';
+import iconsThumbsUp from '@/assets/icons/gesture/thumbs-up.svg?react';
+import iconsHandRaise from '@/assets/icons/gesture/hand-raise.svg?react';
+import iconsCircleCheck from '@/assets/icons/gesture/circle-check.svg?react';
+import iconOne from '@/assets/icons/gesture/one.svg?react';
+import iconTwo from '@/assets/icons/gesture/two.svg?react';
+import iconThree from '@/assets/icons/gesture/three.svg?react';
+import iconFour from '@/assets/icons/gesture/four.svg?react';
+import iconsToastCheck from '@/assets/icons/gesture/toast-check.svg?react';
+import iconsToastExclamation from '@/assets/icons/gesture/toast-exclamation.svg?react';
+import iconsToastGesture from '@/assets/icons/gesture/toast-gesture.svg?react';
+import iconsToastInfo from '@/assets/icons/gesture/toast-info.svg?react';
 
 import type { ComponentType, SVGProps } from 'react';
 
@@ -78,6 +93,22 @@ export const iconMap = {
   users: iconsUsers,
   vote: iconsVote,
   x: iconsX,
+
+  // hand gesture icons
+  'thumbs-down': iconsThumbsDown,
+  'thumbs-up': iconsThumbsUp,
+  'hand-raise': iconsHandRaise,
+  'circle-check': iconsCircleCheck,
+  one: iconOne,
+  two: iconTwo,
+  three: iconThree,
+  four: iconFour,
+  'gesture-o': iconsGestureO,
+  'gesture-x': iconsGestureX,
+  'toast-check': iconsToastCheck,
+  'toast-exclamation': iconsToastExclamation,
+  'toast-gesture': iconsToastGesture,
+  'toast-info': iconsToastInfo,
 };
 
 export type IconName = keyof typeof iconMap;

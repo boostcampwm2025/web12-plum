@@ -1,5 +1,8 @@
+import { z } from 'zod';
+
 import { ParticipantPayload, ParticipantRole } from './participant.js';
 import { MediaKind, MediasoupProducer, MediaType, RoomInfo, ToggleActionType } from './shared.js';
+import { Poll, pollFormSchema, PollOption, PollPayload } from './poll.js';
 
 // 제스처 타입 정의
 export type GestureType =
@@ -62,6 +65,21 @@ export interface ActionGestureRequest {
   gesture: GestureType;
 }
 
+export type CreatePollRequest = z.infer<typeof pollFormSchema>;
+
+export interface EmitPollRequest {
+  pollId: string;
+}
+
+export interface VoteRequest {
+  pollId: string;
+  optionId: number;
+}
+
+export interface BreakPollRequest {
+  pollId: string;
+}
+
 // 클라이언트에서 보낸 요청에 따라 발생하는 이벤트 페이로드
 
 export interface BaseResponse {
@@ -122,6 +140,27 @@ export type LeaveRoomResponse = BaseResponse;
 
 export type BreakRoomResponse = BaseResponse;
 
+export type ActionGestureResponse = BaseResponse;
+
+export type CreatePollResponse = BaseResponse;
+
+export type GetPollResponse =
+  | (BaseResponse & { success: false })
+  | {
+      success: true;
+      polls: Poll[];
+    };
+
+export type EmitPollResponse =
+  | (BaseResponse & { success: false })
+  | ({ success: true } & Pick<PollPayload, 'startedAt' | 'endedAt'>);
+
+export type VoteResponse = BaseResponse;
+
+export type BreakPollResponse =
+  | (BaseResponse & { success: false })
+  | { success: true; options: PollOption[] };
+
 // 서버에서 보내는 브로드캐스트 페이로드
 export type UserJoinedPayload = ParticipantPayload;
 
@@ -147,7 +186,29 @@ export interface UpdateGestureStatusPayload {
   gesture: GestureType;
 }
 
-export type ActionGestureResponse = BaseResponse;
+export type StartPollPayload = PollPayload;
+
+export interface UpdatePollStatusFullPayload {
+  pollId: string;
+  options: Pick<PollOption, 'id' | 'count'>[];
+  voter: {
+    participantId: string;
+    name: string;
+    optionId: number;
+  };
+}
+
+export type UpdatePollStatusSubPayload = Omit<UpdatePollStatusFullPayload, 'voter'>;
+
+export interface EndPollPayload {
+  pollId: string;
+  options: Omit<PollOption, 'voters'>[];
+}
+
+export interface EndPollDetailPayload {
+  pollId: string;
+  options: PollOption[];
+}
 
 /**
  * 서버 -> 클라이언트 이벤트
@@ -164,6 +225,16 @@ export interface ServerToClientEvents {
   update_gesture_status: (data: UpdateGestureStatusPayload) => void;
 
   room_end: () => void;
+
+  start_poll: (data: StartPollPayload) => void;
+
+  update_poll: (data: UpdatePollStatusSubPayload) => void;
+
+  update_poll_detail: (data: UpdatePollStatusFullPayload) => void;
+
+  poll_end: (data: EndPollPayload) => void;
+
+  poll_end_detail: (data: EndPollDetailPayload) => void;
 }
 
 /**
@@ -197,4 +268,14 @@ export interface ClientToServerEvents {
   action_gesture: (data: ActionGestureRequest, cb: (res: ActionGestureResponse) => void) => void;
 
   break_room: (cb: (res: BreakRoomResponse) => void) => void;
+
+  create_poll: (data: CreatePollRequest, cb: (res: CreatePollResponse) => void) => void;
+
+  get_poll: (cb: (res: GetPollResponse) => void) => void;
+
+  emit_poll: (data: EmitPollRequest, cb: (res: EmitPollResponse) => void) => void;
+
+  vote: (data: VoteRequest, cb: (res: VoteResponse) => void) => void;
+
+  break_poll: (data: BreakPollRequest, cb: (res: BreakPollResponse) => void) => void;
 }

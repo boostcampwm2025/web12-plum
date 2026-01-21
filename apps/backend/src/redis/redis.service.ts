@@ -1,4 +1,5 @@
 import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import Redis from 'ioredis';
 
 /**
@@ -16,6 +17,8 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(RedisService.name);
   private client: Redis;
   private subscriber: Redis;
+
+  constructor(private eventEmitter: EventEmitter2) {}
 
   // nestJS 라이프사이클 훅 - 모듈 초기화 시점
   async onModuleInit() {
@@ -43,10 +46,25 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
 
     // Redis 연결 완료 대기
     await this.client.ping();
+    await this.client.config('SET', 'notify-keyspace-events', 'Ex');
     this.logger.log('✅ Redis client 연결 완료');
 
     // 2. subscriber 클라이언트 초기화/생성
     this.subscriber = this.client.duplicate();
+
+    const expiredChannel = '__keyevent@0__:expired';
+    await this.subscriber.subscribe(expiredChannel);
+
+    this.subscriber.on('message', (channel, key) => {
+      if (channel === expiredChannel) {
+        const parts = key.split(':');
+        const prefix = parts[0];
+
+        this.logger.debug(`[Redis Expired] Prefix: ${prefix}, Key: ${key}`);
+
+        this.eventEmitter.emit(`redis.expired.${key}`, key);
+      }
+    });
 
     this.subscriber.on('error', (error) => {
       this.logger.error('Redis subscriber error:', error);
