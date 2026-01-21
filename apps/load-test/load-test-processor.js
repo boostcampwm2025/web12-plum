@@ -193,6 +193,17 @@ export function maintainConnection() {
 }
 
 /**
+ * Phase 1: 2분 연결 유지
+ */
+export function maintain2Minutes() {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve();
+    }, 120000); // 2분 = 120,000ms
+  });
+}
+
+/**
  * 5단계: Socket 연결 종료
  */
 export function disconnectSocket(context) {

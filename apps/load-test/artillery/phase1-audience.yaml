@@ -1,0 +1,36 @@
+# Phase 1: 청중 60명 부하테스트 (Artillery)
+# - Socket.IO 연결만
+# - join_room 이벤트만
+# - 2분 유지
+# - 브라우저 없음 (가벼움!)
+
+config:
+  target: "https://tiki-plum.n-e.kr"
+  phases:
+    # 1단계: 60초 동안 60명 입장 (초당 1명)
+    - duration: 60
+      arrivalRate: 1
+
+    # 2단계: 2분(120초) 동안 연결 유지
+    - duration: 120
+      arrivalRate: 0
+
+  processor: "../load-test-processor.js"
+
+scenarios:
+  - name: "청중 (수신 전용)"
+    flow:
+      # 1. 강의실 정보 가져오기 (발표자가 생성한 것)
+      - function: "ensureRoom"
+
+      # 2. 참가자 등록 (HTTP POST)
+      - function: "joinAsParticipant"
+
+      # 3. Socket.IO 연결 + join_room
+      - function: "connectAndJoinRoom"
+
+      # 4. 2분 연결 유지
+      - function: "maintain2Minutes"
+
+      # 5. 연결 종료
+      - function: "disconnectSocket"
