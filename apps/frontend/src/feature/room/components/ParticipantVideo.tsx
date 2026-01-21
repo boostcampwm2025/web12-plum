@@ -18,14 +18,10 @@ const VIDEO_HEIGHTS = {
 /**
  * UI에서 특정 참가자의 특정 타입 스트림을 실시간으로 구독하기 위한 커스텀 셀렉터 훅
  */
-function useRemoteVideoStream(participantId: string) {
+function useRemoteVideoStream(participantId: string): MediaStream | null {
   return useMediaStore((state) => {
-    // Map 내의 RemoteStream 객체들 중 조건에 맞는 것 탐색
-    for (const streamObj of state.remoteStreams.values()) {
-      const isMatch = streamObj.participantId === participantId && streamObj.type === 'video';
-      if (isMatch) return streamObj.stream;
-    }
-    return null;
+    const streamObj = state.remoteStreams.get(participantId);
+    return streamObj?.type === 'video' ? streamObj.stream : null;
   });
 }
 
