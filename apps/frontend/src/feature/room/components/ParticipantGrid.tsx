@@ -6,11 +6,11 @@ import { useItemsPerPage } from '../hooks/useItemsPerPage';
 import { useParticipantPagination } from '../hooks/useParticipantPagination';
 import { useMediaStore } from '../stores/useMediaStore';
 import { useStreamStore } from '@/store/useLocalStreamStore';
-import { Participant } from '../stores/useRoomStore';
+import { MyInfo } from '../stores/useRoomStore';
 
 interface ParticipantGridProps {
   videoMode: VideoDisplayMode;
-  currentUser: Participant;
+  currentUser: MyInfo;
   onModeChange?: (mode: VideoDisplayMode) => void;
 }
 
