@@ -1,8 +1,9 @@
 import { Module } from '@nestjs/common';
 import { APP_INTERCEPTOR, APP_FILTER } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
-import { HealthModule } from './health/health.module.js';
 import { WinstonModule } from 'nest-winston';
+import { EventEmitterModule } from '@nestjs/event-emitter';
+import { HealthModule } from './health/health.module.js';
 import { winstonConfig } from './config/logger.config.js';
 import { LoggingInterceptor } from './common/interceptors/index.js';
 import { HttpExceptionFilter } from './common/filters/index.js';
@@ -13,7 +14,6 @@ import { PrometheusModule, MetricsInterceptor } from './prometheus/index.js';
 import { RedisModule } from './redis/redis.module.js';
 import { MediasoupModule } from './mediasoup/mediasoup.module.js';
 import { SocketMetadataModule } from './common/services/index.js';
-import { EventEmitterModule } from '@nestjs/event-emitter';
 
 @Module({
   imports: [

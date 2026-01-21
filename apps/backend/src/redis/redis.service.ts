@@ -62,7 +62,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
 
         this.logger.debug(`[Redis Expired] Prefix: ${prefix}, Key: ${key}`);
 
-        this.eventEmitter.emit(`redis.expired.${prefix}`, key);
+        this.eventEmitter.emit(`redis.expired.${key}`, key);
       }
     });
 
