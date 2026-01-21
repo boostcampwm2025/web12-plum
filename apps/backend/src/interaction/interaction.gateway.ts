@@ -87,6 +87,7 @@ export class InteractionGateway implements OnGatewayDisconnect {
       // 3. 브로드캐스트 (본인 포함 전체에게)
       const payload: UpdateGestureStatusPayload = {
         participantId,
+        participantName: participant.name,
         gesture: data.gesture,
       };
 
