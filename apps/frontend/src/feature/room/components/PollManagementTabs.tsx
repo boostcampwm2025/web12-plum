@@ -184,7 +184,7 @@ function ActiveVoteSection() {
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-xs text-white">
+        <div className="text-text flex items-center gap-2 text-xs">
           <span
             className="bg-success h-2 w-2 rounded-full"
             aria-hidden="true"
@@ -195,13 +195,13 @@ function ActiveVoteSection() {
           <TimeLeft
             timeLimitSeconds={activeVote.timeLimit}
             startedAt={activeStartedAt}
-            className="w-auto justify-start text-xs text-white"
+            className="text-text w-auto justify-start text-xs"
             iconSize={14}
           />
         </div>
       </div>
 
-      <div className="flex flex-col gap-4 rounded-xl bg-gray-400 p-4 text-white">
+      <div className="text-text flex flex-col gap-4 rounded-xl bg-gray-400 p-4">
         <h3 className="text-lg font-semibold">{activeVote.title}</h3>
         <div className="flex flex-col gap-5">
           {activeVote.options.map((option) => {
@@ -214,7 +214,7 @@ function ActiveVoteSection() {
               >
                 <div className="flex items-center justify-between text-sm">
                   <span>{option.value}</span>
-                  <span className="text-white/80">
+                  <span className="text-text/80">
                     {percentage}% ({option.count}명)
                   </span>
                 </div>
@@ -267,7 +267,7 @@ function CompletedVoteSection() {
               >
                 <div className="flex items-center justify-between text-sm">
                   <span>{option.value}</span>
-                  <span className="text-white/80">
+                  <span className="text-text/80">
                     {percentage}% ({option.count}명)
                   </span>
                 </div>
@@ -311,7 +311,7 @@ function CompletedVoteSection() {
                     paddingBottom: isExpanded ? '0.75rem' : '0rem',
                   }}
                   transition={{ duration: 0.2, ease: 'easeInOut' }}
-                  className="grid overflow-hidden rounded-lg bg-gray-500 px-4 text-sm text-white"
+                  className="text-text grid overflow-hidden rounded-lg bg-gray-500 px-4 text-sm"
                 >
                   <div className="max-h-26 min-h-0 overflow-y-auto">
                     {voters.length === 0 ? (
