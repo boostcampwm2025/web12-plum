@@ -113,6 +113,13 @@ describe('RoomGateway', () => {
             has: jest.fn(),
           },
         },
+        {
+          provide: 'PrometheusService',
+          useValue: {
+            incrementSocketIOConnections: jest.fn(),
+            decrementSocketIOConnections: jest.fn(),
+          },
+        },
       ],
     }).compile();
 

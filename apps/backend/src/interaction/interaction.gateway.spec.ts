@@ -54,6 +54,13 @@ describe('InteractionGateway', () => {
             stopPoll: jest.fn(),
           },
         },
+        {
+          provide: 'PrometheusService',
+          useValue: {
+            incrementSocketIOConnections: jest.fn(),
+            decrementSocketIOConnections: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
