@@ -116,8 +116,7 @@ export function useRoomInit() {
           },
           handleUpdatePoll: pollActions.updatePollOptions,
           handlePollEnd: (data) => {
-            pollActions.setCompletedFromEnd(data);
-
+            pollActions.clearActivePoll(data.pollId);
             const { activeDialog, setActiveDialog } = useRoomUIStore.getState();
             if (activeDialog === 'vote') setActiveDialog('vote');
           },

@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import type {
   EndPollDetailPayload,
-  EndPollPayload,
   Poll,
   PollOption,
   PollPayload,
@@ -14,9 +13,9 @@ interface PollState {
   actions: {
     hydrateFromPolls: (polls: Poll[]) => void;
     setActivePoll: (poll: PollPayload) => void;
+    clearActivePoll: (pollId: string) => void;
     updatePollOptions: (data: UpdatePollStatusSubPayload) => void;
     updatePollDetail: (data: UpdatePollStatusFullPayload) => void;
-    setCompletedFromEnd: (data: EndPollPayload) => void;
     setCompletedFromEndDetail: (data: EndPollDetailPayload) => void;
   };
 }
@@ -69,6 +68,13 @@ export const usePollStore = create<PollState>((set) => ({
                 endedAt: poll.endedAt,
               },
             ],
+      }));
+    },
+    clearActivePoll: (pollId) => {
+      set((state) => ({
+        polls: state.polls.map((item) =>
+          item.id === pollId ? { ...item, status: 'ended' } : item,
+        ),
       }));
     },
     updatePollOptions: (data) => {
@@ -127,21 +133,6 @@ export const usePollStore = create<PollState>((set) => ({
               options: updatedOptions,
             };
           }),
-        };
-      });
-    },
-    setCompletedFromEnd: (data) => {
-      set((state) => {
-        return {
-          polls: state.polls.map((item) =>
-            item.id === data.pollId
-              ? {
-                  ...item,
-                  status: 'ended',
-                  options: ensureVoters(data.options.map((option) => ({ ...option, voters: [] }))),
-                }
-              : item,
-          ),
         };
       });
     },
