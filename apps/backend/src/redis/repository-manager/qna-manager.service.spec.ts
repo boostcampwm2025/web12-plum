@@ -125,4 +125,90 @@ describe('QnaManagerService', () => {
       expect(service.findMany).not.toHaveBeenCalled();
     });
   });
+
+  describe('startQna', () => {
+    const qnaId = 'qna-123';
+    const timeLimit = 60;
+    const activeKey = `qna:${qnaId}:active`;
+
+    const mockQna = {
+      id: qnaId,
+      status: 'pending',
+    } as Qna;
+
+    beforeEach(() => {
+      pipeline.set = jest.fn().mockReturnThis();
+      pipeline.del = jest.fn().mockReturnThis();
+
+      jest.spyOn(service as any, 'addUpdatePartialToPipeline').mockImplementation(() => {});
+      jest.spyOn(service as any, 'getActiveKey').mockReturnValue(activeKey);
+      jest.spyOn(service, 'findOne').mockResolvedValue(mockQna);
+    });
+
+    it('질문을 시작하고 상태를 active로 변경하며 타이머 키를 생성해야 한다', async () => {
+      pipeline.exec.mockResolvedValueOnce([
+        [null, 'OK'],
+        [null, 'OK'],
+      ]);
+
+      const result = await service.startQna(qnaId, timeLimit);
+
+      expect(service.findOne).toHaveBeenCalledWith(qnaId);
+
+      expect(service['addUpdatePartialToPipeline']).toHaveBeenCalledWith(
+        pipeline,
+        qnaId,
+        expect.objectContaining({
+          status: 'active',
+          startedAt: expect.any(String),
+          endedAt: expect.any(String),
+        }),
+      );
+
+      expect(pipeline.set).toHaveBeenCalledWith(activeKey, 'true', 'EX', timeLimit);
+
+      expect(result).toHaveProperty('startedAt');
+      expect(result).toHaveProperty('endedAt');
+    });
+
+    it('존재하지 않는 질문 ID일 경우 에러를 던져야 한다', async () => {
+      jest.spyOn(service, 'findOne').mockResolvedValue(null);
+
+      await expect(service.startQna(qnaId, timeLimit)).rejects.toThrow('Qna does not exist');
+    });
+
+    it('파이프라인 실행 에러 발생 시 상태를 pending으로 롤백해야 한다', async () => {
+      pipeline.exec
+        .mockResolvedValueOnce([[new Error('Redis Error'), null]])
+        .mockResolvedValueOnce([[null, 'OK']]);
+
+      await expect(service.startQna(qnaId, timeLimit)).rejects.toThrow('Pipeline execution failed');
+
+      expect(redisClient.pipeline).toHaveBeenCalledTimes(2);
+
+      expect(service['addUpdatePartialToPipeline']).toHaveBeenCalledWith(
+        expect.anything(),
+        qnaId,
+        expect.objectContaining({ status: 'pending' }),
+      );
+
+      expect(pipeline.del).toHaveBeenCalledWith(activeKey);
+    });
+
+    it('롤백 과정에서도 실패할 경우 크리티컬 에러 로그를 남겨야 한다', async () => {
+      pipeline.exec
+        .mockRejectedValueOnce(new Error('Initial Fail'))
+        .mockRejectedValueOnce(new Error('Rollback Fail'));
+
+      const loggerSpy = jest.spyOn(service['logger'], 'error');
+
+      await expect(service.startQna(qnaId, timeLimit)).rejects.toThrow('Initial Fail');
+
+      expect(loggerSpy).toHaveBeenCalledWith(
+        expect.stringContaining(`[CRITICAL] StartQna rollback failed: ${qnaId}`),
+        expect.any(String),
+      );
+    });
+  });
+  // });
 });

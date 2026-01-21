@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { ParticipantPayload, ParticipantRole } from './participant.js';
 import { MediaKind, MediasoupProducer, MediaType, RoomInfo, ToggleActionType } from './shared.js';
 import { Poll, pollFormSchema, PollOption, PollPayload } from './poll.js';
-import { Qna, qnaFormSchema } from './qna.js';
+import { Qna, qnaFormSchema, QnaPayload } from './qna.js';
 
 // 제스처 타입 정의
 export type GestureType =
@@ -72,6 +72,10 @@ export type CreateQnaRequest = z.infer<typeof qnaFormSchema>;
 
 export interface EmitPollRequest {
   pollId: string;
+}
+
+export interface EmitQnaRequest {
+  qnaId: string;
 }
 
 export interface VoteRequest {
@@ -167,6 +171,10 @@ export type EmitPollResponse =
   | (BaseResponse & { success: false })
   | ({ success: true } & Pick<PollPayload, 'startedAt' | 'endedAt'>);
 
+export type EmitQnaResponse =
+  | (BaseResponse & { success: false })
+  | ({ success: true } & Pick<QnaPayload, 'startedAt' | 'endedAt'>);
+
 export type VoteResponse = BaseResponse;
 
 export type BreakPollResponse =
@@ -199,6 +207,8 @@ export interface UpdateGestureStatusPayload {
 }
 
 export type StartPollPayload = PollPayload;
+
+export type StartQnaPayload = QnaPayload;
 
 export interface UpdatePollStatusFullPayload {
   pollId: string;
@@ -239,6 +249,8 @@ export interface ServerToClientEvents {
   room_end: () => void;
 
   start_poll: (data: StartPollPayload) => void;
+
+  start_qna: (data: StartQnaPayload) => void;
 
   update_poll: (data: UpdatePollStatusSubPayload) => void;
 
@@ -290,6 +302,8 @@ export interface ClientToServerEvents {
   get_qna: (cb: (res: GetQnaResponse) => void) => void;
 
   emit_poll: (data: EmitPollRequest, cb: (res: EmitPollResponse) => void) => void;
+
+  emit_qna: (data: EmitQnaRequest, cb: (res: EmitQnaResponse) => void) => void;
 
   vote: (data: VoteRequest, cb: (res: VoteResponse) => void) => void;
 

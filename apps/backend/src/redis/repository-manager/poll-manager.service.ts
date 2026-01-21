@@ -2,9 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 import { Poll, PollOption, UpdatePollStatusSubPayload, Voter } from '@plum/shared-interfaces';
 import { RedisService } from '../redis.service.js';
+import { TTL_BOUNDS } from '../redis.constants';
 import { BaseRedisRepository } from './base-redis.repository.js';
-
-const TTL_BOUNDS = 7200;
 
 @Injectable()
 export class PollManagerService extends BaseRedisRepository<Poll> {
@@ -158,7 +157,12 @@ export class PollManagerService extends BaseRedisRepository<Poll> {
       try {
         const rollbackPipeline = client.pipeline();
 
-        this.addUpdatePartialToPipeline(rollbackPipeline, pollId, { status: 'pending' });
+        this.addUpdatePartialToPipeline(rollbackPipeline, pollId, {
+          status: 'pending',
+          startedAt: '',
+          endedAt: '',
+          updatedAt: new Date().toISOString(),
+        });
         rollbackPipeline.del(activeKey);
         rollbackPipeline.del(countKey);
         await rollbackPipeline.exec();

@@ -155,7 +155,12 @@ describe('PollManagerService', () => {
       expect(service['addUpdatePartialToPipeline']).toHaveBeenCalledWith(
         expect.anything(),
         pollId,
-        { status: 'pending' },
+        {
+          status: 'pending',
+          startedAt: '',
+          endedAt: '',
+          updatedAt: expect.any(String),
+        },
       );
 
       expect(pipeline.del).toHaveBeenCalledWith(activeKey);

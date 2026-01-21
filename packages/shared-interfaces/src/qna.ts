@@ -48,4 +48,14 @@ export interface Qna {
   isPublic: boolean;
   createdAt: string;
   updatedAt: string;
+  startedAt: string;
+  endedAt: string;
+}
+
+export interface QnaPayload {
+  id: string;
+  title: string;
+  timeLimit: number;
+  startedAt: string;
+  endedAt: string;
 }

@@ -55,6 +55,7 @@ describe('InteractionGateway', () => {
             createQna: jest.fn(),
             getQna: jest.fn(),
             getQnas: jest.fn(),
+            startQna: jest.fn(),
           },
         },
       ],
@@ -505,6 +506,73 @@ describe('InteractionGateway', () => {
 
       expect(result).toEqual({ success: true, qnas: mockQnas });
       expect(interactionService.getQnas).toHaveBeenCalledWith('r1');
+    });
+  });
+
+  describe('emit_qna (startQna)', () => {
+    const emitQnaDto = { qnaId: 'qna-123' };
+
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it('발표자 권한이 확인되면 질문을 활성화하고 방 전체에 start_qna 이벤트를 브로드캐스트한다', async () => {
+      const mockRoom = { id: 'room-123' };
+      const mockPayload = {
+        id: 'qna-123',
+        title: '질문 제목',
+        startedAt: new Date().toISOString(),
+        endedAt: new Date().toISOString(),
+      };
+
+      jest.spyOn(gateway as any, 'validatePresenterAction').mockResolvedValue({ room: mockRoom });
+      jest.spyOn(interactionService, 'startQna').mockResolvedValue(mockPayload as any);
+
+      const mockEmit = jest.fn();
+      mockSocket.to = jest.fn().mockReturnValue({ emit: mockEmit });
+
+      const result = await gateway.startQna(mockSocket, emitQnaDto);
+
+      expect(gateway['validatePresenterAction']).toHaveBeenCalledWith(mockSocket.id);
+      expect(interactionService.startQna).toHaveBeenCalledWith(emitQnaDto.qnaId);
+
+      expect(mockSocket.to).toHaveBeenCalledWith(mockRoom.id);
+      expect(mockEmit).toHaveBeenCalledWith('start_qna', mockPayload);
+
+      expect(result).toEqual({
+        success: true,
+        startedAt: mockPayload.startedAt,
+        endedAt: mockPayload.endedAt,
+      });
+    });
+
+    it('비즈니스 로직 에러(BusinessException) 발생 시 해당 에러 메시지를 반환해야 한다', async () => {
+      jest
+        .spyOn(gateway as any, 'validatePresenterAction')
+        .mockResolvedValue({ room: { id: 'r1' } });
+      jest
+        .spyOn(interactionService, 'startQna')
+        .mockRejectedValue(new BusinessException('이미 시작되거나 종료된 질문입니다.'));
+
+      const result = await gateway.startQna(mockSocket, emitQnaDto);
+
+      expect(result).toEqual({
+        success: false,
+        error: '이미 시작되거나 종료된 질문입니다.',
+      });
+    });
+
+    it('발표자 권한이 없거나 예상치 못한 에러 발생 시 기본 에러 메시지를 반환해야 한다', async () => {
+      jest
+        .spyOn(gateway as any, 'validatePresenterAction')
+        .mockRejectedValue(new Error('Unauthorized'));
+
+      const result = await gateway.startQna(mockSocket, emitQnaDto);
+
+      expect(result).toEqual({
+        success: false,
+        error: '질문 시작에 실패했습니다.',
+      });
     });
   });
 });

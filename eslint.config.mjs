@@ -30,4 +30,10 @@ export default tseslint.config(
       '@typescript-eslint/no-explicit-any': 'warn',
     },
   },
+  {
+    files: ['**/*.spec.ts', '**/*.spec.tsx', '**/*.spec.js', '**/*.spec.jsx'],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+    },
+  }
 );

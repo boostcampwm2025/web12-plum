@@ -5,6 +5,7 @@ import {
   PollOption,
   PollPayload,
   Qna,
+  QnaPayload,
   UpdatePollStatusSubPayload,
 } from '@plum/shared-interfaces';
 
@@ -56,6 +57,8 @@ export class InteractionService {
       ...dto,
       createdAt: now,
       updatedAt: now,
+      startedAt: '',
+      endedAt: '',
     };
   }
 
@@ -157,5 +160,20 @@ export class InteractionService {
 
   async getQnas(roomId: string): Promise<Qna[]> {
     return await this.qnaManagerService.getQnasInRoom(roomId);
+  }
+
+  async startQna(qnaId: string): Promise<QnaPayload> {
+    const qna = await this.qnaManagerService.findOne(qnaId);
+    if (!qna) throw new BusinessException('존재하지 않는 질문입니다.');
+    if (qna.status !== 'pending') throw new BusinessException('이미 시작되거나 종료된 질문입니다.');
+
+    const { startedAt, endedAt } = await this.qnaManagerService.startQna(qnaId, qna.timeLimit);
+    return {
+      id: qnaId,
+      title: qna.title,
+      timeLimit: qna.timeLimit,
+      startedAt,
+      endedAt,
+    };
   }
 }

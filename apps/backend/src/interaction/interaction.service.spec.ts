@@ -22,6 +22,7 @@ describe('InteractionService (투표 및 Q&A 생성 테스트)', () => {
     addQnaToRoom: jest.fn(),
     getQnasInRoom: jest.fn(),
     findOne: jest.fn(),
+    startQna: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -386,6 +387,71 @@ describe('InteractionService (투표 및 Q&A 생성 테스트)', () => {
 
       expect(result).toEqual([]);
       expect(mockQnaManager.getQnasInRoom).toHaveBeenCalledWith('empty-room');
+    });
+  });
+
+  describe('startQna (질문 시작)', () => {
+    const qnaId = 'qna-ulid-123';
+    const mockQna = {
+      id: qnaId,
+      title: '테스트 질문',
+      status: 'pending',
+      timeLimit: 120,
+    };
+
+    it('대기 중인 질문을 시작하고 QnaPayload를 반환해야 한다', async () => {
+      const startedAt = new Date().toISOString();
+      const endedAt = new Date(Date.now() + 120000).toISOString();
+
+      mockQnaManager.findOne.mockResolvedValue(mockQna);
+      mockQnaManager.startQna.mockResolvedValue({ startedAt, endedAt });
+
+      const result = await service.startQna(qnaId);
+
+      expect(mockQnaManager.findOne).toHaveBeenCalledWith(qnaId);
+      expect(mockQnaManager.startQna).toHaveBeenCalledWith(qnaId, mockQna.timeLimit);
+
+      expect(result).toEqual({
+        id: qnaId,
+        title: mockQna.title,
+        timeLimit: mockQna.timeLimit,
+        startedAt,
+        endedAt,
+      });
+    });
+
+    it('존재하지 않는 질문인 경우 BusinessException을 던져야 한다', async () => {
+      mockQnaManager.findOne.mockResolvedValue(null);
+
+      await expect(service.startQna('invalid-id')).rejects.toThrow(
+        new BusinessException('존재하지 않는 질문입니다.'),
+      );
+
+      expect(mockQnaManager.startQna).not.toHaveBeenCalled();
+    });
+
+    it('이미 시작(active)된 질문을 다시 시작하려 하면 BusinessException을 던져야 한다', async () => {
+      mockQnaManager.findOne.mockResolvedValue({
+        ...mockQna,
+        status: 'active',
+      });
+
+      await expect(service.startQna(qnaId)).rejects.toThrow(
+        new BusinessException('이미 시작되거나 종료된 질문입니다.'),
+      );
+
+      expect(mockQnaManager.startQna).not.toHaveBeenCalled();
+    });
+
+    it('이미 종료(ended)된 질문을 시작하려 하면 BusinessException을 던져야 한다', async () => {
+      mockQnaManager.findOne.mockResolvedValue({
+        ...mockQna,
+        status: 'ended',
+      });
+
+      await expect(service.startQna(qnaId)).rejects.toThrow(
+        new BusinessException('이미 시작되거나 종료된 질문입니다.'),
+      );
     });
   });
 });
