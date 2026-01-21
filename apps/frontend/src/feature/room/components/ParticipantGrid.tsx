@@ -1,12 +1,12 @@
-import { useMemo, useRef } from 'react';
+import { useRef } from 'react';
 import { ParticipantVideo, VideoDisplayMode } from './ParticipantVideo';
 import { Icon } from '@/shared/components/icon/Icon';
 import { Button } from '@/shared/components/Button';
 import { useItemsPerPage } from '../hooks/useItemsPerPage';
-import { usePagination } from '../hooks/usePagination';
+import { useParticipantPagination } from '../hooks/useParticipantPagination';
 import { useMediaStore } from '../stores/useMediaStore';
 import { useStreamStore } from '@/store/useLocalStreamStore';
-import { Participant, useRoomStore } from '../stores/useRoomStore';
+import { Participant } from '../stores/useRoomStore';
 
 interface ParticipantGridProps {
   videoMode: VideoDisplayMode;
@@ -19,23 +19,8 @@ export function ParticipantGrid({ videoMode, currentUser, onModeChange }: Partic
 
   const isCameraOn = useMediaStore((state) => state.isCameraOn);
   const localStream = useStreamStore((state) => state.localStream);
-  const { getParticipantList } = useRoomStore((state) => state.actions);
-  const { getRemoteStreamsByParticipant } = useMediaStore((state) => state.actions);
 
-  const participants = getParticipantList();
-
-  // 카메라 켜진 참가자를 위로, 꺼진 참가자를 아래로 정렬
-  const sortedParticipants = useMemo(() => {
-    return [...participants].sort((a, b) => {
-      const aHasVideo = a.producers.has('video');
-      const bHasVideo = b.producers.has('video');
-      if (aHasVideo && !bHasVideo) return -1;
-      if (!aHasVideo && bHasVideo) return 1;
-      return 0;
-    });
-  }, [participants]);
-
-  const itemsPerPage = useItemsPerPage(containerRef, {
+  const dynamicItemsPerPage = useItemsPerPage(containerRef, {
     buttonHeight: 24,
     gap: 12,
     itemHeight: 114,
@@ -43,12 +28,15 @@ export function ParticipantGrid({ videoMode, currentUser, onModeChange }: Partic
   });
 
   const {
-    currentItems: currentParticipants,
+    currentPage,
+    itemsPerPage,
     goToPrevPage,
     goToNextPage,
     hasPrevPage,
     hasNextPage,
-  } = usePagination<Participant>(sortedParticipants, itemsPerPage);
+    sortedParticipants,
+    visibleWindowParticipants,
+  } = useParticipantPagination(dynamicItemsPerPage);
 
   if (videoMode !== 'side') return null;
 
@@ -83,9 +71,12 @@ export function ParticipantGrid({ videoMode, currentUser, onModeChange }: Partic
         </Button>
 
         <div className="flex flex-1 flex-col justify-center gap-3 overflow-hidden">
-          {currentParticipants.map((participant) => {
-            const remoteStreams = getRemoteStreamsByParticipant(participant.id);
-            const videoStream = remoteStreams.find((s) => s.type === 'video');
+          {visibleWindowParticipants.map((participant) => {
+            const participantIdx = sortedParticipants.findIndex((p) => participant.id === p.id);
+            const isCurrentlyVisible =
+              participantIdx >= currentPage * itemsPerPage &&
+              participantIdx < (currentPage + 1) * itemsPerPage;
+
             const videoProducerId = participant.producers.get('video');
 
             return (
@@ -94,10 +85,10 @@ export function ParticipantGrid({ videoMode, currentUser, onModeChange }: Partic
                 id={participant.id}
                 name={participant.name}
                 mode="side"
-                stream={videoStream?.stream}
-                isCameraOn={!!videoStream}
                 videoProducerId={videoProducerId}
                 participantRole={participant.role}
+                isActive={true}
+                isCurrentlyVisible={isCurrentlyVisible}
               />
             );
           })}
