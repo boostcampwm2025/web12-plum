@@ -76,6 +76,7 @@ export function PollManagementTabs() {
           });
           return;
         }
+        setActiveTab('active');
         fetchPolls();
       });
     },
@@ -94,6 +95,7 @@ export function PollManagementTabs() {
         return;
       }
       pollActions.setCompletedFromEndDetail({ pollId: activePoll.id, options: response.options });
+      setActiveTab('completed');
       fetchPolls();
     });
   }, [emit, activePoll, pollActions, fetchPolls, addToast]);
