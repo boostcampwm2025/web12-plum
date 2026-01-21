@@ -1,9 +1,10 @@
 /**
  * Artillery 부하테스트 프로세서
- * 실제 HTTP 요청, Socket.IO 연결을 수행합니다.
+ * 실제 HTTP 요청, Socket.IO 연결, WebRTC Transport
  */
 
 import { io } from 'socket.io-client';
+import * as mediasoupClient from 'mediasoup-client';
 
 const BACKEND_URL = 'http://223.130.140.152:3000';
 
@@ -148,6 +149,7 @@ export function connectAndJoinRoom(context) {
           if (!hasFinished) {
             hasFinished = true;
             context.vars.socket = socket;
+            context.vars.roomInfo = response.roomInfo; // RTP capabilities 저장
             resolve();
           }
         } else {
@@ -182,7 +184,117 @@ export function connectAndJoinRoom(context) {
 }
 
 /**
- * 4단계: 연결 유지 (5초 대기)
+ * 4단계: WebRTC Transport 생성 및 Consumer 연결
+ */
+export async function createWebRTCTransportAndConsume(context) {
+  const socket = context.vars.socket;
+  const roomInfo = context.vars.roomInfo;
+
+  if (!socket || !roomInfo) {
+    console.error('❌ Socket 또는 RoomInfo 없음');
+    return;
+  }
+
+  try {
+    // mediasoup Device 생성
+    const device = new mediasoupClient.Device();
+    await device.load({ routerRtpCapabilities: roomInfo.mediasoup.routerRtpCapabilities });
+    console.log(`📱 Device 로드 완료: ${context.vars.participantName}`);
+
+    // recvTransport 생성 요청
+    const recvTransportData = await new Promise((resolve, reject) => {
+      socket.emit(
+        'create_transport',
+        { roomId: context.vars.roomId, direction: 'recv' },
+        (response) => {
+          if (response.success) {
+            resolve(response.transportOptions);
+          } else {
+            reject(new Error(response.error || 'create_transport failed'));
+          }
+        },
+      );
+    });
+
+    // recvTransport 생성
+    const recvTransport = device.createRecvTransport(recvTransportData);
+    console.log(`📥 RecvTransport 생성: ${context.vars.participantName}`);
+
+    // Transport 연결
+    recvTransport.on('connect', async ({ dtlsParameters }, callback, errback) => {
+      try {
+        await new Promise((resolve, reject) => {
+          socket.emit(
+            'connect_transport',
+            {
+              transportId: recvTransport.id,
+              dtlsParameters,
+            },
+            (response) => {
+              if (response.success) {
+                resolve();
+              } else {
+                reject(new Error(response.error || 'connect_transport failed'));
+              }
+            },
+          );
+        });
+        callback();
+      } catch (error) {
+        errback(error);
+      }
+    });
+
+    // 기존 Producer들에 대해 Consumer 생성
+    const consumers = [];
+    for (const producer of roomInfo.mediasoup.existingProducers || []) {
+      try {
+        const consumerData = await new Promise((resolve, reject) => {
+          socket.emit(
+            'consume',
+            {
+              transportId: recvTransport.id,
+              producerId: producer.producerId,
+              rtpCapabilities: device.rtpCapabilities,
+            },
+            (response) => {
+              if (response.success) {
+                resolve(response);
+              } else {
+                reject(new Error(response.error || 'consume failed'));
+              }
+            },
+          );
+        });
+
+        const consumer = await recvTransport.consume({
+          id: consumerData.id,
+          producerId: consumerData.producerId,
+          kind: consumerData.kind,
+          rtpParameters: consumerData.rtpParameters,
+        });
+
+        consumers.push(consumer);
+        console.log(`✅ Consumer 생성: ${consumer.kind} from ${producer.participantId}`);
+
+        // Consumer resume
+        socket.emit('resume_consumer', { consumerId: consumer.id });
+      } catch (error) {
+        console.error(`❌ Consumer 생성 실패: ${error.message}`);
+      }
+    }
+
+    context.vars.device = device;
+    context.vars.recvTransport = recvTransport;
+    context.vars.consumers = consumers;
+    console.log(`🎉 WebRTC 설정 완료: ${consumers.length}개 Consumer`);
+  } catch (error) {
+    console.error(`❌ WebRTC 설정 실패: ${error.message}`);
+  }
+}
+
+/**
+ * 5단계: 연결 유지 (5초 대기)
  */
 export function maintainConnection() {
   return new Promise((resolve) => {
@@ -204,11 +316,23 @@ export function maintain2Minutes() {
 }
 
 /**
- * 5단계: Socket 연결 종료
+ * 6단계: Socket 및 Transport 연결 종료
  */
 export function disconnectSocket(context) {
-  const socket = context.vars.socket;
+  // Consumer 정리
+  if (context.vars.consumers) {
+    for (const consumer of context.vars.consumers) {
+      consumer.close();
+    }
+  }
 
+  // Transport 정리
+  if (context.vars.recvTransport) {
+    context.vars.recvTransport.close();
+  }
+
+  // Socket 연결 종료
+  const socket = context.vars.socket;
   if (socket && socket.connected) {
     socket.disconnect();
     console.log(`🔌 연결 종료: ${context.vars.participantName}`);

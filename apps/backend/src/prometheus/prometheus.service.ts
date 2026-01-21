@@ -86,6 +86,14 @@ export class PrometheusService implements OnModuleInit {
       register: this.registry,
       prefix: 'nodejs_',
     });
+
+    // Mediasoup 메트릭 초기값 설정 (메트릭이 항상 노출되도록)
+    this.socketIOConnectionsActive.set(0);
+    this.mediasoupWorkersActive.set(0);
+    this.mediasoupRoutersActive.set(0);
+    this.mediasoupTransportsActive.set(0);
+    this.mediasoupProducersActive.set(0);
+    this.mediasoupConsumersActive.set(0);
   }
 
   async getMetrics(): Promise<string> {
