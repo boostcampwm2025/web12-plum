@@ -1,21 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useLocation } from 'react-router';
-import type { RtpCapabilities } from 'mediasoup-client/types';
-import type {
-  EnterRoomResponse,
-  JoinRoomResponse,
-  ServerToClientEvents,
-} from '@plum/shared-interfaces';
+import { useParams } from 'react-router';
 
 import { logger } from '@/shared/lib/logger';
 import { useMediaDeviceStore } from '@/store/useMediaDeviceStore';
 import { useStreamStore } from '@/store/useLocalStreamStore';
 import { useSocketStore } from '@/store/useSocketStore';
+import { useToastStore } from '@/store/useToastStore';
 
-import { MyInfo, useRoomStore } from '../stores/useRoomStore';
+import { useRoomStore } from '../stores/useRoomStore';
 import { useMediaStore } from '../stores/useMediaStore';
 import { useMediaConnectionContext } from './useMediaConnectionContext';
-import { useToastStore } from '@/store/useToastStore';
+import { RoomSignaling } from '../mediasoup/RoomSignaling';
 
 /**
  * Room 초기화 통합 훅
@@ -32,33 +27,30 @@ export function useRoomInit() {
    */
   const hasStartedInit = useRef(false);
 
-  // 라우터 정보
-  const location = useLocation();
-  const navState = location.state as EnterRoomResponse | null;
+  // URL 파라미터
+  const { roomId } = useParams<{ roomId: string }>();
 
   // 스토어 상태
   const isMicOn = useMediaStore((state) => state.isMicOn);
   const isCameraOn = useMediaStore((state) => state.isCameraOn);
   const hasHydrated = useMediaStore((state) => state.hasHydrated);
+  const myInfo = useRoomStore((state) => state.myInfo);
 
   // 스토어 액션
   const { initDevice } = useMediaDeviceStore((state) => state.actions);
   const { ensureTracks } = useStreamStore((state) => state.actions);
-  const { setMyInfo, setRouterRtpCapabilities, addParticipant, removeParticipant } = useRoomStore(
+  const { initParticipants, addParticipant, removeParticipant, addProducer } = useRoomStore(
     (state) => state.actions,
   );
   const { removeRemoteStreamByParticipant } = useMediaStore((state) => state.actions);
+  const { connect: connectSocket } = useSocketStore((state) => state.actions);
   const { addToast } = useToastStore((state) => state.actions);
-  const {
-    connect: connectSocket,
-    registerHandlers,
-    unregisterHandlers,
-  } = useSocketStore((state) => state.actions);
 
   // 미디어 컨트롤러
   const {
     startProducing,
     consumeRemoteProducer,
+    consumeExistingAudioProducers,
     cleanup: cleanupMedia,
   } = useMediaConnectionContext();
 
@@ -70,55 +62,14 @@ export function useRoomInit() {
     return '굴러 들어온 자두';
   };
 
-  // 소켓 이벤트 핸들러 모음
-  const socketEventHandlers: Partial<ServerToClientEvents> = {
-    user_joined: addParticipant,
-    user_left: (data) => removeParticipant(data.id),
-    new_producer: consumeRemoteProducer,
-    media_state_changed: (data) => {
-      if (data.action === 'pause') removeRemoteStreamByParticipant(data.participantId, data.type);
-    },
-    update_gesture_status: (data) => {
-      logger.socket.info('제스처 상태 업데이트 수신', data);
-      const name = resolveParticipantName(data.participantId);
-      addToast({ type: 'gesture', title: name, gesture: data.gesture });
-    },
-  };
-
-  /**
-   * 데이터 복원
-   */
-  const restoreRoomData = useCallback((): { myInfo: MyInfo; rtpCapabilities: RtpCapabilities } => {
-    // Navigation State에서 시도
-    if (navState?.mediasoup?.routerRtpCapabilities) {
-      const { participantId, name, role, mediasoup } = navState;
-      const info = { id: participantId, name, role };
-      setMyInfo(info);
-      setRouterRtpCapabilities(mediasoup.routerRtpCapabilities as RtpCapabilities);
-
-      return { myInfo: info, rtpCapabilities: mediasoup.routerRtpCapabilities as RtpCapabilities };
-    }
-
-    // SessionStorage에서 시도
-    const storedData = sessionStorage.getItem('room-my-info');
-    if (storedData) {
-      const { state } = JSON.parse(storedData);
-      if (state?.myInfo && state?.routerRtpCapabilities) {
-        setMyInfo(state.myInfo);
-        setRouterRtpCapabilities(state.routerRtpCapabilities);
-
-        return { myInfo: state.myInfo, rtpCapabilities: state.routerRtpCapabilities };
-      }
-    }
-
-    throw new Error('복원할 수 있는 방 입장 데이터가 없습니다.');
-  }, [navState]);
-
   /**
    * 메인 초기화 파이프라인
    */
   const runInitPipeline = useCallback(async () => {
     try {
+      if (!roomId) throw new Error('유효하지 않은 방 ID 입니다.');
+      if (!myInfo) throw new Error('내 참가자 정보가 존재하지 않습니다.');
+
       // 로딩 시작
       setIsLoading(true);
       setError(null);
@@ -126,25 +77,39 @@ export function useRoomInit() {
       // 1. 소켓 연결 및 이벤트 핸들러 등록
       const connectedSocket = await connectSocket();
       if (!connectedSocket) throw new Error('서버 소켓 연결에 실패했습니다.');
-      registerHandlers(socketEventHandlers);
 
-      // 2. 데이터 복원 및 Mediasoup Device 초기화
-      const { myInfo, rtpCapabilities } = restoreRoomData();
-      await initDevice(rtpCapabilities);
-
-      // 3. 방 입장 요청
-      const roomId = window.location.pathname.split('/').pop() || '';
-      await new Promise<void>((resolve, reject) => {
-        const payload = { roomId, participantId: myInfo.id };
-        const handleResponse = (response: JoinRoomResponse) => {
-          if (response.success) resolve();
-          else reject(new Error(response.error || '방 입장 실패'));
-        };
-
-        connectedSocket.emit('join_room', payload, handleResponse);
+      // 2. 실시간 이벤트 핸들러 설정
+      RoomSignaling.setupAllHandlers(connectedSocket, {
+        addParticipant,
+        removeParticipant,
+        addProducer,
+        consumeRemoteProducer,
+        handleMediaStateChanged: (data) => {
+          if (data.action === 'pause') {
+            removeRemoteStreamByParticipant(data.participantId, data.type);
+          }
+        },
+        handleUpdateGestureStatus: (data) => {
+          const name = resolveParticipantName(data.participantId);
+          addToast({ type: 'gesture', title: name, gesture: data.gesture });
+        },
       });
 
-      // 4. 미디어 스트림 획득 및 송출 시작
+      // 3. 방 입장 요청
+      const routerRtpCapabilities = await RoomSignaling.joinRoom(
+        connectedSocket,
+        roomId,
+        myInfo.id,
+        initParticipants,
+      );
+
+      // 4. Mediasoup Device 초기화
+      await initDevice(routerRtpCapabilities);
+
+      // 5. 기존 참가자들의 오디오만 즉시 수신
+      await consumeExistingAudioProducers();
+
+      // 6. 미디어 스트림 획득 및 송출 시작
       try {
         // 초기 입장 시 사용자가 설정한 값에 따라 트랙 확보
         if (isCameraOn || isMicOn) {
@@ -207,15 +172,14 @@ export function useRoomInit() {
   useEffect(() => {
     return () => {
       // 소켓 이벤트 핸들러 해제
-      const eventNames = Object.keys(socketEventHandlers) as (keyof ServerToClientEvents)[];
-      unregisterHandlers(eventNames);
-      logger.custom.info('[RoomInit] 소켓 리스너 해제 완료');
+      const socket = useSocketStore.getState().socket;
+      if (socket) RoomSignaling.removeAllHandlers(socket);
 
       // 미디어 자원 정리
       cleanupMedia();
       logger.custom.info('[RoomInit] 미디어 연결 자원 정리 완료');
     };
-  }, [unregisterHandlers]);
+  }, []);
 
   return { isLoading, isSuccess, error, retry };
 }

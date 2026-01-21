@@ -5,13 +5,13 @@ import { Footer } from '@/shared/components/Footer';
 import { Header } from '@/shared/components/Header';
 import { PageSubHeader } from '@/shared/components/PageSubHeader';
 import { ROUTES } from '@/app/routes/routes';
-import type { EnterRoomResponse } from '@plum/shared-interfaces';
 import { roomApi } from '@/shared/api';
 import { logger } from '@/shared/lib/logger';
 
 export function EnterLecture() {
   const navigate = useNavigate();
   const { roomId } = useParams<{ roomId: string }>();
+
   const [lectureName, setLectureName] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
@@ -46,11 +46,6 @@ export function EnterLecture() {
     };
   }, [navigate, roomId]);
 
-  const handleEnterSuccess = (response: EnterRoomResponse) => {
-    if (!roomId) return;
-    navigate(ROUTES.ROOM(roomId), { state: response });
-  };
-
   if (isLoading || !roomId) {
     return null;
   }
@@ -66,7 +61,6 @@ export function EnterLecture() {
         <EnterLectureForm
           roomId={roomId}
           lectureName={lectureName}
-          onEnterSuccess={handleEnterSuccess}
         />
       </main>
       <Footer />

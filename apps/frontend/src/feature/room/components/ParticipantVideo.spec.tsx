@@ -1,306 +1,169 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 
 import { ParticipantVideo } from './ParticipantVideo';
-import type { VideoDisplayMode } from './ParticipantVideo';
+import { useMediaStore, RemoteStream } from '../stores/useMediaStore';
+import { useMediaConnectionContext } from '../hooks/useMediaConnectionContext';
+import type { ParticipantRole } from '@plum/shared-interfaces';
 
-vi.mock('@/shared/components/icon/Icon', () => ({
-  Icon: ({ name, size }: { name: string; size?: number }) => (
-    <svg
-      data-testid="icon"
-      data-size={size}
-    >
-      {name}
-    </svg>
-  ),
+// 1. 외부 의존성 모킹
+vi.mock('../stores/useMediaStore', () => ({
+  useMediaStore: vi.fn(),
 }));
 
-vi.mock('@/shared/components/Button', () => ({
-  Button: ({
-    children,
-    onClick,
-    className,
-    'aria-label': ariaLabel,
-  }: {
-    children: React.ReactNode;
-    onClick?: () => void;
-    className?: string;
-    'aria-label'?: string;
-  }) => (
-    <button
-      onClick={onClick}
-      className={className}
-      aria-label={ariaLabel}
-    >
-      {children}
-    </button>
-  ),
+vi.mock('../hooks/useMediaConnectionContext', () => ({
+  useMediaConnectionContext: vi.fn(),
 }));
+
+vi.mock('@/shared/lib/logger', () => ({
+  logger: { ui: { debug: vi.fn() } },
+}));
+
+const mockUseMediaStore = vi.mocked(useMediaStore);
+const mockUseMediaConnectionContext = vi.mocked(useMediaConnectionContext);
 
 describe('ParticipantVideo', () => {
+  const mockConsume = vi.fn();
+  const mockStopConsuming = vi.fn();
+  const mockStream = { id: 'stream-123', getTracks: () => [] } as unknown as MediaStream;
+
   const defaultProps = {
     id: 'participant-1',
-    name: '홍길동',
-    mode: 'pip' as VideoDisplayMode,
+    name: '호눅스',
+    mode: 'side' as const,
+    videoProducerId: 'prod-123',
+    participantRole: 'audience' as ParticipantRole,
   };
 
-  it('참가자 이름이 렌더링된다', () => {
-    render(<ParticipantVideo {...defaultProps} />);
+  beforeEach(() => {
+    vi.clearAllMocks();
 
-    expect(screen.getByText('홍길동')).toBeInTheDocument();
+    // 기본적으로 수신 컨텍스트 모킹
+    mockUseMediaConnectionContext.mockReturnValue({
+      consumeRemoteProducer: mockConsume,
+      stopConsuming: mockStopConsuming,
+    } as unknown as ReturnType<typeof useMediaConnectionContext>);
+
+    // 기본적으로 스토어에서 스트림이 없는 상태로 시작
+    mockUseMediaStore.mockImplementation((selector) =>
+      selector({ remoteStreams: new Map<string, RemoteStream>() } as Parameters<
+        typeof selector
+      >[0]),
+    );
   });
 
-  describe('minimize 모드', () => {
-    it('minimize 모드일 때 비디오 영역이 렌더링되지 않는다', () => {
-      const { container } = render(
-        <ParticipantVideo
-          {...defaultProps}
-          mode="minimize"
-        />,
-      );
-
-      const videoArea = container.querySelector('.bg-gray-200');
-      expect(videoArea).not.toBeInTheDocument();
-    });
-
-    it('minimize 모드일 때 적절한 스타일 클래스가 적용된다', () => {
-      const { container } = render(
-        <ParticipantVideo
-          {...defaultProps}
-          mode="minimize"
-        />,
-      );
-
-      const videoContainer = container.firstChild as HTMLElement;
-      expect(videoContainer).toHaveClass('h-9', 'bg-gray-500');
-    });
-
-    it('minimize 모드에서 현재 사용자일 때 확대 버튼이 렌더링된다', () => {
+  describe('수신(Consume) 제어 로직', () => {
+    it('isActive가 true이면 마운트 시 consumeRemoteProducer가 호출된다', () => {
       render(
         <ParticipantVideo
           {...defaultProps}
-          mode="minimize"
-          isCurrentUser
+          isActive={true}
         />,
       );
 
-      const maximizeButton = screen.getByLabelText('확대');
-      expect(maximizeButton).toBeInTheDocument();
-
-      const icon = screen.getByTestId('icon');
-      expect(icon).toHaveTextContent('maximize');
-      expect(icon).toHaveAttribute('data-size', '16');
+      expect(mockConsume).toHaveBeenCalledWith(
+        expect.objectContaining({
+          participantId: defaultProps.id,
+          producerId: defaultProps.videoProducerId,
+        }),
+      );
     });
 
-    it('minimize 모드에서 확대 버튼 클릭 시 onModeChange가 pip으로 호출된다', async () => {
-      const user = userEvent.setup();
-      const onModeChange = vi.fn();
-
+    it('isActive가 false이면 stopConsuming이 호출되어야 한다 (윈도우 밖으로 밀려남)', () => {
       render(
         <ParticipantVideo
           {...defaultProps}
-          mode="minimize"
-          isCurrentUser
-          onModeChange={onModeChange}
+          isActive={false}
         />,
       );
 
-      const maximizeButton = screen.getByLabelText('확대');
-      await user.click(maximizeButton);
-
-      expect(onModeChange).toHaveBeenCalledWith('pip');
-      expect(onModeChange).toHaveBeenCalledTimes(1);
+      expect(mockStopConsuming).toHaveBeenCalledWith(defaultProps.videoProducerId, 'video');
     });
 
-    it('minimize 모드에서 현재 사용자가 아닐 때 확대 버튼이 렌더링되지 않는다', () => {
-      render(
+    it('컴포넌트가 언마운트될 때 반드시 stopConsuming이 호출되어 리소스를 정리한다', () => {
+      const { unmount } = render(
         <ParticipantVideo
           {...defaultProps}
-          mode="minimize"
-          isCurrentUser={false}
+          isActive={true}
         />,
       );
 
-      expect(screen.queryByLabelText('확대')).not.toBeInTheDocument();
+      unmount();
+
+      expect(mockStopConsuming).toHaveBeenCalledWith(defaultProps.videoProducerId, 'video');
     });
   });
 
-  describe('pip 모드', () => {
-    it('pip 모드일 때 비디오 영역이 렌더링된다', () => {
-      const { container } = render(
-        <ParticipantVideo
-          {...defaultProps}
-          mode="pip"
-        />,
-      );
+  describe('비디오 렌더링 및 스트림 연결', () => {
+    it('스토어에 스트림이 들어오면 <video> 태그가 렌더링된다', () => {
+      mockUseMediaStore.mockImplementation((selector) => {
+        const state = {
+          remoteStreams: new Map<string, RemoteStream>([
+            [
+              'conn-1',
+              {
+                participantId: 'participant-1',
+                type: 'video',
+                stream: mockStream,
+                consumerId: 'conn-1',
+              },
+            ],
+          ]),
+        };
+        return selector(state as Parameters<typeof selector>[0]);
+      });
 
-      const videoArea = container.querySelector('.bg-gray-200');
-      expect(videoArea).toBeInTheDocument();
+      render(<ParticipantVideo {...defaultProps} />);
+
+      const videoElement = document.querySelector('video');
+      expect(videoElement).toBeInTheDocument();
     });
 
-    it('pip 모드에서 현재 사용자일 때 최소화 및 사이드바 버튼이 렌더링된다', () => {
-      render(
-        <ParticipantVideo
-          {...defaultProps}
-          mode="pip"
-          isCurrentUser
-        />,
-      );
+    it('카메라가 꺼져 있거나 스트림이 없으면 cam-disabled 아이콘을 보여준다', () => {
+      render(<ParticipantVideo {...defaultProps} />);
 
-      expect(screen.getByLabelText('최소화')).toBeInTheDocument();
-      expect(screen.getByLabelText('사이드바로 이동')).toBeInTheDocument();
-    });
-
-    it('pip 모드에서 최소화 버튼 클릭 시 onModeChange가 minimize로 호출된다', async () => {
-      const user = userEvent.setup();
-      const onModeChange = vi.fn();
-
-      render(
-        <ParticipantVideo
-          {...defaultProps}
-          mode="pip"
-          isCurrentUser
-          onModeChange={onModeChange}
-        />,
-      );
-
-      const minimizeButton = screen.getByLabelText('최소화');
-      await user.click(minimizeButton);
-
-      expect(onModeChange).toHaveBeenCalledWith('minimize');
-      expect(onModeChange).toHaveBeenCalledTimes(1);
-    });
-
-    it('pip 모드에서 사이드바 버튼 클릭 시 onModeChange가 side로 호출된다', async () => {
-      const user = userEvent.setup();
-      const onModeChange = vi.fn();
-
-      render(
-        <ParticipantVideo
-          {...defaultProps}
-          mode="pip"
-          isCurrentUser
-          onModeChange={onModeChange}
-        />,
-      );
-
-      const sideButton = screen.getByLabelText('사이드바로 이동');
-      await user.click(sideButton);
-
-      expect(onModeChange).toHaveBeenCalledWith('side');
-      expect(onModeChange).toHaveBeenCalledTimes(1);
-    });
-
-    it('pip 모드에서 현재 사용자가 아닐 때 컨트롤 버튼이 렌더링되지 않는다', () => {
-      render(
-        <ParticipantVideo
-          {...defaultProps}
-          mode="pip"
-          isCurrentUser={false}
-        />,
-      );
-
-      expect(screen.queryByLabelText('최소화')).not.toBeInTheDocument();
-      expect(screen.queryByLabelText('사이드바로 이동')).not.toBeInTheDocument();
+      expect(screen.getByRole('img', { name: 'cam-disabled' })).toBeInTheDocument();
+      expect(document.querySelector('video')).not.toBeInTheDocument();
     });
   });
 
-  describe('side 모드', () => {
-    it('side 모드일 때 비디오 영역이 렌더링된다', () => {
+  describe('페이지네이션 가시성 (isCurrentlyVisible)', () => {
+    it('isCurrentlyVisible이 false이면 display: none 스타일이 적용된다', () => {
       const { container } = render(
         <ParticipantVideo
           {...defaultProps}
-          mode="side"
+          isCurrentlyVisible={false}
         />,
       );
 
-      const videoArea = container.querySelector('.bg-gray-200');
-      expect(videoArea).toBeInTheDocument();
+      const motionDiv = container.firstChild as HTMLElement;
+      expect(motionDiv).toHaveStyle({ display: 'none' });
     });
 
-    it('side 모드에서 현재 사용자일 때 PIP 전환 버튼이 렌더링된다', () => {
-      render(
+    it('isCurrentlyVisible이 true이면 display: block 스타일이 적용된다', () => {
+      const { container } = render(
         <ParticipantVideo
           {...defaultProps}
-          mode="side"
-          isCurrentUser
+          isCurrentlyVisible={true}
         />,
       );
 
-      expect(screen.getByLabelText('PIP 모드로 전환')).toBeInTheDocument();
-    });
-
-    it('side 모드에서 PIP 버튼 클릭 시 onModeChange가 pip으로 호출된다', async () => {
-      const user = userEvent.setup();
-      const onModeChange = vi.fn();
-
-      render(
-        <ParticipantVideo
-          {...defaultProps}
-          mode="side"
-          isCurrentUser
-          onModeChange={onModeChange}
-        />,
-      );
-
-      const pipButton = screen.getByLabelText('PIP 모드로 전환');
-      await user.click(pipButton);
-
-      expect(onModeChange).toHaveBeenCalledWith('pip');
-      expect(onModeChange).toHaveBeenCalledTimes(1);
-    });
-
-    it('side 모드에서 현재 사용자가 아닐 때 PIP 버튼이 렌더링되지 않는다', () => {
-      render(
-        <ParticipantVideo
-          {...defaultProps}
-          mode="side"
-          isCurrentUser={false}
-        />,
-      );
-
-      expect(screen.queryByLabelText('PIP 모드로 전환')).not.toBeInTheDocument();
+      const motionDiv = container.firstChild as HTMLElement;
+      expect(motionDiv).toHaveStyle({ display: 'block' });
     });
   });
 
-  describe('호버 컨트롤', () => {
-    it('pip과 side 모드에서 현재 사용자일 때 호버 오버레이가 렌더링된다', () => {
-      const { container: pipContainer } = render(
-        <ParticipantVideo
-          {...defaultProps}
-          mode="pip"
-          isCurrentUser
-        />,
-      );
-
-      const { container: sideContainer } = render(
-        <ParticipantVideo
-          {...defaultProps}
-          mode="side"
-          isCurrentUser
-        />,
-      );
-
-      const pipOverlay = pipContainer.querySelector('.bg-gray-700\\/40');
-      const sideOverlay = sideContainer.querySelector('.bg-gray-700\\/40');
-
-      expect(pipOverlay).toBeInTheDocument();
-      expect(sideOverlay).toBeInTheDocument();
-    });
-
-    it('minimize 모드에서는 호버 오버레이가 렌더링되지 않는다', () => {
+  describe('사용자 모드 전환 제어', () => {
+    it('현재 사용자인 경우 layoutId가 부여되어 애니메이션이 연결된다', () => {
       const { container } = render(
         <ParticipantVideo
           {...defaultProps}
-          mode="minimize"
-          isCurrentUser
+          isCurrentUser={true}
         />,
       );
 
-      const overlay = container.querySelector('.bg-gray-700\\/40');
-      expect(overlay).not.toBeInTheDocument();
+      expect(container.firstChild).toHaveClass('group');
     });
   });
 });

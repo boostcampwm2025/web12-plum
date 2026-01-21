@@ -1,17 +1,16 @@
-import { useMemo, useRef } from 'react';
+import { useRef } from 'react';
 import { ParticipantVideo, VideoDisplayMode } from './ParticipantVideo';
 import { Icon } from '@/shared/components/icon/Icon';
 import { Button } from '@/shared/components/Button';
 import { useItemsPerPage } from '../hooks/useItemsPerPage';
-import { usePagination } from '../hooks/usePagination';
-import { type Participant } from '../types';
+import { useParticipantPagination } from '../hooks/useParticipantPagination';
 import { useMediaStore } from '../stores/useMediaStore';
 import { useStreamStore } from '@/store/useLocalStreamStore';
-import { useRoomStore } from '../stores/useRoomStore';
+import { MyInfo } from '../stores/useRoomStore';
 
 interface ParticipantGridProps {
   videoMode: VideoDisplayMode;
-  currentUser: Participant;
+  currentUser: MyInfo;
   onModeChange?: (mode: VideoDisplayMode) => void;
   onCurrentUserVideoElementChange?: (element: HTMLVideoElement | null) => void;
 }
@@ -27,27 +26,7 @@ export function ParticipantGrid({
   const isCameraOn = useMediaStore((state) => state.isCameraOn);
   const localStream = useStreamStore((state) => state.localStream);
 
-  const { getParticipantList } = useRoomStore((state) => state.actions);
-  const { getRemoteStreamsByParticipant } = useMediaStore((state) => state.actions);
-  const remoteStreams = useMediaStore((state) => state.remoteStreams);
-  const participants = getParticipantList();
-
-  // 카메라 켜진 참가자를 위로, 꺼진 참가자를 아래로 정렬
-  const sortedParticipants = useMemo(() => {
-    return [...participants].sort((a, b) => {
-      const aHasVideo = getRemoteStreamsByParticipant(a.id).some(
-        (stream) => stream.type === 'video',
-      );
-      const bHasVideo = getRemoteStreamsByParticipant(b.id).some(
-        (stream) => stream.type === 'video',
-      );
-      if (aHasVideo && !bHasVideo) return -1;
-      if (!aHasVideo && bHasVideo) return 1;
-      return 0;
-    });
-  }, [participants, remoteStreams, getRemoteStreamsByParticipant]);
-
-  const itemsPerPage = useItemsPerPage(containerRef, {
+  const dynamicItemsPerPage = useItemsPerPage(containerRef, {
     buttonHeight: 24,
     gap: 12,
     itemHeight: 114,
@@ -55,12 +34,15 @@ export function ParticipantGrid({
   });
 
   const {
-    currentItems: currentParticipants,
+    currentPage,
+    itemsPerPage,
     goToPrevPage,
     goToNextPage,
     hasPrevPage,
     hasNextPage,
-  } = usePagination<Participant>(sortedParticipants, itemsPerPage);
+    sortedParticipants,
+    visibleWindowParticipants,
+  } = useParticipantPagination(dynamicItemsPerPage);
 
   if (videoMode !== 'side') return null;
 
@@ -81,6 +63,7 @@ export function ParticipantGrid({
           onVideoElementChange={onCurrentUserVideoElementChange}
         />
 
+        {/* 이전 페이지 버튼 */}
         <Button
           onClick={goToPrevPage}
           disabled={!hasPrevPage}
@@ -95,17 +78,24 @@ export function ParticipantGrid({
         </Button>
 
         <div className="flex flex-1 flex-col justify-center gap-3 overflow-hidden">
-          {currentParticipants.map((participant) => {
-            const remoteStreams = getRemoteStreamsByParticipant(participant.id);
-            const videoStream = remoteStreams.find((stream) => stream.type === 'video');
+          {visibleWindowParticipants.map((participant) => {
+            const participantIdx = sortedParticipants.findIndex((p) => participant.id === p.id);
+            const isCurrentlyVisible =
+              participantIdx >= currentPage * itemsPerPage &&
+              participantIdx < (currentPage + 1) * itemsPerPage;
+
+            const videoProducerId = participant.producers.get('video');
+
             return (
               <ParticipantVideo
                 key={participant.id}
                 id={participant.id}
                 name={participant.name}
                 mode="side"
-                stream={videoStream?.stream}
-                isCameraOn={!!videoStream}
+                videoProducerId={videoProducerId}
+                participantRole={participant.role}
+                isActive={true}
+                isCurrentlyVisible={isCurrentlyVisible}
               />
             );
           })}

@@ -1,5 +1,5 @@
 import { createContext, useContext, useCallback, type ReactNode } from 'react';
-import type { MediaType, NewProducerPayload } from '@plum/shared-interfaces';
+import type { MediaKind, MediaType, NewProducerPayload } from '@plum/shared-interfaces';
 
 import { logger } from '@/shared/lib/logger';
 import { useSocketStore } from '@/store/useSocketStore';
@@ -11,12 +11,15 @@ import { useMediaTransport } from '../mediasoup/useMediaTransport';
 import { useMediaProducer } from '../mediasoup/useMediaProducer';
 import { useMediaConsumer } from '../mediasoup/useMediaConsumer';
 import { ProducerSignaling } from '../mediasoup/ProducerSignaling';
+import { useRoomStore } from '../stores/useRoomStore';
 
 interface MediaConnectionContextType {
   // 미디어 전송/수신 관련 기능
   startProducing: (track: MediaStreamTrack, type: MediaType) => Promise<void>;
   stopProducing: (type: MediaType) => void;
   consumeRemoteProducer: (data: NewProducerPayload) => Promise<void>;
+  consumeExistingAudioProducers: () => Promise<void>;
+  stopConsuming: (producerId: string, type: MediaType) => void;
   cleanup: () => void;
 
   // 미디어 토글 기능
@@ -55,15 +58,16 @@ export function MediaConnectionProvider({ children }: MediaConnectionProviderPro
     getProducer,
     togglePause,
   } = useMediaProducer();
-  const { consume, removeAll: removeConsumers } = useMediaConsumer();
+  const { consume, removeConsumer: closeConsumer, removeAll: removeConsumers } = useMediaConsumer();
 
   // 외부 스토어 액션
-  const { setTracksEnabled, ensureTracks, clearStream, stopTrack } = useStreamStore(
-    (state) => state.actions,
-  );
+  const { getParticipantList } = useRoomStore((state) => state.actions);
   const { setScreenSharing, setScreenStream } = useMediaStore((state) => state.actions);
   const { addRemoteStream, removeRemoteStream, resetRemoteStreams, toggleMic, toggleCamera } =
     useMediaStore((state) => state.actions);
+  const { setTracksEnabled, ensureTracks, clearStream, stopTrack } = useStreamStore(
+    (state) => state.actions,
+  );
 
   /**
    * [내부] 전송/수신용 Transport 확보 공통 로직
@@ -134,6 +138,54 @@ export function MediaConnectionProvider({ children }: MediaConnectionProviderPro
     },
     [ensureTransport, consume, addRemoteStream, removeRemoteStream],
   );
+
+  /**
+   * 특정 Producer에 대한 수신 중단
+   */
+  const stopConsuming = useCallback(
+    (producerId: string, type: MediaType) => {
+      try {
+        closeConsumer(producerId);
+        removeRemoteStream(producerId);
+
+        logger.media.info(`[MediaConnection] ${type} 수신 중단 완료: ${producerId}`);
+      } catch (error) {
+        logger.media.error(`[MediaConnection] 수신 중단 중 에러:`, error);
+      }
+    },
+    [closeConsumer, removeRemoteStream],
+  );
+
+  /**
+   * 방 입장 시 이미 존재하는 참가자들의 '오디오'만 모두 수신
+   */
+  const consumeExistingAudioProducers = useCallback(async () => {
+    const participants = getParticipantList();
+    const consumePromises: Promise<void>[] = [];
+
+    participants.forEach((participant) => {
+      // 오디오 프로듀서가 있는지 확인
+      const audioProducerId = participant.producers.get('audio');
+
+      if (audioProducerId) {
+        const data = {
+          producerId: audioProducerId,
+          participantId: participant.id,
+          type: 'audio' as MediaKind,
+          kind: 'audio' as MediaKind,
+          participantRole: participant.role,
+        };
+        consumePromises.push(consumeRemoteProducer(data));
+      }
+    });
+
+    if (consumePromises.length > 0) {
+      logger.media.info(
+        `[MediaConnection] 기존 참가자 ${consumePromises.length}명의 오디오 수신 시작`,
+      );
+      await Promise.allSettled(consumePromises);
+    }
+  }, [getParticipantList, consumeRemoteProducer]);
 
   /**
    * 마이크 송출 토글 (점유 유지 + Pause/Resume 전략)
@@ -331,6 +383,8 @@ export function MediaConnectionProvider({ children }: MediaConnectionProviderPro
     startProducing,
     stopProducing,
     consumeRemoteProducer,
+    consumeExistingAudioProducers,
+    stopConsuming,
     cleanup,
 
     startMicProducer,

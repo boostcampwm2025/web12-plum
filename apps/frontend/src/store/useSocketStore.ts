@@ -1,7 +1,7 @@
 import { io } from 'socket.io-client';
 import { create } from 'zustand';
 import { logger } from '@/shared/lib/logger';
-import type { ClientToServerEvents, ServerToClientEvents } from '@plum/shared-interfaces';
+import type { ClientToServerEvents } from '@plum/shared-interfaces';
 import { MediaSocket } from '@/feature/room/types';
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL as string;
@@ -34,8 +34,6 @@ interface SocketState {
       event: K,
       ...args: Parameters<ClientToServerEvents[K]>
     ) => void;
-    registerHandlers: (eventHandlers: Partial<ServerToClientEvents>) => void;
-    unregisterHandlers: (eventNames: (keyof ServerToClientEvents)[]) => void;
   };
 }
 
@@ -217,33 +215,6 @@ export const useSocketStore = create<SocketState>((set, get) => ({
       }
 
       socket.emit(event, ...args);
-    },
-
-    /**
-     * 주입받은 이벤트 핸들러들을 소켓에 등록
-     */
-    registerHandlers: (eventHandlers) => {
-      const { socket } = get();
-      if (!socket) return;
-
-      Object.entries(eventHandlers).forEach(([eventName, handler]) => {
-        socket.off(eventName as keyof ServerToClientEvents);
-        socket.on(eventName as keyof ServerToClientEvents, handler);
-        logger.socket.debug(`[Socket] 이벤트 리스너 등록됨: ${eventName}`);
-      });
-    },
-
-    /**
-     * 주어진 이벤트 이름 목록에 해당하는 리스너들을 소켓에서 해제
-     */
-    unregisterHandlers: (eventNames) => {
-      const { socket } = get();
-      if (!socket) return;
-
-      eventNames.forEach((eventName) => {
-        socket.off(eventName as keyof ServerToClientEvents);
-        logger.socket.debug(`[Socket] 이벤트 리스너 해제됨: ${eventName}`);
-      });
     },
   },
 }));

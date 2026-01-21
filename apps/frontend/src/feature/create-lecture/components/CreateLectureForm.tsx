@@ -1,6 +1,6 @@
 import { FormProvider, useForm, useFormContext, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import type { CreateRoomRequest, CreateRoomResponse } from '@plum/shared-interfaces';
+import type { CreateRoomRequest } from '@plum/shared-interfaces';
 import { createLectureSchema } from '@plum/shared-interfaces';
 
 import { Button } from '@/shared/components/Button';
@@ -17,6 +17,9 @@ import { ActivityList } from './ActivityList';
 import { ActivityModals } from './ActivityModals';
 import { LecturePresentationUpload } from './LecturePresentationUpload';
 import { LecturePresentationList } from './LecturePresentationList';
+import { useNavigate } from 'react-router';
+import { ROUTES } from '@/app/routes/routes';
+import { useRoomStore } from '@/feature/room/stores/useRoomStore';
 
 /**
  * 강의실 이름 섹션 컴포넌트
@@ -180,12 +183,11 @@ function PresentationUploaderSection() {
  * 강의 생성 폼 컴포넌트
  * @returns 강의 생성 폼 JSX 요소
  */
-interface CreateLectureFormProps {
-  onCreateSuccess?: (response: CreateRoomResponse) => void;
-}
-
-export function CreateLectureForm({ onCreateSuccess }: CreateLectureFormProps) {
+export function CreateLectureForm() {
+  const navigate = useNavigate();
   const { createRoom, isSubmitting } = useCreateRoom();
+  const { setMyInfo } = useRoomStore((state) => state.actions);
+
   const formMethods = useForm<CreateRoomRequest>({
     resolver: zodResolver(createLectureSchema),
     defaultValues: lectureFormDefaultValues,
@@ -197,7 +199,8 @@ export function CreateLectureForm({ onCreateSuccess }: CreateLectureFormProps) {
   const onSubmit = async (data: CreateRoomRequest) => {
     try {
       const response = await createRoom(data);
-      onCreateSuccess?.(response);
+      setMyInfo(response.host);
+      navigate(ROUTES.ROOM(response.roomId));
     } catch (err) {
       alert(`강의실 생성에 실패했습니다: ${err}`);
     }
