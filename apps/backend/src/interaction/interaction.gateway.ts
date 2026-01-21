@@ -193,7 +193,7 @@ export class InteractionGateway implements OnGatewayDisconnect {
         voter: {
           participantId: participant.id,
           name: participant.name,
-          optionsId: data.optionId,
+          optionId: data.optionId,
         },
       });
 
@@ -343,17 +343,17 @@ export class InteractionGateway implements OnGatewayDisconnect {
   }
 
   @OnEvent('poll.autoClosed')
-  async handleAutoClosedPollEvent(payload: { pollId: string; options: PollOption[] }) {
+  async handleAutoClosedPollEvent(payload: { pollId: string; results: PollOption[] }) {
     try {
       const poll = await this.interactionService.getPoll(payload.pollId);
 
       this.server.to(`${poll.roomId}:presenter`).emit('poll_end_detail', {
         pollId: poll.id,
-        options: payload.options,
+        options: payload.results,
       });
       this.server.to(`${poll.roomId}:audience`).emit('poll_end', {
         pollId: poll.id,
-        options: payload.options.map((o) => ({ id: o.id, count: o.count })),
+        options: payload.results.map((o) => ({ id: o.id, count: o.count })),
       });
       this.logger.log(`[auto_close_poll] 전달 ${poll.roomId}: ${poll.id}`);
     } catch (error) {
