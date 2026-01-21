@@ -12,11 +12,13 @@ import { usePollStore } from '../stores/usePollStore';
 import { logger } from '@/shared/lib/logger';
 import type { PollFormValues } from '@/shared/constants/poll';
 import type { Poll, Voter } from '@plum/shared-interfaces';
+import { useToastStore } from '@/store/useToastStore';
 
 export function PollManagementTabs() {
   const [activeTab, setActiveTab] = useState<TabValue>('scheduled');
   const polls = usePollStore((state) => state.polls);
   const pollActions = usePollStore((state) => state.actions);
+  const addToast = useToastStore((state) => state.actions.addToast);
   const emit = useSocketStore((state) => state.actions.emit);
 
   const scheduledPolls = useMemo(() => polls.filter((poll) => poll.status === 'pending'), [polls]);
@@ -51,12 +53,16 @@ export function PollManagementTabs() {
       emit('create_poll', data, (response) => {
         if (!response.success) {
           logger.socket.warn('투표 생성 실패', response.error);
+          addToast({
+            type: 'error',
+            title: '투표 생성에 실패했습니다.',
+          });
           return;
         }
         fetchPolls();
       });
     },
-    [emit, fetchPolls],
+    [emit, fetchPolls, addToast],
   );
 
   const handleStartPoll = useCallback(
@@ -64,12 +70,16 @@ export function PollManagementTabs() {
       emit('emit_poll', { pollId }, (response) => {
         if (!response.success) {
           logger.socket.warn('투표 시작 실패', response.error);
+          addToast({
+            type: 'error',
+            title: '투표 시작에 실패했습니다.',
+          });
           return;
         }
         fetchPolls();
       });
     },
-    [emit, fetchPolls],
+    [emit, fetchPolls, addToast],
   );
 
   const handleBreakPoll = useCallback(() => {
@@ -77,12 +87,16 @@ export function PollManagementTabs() {
     emit('break_poll', { pollId: activePoll.id }, (response) => {
       if (!response.success) {
         logger.socket.warn('투표 종료 실패', response.error);
+        addToast({
+          type: 'error',
+          title: '투표 종료에 실패했습니다.',
+        });
         return;
       }
       pollActions.setCompletedFromEndDetail({ pollId: activePoll.id, options: response.options });
       fetchPolls();
     });
-  }, [emit, activePoll, pollActions, fetchPolls]);
+  }, [emit, activePoll, pollActions, fetchPolls, addToast]);
 
   return (
     <>
