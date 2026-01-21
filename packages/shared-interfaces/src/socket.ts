@@ -183,6 +183,7 @@ export type MediaStateChangedPayload = NewProducerPayload & {
 // 제스처 상태 업데이트 페이로드
 export interface UpdateGestureStatusPayload {
   participantId: string;
+  participantName: string;
   gesture: GestureType;
 }
 
