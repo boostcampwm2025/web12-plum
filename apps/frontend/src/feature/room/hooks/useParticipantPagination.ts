@@ -1,14 +1,15 @@
 import { useMemo, useState } from 'react';
+import { useShallow } from 'zustand/shallow';
 import { useRoomStore } from '../stores/useRoomStore';
 
 const MAX_ITEMS = 5;
 
 export function useParticipantPagination(dynamicItemsPerPage: number) {
   const [currentPage, setCurrentPage] = useState(0);
-  const { getParticipantList } = useRoomStore((state) => state.actions);
+  const participantsMap = useRoomStore(useShallow((state) => state.participants));
+  const participants = useMemo(() => Array.from(participantsMap.values()), [participantsMap]);
 
   const itemsPerPage = Math.min(MAX_ITEMS, dynamicItemsPerPage) || MAX_ITEMS;
-  const participants = getParticipantList();
 
   /**
    * 비디오를 송출하는 참가자를 우선적으로 정렬

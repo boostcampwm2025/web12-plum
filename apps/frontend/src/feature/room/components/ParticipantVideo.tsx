@@ -16,12 +16,17 @@ const VIDEO_HEIGHTS = {
 };
 
 /**
- * UI에서 특정 참가자의 특정 타입 스트림을 실시간으로 구독하기 위한 커스텀 셀렉터 훅
+ * UI에서 특정 참가자의 비디오 스트림을 실시간으로 구독하기 위한 커스텀 셀렉터 훅
+ * remoteStreams는 consumerId를 키로 사용하므로 participantId로 순회 검색
  */
 function useRemoteVideoStream(participantId: string): MediaStream | null {
   return useMediaStore((state) => {
-    const streamObj = state.remoteStreams.get(participantId);
-    return streamObj?.type === 'video' ? streamObj.stream : null;
+    for (const stream of state.remoteStreams.values()) {
+      if (stream.participantId === participantId && stream.type === 'video') {
+        return stream.stream;
+      }
+    }
+    return null;
   });
 }
 
