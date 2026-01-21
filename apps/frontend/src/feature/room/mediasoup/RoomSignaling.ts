@@ -2,6 +2,7 @@ import { RtpCapabilities } from 'mediasoup-client/types';
 import {
   JoinRoomResponse,
   MediaStateChangedPayload,
+  MediaType,
   NewProducerPayload,
   ParticipantRole,
   UserJoinedPayload,
@@ -77,6 +78,7 @@ export const RoomSignaling = {
     actions: {
       addParticipant: (data: UserJoinedPayload) => void;
       removeParticipant: (id: string) => void;
+      addProducer: (participantId: string, type: MediaType, producerId: string) => void;
       consumeRemoteProducer: (data: NewProducerPayload) => void;
       handleMediaStateChanged: (data: MediaStateChangedPayload) => void;
     },
@@ -96,7 +98,12 @@ export const RoomSignaling = {
     // 미디어 스트림 발생 (다른 사람이 카메라/마이크 켰을 때)
     socket.on('new_producer', (data) => {
       logger.media.info(`[Room] 새로운 프로듀서 발생: ${data.participantId} - ${data.type}`);
-      actions.consumeRemoteProducer(data);
+
+      // 스토어에 producer 정보 저장 (비디오는 페이지네이션에서 사용)
+      actions.addProducer(data.participantId, data.type, data.producerId);
+
+      // 오디오만 즉시 consume
+      if (data.type === 'audio') actions.consumeRemoteProducer(data);
     });
 
     // 미디어 상태 변경 (다른 사람이 Mute/Unmute 했을 때)

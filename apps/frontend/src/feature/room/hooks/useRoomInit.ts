@@ -38,7 +38,7 @@ export function useRoomInit() {
   // 스토어 액션
   const { initDevice } = useMediaDeviceStore((state) => state.actions);
   const { ensureTracks } = useStreamStore((state) => state.actions);
-  const { initParticipants, addParticipant, removeParticipant } = useRoomStore(
+  const { initParticipants, addParticipant, removeParticipant, addProducer } = useRoomStore(
     (state) => state.actions,
   );
   const { removeRemoteStreamByParticipant } = useMediaStore((state) => state.actions);
@@ -72,6 +72,7 @@ export function useRoomInit() {
       RoomSignaling.setupAllHandlers(connectedSocket, {
         addParticipant,
         removeParticipant,
+        addProducer,
         consumeRemoteProducer,
         handleMediaStateChanged: (data) => {
           if (data.action === 'pause') {
