@@ -59,3 +59,17 @@ services:
     networks:
       - plum-network
     # depends_on 제거: backend는 host 모드라 네트워크 의존성이 의미 없음
+
+  # Load Test - Playwright 부하 테스트 (Worker 분배 확인용)
+  load-test:
+    image: mcr.microsoft.com/playwright:v1.40.0-focal
+    container_name: plum-load-test-develop
+    network_mode: host # Backend와 같게 host 네트워크 사용
+    volumes:
+      - ./apps/load-test:/app
+    working_dir: /app
+    environment:
+      - BACKEND_URL=http://localhost:3000 # host 모드니까 localhost
+      - FRONTEND_URL=http://localhost:5173
+    command: tail -f /dev/null # 컨테이너 유지 (수동으로 테스트 실행)
+    restart: "no" # 테스트 전용이므로 자동 재시작 안 함
