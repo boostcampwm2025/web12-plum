@@ -15,12 +15,12 @@ export function RoomDialogs() {
   const setActiveDialog = useRoomUIStore((state) => state.setActiveDialog);
   const polls = usePollStore((state) => state.polls);
   const qnas = useQnaStore((state) => state.qnas);
-  const qnaActions = useQnaStore((state) => state.actions);
   const emit = useSocketStore((state) => state.actions.emit);
   const addToast = useToastStore((state) => state.actions.addToast);
   const [selectedOptionByPollId, setSelectedOptionByPollId] = useState<
     Record<string, number | null>
   >({});
+  const [submittedQnaById, setSubmittedQnaById] = useState<Record<string, boolean>>({});
 
   const activePoll = useMemo(() => polls.find((poll) => poll.status === 'active'), [polls]);
   const activeQna = useMemo(() => qnas.find((qna) => qna.status === 'active'), [qnas]);
@@ -47,11 +47,7 @@ export function RoomDialogs() {
         });
         return;
       }
-      addToast({
-        type: 'success',
-        title: 'Q&A 답변이 전송되었습니다.',
-      });
-      qnaActions.clearActiveQna(qnaId);
+      setSubmittedQnaById((state) => ({ ...state, [qnaId]: true }));
     });
   };
 
@@ -59,6 +55,11 @@ export function RoomDialogs() {
     if (activePoll) return;
     setSelectedOptionByPollId({});
   }, [activePoll]);
+
+  useEffect(() => {
+    if (activeQna) return;
+    setSubmittedQnaById({});
+  }, [activeQna]);
 
   return (
     <AnimatePresence>
@@ -90,6 +91,7 @@ export function RoomDialogs() {
             qna={activeQna}
             startedAt={qnaStartedAt}
             onSubmit={handleAnswer}
+            isSubmitted={activeQna ? (submittedQnaById[activeQna.id] ?? false) : false}
           />
         </RoomDialog>
       )}
