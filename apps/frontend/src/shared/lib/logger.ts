@@ -1,3 +1,5 @@
+import { addBreadcrumb, captureException, captureMessage, SeverityLevel } from '@sentry/react';
+
 /**
  * 로그 레벨 타입
  */
@@ -44,8 +46,35 @@ function formatMessage(
   message: string,
   ...args: unknown[]
 ): void {
-  if (!isDev) return;
+  addBreadcrumb({
+    category: category || 'default',
+    message: message,
+    level: level === 'warn' ? 'warning' : (level as SeverityLevel),
+    data: args.length > 0 ? { args } : undefined,
+  });
 
+  // 운영 환경에서는 error 및 warn 레벨만 Sentry로 전송
+  if (!isDev) {
+    if (level === 'error' || level === 'warn') {
+      const errorObj = args.find((arg) => arg instanceof Error) as Error | undefined;
+
+      if (level === 'error') {
+        captureException(errorObj || new Error(message), {
+          tags: { category },
+          extra: { args },
+        });
+      } else {
+        captureMessage(message, {
+          level: 'warning',
+          tags: { category },
+          extra: { args },
+        });
+      }
+    }
+    return;
+  }
+
+  // 개발 환경이 아닐 경우 콘솔 출력 생략
   const label = LEVEL_LABEL[level];
 
   if (category) {
