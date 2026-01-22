@@ -12,6 +12,9 @@ import { enterLectureDefaultValues, ENTER_LECTURE_KEYS } from '../schema';
 import { LocalMediaPreview } from './LocalMediaPreview';
 import { useEnterRoom } from '../hooks/useEnterRoom';
 import { useNicknameValidation } from '../hooks/useNicknameValidation';
+import { useToastStore } from '@/store/useToastStore';
+import { ROUTES } from '@/app/routes/routes';
+import { useNavigate } from 'react-router';
 
 /**
  * 강의실 이름 입력 섹션
@@ -169,7 +172,10 @@ interface EnterLectureFormProps {
 }
 
 export function EnterLectureForm({ roomId, lectureName = '예시 강의실' }: EnterLectureFormProps) {
+  const navigate = useNavigate();
+
   const { enterRoom, isSubmitting } = useEnterRoom();
+  const { addToast } = useToastStore((state) => state.actions);
   const { initialize } = useMediaStore((state) => state.actions);
 
   const formMethods = useForm<EnterLectureRequestBody>({
@@ -193,6 +199,7 @@ export function EnterLectureForm({ roomId, lectureName = '예시 강의실' }: E
   } = useNicknameValidation({ roomId, control, trigger, getValues });
 
   const onSubmit = async (data: EnterLectureRequestBody) => {
+    logger.ui.info('강의실 입장 폼 제출 시도', data);
     if (!hasCheckedNickname || !isNicknameAvailable) {
       requireCheck();
       setError(
@@ -209,9 +216,16 @@ export function EnterLectureForm({ roomId, lectureName = '예시 강의실' }: E
     try {
       initialize(data.isAudioOn, data.isVideoOn);
       await enterRoom(data);
+
+      logger.ui.info('강의실 입장 폼 제출 성공');
+      navigate(ROUTES.ROOM(roomId));
     } catch (error) {
       logger.ui.error('강의실 입장 실패:', error);
+      // TODO: API 에러별 메시지 추가
+      // if (error instanceof ApiError) {}
+      addToast({ type: 'error', title: '강의실 입장에 실패했습니다. 잠시 후 다시 시도해주세요.' });
     }
+    logger.ui.info('강의실 입장 폼 제출 완료');
   };
 
   const isSubmitDisabled = !formState.isValid || isSubmitting || !roomId || !lectureName;
