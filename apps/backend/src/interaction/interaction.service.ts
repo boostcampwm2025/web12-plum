@@ -238,11 +238,13 @@ export class InteractionService {
 
     const audiencePayload: EndQnaPayload = {
       qnaId: qna.id,
+      title: qna.title,
       count: answers.length,
       text: answers.map((a) => a.text),
     };
     const payload: EndQnaDetailPayload = {
       qnaId: qna.id,
+      title: qna.title,
       count: answers.length,
       answers,
     };
@@ -251,7 +253,7 @@ export class InteractionService {
       return { audience: audiencePayload, presenter: payload };
     } else {
       return {
-        audience: { qnaId: payload.qnaId, count: payload.count },
+        audience: { qnaId: payload.qnaId, title: payload.title, count: payload.count },
         presenter: payload,
       };
     }

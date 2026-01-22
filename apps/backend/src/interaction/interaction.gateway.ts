@@ -358,11 +358,13 @@ export class InteractionGateway {
 
       const audiencePayload: EndQnaPayload = {
         qnaId: qna.id,
+        title: qna.title,
         count: payload.answers.length,
         ...(qna.isPublic && { text: payload.answers.map((a) => a.text) }),
       };
       const presenterPayload: EndQnaDetailPayload = {
         qnaId: qna.id,
+        title: qna.title,
         count: payload.answers.length,
         answers: payload.answers,
       };

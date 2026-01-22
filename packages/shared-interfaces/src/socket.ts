@@ -260,12 +260,14 @@ export interface EndPollDetailPayload {
 
 export interface EndQnaDetailPayload {
   qnaId: string;
+  title: string;
   count: number;
   answers: Answer[];
 }
 
 export type EndQnaPayload = {
   qnaId: string;
+  title: string;
   count: number;
   text?: string[];
 };

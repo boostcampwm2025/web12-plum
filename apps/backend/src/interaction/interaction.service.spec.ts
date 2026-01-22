@@ -548,7 +548,7 @@ describe('InteractionService (투표 및 Q&A 생성 테스트)', () => {
     });
 
     it('성공: 공개 질문(isPublic: true)을 종료하면 청중과 발표자 모두 상세 답변을 받아야 한다', async () => {
-      const activeQna = { id: qnaId, status: 'active', isPublic: true };
+      const activeQna = { id: qnaId, title: 'q1', status: 'active', isPublic: true };
       mockQnaManager.findOne.mockResolvedValue(activeQna);
       mockQnaManager.closeQna.mockResolvedValue(mockAnswers);
 
@@ -556,28 +556,35 @@ describe('InteractionService (투표 및 Q&A 생성 테스트)', () => {
 
       const expectedPayload = {
         qnaId,
+        title: activeQna.title,
         count: mockAnswers.length,
         answers: mockAnswers,
       };
 
       expect(mockQnaManager.closeQna).toHaveBeenCalledWith(qnaId);
       expect(result).toEqual({
-        audience: { qnaId, count: mockAnswers.length, text: mockAnswers.map((a) => a.text) },
+        audience: {
+          qnaId,
+          title: activeQna.title,
+          count: mockAnswers.length,
+          text: mockAnswers.map((a) => a.text),
+        },
         presenter: expectedPayload,
       });
     });
 
     it('성공: 비공개 질문(isPublic: false)을 종료하면 청중에게는 통계(ID, count)만 반환해야 한다', async () => {
-      const activeQna = { id: qnaId, status: 'active', isPublic: false };
+      const activeQna = { id: qnaId, title: 'q1', status: 'active', isPublic: false };
       mockQnaManager.findOne.mockResolvedValue(activeQna);
       mockQnaManager.closeQna.mockResolvedValue(mockAnswers);
 
       const result = await service.stopQna(qnaId);
 
       expect(result).toEqual({
-        audience: { qnaId: qnaId, count: mockAnswers.length },
+        audience: { qnaId: qnaId, title: activeQna.title, count: mockAnswers.length },
         presenter: {
           qnaId,
+          title: activeQna.title,
           count: mockAnswers.length,
           answers: mockAnswers,
         },
