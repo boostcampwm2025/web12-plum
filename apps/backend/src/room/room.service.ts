@@ -181,12 +181,13 @@ export class RoomService {
       }
     }
 
+    const existingParticipants = allParticipants.filter((p) => p.id !== participant.id);
     return {
       mediasoup: {
         routerRtpCapabilities: rtpCapabilities,
         existingProducers,
       },
-      participants: allParticipants.map((p) => ({
+      participants: existingParticipants.map((p) => ({
         id: p.id,
         name: p.name,
         role: p.role,

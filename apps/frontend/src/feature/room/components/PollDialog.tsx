@@ -1,16 +1,23 @@
 import { Poll } from '@plum/shared-interfaces';
-import { useState } from 'react';
 import { cn } from '@/shared/lib/utils';
 import { TimeLeft } from './TimeLeft';
 
 interface PollDialogProps {
   poll?: Pick<Poll, 'id' | 'title' | 'options' | 'timeLimit'>;
   startedAt: number;
+  onVote: (pollId: string, optionId: number) => void;
+  selectedOptionId: number | null;
+  onSelectOption: (pollId: string, optionId: number) => void;
 }
 
-export function PollDialog({ poll, startedAt }: PollDialogProps) {
+export function PollDialog({
+  poll,
+  startedAt,
+  onVote,
+  selectedOptionId,
+  onSelectOption,
+}: PollDialogProps) {
   const totalVotes = poll?.options.reduce((sum, option) => sum + option.count, 0) ?? 0;
-  const [selectedOptionId, setSelectedOptionId] = useState<number | null>(null);
 
   return (
     <>
@@ -18,17 +25,20 @@ export function PollDialog({ poll, startedAt }: PollDialogProps) {
         <div className="flex flex-col gap-4">
           <h3 className="text-text text-2xl font-bold">{poll.title}</h3>
           <ul className="space-y-3">
-            {poll.options.map((option, index) => {
+            {poll.options.map((option) => {
               const percentage = totalVotes > 0 ? Math.round((option.count / totalVotes) * 100) : 0;
               const isSelected = selectedOptionId === option.id;
               const isDisabled = selectedOptionId !== null && !isSelected;
 
               return (
-                <li key={index}>
+                <li key={option.id}>
                   <button
                     type="button"
                     onClick={() => {
-                      if (selectedOptionId === null) setSelectedOptionId(option.id);
+                      if (selectedOptionId === null && poll) {
+                        onSelectOption(poll.id, option.id);
+                        onVote(poll.id, option.id);
+                      }
                     }}
                     disabled={selectedOptionId !== null}
                     aria-pressed={isSelected}

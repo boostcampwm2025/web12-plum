@@ -18,7 +18,7 @@ interface MediaConnectionContextType {
   startProducing: (track: MediaStreamTrack, type: MediaType) => Promise<void>;
   stopProducing: (type: MediaType) => void;
   consumeRemoteProducer: (data: NewProducerPayload) => Promise<void>;
-  consumeExistingAudioProducers: () => Promise<void>;
+  consumeExistingProducers: () => Promise<void>;
   stopConsuming: (producerId: string, type: MediaType) => void;
   cleanup: () => void;
 
@@ -157,31 +157,45 @@ export function MediaConnectionProvider({ children }: MediaConnectionProviderPro
   );
 
   /**
-   * 방 입장 시 이미 존재하는 참가자들의 '오디오'만 모두 수신
+   * 방 입장 시 이미 존재하는 참가자들의 오디오와 화면공유를 모두 수신
    */
-  const consumeExistingAudioProducers = useCallback(async () => {
+  const consumeExistingProducers = useCallback(async () => {
     const participants = getParticipantList();
     const consumePromises: Promise<void>[] = [];
 
     participants.forEach((participant) => {
       // 오디오 프로듀서가 있는지 확인
       const audioProducerId = participant.producers.get('audio');
-
       if (audioProducerId) {
-        const data = {
-          producerId: audioProducerId,
-          participantId: participant.id,
-          type: 'audio' as MediaKind,
-          kind: 'audio' as MediaKind,
-          participantRole: participant.role,
-        };
-        consumePromises.push(consumeRemoteProducer(data));
+        consumePromises.push(
+          consumeRemoteProducer({
+            producerId: audioProducerId,
+            participantId: participant.id,
+            type: 'audio' as MediaKind,
+            kind: 'audio' as MediaKind,
+            participantRole: participant.role,
+          }),
+        );
+      }
+
+      // 화면공유 프로듀서가 있는지 확인
+      const screenProducerId = participant.producers.get('screen');
+      if (screenProducerId) {
+        consumePromises.push(
+          consumeRemoteProducer({
+            producerId: screenProducerId,
+            participantId: participant.id,
+            type: 'screen' as MediaType,
+            kind: 'video' as MediaKind,
+            participantRole: participant.role,
+          }),
+        );
       }
     });
 
     if (consumePromises.length > 0) {
       logger.media.info(
-        `[MediaConnection] 기존 참가자 ${consumePromises.length}명의 오디오 수신 시작`,
+        `[MediaConnection] 기존 참가자들의 미디어 ${consumePromises.length}개 수신 시작`,
       );
       await Promise.allSettled(consumePromises);
     }
@@ -313,7 +327,19 @@ export function MediaConnectionProvider({ children }: MediaConnectionProviderPro
   /**
    * 화면 공유 중지
    */
-  const stopScreenShare = useCallback(() => {
+  const stopScreenShare = useCallback(async () => {
+    const socket = useSocketStore.getState().socket;
+    const producer = getProducer('screen');
+
+    // 서버에 화면공유 종료 알림 (다른 클라이언트에게 브로드캐스트)
+    if (socket && producer) {
+      try {
+        await ProducerSignaling.toggleMedia(socket, producer.id, 'pause', 'screen');
+      } catch (error) {
+        logger.media.warn('[MediaConnection] 화면 공유 종료 알림 실패:', error);
+      }
+    }
+
     const { screenStream: currentScreenStream } = useMediaStore.getState();
     if (currentScreenStream) {
       currentScreenStream.getTracks().forEach((track) => track.stop());
@@ -322,7 +348,7 @@ export function MediaConnectionProvider({ children }: MediaConnectionProviderPro
     setScreenStream(null);
     setScreenSharing(false);
     logger.media.info('[MediaConnection] 화면 공유 중지');
-  }, [stopProducing, setScreenStream, setScreenSharing]);
+  }, [getProducer, stopProducing, setScreenStream, setScreenSharing]);
 
   /**
    * 화면 공유 시작
@@ -383,7 +409,7 @@ export function MediaConnectionProvider({ children }: MediaConnectionProviderPro
     startProducing,
     stopProducing,
     consumeRemoteProducer,
-    consumeExistingAudioProducers,
+    consumeExistingProducers,
     stopConsuming,
     cleanup,
 

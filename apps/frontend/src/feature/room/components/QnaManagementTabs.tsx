@@ -26,6 +26,9 @@ const scheduledQnas: Qna[] = [
     isPublic: true,
     createdAt: '2024-08-01T09:00:00.000Z',
     updatedAt: '2024-08-01T09:00:00.000Z',
+    startedAt: '',
+    endedAt: '',
+    answers: [],
   },
   {
     id: 'qna-2',
@@ -36,6 +39,9 @@ const scheduledQnas: Qna[] = [
     isPublic: false,
     createdAt: '2024-08-01T10:00:00.000Z',
     updatedAt: '2024-08-01T10:00:00.000Z',
+    startedAt: '',
+    endedAt: '',
+    answers: [],
   },
 ];
 
@@ -48,6 +54,9 @@ const activeQna: Qna | null = {
   isPublic: true,
   createdAt: '2024-08-01T11:00:00.000Z',
   updatedAt: '2024-08-01T11:00:00.000Z',
+  startedAt: '2024-08-01T11:00:00.000Z',
+  endedAt: '',
+  answers: [],
 };
 
 const activeQnaResponses: QnaResponse[] = [
@@ -93,6 +102,9 @@ const completedQnas: Qna[] = [
     isPublic: true,
     createdAt: '2024-08-01T08:00:00.000Z',
     updatedAt: '2024-08-01T08:30:00.000Z',
+    startedAt: '2024-08-01T08:00:00.000Z',
+    endedAt: '2024-08-01T08:30:00.000Z',
+    answers: [],
   },
   {
     id: 'qna-5',
@@ -103,6 +115,9 @@ const completedQnas: Qna[] = [
     isPublic: false,
     createdAt: '2024-08-01T07:00:00.000Z',
     updatedAt: '2024-08-01T07:30:00.000Z',
+    startedAt: '2024-08-01T07:00:00.000Z',
+    endedAt: '2024-08-01T07:30:00.000Z',
+    answers: [],
   },
 ];
 
@@ -212,6 +227,8 @@ function ScheduledQnaList() {
             <ScheduledCard
               key={qna.id}
               title={qna.title}
+              onEdit={() => undefined}
+              onStart={() => undefined}
             />
           ))}
         </div>

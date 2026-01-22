@@ -293,7 +293,7 @@ describe('InteractionService (투표 및 Q&A 생성 테스트)', () => {
     });
 
     it('이미 종료된(ended) 투표인 경우 getFinalResults를 호출하여 결과를 반환해야 한다', async () => {
-      const endedPoll = { id: pollId, status: 'ended' };
+      const endedPoll = { id: pollId, status: 'ended', title: '종료된 투표' };
       mockPollManager.findOne.mockResolvedValue(endedPoll);
       mockPollManager.getFinalResults.mockResolvedValue(mockOptions);
 
@@ -301,11 +301,11 @@ describe('InteractionService (투표 및 Q&A 생성 테스트)', () => {
 
       expect(mockPollManager.getFinalResults).toHaveBeenCalledWith(pollId);
       expect(mockPollManager.closePoll).not.toHaveBeenCalled();
-      expect(result).toEqual(mockOptions);
+      expect(result).toEqual({ title: endedPoll.title, options: mockOptions });
     });
 
     it('진행 중인 투표인 경우 closePoll을 호출하여 투표를 마감하고 결과를 반환해야 한다', async () => {
-      const activePoll = { id: pollId, status: 'active' };
+      const activePoll = { id: pollId, status: 'active', title: '진행중 투표' };
       mockPollManager.findOne.mockResolvedValue(activePoll);
       mockPollManager.closePoll.mockResolvedValue(mockOptions);
 
@@ -313,7 +313,7 @@ describe('InteractionService (투표 및 Q&A 생성 테스트)', () => {
 
       expect(mockPollManager.closePoll).toHaveBeenCalledWith(pollId);
       expect(mockPollManager.getFinalResults).not.toHaveBeenCalled(); // getFinalResults는 호출되면 안 됨
-      expect(result).toEqual(mockOptions);
+      expect(result).toEqual({ title: activePoll.title, options: mockOptions });
     });
   });
 

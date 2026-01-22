@@ -22,7 +22,6 @@ import {
   VoteResponse,
   BreakPollRequest,
   BreakPollResponse,
-  UpdatePollStatusSubPayload,
   PollOption,
   CreateQnaResponse,
   CreateQnaRequest,
@@ -206,7 +205,7 @@ export class InteractionGateway implements OnGatewayDisconnect {
         voter: {
           participantId: participant.id,
           name: participant.name,
-          optionsId: data.optionId,
+          optionId: data.optionId,
         },
       });
 
@@ -231,18 +230,18 @@ export class InteractionGateway implements OnGatewayDisconnect {
     try {
       const { room } = await this.validatePresenterAction(socket.id);
 
-      const options = await this.interactionService.stopPoll(data.pollId);
-      const broadCastPayload: UpdatePollStatusSubPayload = {
+      const { title, options } = await this.interactionService.stopPoll(data.pollId);
+      socket.to(room.id).emit('poll_end', {
         pollId: data.pollId,
+        title,
         options: options.map((option) => ({
           id: option.id,
+          value: option.value,
           count: option.count,
         })),
-      };
-
-      socket.to(room.id).emit('poll_end', broadCastPayload);
+      });
       this.logger.log(`[break_poll] ${room.id}에서 투표 수동 종료: ${data.pollId}`);
-      return { success: true, options: options };
+      return { success: true, options };
     } catch (error) {
       const errorMessage =
         error instanceof BusinessException ? error.message : '투표 종료에 실패했습니다.';
@@ -356,17 +355,18 @@ export class InteractionGateway implements OnGatewayDisconnect {
   }
 
   @OnEvent('poll.autoClosed')
-  async handleAutoClosedPollEvent(payload: { pollId: string; options: PollOption[] }) {
+  async handleAutoClosedPollEvent(payload: { pollId: string; results: PollOption[] }) {
     try {
       const poll = await this.interactionService.getPoll(payload.pollId);
 
       this.server.to(`${poll.roomId}:presenter`).emit('poll_end_detail', {
         pollId: poll.id,
-        options: payload.options,
+        options: payload.results,
       });
       this.server.to(`${poll.roomId}:audience`).emit('poll_end', {
         pollId: poll.id,
-        options: payload.options.map((o) => ({ id: o.id, count: o.count })),
+        title: poll.title,
+        options: payload.results.map((o) => ({ id: o.id, value: o.value, count: o.count })),
       });
       this.logger.log(`[auto_close_poll] 전달 ${poll.roomId}: ${poll.id}`);
     } catch (error) {

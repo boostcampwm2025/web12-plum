@@ -5,7 +5,6 @@ import {
   MediaType,
   NewProducerPayload,
   ParticipantRole,
-  UpdateGestureStatusPayload,
   UserJoinedPayload,
 } from '@plum/shared-interfaces';
 
@@ -72,6 +71,19 @@ export const RoomSignaling = {
   },
 
   /**
+   * 방 퇴장 처리
+   */
+  leaveRoom: (socket: MediaSocket) => {
+    return new Promise<void>((resolve) => {
+      const handleResponse = () => {
+        logger.ui.debug('[Room] 서버에 퇴장 알림 전송 완료');
+        resolve();
+      };
+      socket.emit('leave_room', handleResponse);
+    });
+  },
+
+  /**
    * 방 세션 및 미디어 관련 모든 실시간 리스너 설정
    */
   setupAllHandlers: (
@@ -82,7 +94,6 @@ export const RoomSignaling = {
       addProducer: (participantId: string, type: MediaType, producerId: string) => void;
       consumeRemoteProducer: (data: NewProducerPayload) => void;
       handleMediaStateChanged: (data: MediaStateChangedPayload) => void;
-      handleUpdateGestureStatus: (data: UpdateGestureStatusPayload) => void;
     },
   ) => {
     // 참가자 입장
@@ -104,8 +115,10 @@ export const RoomSignaling = {
       // 스토어에 producer 정보 저장 (비디오는 페이지네이션에서 사용)
       actions.addProducer(data.participantId, data.type, data.producerId);
 
-      // 오디오만 즉시 consume
-      if (data.type === 'audio') actions.consumeRemoteProducer(data);
+      // 오디오와 화면공유는 즉시 consume (비디오는 페이지네이션에서 처리)
+      if (data.type === 'audio' || data.type === 'screen') {
+        actions.consumeRemoteProducer(data);
+      }
     });
 
     // 미디어 상태 변경 (다른 사람이 Mute/Unmute 했을 때)
@@ -114,12 +127,6 @@ export const RoomSignaling = {
         `[Room] 미디어 상태 변경: ${data.participantId} [${data.type}: ${data.action}]`,
       );
       actions.handleMediaStateChanged(data);
-    });
-
-    // 제스처 상태 변경 (다른 사람이 제스처를 변경했을 때)
-    socket.on('update_gesture_status', (data) => {
-      logger.socket.info('제스처 상태 업데이트 수신', data);
-      actions.handleUpdateGestureStatus(data);
     });
   },
 

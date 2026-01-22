@@ -11,6 +11,9 @@ import { useRoomStore } from '../stores/useRoomStore';
 import { useMediaStore } from '../stores/useMediaStore';
 import { useMediaConnectionContext } from './useMediaConnectionContext';
 import { RoomSignaling } from '../mediasoup/RoomSignaling';
+import { InteractionSignaling } from '../mediasoup/InteractionSignaling';
+import { usePollStore } from '../stores/usePollStore';
+import { useRoomUIStore } from '../stores/useRoomUIStore';
 
 /**
  * Room 초기화 통합 훅
@@ -45,22 +48,15 @@ export function useRoomInit() {
   const { removeRemoteStreamByParticipant } = useMediaStore((state) => state.actions);
   const { connect: connectSocket } = useSocketStore((state) => state.actions);
   const { addToast } = useToastStore((state) => state.actions);
+  const pollActions = usePollStore((state) => state.actions);
 
   // 미디어 컨트롤러
   const {
     startProducing,
     consumeRemoteProducer,
-    consumeExistingAudioProducers,
+    consumeExistingProducers,
     cleanup: cleanupMedia,
   } = useMediaConnectionContext();
-
-  const resolveParticipantName = (participantId: string) => {
-    const { participants, myInfo } = useRoomStore.getState();
-    const participant = participants.get(participantId);
-    if (participant?.name) return participant.name;
-    if (myInfo?.id === participantId && myInfo.name) return myInfo.name;
-    return '굴러 들어온 자두';
-  };
 
   /**
    * 메인 초기화 파이프라인
@@ -89,11 +85,51 @@ export function useRoomInit() {
             removeRemoteStreamByParticipant(data.participantId, data.type);
           }
         },
-        handleUpdateGestureStatus: (data) => {
-          const name = resolveParticipantName(data.participantId);
-          addToast({ type: 'gesture', title: name, gesture: data.gesture });
-        },
       });
+
+      if (myInfo.role === 'presenter') {
+        InteractionSignaling.setupPresenterHandlers(connectedSocket, {
+          handleUpdateGestureStatus: (data) => {
+            addToast({ type: 'gesture', title: data.participantName, gesture: data.gesture });
+          },
+          handleUpdatePollDetail: (data) => {
+            pollActions.updatePollDetail({
+              ...data,
+              voter: {
+                ...data.voter,
+                optionId: data.voter.optionId,
+              },
+            });
+          },
+          handlePollEndDetail: pollActions.setCompletedFromEndDetail,
+        });
+      } else {
+        InteractionSignaling.setupAudienceHandlers(connectedSocket, {
+          handleUpdateGestureStatus: (data) => {
+            addToast({ type: 'gesture', title: data.participantName, gesture: data.gesture });
+          },
+          handleStartPoll: (data) => {
+            pollActions.setActivePoll(data);
+
+            const { activeDialog, setActiveDialog } = useRoomUIStore.getState();
+            if (activeDialog !== 'vote') setActiveDialog('vote');
+          },
+          handleUpdatePoll: pollActions.updatePollOptions,
+          handlePollEnd: (data) => {
+            pollActions.clearActivePoll(data.pollId);
+            const { activeDialog, setActiveDialog } = useRoomUIStore.getState();
+            if (activeDialog === 'vote') setActiveDialog('vote');
+            // TODO: 투표 결과 표시 방식 개선
+            addToast({
+              type: 'info',
+              title: data.title,
+              description: data.options
+                .map((option) => `${option.value}: ${option.count}`)
+                .join(' / '),
+            });
+          },
+        });
+      }
 
       // 3. 방 입장 요청
       const routerRtpCapabilities = await RoomSignaling.joinRoom(
@@ -106,8 +142,8 @@ export function useRoomInit() {
       // 4. Mediasoup Device 초기화
       await initDevice(routerRtpCapabilities);
 
-      // 5. 기존 참가자들의 오디오만 즉시 수신
-      await consumeExistingAudioProducers();
+      // 5. 기존 참가자들의 오디오와 화면공유 즉시 수신
+      await consumeExistingProducers();
 
       // 6. 미디어 스트림 획득 및 송출 시작
       try {
@@ -173,7 +209,10 @@ export function useRoomInit() {
     return () => {
       // 소켓 이벤트 핸들러 해제
       const socket = useSocketStore.getState().socket;
-      if (socket) RoomSignaling.removeAllHandlers(socket);
+      if (socket) {
+        RoomSignaling.removeAllHandlers(socket);
+        InteractionSignaling.removeAllHandlers(socket);
+      }
 
       // 미디어 자원 정리
       cleanupMedia();

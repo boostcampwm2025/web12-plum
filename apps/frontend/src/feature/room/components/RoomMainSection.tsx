@@ -12,19 +12,30 @@ import { useGestureRecognition } from '../hooks/useGestureRecognition';
 
 /**
  * 화면공유 영상을 표시하는 컴포넌트
+ * 로컬(내 화면공유) 또는 원격(다른 사람의 화면공유) 스트림을 표시
  */
 function ScreenShareVideo() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const isScreenSharing = useMediaStore((state) => state.isScreenSharing);
   const screenStream = useMediaStore((state) => state.screenStream);
+  const remoteStreams = useMediaStore((state) => state.remoteStreams);
+
+  // 원격 화면공유 스트림 찾기
+  const remoteScreenStream = Array.from(remoteStreams.values()).find(
+    (stream) => stream.type === 'screen',
+  );
+
+  // 표시할 스트림 결정: 로컬 화면공유 > 원격 화면공유
+  const displayStream = isScreenSharing ? screenStream : remoteScreenStream?.stream;
+  const hasScreenShare = isScreenSharing || !!remoteScreenStream;
 
   useEffect(() => {
-    if (videoRef.current && screenStream) {
-      videoRef.current.srcObject = screenStream;
+    if (videoRef.current && displayStream) {
+      videoRef.current.srcObject = displayStream;
     }
-  }, [screenStream]);
+  }, [displayStream]);
 
-  if (!isScreenSharing) return <div className="aspect-video w-full rounded-2xl bg-gray-200"></div>;
+  if (!hasScreenShare) return <div className="aspect-video w-full rounded-2xl bg-gray-200"></div>;
 
   return (
     <video

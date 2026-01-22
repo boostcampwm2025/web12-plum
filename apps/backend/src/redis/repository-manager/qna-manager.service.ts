@@ -121,7 +121,7 @@ export class QnaManagerService extends BaseRedisRepository<Qna> {
 
     const now = new Date();
     const startedAt = now.toISOString();
-    const endedAt = new Date(now.getTime() + timeLimit * 1000).toISOString();
+    const endedAt = timeLimit > 0 ? new Date(now.getTime() + timeLimit * 1000).toISOString() : '';
 
     try {
       const pipeline = client.pipeline();
@@ -131,7 +131,7 @@ export class QnaManagerService extends BaseRedisRepository<Qna> {
         endedAt,
         updatedAt: startedAt,
       });
-      pipeline.set(activeKey, 'true', 'EX', timeLimit);
+      pipeline.set(activeKey, 'true', 'EX', timeLimit || TTL_BOUNDS); // 좀비 데이터를 방지
 
       const results = await pipeline.exec();
 
@@ -221,6 +221,8 @@ export class QnaManagerService extends BaseRedisRepository<Qna> {
       throw new Error('Qna not found');
     }
 
+    const now = new Date().toISOString();
+
     try {
       const pipeline = client.pipeline();
       pipeline.del(activeKey);
@@ -235,7 +237,8 @@ export class QnaManagerService extends BaseRedisRepository<Qna> {
       await this.updatePartial(qnaId, {
         status: 'ended',
         answers,
-        updatedAt: new Date().toISOString(),
+        endedAt: now,
+        updatedAt: now,
       });
 
       await client.del(answererKey);
@@ -258,7 +261,7 @@ export class QnaManagerService extends BaseRedisRepository<Qna> {
     return qna.answers;
   }
 
-  @OnEvent('redis.expired.qna:*')
+  @OnEvent('redis.expired.qna')
   async handleQnaAutoClose(key: string) {
     const parts = key.split(':');
 

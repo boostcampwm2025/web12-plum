@@ -19,7 +19,7 @@ services:
       --appendonly yes
       --appendfsync everysec
       --maxmemory ${REDIS_MAXMEMORY:-256mb}
-      --maxmemory-policy allkeys-lru
+      --maxmemory-policy volatile-lru
     networks:
       - redis-network
     healthcheck:
