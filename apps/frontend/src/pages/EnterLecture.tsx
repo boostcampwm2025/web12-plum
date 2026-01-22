@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router';
+import { useNavigate } from 'react-router';
 import { EnterLectureForm } from '@/feature/enter-lecture/components/EnterLectureForm';
 import { Footer } from '@/shared/components/Footer';
 import { Header } from '@/shared/components/Header';
@@ -7,35 +7,44 @@ import { PageSubHeader } from '@/shared/components/PageSubHeader';
 import { ROUTES } from '@/app/routes/routes';
 import { roomApi } from '@/shared/api';
 import { logger } from '@/shared/lib/logger';
+import { Loading } from '@/shared/components/Loading';
+import { useSafeRoomId } from '@/shared/hooks/useSafeRoomId';
+import { useToastStore } from '@/store/useToastStore';
 
+/**
+ * 강의실 입장 페이지 컴포넌트
+ *
+ * useSafeRoomId 훅을 사용하여 유효한 roomId를 가져옴
+ * 하위 컴포넌트들에서는 roomId에 대한 처리를 신경쓰지 않아도 됨
+ */
 export function EnterLecture() {
   const navigate = useNavigate();
-  const { roomId } = useParams<{ roomId: string }>();
+  const roomId = useSafeRoomId();
 
   const [lectureName, setLectureName] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
+  const { addToast } = useToastStore((state) => state.actions);
+
   useEffect(() => {
+    if (!roomId) return;
     let isActive = true;
 
+    // 강의실 이름 조회
     const fetchRoomName = async () => {
-      if (!roomId) {
-        navigate(ROUTES.NOT_FOUND, { replace: true });
-        return;
-      }
-
       setIsLoading(true);
       try {
         const response = await roomApi.validateRoom(roomId);
+
         if (!isActive) return;
         setLectureName(response.data.name);
+        setIsLoading(false);
       } catch (error) {
         logger.api.error(`강의실 이름 조회 실패: ${error}`);
-        if (isActive) {
-          navigate(ROUTES.NOT_FOUND, { replace: true });
-        }
-      } finally {
-        if (isActive) setIsLoading(false);
+
+        if (!isActive) return;
+        addToast({ type: 'error', title: '유효하지 않은 강의실입니다.' });
+        navigate(ROUTES.HOME, { replace: true });
       }
     };
 
@@ -44,11 +53,10 @@ export function EnterLecture() {
     return () => {
       isActive = false;
     };
-  }, [navigate, roomId]);
+  }, [roomId, navigate, addToast]);
 
-  if (isLoading || !roomId) {
-    return null;
-  }
+  if (!roomId) return null;
+  if (isLoading) return <Loading />;
 
   return (
     <>
