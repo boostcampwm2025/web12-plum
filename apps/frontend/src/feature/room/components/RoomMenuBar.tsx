@@ -3,10 +3,10 @@ import { RoomButton } from './RoomButton';
 import type { IconName } from '@/shared/components/icon/iconMap';
 import { useMediaStore } from '../stores/useMediaStore';
 import { useRoomUIStore } from '../stores/useRoomUIStore';
-import { logger } from '@/shared/lib/logger';
 import { useMediaConnectionContext } from '../hooks/useMediaConnectionContext';
 import { usePollStore } from '../stores/usePollStore';
 import { useRoomStore } from '../stores/useRoomStore';
+import { ExitButton } from './ExitButton';
 
 interface MenuButton {
   icon: IconName;
@@ -145,23 +145,6 @@ function SideMenu() {
         />
       ))}
     </div>
-  );
-}
-
-function ExitButton() {
-  const handleExit = () => {
-    logger.ui.debug('강의실 나가기 요청');
-    // TODO: 방 나가기 로직
-  };
-
-  return (
-    <RoomButton
-      icon="exit"
-      tooltip="나가기"
-      variant="ghost"
-      onClick={handleExit}
-      className="text-error hover:bg-error/10"
-    />
   );
 }
 

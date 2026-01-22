@@ -71,6 +71,19 @@ export const RoomSignaling = {
   },
 
   /**
+   * 방 퇴장 처리
+   */
+  leaveRoom: (socket: MediaSocket) => {
+    return new Promise<void>((resolve) => {
+      const handleResponse = () => {
+        logger.ui.debug('[Room] 서버에 퇴장 알림 전송 완료');
+        resolve();
+      };
+      socket.emit('leave_room', handleResponse);
+    });
+  },
+
+  /**
    * 방 세션 및 미디어 관련 모든 실시간 리스너 설정
    */
   setupAllHandlers: (
