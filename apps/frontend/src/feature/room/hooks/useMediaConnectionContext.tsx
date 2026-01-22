@@ -327,7 +327,19 @@ export function MediaConnectionProvider({ children }: MediaConnectionProviderPro
   /**
    * 화면 공유 중지
    */
-  const stopScreenShare = useCallback(() => {
+  const stopScreenShare = useCallback(async () => {
+    const socket = useSocketStore.getState().socket;
+    const producer = getProducer('screen');
+
+    // 서버에 화면공유 종료 알림 (다른 클라이언트에게 브로드캐스트)
+    if (socket && producer) {
+      try {
+        await ProducerSignaling.toggleMedia(socket, producer.id, 'pause', 'screen');
+      } catch (error) {
+        logger.media.warn('[MediaConnection] 화면 공유 종료 알림 실패:', error);
+      }
+    }
+
     const { screenStream: currentScreenStream } = useMediaStore.getState();
     if (currentScreenStream) {
       currentScreenStream.getTracks().forEach((track) => track.stop());
@@ -336,7 +348,7 @@ export function MediaConnectionProvider({ children }: MediaConnectionProviderPro
     setScreenStream(null);
     setScreenSharing(false);
     logger.media.info('[MediaConnection] 화면 공유 중지');
-  }, [stopProducing, setScreenStream, setScreenSharing]);
+  }, [getProducer, stopProducing, setScreenStream, setScreenSharing]);
 
   /**
    * 화면 공유 시작
