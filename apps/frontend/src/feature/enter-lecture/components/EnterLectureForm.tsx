@@ -180,10 +180,7 @@ export function EnterLectureForm({ roomId, lectureName = '예시 강의실' }: E
 
   const formMethods = useForm<EnterLectureRequestBody>({
     resolver: zodResolver(enterLectureSchema),
-    defaultValues: {
-      ...enterLectureDefaultValues,
-      name: lectureName,
-    },
+    defaultValues: { ...enterLectureDefaultValues, name: lectureName },
     mode: 'onChange',
   });
 
@@ -196,18 +193,17 @@ export function EnterLectureForm({ roomId, lectureName = '예시 강의실' }: E
     isNicknameAvailable,
     handleCheckNickname,
     requireCheck,
-  } = useNicknameValidation({ roomId, control, trigger, getValues });
+  } = useNicknameValidation({ control, trigger, getValues });
 
   const onSubmit = async (data: EnterLectureRequestBody) => {
     logger.ui.info('강의실 입장 폼 제출 시도', data);
-    if (!hasCheckedNickname || !isNicknameAvailable) {
+
+    const isNicknameCheckInvalid = !hasCheckedNickname || !isNicknameAvailable;
+    if (isNicknameCheckInvalid) {
       requireCheck();
       setError(
         ENTER_LECTURE_KEYS.nickname,
-        {
-          type: 'manual',
-          message: '닉네임 중복 확인을 해주세요.',
-        },
+        { type: 'manual', message: '닉네임 중복 확인을 해주세요.' },
         { shouldFocus: true },
       );
       return;
@@ -228,7 +224,7 @@ export function EnterLectureForm({ roomId, lectureName = '예시 강의실' }: E
     logger.ui.info('강의실 입장 폼 제출 완료');
   };
 
-  const isSubmitDisabled = !formState.isValid || isSubmitting || !roomId || !lectureName;
+  const isSubmitDisabled = !formState.isValid || isSubmitting;
 
   return (
     <FormProvider {...formMethods}>
@@ -241,7 +237,7 @@ export function EnterLectureForm({ roomId, lectureName = '예시 강의실' }: E
           errorMessage={formState.errors.nickname?.message}
           checkMessage={checkMessage}
           checkVariant={checkVariant}
-          isCheckDisabled={!roomId || !nicknameValue?.trim()}
+          isCheckDisabled={!nicknameValue?.trim()}
           onCheckNickname={handleCheckNickname}
         />
         <AgreementSection />
