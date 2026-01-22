@@ -8,6 +8,7 @@ services:
     image: ${DOCKER_USERNAME}/plum-backend:${TAG:-staging} # 개발용 이미지는 'staging' 태그
     container_name: plum-backend-develop
     network_mode: host # WebRTC UDP 포트를 위해 host 네트워크 사용
+    
     env_file:
       - .env
     environment:
