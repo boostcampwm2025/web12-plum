@@ -5,11 +5,14 @@ import { useMediaStore } from '../stores/useMediaStore';
 import { useRoomUIStore } from '../stores/useRoomUIStore';
 import { logger } from '@/shared/lib/logger';
 import { useMediaConnectionContext } from '../hooks/useMediaConnectionContext';
+import { usePollStore } from '../stores/usePollStore';
+import { useRoomStore } from '../stores/useRoomStore';
 
 interface MenuButton {
   icon: IconName;
   tooltip: string;
   isActive?: boolean;
+  hasAlarm?: boolean;
   onClick?: () => void;
 }
 
@@ -23,6 +26,10 @@ function MainMenu() {
   const isScreenSharing = useMediaStore((state) => state.isScreenSharing);
 
   const { activeDialog, setActiveDialog } = useRoomUIStore();
+  const hasActivePoll = usePollStore((state) =>
+    state.polls.some((poll) => poll.status === 'active'),
+  );
+  const myRole = useRoomStore((state) => state.myInfo?.role);
   const {
     startCameraProducer,
     startMicProducer,
@@ -55,6 +62,7 @@ function MainMenu() {
       icon: 'vote',
       tooltip: '투표',
       isActive: activeDialog === 'vote',
+      hasAlarm: hasActivePoll,
       onClick: () => setActiveDialog('vote'),
     },
     {
@@ -70,15 +78,20 @@ function MainMenu() {
       onClick: () => setActiveDialog('ranking'),
     },
   ];
+  const visibleButtons =
+    myRole === 'presenter'
+      ? menuButtons.filter((button) => button.icon !== 'vote' && button.icon !== 'qna')
+      : menuButtons;
 
   return (
     <>
-      {menuButtons.map((button, index) => (
+      {visibleButtons.map((button, index) => (
         <RoomButton
           key={`${button.icon}-${index}`}
           icon={button.icon}
           tooltip={button.tooltip}
           isActive={button.isActive}
+          hasAlarm={button.hasAlarm}
           onClick={button.onClick}
         />
       ))}
@@ -92,6 +105,7 @@ function MainMenu() {
  */
 function SideMenu() {
   const { activeSidePanel, setActiveSidePanel } = useRoomUIStore();
+  const myRole = useRoomStore((state) => state.myInfo?.role);
 
   const sideMenuButtons: MenuButton[] = [
     {
@@ -113,10 +127,14 @@ function SideMenu() {
       onClick: () => setActiveSidePanel('menu'),
     },
   ];
+  const visibleSideButtons =
+    myRole === 'audience'
+      ? sideMenuButtons.filter((button) => button.icon !== 'menu')
+      : sideMenuButtons;
 
   return (
     <div className="flex items-center gap-1 justify-self-end">
-      {sideMenuButtons.map((button, index) => (
+      {visibleSideButtons.map((button, index) => (
         <RoomButton
           key={`${button.icon}-${index}`}
           icon={button.icon}

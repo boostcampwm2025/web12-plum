@@ -251,6 +251,7 @@ export type UpdateQnaSubPayload = {
 
 export interface EndPollPayload {
   pollId: string;
+  title: string;
   options: Omit<PollOption, 'voters'>[];
 }
 

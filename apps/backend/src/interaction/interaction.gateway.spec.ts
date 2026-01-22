@@ -330,7 +330,9 @@ describe('InteractionGateway', () => {
       jest.spyOn(socketMetadataService, 'get').mockReturnValue(metadata as any);
       jest.spyOn(participantManagerService, 'findOne').mockResolvedValue(participant as any);
       jest.spyOn(roomManagerService, 'findOne').mockResolvedValue(room as any);
-      jest.spyOn(interactionService, 'stopPoll').mockResolvedValue(mockOptions as any);
+      jest
+        .spyOn(interactionService, 'stopPoll')
+        .mockResolvedValue({ title: '종료 테스트', options: mockOptions } as any);
 
       const mockEmit = jest.fn();
       mockSocket.to = jest.fn().mockReturnValue({ emit: mockEmit });
@@ -343,9 +345,10 @@ describe('InteractionGateway', () => {
       expect(mockSocket.to).toHaveBeenCalledWith('r1');
       expect(mockEmit).toHaveBeenCalledWith('poll_end', {
         pollId: breakPollDto.pollId,
+        title: '종료 테스트',
         options: [
-          { id: 0, count: 10 },
-          { id: 1, count: 5 },
+          { id: 0, value: '옵션1', count: 10 },
+          { id: 1, value: '옵션2', count: 5 },
         ],
       });
     });
@@ -407,7 +410,7 @@ describe('InteractionGateway', () => {
   describe('handleAutoClosedEvent (자동 종료 이벤트 수신)', () => {
     const mockPayload = {
       pollId: 'poll-123',
-      options: [
+      results: [
         { id: 0, value: '옵션1', count: 10, voters: [{ id: 'u1', name: 'user1' }] },
         { id: 1, value: '옵션2', count: 5, voters: [] },
       ],
@@ -436,16 +439,17 @@ describe('InteractionGateway', () => {
       const presenterEmit = (gateway as any).server.to('room-1:presenter').emit;
       expect(presenterEmit).toHaveBeenCalledWith('poll_end_detail', {
         pollId: mockPollData.id,
-        options: mockPayload.options,
+        options: mockPayload.results,
       });
 
       expect((gateway as any).server.to).toHaveBeenCalledWith('room-1:audience');
       const audienceEmit = (gateway as any).server.to('room-1:audience').emit;
       expect(audienceEmit).toHaveBeenCalledWith('poll_end', {
         pollId: mockPollData.id,
+        title: mockPollData.title,
         options: [
-          { id: 0, count: 10 },
-          { id: 1, count: 5 },
+          { id: 0, value: '옵션1', count: 10 },
+          { id: 1, value: '옵션2', count: 5 },
         ],
       });
     });

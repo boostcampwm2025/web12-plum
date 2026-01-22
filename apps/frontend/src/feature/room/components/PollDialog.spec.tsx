@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 
+import { useState } from 'react';
 import { PollDialog } from './PollDialog';
 
 vi.mock('@/shared/components/icon/Icon', () => ({
@@ -28,7 +29,14 @@ const mockPoll = {
 
 describe('PollDialog', () => {
   it('투표가 없으면 안내 문구가 렌더링된다', () => {
-    render(<PollDialog startedAt={Date.now()} />);
+    render(
+      <PollDialog
+        startedAt={Date.now()}
+        onVote={vi.fn()}
+        selectedOptionId={null}
+        onSelectOption={vi.fn()}
+      />,
+    );
 
     expect(screen.getByText('현재 진행중인 투표가 없습니다')).toBeInTheDocument();
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
@@ -39,6 +47,9 @@ describe('PollDialog', () => {
       <PollDialog
         poll={mockPoll}
         startedAt={Date.now()}
+        onVote={vi.fn()}
+        selectedOptionId={null}
+        onSelectOption={vi.fn()}
       />,
     );
 
@@ -55,12 +66,19 @@ describe('PollDialog', () => {
 
   it('한 번 선택하면 모든 선택지가 비활성화된다', async () => {
     const user = userEvent.setup();
-    render(
-      <PollDialog
-        poll={mockPoll}
-        startedAt={Date.now()}
-      />,
-    );
+    const Wrapper = () => {
+      const [selectedOptionId, setSelectedOptionId] = useState<number | null>(null);
+      return (
+        <PollDialog
+          poll={mockPoll}
+          startedAt={Date.now()}
+          onVote={vi.fn()}
+          selectedOptionId={selectedOptionId}
+          onSelectOption={(_, optionId) => setSelectedOptionId(optionId)}
+        />
+      );
+    };
+    render(<Wrapper />);
 
     const buttons = screen.getAllByRole('button');
     await user.click(buttons[0]);
