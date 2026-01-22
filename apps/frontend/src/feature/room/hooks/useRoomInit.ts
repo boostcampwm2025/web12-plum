@@ -14,6 +14,7 @@ import { RoomSignaling } from '../mediasoup/RoomSignaling';
 import { InteractionSignaling } from '../mediasoup/InteractionSignaling';
 import { usePollStore } from '../stores/usePollStore';
 import { useRoomUIStore } from '../stores/useRoomUIStore';
+import { useQnaStore } from '../stores/useQnaStore';
 
 /**
  * Room 초기화 통합 훅
@@ -49,6 +50,7 @@ export function useRoomInit() {
   const { connect: connectSocket } = useSocketStore((state) => state.actions);
   const { addToast } = useToastStore((state) => state.actions);
   const pollActions = usePollStore((state) => state.actions);
+  const qnaActions = useQnaStore((state) => state.actions);
 
   // 미디어 컨트롤러
   const {
@@ -102,6 +104,8 @@ export function useRoomInit() {
             });
           },
           handlePollEndDetail: pollActions.setCompletedFromEndDetail,
+          handleUpdateQnaDetail: qnaActions.updateQnaDetail,
+          handleQnaEndDetail: qnaActions.setCompletedFromEndDetail,
         });
       } else {
         InteractionSignaling.setupAudienceHandlers(connectedSocket, {
@@ -127,6 +131,22 @@ export function useRoomInit() {
                 .map((option) => `${option.value}: ${option.count}`)
                 .join(' / '),
             });
+          },
+          handleStartQna: (data) => {
+            qnaActions.setActiveQna(data);
+            const { activeDialog, setActiveDialog } = useRoomUIStore.getState();
+            if (activeDialog !== 'qna') setActiveDialog('qna');
+          },
+          handleUpdateQna: qnaActions.updateQnaSub,
+          handleQnaEnd: (data) => {
+            qnaActions.clearActiveQna(data.qnaId);
+            const { activeDialog, setActiveDialog } = useRoomUIStore.getState();
+            if (activeDialog === 'qna') setActiveDialog('qna');
+            addToast({
+              type: 'info',
+              title: 'Q&A가 종료되었습니다.',
+            });
+            // TODO: 익명으로 답변 공개인 경우에 채팅창에 표시
           },
         });
       }
