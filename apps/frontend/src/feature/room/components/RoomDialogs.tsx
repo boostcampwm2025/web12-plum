@@ -3,23 +3,30 @@ import { useEffect, useMemo, useState } from 'react';
 import { Dialog as RoomDialog } from './Dialog';
 import { useRoomUIStore } from '../stores/useRoomUIStore';
 import { PollDialog } from './PollDialog';
+import { QnaDialog } from './QnaDialog';
 import { usePollStore } from '../stores/usePollStore';
+import { useQnaStore } from '../stores/useQnaStore';
 import { useSocketStore } from '@/store/useSocketStore';
 import { logger } from '@/shared/lib/logger';
+import { useToastStore } from '@/store/useToastStore';
 
 export function RoomDialogs() {
   const activeDialog = useRoomUIStore((state) => state.activeDialog);
   const setActiveDialog = useRoomUIStore((state) => state.setActiveDialog);
   const polls = usePollStore((state) => state.polls);
+  const qnas = useQnaStore((state) => state.qnas);
+  const qnaActions = useQnaStore((state) => state.actions);
   const emit = useSocketStore((state) => state.actions.emit);
+  const addToast = useToastStore((state) => state.actions.addToast);
   const [selectedOptionByPollId, setSelectedOptionByPollId] = useState<
     Record<string, number | null>
   >({});
 
   const activePoll = useMemo(() => polls.find((poll) => poll.status === 'active'), [polls]);
+  const activeQna = useMemo(() => qnas.find((qna) => qna.status === 'active'), [qnas]);
   const handleCloseDialog = () => setActiveDialog(activeDialog!);
-  const parsedStartedAt = activePoll?.startedAt ? Date.parse(activePoll.startedAt) : NaN;
-  const startedAt = Number.isNaN(parsedStartedAt) ? Date.now() : parsedStartedAt;
+  const pollStartedAt = getStartedAt(activePoll?.startedAt);
+  const qnaStartedAt = getStartedAt(activeQna?.startedAt);
   const selectedOptionId = activePoll ? (selectedOptionByPollId[activePoll.id] ?? null) : null;
 
   const handleVote = (pollId: string, optionId: number) => {
@@ -27,6 +34,24 @@ export function RoomDialogs() {
       if (!response.success) {
         logger.socket.warn('투표 참여 실패', response.error);
       }
+    });
+  };
+
+  const handleAnswer = (qnaId: string, text: string) => {
+    emit('answer', { qnaId, text }, (response) => {
+      if (!response.success) {
+        logger.socket.warn('QnA 답변 실패', response.error);
+        addToast({
+          type: 'error',
+          title: 'Q&A 답변에 실패했습니다.',
+        });
+        return;
+      }
+      addToast({
+        type: 'success',
+        title: 'Q&A 답변이 전송되었습니다.',
+      });
+      qnaActions.clearActiveQna(qnaId);
     });
   };
 
@@ -44,7 +69,7 @@ export function RoomDialogs() {
         >
           <PollDialog
             poll={activePoll}
-            startedAt={startedAt}
+            startedAt={pollStartedAt}
             onVote={handleVote}
             selectedOptionId={selectedOptionId}
             onSelectOption={(pollId, optionId) =>
@@ -61,7 +86,11 @@ export function RoomDialogs() {
           title="Q&A"
           onClose={handleCloseDialog}
         >
-          <div>Q&A 내용</div>
+          <QnaDialog
+            qna={activeQna}
+            startedAt={qnaStartedAt}
+            onSubmit={handleAnswer}
+          />
         </RoomDialog>
       )}
       {activeDialog === 'ranking' && (
@@ -75,3 +104,8 @@ export function RoomDialogs() {
     </AnimatePresence>
   );
 }
+
+const getStartedAt = (startedAt?: string) => {
+  const parsed = startedAt ? Date.parse(startedAt) : NaN;
+  return Number.isNaN(parsed) ? Date.now() : parsed;
+};
