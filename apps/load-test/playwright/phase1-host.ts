@@ -7,7 +7,7 @@
  */
 
 import { chromium, Page, Browser } from 'playwright';
-import { RoomInfo, delay } from './utils';
+import { RoomInfo, delay, FRONTEND_URL, BACKEND_URL } from './utils';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -34,7 +34,7 @@ export class HostBrowser {
     });
 
     // 실제 프론트엔드 페이지 로드 (CORS 문제 없음)
-    const frontendUrl = `https://web12-plum-dev.vercel.app/enter/${roomInfo.roomId}`;
+    const frontendUrl = `${FRONTEND_URL}/enter/${roomInfo.roomId}`;
     console.log(`🌐 프론트엔드 페이지 로드: ${frontendUrl}`);
     await this.page.goto(frontendUrl, { waitUntil: 'networkidle' });
 
@@ -111,9 +111,10 @@ export class HostBrowser {
     const participantId = this.roomInfo!.hostId;
 
     await this.page!.evaluate(
-      async ({ roomId, participantId }) => {
+      async (args: { roomId: string; participantId: string; backendUrl: string }) => {
+        const { roomId, participantId, backendUrl } = args;
         return new Promise<void>((resolve, reject) => {
-          const socketUrl = 'https://tiki-plum.n-e.kr/session';
+          const socketUrl = `${backendUrl}/session`;
           const socket = (window as any).io(socketUrl, {
             transports: ['websocket', 'polling'],
             reconnection: true,
@@ -150,7 +151,7 @@ export class HostBrowser {
           setTimeout(() => reject(new Error('Socket 연결 타임아웃')), 30000);
         });
       },
-      { roomId, participantId },
+      { roomId, participantId, backendUrl: BACKEND_URL },
     );
 
     console.log(`✅ Socket.IO 연결 및 join_room 완료`);

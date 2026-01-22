@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 import { Poll, PollOption, UpdatePollStatusSubPayload, Voter } from '@plum/shared-interfaces';
 import { RedisService } from '../redis.service.js';
-import { TTL_BOUNDS } from '../redis.constants';
+import { TTL_BOUNDS } from '../redis.constants.js';
 import { BaseRedisRepository } from './base-redis.repository.js';
 
 @Injectable()

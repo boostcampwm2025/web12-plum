@@ -9,8 +9,9 @@ import * as mediasoupClient from 'mediasoup-client';
 const BACKEND_URL = 'http://223.130.140.152:3000';
 
 // 전역 변수: 첫 번째 사용자만 강의실을 생성하고, 나머지는 재사용
-let globalRoomId = null;
-let globalRoomName = null;
+//TODO: 방생성하면 이거 수정하기
+let globalRoomId = '01KFHN1CM23Y0Y4VKQN38ED0C8';
+let globalRoomName = 'Phase1_1769045275166';
 let isCreatingRoom = false;
 
 /**
@@ -146,10 +147,12 @@ export async function connectAndJoinRoom(context) {
       socket.emit('join_room', { roomId, participantId }, (response) => {
         if (response && response.success) {
           console.log(`✅ 입장 성공: ${context.vars.participantName}`);
+          console.log(`🔍 Response 구조:`, JSON.stringify(response, null, 2).slice(0, 500)); // 추가!
+
           if (!hasFinished) {
             hasFinished = true;
             context.vars.socket = socket;
-            context.vars.roomInfo = response.roomInfo; // RTP capabilities 저장
+            context.vars.roomInfo = response; // RTP capabilities 저장
             resolve();
           }
         } else {

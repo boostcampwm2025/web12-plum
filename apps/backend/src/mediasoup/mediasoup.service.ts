@@ -72,6 +72,34 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
 
     // Prometheus 메트릭 업데이트
     this.prometheusService.setMediasoupWorkers(this.workers.length);
+
+    // Worker CPU 모니터링 시작 (5초마다)
+    this.startWorkerMonitoring();
+  }
+
+  /**
+   * Worker CPU 사용률 모니터링 시작
+   * 5초마다 각 Worker의 리소스 사용률을 수집해서 Prometheus에 전송
+   */
+  private startWorkerMonitoring() {
+    setInterval(async () => {
+      for (let i = 0; i < this.workers.length; i++) {
+        try {
+          const worker = this.workers[i];
+          const usage = await worker.getResourceUsage();
+
+          // CPU 사용률 계산 (user time + system time)
+          //  단위: %
+          // getResourceUsage()는 microseconds를 반환하므로 계산 필요
+          // 간단히 user time만 사용 (초당 증가량 기준)
+          const cpuPercent = usage.ru_utime / 10000; // 대략적인 변환
+
+          this.prometheusService.setWorkerCpu(i, cpuPercent);
+        } catch (error) {
+          this.logger.warn(`Worker #${i} 리소스 사용률 수집 실패:`, error);
+        }
+      }
+    }, 5000);
   }
 
   /**
@@ -290,16 +318,23 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
       },
     });
     this.producers.set(producer.id, producer);
+
+    // Producer 종류 결정 (source가 'screen'이면 'screen', 아니면 kind 사용)
+    const producerKind: 'video' | 'audio' | 'screen' =
+      source === 'screen' ? 'screen' : (kind as 'video' | 'audio');
+
     producer.observer.on('close', () => {
       this.producers.delete(producer.id);
       this.logger.log(`Producer 닫힘 (id: ${producer.id})`);
 
       // Prometheus 메트릭 업데이트
       this.prometheusService.setMediasoupProducers(this.producers.size);
+      this.prometheusService.decrementProducerByKind(producerKind);
     });
 
     // Prometheus 메트릭 업데이트
     this.prometheusService.setMediasoupProducers(this.producers.size);
+    this.prometheusService.incrementProducerByKind(producerKind);
 
     return producer;
   }
@@ -349,16 +384,23 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
       },
     });
     this.consumers.set(consumer.id, consumer);
+
+    // Consumer 종류 결정 (producer의 appData.source 기반)
+    const consumerKind: 'video' | 'audio' | 'screen' =
+      producer.appData.source === 'screen' ? 'screen' : (consumer.kind as 'video' | 'audio');
+
     consumer.observer.on('close', () => {
       this.consumers.delete(consumer.id);
       this.logger.log(`Consumer 닫힘 (id: ${consumer.id})`);
 
       // Prometheus 메트릭 업데이트
       this.prometheusService.setMediasoupConsumers(this.consumers.size);
+      this.prometheusService.decrementConsumerByKind(consumerKind);
     });
 
     // Prometheus 메트릭 업데이트
     this.prometheusService.setMediasoupConsumers(this.consumers.size);
+    this.prometheusService.incrementConsumerByKind(consumerKind);
 
     return consumer;
   }
