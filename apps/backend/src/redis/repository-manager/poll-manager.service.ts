@@ -2,9 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 import { Poll, PollOption, UpdatePollStatusSubPayload, Voter } from '@plum/shared-interfaces';
 import { RedisService } from '../redis.service.js';
+import { TTL_BOUNDS } from '../redis.constants.js';
 import { BaseRedisRepository } from './base-redis.repository.js';
-
-const TTL_BOUNDS = 7200;
 
 @Injectable()
 export class PollManagerService extends BaseRedisRepository<Poll> {
@@ -158,7 +157,12 @@ export class PollManagerService extends BaseRedisRepository<Poll> {
       try {
         const rollbackPipeline = client.pipeline();
 
-        this.addUpdatePartialToPipeline(rollbackPipeline, pollId, { status: 'pending' });
+        this.addUpdatePartialToPipeline(rollbackPipeline, pollId, {
+          status: 'pending',
+          startedAt: '',
+          endedAt: '',
+          updatedAt: new Date().toISOString(),
+        });
         rollbackPipeline.del(activeKey);
         rollbackPipeline.del(countKey);
         await rollbackPipeline.exec();
@@ -312,14 +316,19 @@ export class PollManagerService extends BaseRedisRepository<Poll> {
     return poll.options;
   }
 
-  @OnEvent('redis.expired.poll:*')
+  @OnEvent('redis.expired.*')
   async handlePollAutoClose(key: string) {
     const parts = key.split(':');
+    if (parts[0] !== 'poll') return;
 
     // 마지막 요소가 active인 경우에만 처리 (Shadow Key 역할)
     if (parts[parts.length - 1] !== 'active') return;
 
     const pollId = parts[1];
+
+    const poll = await this.findOne(pollId);
+    if (!poll || poll.status === 'ended') return;
+
     this.logger.log(`[Redis Expiry] 투표 ID: ${pollId} 시간 만료됨`);
 
     try {

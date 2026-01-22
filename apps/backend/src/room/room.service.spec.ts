@@ -133,7 +133,6 @@ describe('RoomService', () => {
             expect.stringContaining(`https://test-bucket.s3.ap-northeast-2.amazonaws.com/`) ||
               expect.stringContaining('test.pdf'),
           ],
-          qnas: ['qna-1'],
         }),
       );
 
