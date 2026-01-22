@@ -7,8 +7,8 @@ services:
   backend:
     image: ${DOCKER_USERNAME}/plum-backend:${TAG:-staging} # 개발용 이미지는 'staging' 태그
     container_name: plum-backend-develop
-    ports:
-      - "${BACKEND_PORT:-3000}:3000" # 호스트 포트를 환경변수로 관리 (기본값: 3000)
+    network_mode: host # WebRTC UDP 포트를 위해 host 네트워크 사용
+    
     env_file:
       - .env
     environment:
@@ -23,8 +23,6 @@ services:
       - ANNOUNCED_IP=${ANNOUNCED_IP}
       - MEDIASOUP_WORKER_NUM=auto
     restart: unless-stopped
-    networks:
-      - plum-network
     volumes:
       - ./apps/backend/logs:/app/apps/backend/logs # Winston 로그 파일 (Promtail이 읽음)
 
@@ -44,8 +42,7 @@ services:
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
       - /:/host:ro
-    networks:
-      - plum-network
+    # networks 제거: 외부 Prometheus가 호스트 IP로 직접 접근
 
   # Promtail - 로그 수집 및 Loki로 전송
   promtail:
@@ -61,5 +58,4 @@ services:
     command: -config.file=/etc/promtail/config.yml -config.expand-env=true
     networks:
       - plum-network
-    depends_on:
-      - backend
+    # depends_on 제거: backend는 host 모드라 네트워크 의존성이 의미 없음
