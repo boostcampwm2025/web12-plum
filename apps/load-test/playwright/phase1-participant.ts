@@ -59,8 +59,9 @@ export class ParticipantBrowser {
 
     // mediasoup-client 번들 주입
     const bundlePath = path.join(__dirname, '..', 'bundle-mediasoup.js');
+    console.log(`📦 [${this.participantInfo!.name}] 번들 파일 주입`);
     await this.page!.addScriptTag({ path: bundlePath });
-    await delay(500);
+    await delay(1000);
 
     // Socket.IO 클라이언트 CDN 주입
     await this.page!.addScriptTag({
@@ -70,11 +71,25 @@ export class ParticipantBrowser {
     // mediasoup-client 로드 확인
     const mediasoupExists = await this.page!.evaluate(() => {
       const ms = (window as any).mediasoupClient;
+      console.log('[Test] mediasoupClient 구조:', Object.keys(ms || {}));
+
       if (ms?.default?.Device) {
         (window as any).mediasoupClient = ms.default;
+        console.log('[Test] mediasoup-client 로드 완료 (default)');
         return true;
+      } else if (ms?.Device) {
+        console.log('[Test] mediasoup-client 로드 완료 (direct)');
+        return true;
+      } else if (typeof ms === 'object' && Object.keys(ms).length > 0) {
+        const deviceKey = Object.keys(ms).find((k) => ms[k]?.Device);
+        if (deviceKey) {
+          (window as any).mediasoupClient = ms[deviceKey];
+          console.log('[Test] mediasoup-client 로드 완료 (nested)');
+          return true;
+        }
       }
-      return ms && ms.Device;
+      console.error('[Test] mediasoupClient 로드 실패');
+      return false;
     });
 
     if (!mediasoupExists) {
@@ -94,9 +109,12 @@ export class ParticipantBrowser {
       }) => {
         const { roomId, participantId, participantName, backendUrl } = args;
         return new Promise<void>((resolve, reject) => {
-          const socket = (window as any).io(backendUrl, {
-            path: '/session/socket.io',
-            transports: ['websocket'],
+          // host와 동일한 연결 방식
+          const socketUrl = backendUrl.replace('/api', '');
+
+          const socket = (window as any).io(`${socketUrl}/session`, {
+            path: '/socket.io/',
+            transports: ['websocket', 'polling'],
             reconnection: true,
             reconnectionDelay: 1000,
             reconnectionAttempts: 3,
@@ -105,14 +123,12 @@ export class ParticipantBrowser {
 
           socket.on('connect', () => {
             console.log(`[${participantName}] Socket 연결 성공:`, socket.id);
+            console.log(`[${participantName}] join_room 전송...`, { roomId, participantId });
 
             socket.emit('join_room', { roomId, participantId }, (response: any) => {
+              console.log(`[${participantName}] join_room 응답:`, response);
               if (response && response.success) {
                 console.log(`[${participantName}] join_room 성공`);
-                console.log(
-                  `[${participantName}] response.mediasoup:`,
-                  JSON.stringify(response.mediasoup, null, 2).slice(0, 1000),
-                );
                 (window as any).testSocket = socket;
                 (window as any).rtpCapabilities = response.mediasoup.routerRtpCapabilities;
                 (window as any).existingProducers = response.mediasoup.existingProducers || [];
@@ -121,12 +137,27 @@ export class ParticipantBrowser {
                 );
                 resolve();
               } else {
-                reject(new Error('join_room 실패: ' + JSON.stringify(response)));
+                const errorMsg = response?.error || JSON.stringify(response);
+                console.error(`[${participantName}] join_room 실패:`, errorMsg);
+                reject(new Error('join_room 실패: ' + errorMsg));
               }
             });
+
+            setTimeout(() => {
+              console.warn(`[${participantName}] join_room 응답 대기 중... (5초)`);
+            }, 5000);
+          });
+
+          socket.on('error', (error: any) => {
+            console.error(`[${participantName}] Socket 에러:`, error);
+          });
+
+          socket.on('disconnect', (reason: string) => {
+            console.warn(`[${participantName}] Socket 연결 끊김:`, reason);
           });
 
           socket.on('connect_error', (error: Error) => {
+            console.error(`[${participantName}] Socket 연결 실패:`, error.message);
             reject(new Error('Socket 연결 실패: ' + error.message));
           });
 
