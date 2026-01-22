@@ -119,6 +119,14 @@ export function useRoomInit() {
             pollActions.clearActivePoll(data.pollId);
             const { activeDialog, setActiveDialog } = useRoomUIStore.getState();
             if (activeDialog === 'vote') setActiveDialog('vote');
+            // TODO: 투표 결과 표시 방식 개선
+            addToast({
+              type: 'info',
+              title: data.title,
+              description: data.options
+                .map((option) => `${option.value}: ${option.count}`)
+                .join(' / '),
+            });
           },
         });
       }

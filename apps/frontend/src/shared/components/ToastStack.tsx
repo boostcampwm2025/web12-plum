@@ -51,7 +51,10 @@ const ToastItem = forwardRef<HTMLDivElement, { toast: Toast }>(({ toast }, ref) 
         )}
         decorative
       />
-      <span className="truncate text-xs font-bold tracking-tight">{toast.title}</span>
+      <div className="flex min-w-0 flex-col gap-0.5">
+        <span className="truncate text-xs font-bold tracking-tight">{toast.title}</span>
+        {toast.description && <span className="text-[10px] font-light">{toast.description}</span>}
+      </div>
     </motion.div>
   );
 });

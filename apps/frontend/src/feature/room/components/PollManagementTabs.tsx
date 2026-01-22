@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'motion/react';
-import { useCallback, useMemo, useState, useEffect } from 'react';
+import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import { Button } from '@/shared/components/Button';
 import { Icon } from '@/shared/components/icon/Icon';
 import { PollModal } from '@/shared/components/PollModal';
@@ -24,6 +24,7 @@ export function PollManagementTabs() {
   const scheduledPolls = useMemo(() => polls.filter((poll) => poll.status === 'pending'), [polls]);
   const activePoll = useMemo(() => polls.find((poll) => poll.status === 'active'), [polls]);
   const completedPolls = useMemo(() => polls.filter((poll) => poll.status === 'ended'), [polls]);
+  const previousActivePollIdRef = useRef<string | null>(null);
 
   const voteTabs: TabItem[] = useMemo(
     () => [
@@ -47,6 +48,17 @@ export function PollManagementTabs() {
   useEffect(() => {
     fetchPolls();
   }, [fetchPolls]);
+
+  useEffect(() => {
+    const currentActiveId = activePoll?.id ?? null;
+    const previousActiveId = previousActivePollIdRef.current;
+
+    if (!currentActiveId && previousActiveId) {
+      setActiveTab('completed');
+    }
+
+    previousActivePollIdRef.current = currentActiveId;
+  }, [activePoll?.id]);
 
   const handleCreatePoll = useCallback(
     (data: PollFormValues) => {
