@@ -153,11 +153,16 @@ describe('RoomGateway', () => {
       } as any);
       jest
         .spyOn(participantManager, 'findOne')
-        .mockResolvedValue({ id: 'user-1', name: '홍길동', role: 'student' } as any);
+        .mockResolvedValue({ id: 'user-1', name: '홍길동', role: 'audience' } as any);
 
       const result = await gateway.handleJoinRoom(socket, data);
 
-      expect(result).toEqual({ success: true });
+      expect(result).toEqual({
+        success: true,
+        participantId: 'user-1',
+        participantName: '홍길동',
+        role: 'audience',
+      });
       expect(socket.join).toHaveBeenCalledWith('room-1');
       expect(socket.to).toHaveBeenCalledWith('room-1');
     });
@@ -210,6 +215,51 @@ describe('RoomGateway', () => {
         .spyOn(participantManager, 'findOne')
         .mockResolvedValue({ id: 'user-1', producers: {} } as any);
       jest.spyOn(mediasoupService, 'createProducer').mockResolvedValue({ id: 'p-1' } as any);
+
+      const result = await gateway.handleProduce(socket, {
+        transportId: 't-1',
+        type: 'video',
+        rtpParameters: {} as any,
+      });
+
+      expect(result.success).toBe(true);
+      expect(socket.to).toHaveBeenCalled();
+      expect(mediasoupService.createProducer).toHaveBeenCalled();
+    });
+
+    it('청중이 화면 공유 Producer를 생성하는 경우 오류를 반환해야 함', async () => {
+      const socket = createMockSocket();
+      jest.spyOn(socketMetadataService, 'get').mockReturnValue({
+        roomId: 'room-1',
+        participantId: 'user-1',
+        transportIds: [],
+      });
+
+      jest
+        .spyOn(participantManager, 'findOne')
+        .mockResolvedValue({ id: 'user-1', role: 'audience', producers: {} } as any);
+
+      const result = await gateway.handleProduce(socket, {
+        transportId: 't-1',
+        type: 'screen',
+        rtpParameters: {} as any,
+      });
+
+      expect(result.success).toBe(false);
+    });
+
+    it('발표자가 화면 공유 Producer를 생성하는 경우 오류를 반환해야 함', async () => {
+      const socket = createMockSocket();
+      jest.spyOn(socketMetadataService, 'get').mockReturnValue({
+        roomId: 'room-1',
+        participantId: 'user-1',
+        transportIds: [],
+      });
+
+      jest
+        .spyOn(participantManager, 'findOne')
+        .mockResolvedValue({ id: 'user-1', role: 'presenter', producers: {} } as any);
+      jest.spyOn(mediasoupService, 'createProducer').mockResolvedValue({ id: 'p-3' } as any);
 
       const result = await gateway.handleProduce(socket, {
         transportId: 't-1',

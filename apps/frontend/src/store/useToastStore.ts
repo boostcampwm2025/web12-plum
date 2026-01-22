@@ -7,6 +7,7 @@ export type Toast = {
   id: string;
   type: ToastType;
   title: string;
+  description?: string;
   gesture?: GestureType;
   createdAt: number;
 };

@@ -149,7 +149,13 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.logger.log(`✅ [join_room] ${participant.name}님이 ${roomId} 강의실에 입장했습니다.`);
       const roomInfo = await this.roomService.getRoomInfo(roomId, participant);
 
-      return { success: true, ...roomInfo };
+      return {
+        success: true,
+        participantId: participant.id,
+        participantName: participant.name,
+        role: participant.role,
+        ...roomInfo,
+      };
     } catch (error) {
       this.logger.error(`❌ [join_room] 실패:`, error);
       return { success: false, error: '강의실 입장에 실패했습니다.' };
@@ -232,6 +238,10 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
     try {
       const participant = await this.participantManagerService.findOne(metadata.participantId);
       if (!participant) return { success: false, error: '참가자를 찾을 수 없습니다.' };
+
+      if (data.type === 'screen' && participant.role !== 'presenter') {
+        return { success: false, error: '화면 공유 권한이 없습니다.' };
+      }
 
       const kind = data.type === 'audio' ? 'audio' : 'video';
       const producer = await this.mediasoupService.createProducer(
@@ -458,7 +468,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.socketMetadataService.delete(socket.id);
   }
 
-  @OnEvent('redis.expired.reconnect:pending:*')
+  @OnEvent('redis.expired.reconnect')
   async handleReconnectExpired(key: string) {
     const participantId = key.split(':').pop();
     const metadata = await this.participantManagerService.popReconnectMetadata(participantId!);

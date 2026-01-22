@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 import { Poll, PollOption, UpdatePollStatusSubPayload, Voter } from '@plum/shared-interfaces';
 import { RedisService } from '../redis.service.js';
-import { TTL_BOUNDS } from '../redis.constants';
+import { TTL_BOUNDS } from '../redis.constants.js';
 import { BaseRedisRepository } from './base-redis.repository.js';
 
 @Injectable()
@@ -122,7 +122,7 @@ export class PollManagerService extends BaseRedisRepository<Poll> {
 
     const now = new Date();
     const startedAt = now.toISOString();
-    const endedAt = new Date(now.getTime() + timeLimit * 1000).toISOString();
+    const endedAt = timeLimit > 0 ? new Date(now.getTime() + timeLimit * 1000).toISOString() : '';
 
     try {
       const pipeline = client.pipeline();
@@ -140,7 +140,7 @@ export class PollManagerService extends BaseRedisRepository<Poll> {
         endedAt,
         updatedAt: startedAt,
       });
-      pipeline.set(activeKey, 'true', 'EX', timeLimit);
+      pipeline.set(activeKey, 'true', 'EX', timeLimit || TTL_BOUNDS); // 좀비 데이터를 방지
       pipeline.hset(countKey, initialCounts);
       pipeline.expire(countKey, timeLimit + TTL_BOUNDS); // 좀비 데이터를 방지하기 위해 넉넉한 TTL 부여
 
@@ -265,6 +265,8 @@ export class PollManagerService extends BaseRedisRepository<Poll> {
     const poll: Poll | null = await this.findOne(pollId);
     if (!poll) throw new Error('Poll not found');
 
+    const now = new Date().toISOString();
+
     try {
       const pipeline = client.pipeline();
       pipeline.hgetall(countKey);
@@ -296,7 +298,8 @@ export class PollManagerService extends BaseRedisRepository<Poll> {
       await this.updatePartial(pollId, {
         status: 'ended',
         options: finalOptions,
-        updatedAt: new Date().toISOString(),
+        endedAt: now,
+        updatedAt: now,
       });
       this.logger.log(`[ClosePoll] Confirmed: ${pollId}`);
       return finalOptions;
@@ -316,9 +319,10 @@ export class PollManagerService extends BaseRedisRepository<Poll> {
     return poll.options;
   }
 
-  @OnEvent('redis.expired.poll:*')
+  @OnEvent('redis.expired.poll')
   async handlePollAutoClose(key: string) {
     const parts = key.split(':');
+    if (parts[0] !== 'poll') return;
 
     // 마지막 요소가 active인 경우에만 처리 (Shadow Key 역할)
     if (parts[parts.length - 1] !== 'active') return;
