@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 import { Poll, PollOption, UpdatePollStatusSubPayload, Voter } from '@plum/shared-interfaces';
 import { RedisService } from '../redis.service.js';
-import { TTL_BOUNDS } from '../redis.constants';
+import { TTL_BOUNDS } from '../redis.constants.js';
 import { BaseRedisRepository } from './base-redis.repository.js';
 
 @Injectable()
@@ -316,9 +316,10 @@ export class PollManagerService extends BaseRedisRepository<Poll> {
     return poll.options;
   }
 
-  @OnEvent('redis.expired.poll:*')
+  @OnEvent('redis.expired.*')
   async handlePollAutoClose(key: string) {
     const parts = key.split(':');
+    if (parts[0] !== 'poll') return;
 
     // 마지막 요소가 active인 경우에만 처리 (Shadow Key 역할)
     if (parts[parts.length - 1] !== 'active') return;

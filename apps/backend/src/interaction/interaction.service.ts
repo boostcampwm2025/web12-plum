@@ -132,13 +132,21 @@ export class InteractionService {
     return { ...result };
   }
 
-  async stopPoll(pollId: string): Promise<PollOption[]> {
+  async stopPoll(pollId: string): Promise<{ title: string; options: PollOption[] }> {
     const poll = await this.pollManagerService.findOne(pollId);
     if (!poll) throw new BusinessException('존재하지 않는 투표입니다.');
 
-    if (poll.status === 'ended') return await this.pollManagerService.getFinalResults(pollId);
+    if (poll.status === 'ended') {
+      return {
+        title: poll.title,
+        options: await this.pollManagerService.getFinalResults(pollId),
+      };
+    }
 
-    return await this.pollManagerService.closePoll(pollId);
+    return {
+      title: poll.title,
+      options: await this.pollManagerService.closePoll(pollId),
+    };
   }
 
   // --- QnA Methods ---
