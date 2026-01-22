@@ -258,7 +258,7 @@ export class QnaManagerService extends BaseRedisRepository<Qna> {
     return qna.answers;
   }
 
-  @OnEvent('redis.expired.qna:*')
+  @OnEvent('redis.expired.qna')
   async handleQnaAutoClose(key: string) {
     const parts = key.split(':');
 
