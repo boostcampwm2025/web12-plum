@@ -115,8 +115,10 @@ export const RoomSignaling = {
       // 스토어에 producer 정보 저장 (비디오는 페이지네이션에서 사용)
       actions.addProducer(data.participantId, data.type, data.producerId);
 
-      // 오디오만 즉시 consume
-      if (data.type === 'audio') actions.consumeRemoteProducer(data);
+      // 오디오와 화면공유는 즉시 consume (비디오는 페이지네이션에서 처리)
+      if (data.type === 'audio' || data.type === 'screen') {
+        actions.consumeRemoteProducer(data);
+      }
     });
 
     // 미디어 상태 변경 (다른 사람이 Mute/Unmute 했을 때)
