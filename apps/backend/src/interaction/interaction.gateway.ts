@@ -24,6 +24,20 @@ import {
   BreakPollResponse,
   UpdatePollStatusSubPayload,
   PollOption,
+  CreateQnaResponse,
+  CreateQnaRequest,
+  qnaFormSchema,
+  GetPollResponse,
+  EmitQnaRequest,
+  EmitQnaResponse,
+  AnswerRequest,
+  AnswerResponse,
+  BreakQnaRequest,
+  BreakQnaResponse,
+  Answer,
+  EndQnaPayload,
+  EndQnaDetailPayload,
+  GetQnaResponse,
 } from '@plum/shared-interfaces';
 
 import { SOCKET_CONFIG } from '../common/constants/socket.constants.js';
@@ -109,7 +123,9 @@ export class InteractionGateway implements OnGatewayDisconnect {
   ): Promise<CreatePollResponse> {
     try {
       const { room } = await this.validatePresenterAction(socket.id);
-      await this.interactionService.createPoll(room.id, data);
+      const poll = await this.interactionService.createPoll(room.id, data);
+
+      this.logger.log(`[create_poll] ${room.id}에서 새 투표 생성: ${data.title} (${poll.id})`);
 
       return { success: true };
     } catch (error) {
@@ -121,7 +137,7 @@ export class InteractionGateway implements OnGatewayDisconnect {
   }
 
   @SubscribeMessage('get_poll')
-  async getPoll(@ConnectedSocket() socket: Socket) {
+  async getPoll(@ConnectedSocket() socket: Socket): Promise<GetPollResponse> {
     try {
       const { room } = await this.validatePresenterAction(socket.id);
       const polls = await this.interactionService.getPolls(room.id);
@@ -145,6 +161,8 @@ export class InteractionGateway implements OnGatewayDisconnect {
       const payload = await this.interactionService.startPoll(data.pollId);
 
       socket.to(room.id).emit('start_poll', payload);
+
+      this.logger.log(`[start_poll] ${room.id}에서 투표 시작: ${data.pollId}`);
 
       return { success: true, startedAt: payload.startedAt, endedAt: payload.endedAt };
     } catch (error) {
@@ -179,6 +197,10 @@ export class InteractionGateway implements OnGatewayDisconnect {
         },
       });
 
+      this.logger.log(
+        `[vote] ${participant.name}님이 투표 참여: ${data.pollId} (항목: ${data.optionId})`,
+      );
+
       return { success: true };
     } catch (error) {
       const errorMessage =
@@ -206,6 +228,7 @@ export class InteractionGateway implements OnGatewayDisconnect {
       };
 
       socket.to(room.id).emit('poll_end', broadCastPayload);
+      this.logger.log(`[break_poll] ${room.id}에서 투표 수동 종료: ${data.pollId}`);
       return { success: true, options: options };
     } catch (error) {
       const errorMessage =
@@ -215,11 +238,114 @@ export class InteractionGateway implements OnGatewayDisconnect {
     }
   }
 
+  @SubscribeMessage('create_qna')
+  async createQna(
+    @ConnectedSocket() socket: Socket,
+    @MessageBody(new ZodValidationPipeSocket(qnaFormSchema)) data: CreateQnaRequest,
+  ): Promise<CreateQnaResponse> {
+    try {
+      const { room } = await this.validatePresenterAction(socket.id);
+      const qna = await this.interactionService.createQna(room.id, data);
+
+      this.logger.log(`[create_poll] ${room.id}에서 새 질문 생성: ${data.title} (${qna.id})`);
+      return { success: true };
+    } catch (error) {
+      const errorMessage =
+        error instanceof BusinessException ? error.message : '질문 생성에 실패했습니다.';
+      this.logger.error(`[create_poll] 실패:`, error);
+      return { success: false, error: errorMessage };
+    }
+  }
+
+  @SubscribeMessage('get_qna')
+  async getQna(@ConnectedSocket() socket: Socket): Promise<GetQnaResponse> {
+    try {
+      const { room } = await this.validatePresenterAction(socket.id);
+      const qnas = await this.interactionService.getQnas(room.id);
+
+      return { success: true, qnas };
+    } catch (error) {
+      const errorMessage =
+        error instanceof BusinessException ? error.message : '질문 조회에 실패했습니다.';
+      this.logger.error(`[get_poll] 실패:`, error);
+      return { success: false, error: errorMessage };
+    }
+  }
+
+  @SubscribeMessage('emit_qna')
+  async startQna(
+    @ConnectedSocket() socket: Socket,
+    @MessageBody() data: EmitQnaRequest,
+  ): Promise<EmitQnaResponse> {
+    try {
+      const { room } = await this.validatePresenterAction(socket.id);
+      const payload = await this.interactionService.startQna(data.qnaId);
+
+      socket.to(room.id).emit('start_qna', payload);
+
+      this.logger.log(`[start_qna] ${room.id}에서 질문 시작: ${data.qnaId}`);
+      return { success: true, startedAt: payload.startedAt, endedAt: payload.endedAt };
+    } catch (error) {
+      const errorMessage =
+        error instanceof BusinessException ? error.message : '질문 시작에 실패했습니다.';
+      this.logger.error(`[start_qna] 실패:`, error);
+      return { success: false, error: errorMessage };
+    }
+  }
+
+  @SubscribeMessage('answer')
+  async answer(
+    @ConnectedSocket() socket: Socket,
+    @MessageBody() data: AnswerRequest,
+  ): Promise<AnswerResponse> {
+    try {
+      const { room, participant } = await this.validateAudienceAction(socket.id);
+      const result = await this.interactionService.answer(
+        data.qnaId,
+        participant.id,
+        participant.name,
+        data.text,
+      );
+
+      this.server.to(`${room.id}:audience`).emit('update_qna', result.audience);
+      this.server.to(`${room.id}:presenter`).emit('update_qna_detail', result.presenter);
+      this.logger.log(`[answer] ${participant.name}님이 질문 답변 제출: ${data.qnaId}`);
+
+      return { success: true };
+    } catch (error) {
+      const errorMessage =
+        error instanceof BusinessException ? error.message : '투표에 실패했습니다.';
+      this.logger.error(`[vote] 실패:`, error);
+      return { success: false, error: errorMessage };
+    }
+  }
+
+  @SubscribeMessage('break_qna')
+  async breakQna(
+    @ConnectedSocket() socket: Socket,
+    @MessageBody() data: BreakQnaRequest,
+  ): Promise<BreakQnaResponse> {
+    try {
+      const { room } = await this.validatePresenterAction(socket.id);
+
+      const payload = await this.interactionService.stopQna(data.qnaId);
+
+      socket.to(room.id).emit('qna_end', payload.audience);
+
+      this.logger.log(`[break_qna] ${room.id}에서 질문 수동 종료: ${data.qnaId}`);
+      return { success: true, answers: payload.presenter.answers, count: payload.presenter.count };
+    } catch (error) {
+      const errorMessage =
+        error instanceof BusinessException ? error.message : '질문 종료에 실패했습니다.';
+      this.logger.error(`[break_qna] 실패:`, error);
+      return { success: false, error: errorMessage };
+    }
+  }
+
   @OnEvent('poll.autoClosed')
-  async handleAutoClosedEvent(payload: { pollId: string; options: PollOption[] }) {
+  async handleAutoClosedPollEvent(payload: { pollId: string; options: PollOption[] }) {
     try {
       const poll = await this.interactionService.getPoll(payload.pollId);
-      this.logger.log(`[auto_close_poll] 전달 ${poll.roomId}: ${poll.id}`);
 
       this.server.to(`${poll.roomId}:presenter`).emit('poll_end_detail', {
         pollId: poll.id,
@@ -229,6 +355,32 @@ export class InteractionGateway implements OnGatewayDisconnect {
         pollId: poll.id,
         options: payload.options.map((o) => ({ id: o.id, count: o.count })),
       });
+      this.logger.log(`[auto_close_poll] 전달 ${poll.roomId}: ${poll.id}`);
+    } catch (error) {
+      this.logger.error(`[auto_close_poll] 전달 실패: `, error);
+    }
+  }
+
+  @OnEvent('qna.autoClosed')
+  async handleAutoClosedQnaEvent(payload: { qnaId: string; answers: Answer[] }) {
+    try {
+      const qna = await this.interactionService.getQna(payload.qnaId);
+
+      const audiencePayload: EndQnaPayload = {
+        qnaId: qna.id,
+        title: qna.title,
+        count: payload.answers.length,
+        ...(qna.isPublic && { text: payload.answers.map((a) => a.text) }),
+      };
+      const presenterPayload: EndQnaDetailPayload = {
+        qnaId: qna.id,
+        title: qna.title,
+        count: payload.answers.length,
+        answers: payload.answers,
+      };
+      this.server.to(`${qna.roomId}:presenter`).emit('qna_end_detail', presenterPayload);
+      this.server.to(`${qna.roomId}:audience`).emit('qna_end', audiencePayload);
+      this.logger.log(`[auto_close_qna] 전달 ${qna.roomId}: ${qna.id}`);
     } catch (error) {
       this.logger.error(`[auto_close_poll] 전달 실패: `, error);
     }

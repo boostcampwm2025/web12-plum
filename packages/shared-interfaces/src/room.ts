@@ -78,6 +78,5 @@ export interface Room {
   startedAt: string;
   endedAt: string;
   files: string[];
-  qnas: string[];
   aiSummery: string;
 }

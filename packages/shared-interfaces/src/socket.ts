@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { ParticipantPayload, ParticipantRole } from './participant.js';
 import { MediaKind, MediasoupProducer, MediaType, RoomInfo, ToggleActionType } from './shared.js';
 import { Poll, pollFormSchema, PollOption, PollPayload } from './poll.js';
+import { Answer, Qna, qnaFormSchema, QnaPayload } from './qna.js';
 
 // 제스처 타입 정의
 export type GestureType =
@@ -67,8 +68,14 @@ export interface ActionGestureRequest {
 
 export type CreatePollRequest = z.infer<typeof pollFormSchema>;
 
+export type CreateQnaRequest = z.infer<typeof qnaFormSchema>;
+
 export interface EmitPollRequest {
   pollId: string;
+}
+
+export interface EmitQnaRequest {
+  qnaId: string;
 }
 
 export interface VoteRequest {
@@ -76,8 +83,17 @@ export interface VoteRequest {
   optionId: number;
 }
 
+export type AnswerRequest = {
+  qnaId: string;
+  text: string;
+};
+
 export interface BreakPollRequest {
   pollId: string;
+}
+
+export interface BreakQnaRequest {
+  qnaId: string;
 }
 
 // 클라이언트에서 보낸 요청에 따라 발생하는 이벤트 페이로드
@@ -144,6 +160,8 @@ export type ActionGestureResponse = BaseResponse;
 
 export type CreatePollResponse = BaseResponse;
 
+export type CreateQnaResponse = BaseResponse;
+
 export type GetPollResponse =
   | (BaseResponse & { success: false })
   | {
@@ -151,15 +169,32 @@ export type GetPollResponse =
       polls: Poll[];
     };
 
+export type GetQnaResponse =
+  | (BaseResponse & { success: false })
+  | {
+      success: true;
+      qnas: Qna[];
+    };
+
 export type EmitPollResponse =
   | (BaseResponse & { success: false })
   | ({ success: true } & Pick<PollPayload, 'startedAt' | 'endedAt'>);
 
+export type EmitQnaResponse =
+  | (BaseResponse & { success: false })
+  | ({ success: true } & Pick<QnaPayload, 'startedAt' | 'endedAt'>);
+
 export type VoteResponse = BaseResponse;
+
+export type AnswerResponse = BaseResponse;
 
 export type BreakPollResponse =
   | (BaseResponse & { success: false })
   | { success: true; options: PollOption[] };
+
+export type BreakQnaResponse =
+  | (BaseResponse & { success: false })
+  | { success: true; answers: Answer[]; count: number };
 
 // 서버에서 보내는 브로드캐스트 페이로드
 export type UserJoinedPayload = ParticipantPayload;
@@ -189,6 +224,8 @@ export interface UpdateGestureStatusPayload {
 
 export type StartPollPayload = PollPayload;
 
+export type StartQnaPayload = QnaPayload;
+
 export interface UpdatePollStatusFullPayload {
   pollId: string;
   options: Pick<PollOption, 'id' | 'count'>[];
@@ -201,6 +238,17 @@ export interface UpdatePollStatusFullPayload {
 
 export type UpdatePollStatusSubPayload = Omit<UpdatePollStatusFullPayload, 'voter'>;
 
+export type UpdateQnaFullPayload = Answer & {
+  qnaId: string;
+  count: number;
+};
+
+export type UpdateQnaSubPayload = {
+  qnaId: string;
+  count: number;
+  text?: string;
+};
+
 export interface EndPollPayload {
   pollId: string;
   options: Omit<PollOption, 'voters'>[];
@@ -210,6 +258,20 @@ export interface EndPollDetailPayload {
   pollId: string;
   options: PollOption[];
 }
+
+export interface EndQnaDetailPayload {
+  qnaId: string;
+  title: string;
+  count: number;
+  answers: Answer[];
+}
+
+export type EndQnaPayload = {
+  qnaId: string;
+  title: string;
+  count: number;
+  text?: string[];
+};
 
 /**
  * 서버 -> 클라이언트 이벤트
@@ -229,13 +291,23 @@ export interface ServerToClientEvents {
 
   start_poll: (data: StartPollPayload) => void;
 
+  start_qna: (data: StartQnaPayload) => void;
+
   update_poll: (data: UpdatePollStatusSubPayload) => void;
 
   update_poll_detail: (data: UpdatePollStatusFullPayload) => void;
 
+  update_qna: (data: UpdateQnaSubPayload) => void;
+
+  update_qna_detail: (data: UpdateQnaFullPayload) => void;
+
   poll_end: (data: EndPollPayload) => void;
 
   poll_end_detail: (data: EndPollDetailPayload) => void;
+
+  qna_end: (data: EndQnaPayload) => void;
+
+  qna_end_detail: (data: EndQnaDetailPayload) => void;
 }
 
 /**
@@ -272,11 +344,21 @@ export interface ClientToServerEvents {
 
   create_poll: (data: CreatePollRequest, cb: (res: CreatePollResponse) => void) => void;
 
+  create_qna: (data: CreateQnaRequest, cb: (res: CreateQnaResponse) => void) => void;
+
   get_poll: (cb: (res: GetPollResponse) => void) => void;
+
+  get_qna: (cb: (res: GetQnaResponse) => void) => void;
 
   emit_poll: (data: EmitPollRequest, cb: (res: EmitPollResponse) => void) => void;
 
+  emit_qna: (data: EmitQnaRequest, cb: (res: EmitQnaResponse) => void) => void;
+
   vote: (data: VoteRequest, cb: (res: VoteResponse) => void) => void;
 
+  answer: (data: AnswerRequest, cb: (res: AnswerResponse) => void) => void;
+
   break_poll: (data: BreakPollRequest, cb: (res: BreakPollResponse) => void) => void;
+
+  break_qna: (data: BreakQnaRequest, cb: (res: BreakQnaResponse) => void) => void;
 }
