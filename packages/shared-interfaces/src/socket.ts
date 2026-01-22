@@ -107,6 +107,9 @@ export type JoinRoomResponse =
   | (BaseResponse & { success: false })
   | ({
       success: true;
+      participantId: string;
+      participantName: string;
+      role: ParticipantRole;
     } & RoomInfo);
 
 export type CreateTransportResponse<T1 = any, T2 = any, T3 = any> =
