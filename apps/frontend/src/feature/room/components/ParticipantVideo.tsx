@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { memo, useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
 import { cn } from '@/shared/lib/utils';
 import { Icon } from '@/shared/components/icon/Icon';
@@ -94,7 +94,7 @@ export interface ParticipantVideoProps {
   onVideoElementChange?: (element: HTMLVideoElement | null) => void;
 }
 
-export function ParticipantVideo({
+function ParticipantVideoComponent({
   id,
   name,
   mode,
@@ -301,3 +301,13 @@ export function ParticipantVideo({
     </motion.div>
   );
 }
+
+export const ParticipantVideo = memo(
+  ParticipantVideoComponent,
+  (prev, next) =>
+    prev.id === next.id &&
+    prev.mode === next.mode &&
+    prev.isCurrentUser === next.isCurrentUser &&
+    prev.videoProducerId === next.videoProducerId &&
+    prev.isCurrentlyVisible === next.isCurrentlyVisible,
+);

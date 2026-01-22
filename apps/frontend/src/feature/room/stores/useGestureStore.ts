@@ -22,7 +22,14 @@ const initialProgress: GestureProgress = {
 export const useGestureStore = create<GestureStoreState>((set) => ({
   gestureProgress: initialProgress,
   actions: {
-    setGestureProgress: (progress) => set({ gestureProgress: progress }),
+    setGestureProgress: (progress) =>
+      set((state) => {
+        const current = state.gestureProgress;
+        if (current.gesture === progress.gesture && current.progress === progress.progress) {
+          return state;
+        }
+        return { gestureProgress: progress };
+      }),
     resetGestureProgress: () => set({ gestureProgress: initialProgress }),
   },
 }));
