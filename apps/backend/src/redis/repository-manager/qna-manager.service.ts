@@ -278,7 +278,7 @@ export class QnaManagerService extends BaseRedisRepository<Qna> {
     try {
       const finalResults = await this.closeQna(qnaId);
 
-      this.eventEmitter.emit('poll.autoClosed', {
+      this.eventEmitter.emit('qna.autoClosed', {
         qnaId,
         answers: finalResults,
       });

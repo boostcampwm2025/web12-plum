@@ -357,7 +357,7 @@ export class InteractionGateway implements OnGatewayDisconnect {
       });
       this.logger.log(`[auto_close_poll] 전달 ${poll.roomId}: ${poll.id}`);
     } catch (error) {
-      this.logger.error(`[auto_close_poll] 전달 실패: `, error);
+      this.logger.error(`[auto_close_qna] 전달 실패: `, error);
     }
   }
 
