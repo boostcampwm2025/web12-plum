@@ -458,7 +458,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.socketMetadataService.delete(socket.id);
   }
 
-  @OnEvent('redis.expired.reconnect:pending:*')
+  @OnEvent('redis.expired.reconnect')
   async handleReconnectExpired(key: string) {
     const participantId = key.split(':').pop();
     const metadata = await this.participantManagerService.popReconnectMetadata(participantId!);
