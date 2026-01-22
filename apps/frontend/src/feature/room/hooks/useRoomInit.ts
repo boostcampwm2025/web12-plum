@@ -50,7 +50,7 @@ export function useRoomInit() {
   const {
     startProducing,
     consumeRemoteProducer,
-    consumeExistingAudioProducers,
+    consumeExistingProducers,
     cleanup: cleanupMedia,
   } = useMediaConnectionContext();
 
@@ -106,8 +106,8 @@ export function useRoomInit() {
       // 4. Mediasoup Device 초기화
       await initDevice(routerRtpCapabilities);
 
-      // 5. 기존 참가자들의 오디오만 즉시 수신
-      await consumeExistingAudioProducers();
+      // 5. 기존 참가자들의 오디오와 화면공유 즉시 수신
+      await consumeExistingProducers();
 
       // 6. 미디어 스트림 획득 및 송출 시작
       try {
