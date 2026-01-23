@@ -23,11 +23,13 @@ function getRemainingSeconds(timeLimitSeconds: number, startedAt: number) {
 }
 
 export function TimeLeft({ timeLimitSeconds, startedAt, className, iconSize = 16 }: TimeLeftProps) {
+  const isUnlimited = timeLimitSeconds === 0;
   const [remainingSeconds, setRemainingSeconds] = useState(() =>
     getRemainingSeconds(timeLimitSeconds, startedAt),
   );
 
   useEffect(() => {
+    if (isUnlimited) return;
     const intervalId = setInterval(() => {
       setRemainingSeconds((prev) => {
         if (prev === 0) {
@@ -39,7 +41,7 @@ export function TimeLeft({ timeLimitSeconds, startedAt, className, iconSize = 16
     }, 1000);
 
     return () => clearInterval(intervalId);
-  }, [timeLimitSeconds, startedAt]);
+  }, [isUnlimited, timeLimitSeconds, startedAt]);
 
   return (
     <div
@@ -52,7 +54,7 @@ export function TimeLeft({ timeLimitSeconds, startedAt, className, iconSize = 16
         name="timer"
         size={iconSize}
       />
-      {formatSeconds(remainingSeconds)}
+      {isUnlimited ? '제한 없음' : formatSeconds(remainingSeconds)}
     </div>
   );
 }

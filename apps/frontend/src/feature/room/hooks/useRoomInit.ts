@@ -42,9 +42,8 @@ export function useRoomInit() {
   // 스토어 액션
   const { initDevice } = useMediaDeviceStore((state) => state.actions);
   const { ensureTracks } = useStreamStore((state) => state.actions);
-  const { initParticipants, addParticipant, removeParticipant, addProducer } = useRoomStore(
-    (state) => state.actions,
-  );
+  const { initParticipants, addParticipant, removeParticipant, addProducer, setMyInfo } =
+    useRoomStore((state) => state.actions);
   const { removeRemoteStreamByParticipant } = useMediaStore((state) => state.actions);
   const { connect: connectSocket } = useSocketStore((state) => state.actions);
   const { addToast } = useToastStore((state) => state.actions);
@@ -137,6 +136,7 @@ export function useRoomInit() {
         roomId,
         myInfo.id,
         initParticipants,
+        setMyInfo,
       );
 
       // 4. Mediasoup Device 초기화

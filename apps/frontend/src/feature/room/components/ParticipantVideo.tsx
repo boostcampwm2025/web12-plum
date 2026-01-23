@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { memo, useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
 import { cn } from '@/shared/lib/utils';
 import { Icon } from '@/shared/components/icon/Icon';
@@ -94,7 +94,7 @@ export interface ParticipantVideoProps {
   onVideoElementChange?: (element: HTMLVideoElement | null) => void;
 }
 
-export function ParticipantVideo({
+function ParticipantVideoComponent({
   id,
   name,
   mode,
@@ -228,7 +228,14 @@ export function ParticipantVideo({
       {mode !== 'minimize' && isCurrentUser && <GestureProgressOverlay />}
 
       {/* 이름 표시 */}
-      <div className="absolute bottom-2 left-2 rounded px-1 text-sm text-white">{name}</div>
+      <div
+        className={cn(
+          'absolute bottom-2 left-2 rounded px-1 text-xs text-white',
+          mode !== 'minimize' && 'bg-gray-700/40 py-1',
+        )}
+      >
+        {name}
+      </div>
 
       {/* minimize 모드 확대 버튼 */}
       {mode === 'minimize' && isCurrentUser && (
@@ -301,3 +308,16 @@ export function ParticipantVideo({
     </motion.div>
   );
 }
+
+export const ParticipantVideo = memo(ParticipantVideoComponent, (prev, next) => {
+  if (prev.isCurrentUser || next.isCurrentUser) {
+    return false;
+  }
+  return (
+    prev.id === next.id &&
+    prev.mode === next.mode &&
+    prev.isCurrentUser === next.isCurrentUser &&
+    prev.videoProducerId === next.videoProducerId &&
+    prev.isCurrentlyVisible === next.isCurrentlyVisible
+  );
+});
