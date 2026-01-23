@@ -172,6 +172,14 @@ export type GetPollResponse =
       polls: Poll[];
     };
 
+export type GetActivePollResponse =
+  | (BaseResponse & { success: false })
+  | {
+      success: true;
+      poll: PollPayload | null;
+      votedOptionId: number | null;
+    };
+
 export type GetQnaResponse =
   | (BaseResponse & { success: false })
   | {
@@ -351,6 +359,8 @@ export interface ClientToServerEvents {
   create_qna: (data: CreateQnaRequest, cb: (res: CreateQnaResponse) => void) => void;
 
   get_poll: (cb: (res: GetPollResponse) => void) => void;
+
+  get_active_poll: (cb: (res: GetActivePollResponse) => void) => void;
 
   get_qna: (cb: (res: GetQnaResponse) => void) => void;
 
