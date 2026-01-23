@@ -17,10 +17,20 @@ export default defineConfig(({ mode }) => {
         org: env.ORG_NAME,
         project: env.PROJECT_NAME,
         authToken: env.SENTRY_AUTH_TOKEN,
+        sourcemaps: {
+          assets: './dist/**',
+          filesToDeleteAfterUpload: './dist/**/*.map',
+        },
       }),
     ],
     build: {
       sourcemap: true,
+      minify: 'esbuild',
+      rollupOptions: {
+        output: {
+          manualChunks: undefined,
+        },
+      },
     },
     worker: {
       format: 'iife',
