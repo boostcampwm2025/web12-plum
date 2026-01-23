@@ -1,73 +1,57 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PresentationUploader } from './PresentationUploader';
-import { validateFileForUpload } from '../../../shared/lib/presentation';
+import { useToastStore } from '../../../store/useToastStore';
 import '@testing-library/jest-dom';
 
-vi.mock('../../../shared/lib/presentation', () => ({
-  validateFileForUpload: vi.fn(),
-}));
-
-vi.mock('../../../shared/hooks/useDragAndDrop', () => ({
-  useDragAndDrop: vi.fn(() => ({
-    isDragging: false,
-    dragHandlers: {},
-  })),
+vi.mock('../../../store/useToastStore', () => ({
+  useToastStore: vi.fn(),
 }));
 
 describe('PresentationUploader 테스트', () => {
-  const mockOnFileSelect = vi.fn();
-  const mockOnValidationError = vi.fn();
+  const mockAddFile = vi.fn();
+  const mockAddToast = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(useToastStore).mockImplementation((selector: any) => {
+      const mockState = {
+        actions: { addToast: mockAddToast },
+      };
+      return selector(mockState);
+    });
   });
 
-  it('파일 업로드 영역이 렌더링되어야 한다.', () => {
-    render(<PresentationUploader />);
+  it('파일 선택 시 성공하면 성공 토스트를 띄워야 한다.', () => {
+    mockAddFile.mockReturnValue({ success: true });
 
-    expect(screen.getByText('파일을 선택하거나 드래그하세요')).toBeInTheDocument();
-  });
+    render(<PresentationUploader addFile={mockAddFile} />);
 
-  it('파일 선택 버튼을 클릭하면 파일 input이 클릭되어야 한다.', () => {
-    render(<PresentationUploader />);
-
-    const fileInput = screen.getByLabelText('파일 업로드') as HTMLInputElement;
-    const uploadButton = screen.getByRole('button', { name: '파일 선택 또는 드래그하여 업로드' });
-
-    const clickSpy = vi.spyOn(fileInput, 'click');
-
-    fireEvent.click(uploadButton);
-
-    expect(clickSpy).toHaveBeenCalled();
-  });
-
-  it('유효한 파일이 선택되면 onFileSelect가 호출되어야 한다.', () => {
-    vi.mocked(validateFileForUpload).mockReturnValue(null);
-
-    render(<PresentationUploader />);
-
-    const fileInput = screen.getByLabelText('파일 업로드') as HTMLInputElement;
+    const fileInput = screen.getByLabelText('파일 업로드');
     const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
     fireEvent.change(fileInput, { target: { files: [file] } });
 
-    expect(mockOnFileSelect).toHaveBeenCalledWith(file);
-    expect(mockOnValidationError).not.toHaveBeenCalled();
+    expect(mockAddToast).toHaveBeenCalledWith({
+      type: 'success',
+      title: '파일이 성공적으로 추가되었습니다.',
+    });
   });
 
-  it('유효하지 않은 파일이 선택되면 onValidationError가 호출되어야 한다.', () => {
-    const errorMessage = '파일 크기가 너무 큽니다.';
-    vi.mocked(validateFileForUpload).mockReturnValue(errorMessage);
+  it('파일 추가 실패 시 에러 토스트를 띄워야 한다.', () => {
+    const errorMessage = '허용되지 않는 형식';
+    mockAddFile.mockReturnValue({ success: false, message: errorMessage });
 
-    render(<PresentationUploader />);
+    render(<PresentationUploader addFile={mockAddFile} />);
 
-    const fileInput = screen.getByLabelText('파일 업로드') as HTMLInputElement;
-    const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
+    const fileInput = screen.getByLabelText('파일 업로드');
+    const file = new File(['test'], 'invalid.txt');
 
     fireEvent.change(fileInput, { target: { files: [file] } });
 
-    expect(mockOnValidationError).toHaveBeenCalledWith(errorMessage);
-    expect(mockOnFileSelect).not.toHaveBeenCalled();
+    expect(mockAddToast).toHaveBeenCalledWith({
+      type: 'error',
+      title: errorMessage,
+    });
   });
 });

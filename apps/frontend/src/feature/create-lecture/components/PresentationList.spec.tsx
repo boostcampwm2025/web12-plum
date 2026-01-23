@@ -1,97 +1,67 @@
 import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { useFormContext, useWatch, UseFormReturn } from 'react-hook-form';
+import { describe, it, expect, vi } from 'vitest';
 import { PresentationList } from './PresentationList';
 import '@testing-library/jest-dom';
 
-vi.mock('react-hook-form', () => ({
-  useFormContext: vi.fn(),
-  useWatch: vi.fn(),
-}));
-
 describe('PresentationList 테스트', () => {
-  const mockSetValue = vi.fn();
+  const mockOnDelete = vi.fn();
 
-  beforeEach(() => {
-    vi.clearAllMocks();
-
-    vi.mocked(useFormContext).mockReturnValue({
-      setValue: mockSetValue,
-    } as unknown as UseFormReturn);
-  });
+  const createMockFile = (name: string, sizeInBytes: number) => {
+    const file = new File(['a'.repeat(sizeInBytes)], name);
+    return file;
+  };
 
   it('파일이 없을 때 아무것도 렌더링하지 않아야 한다.', () => {
-    vi.mocked(useWatch).mockReturnValue([]);
-
-    const { container } = render(<PresentationList />);
-
+    const { container } = render(
+      <PresentationList
+        files={[]}
+        onDelete={mockOnDelete}
+      />,
+    );
     expect(container.firstChild).toBeNull();
   });
 
-  it('업로드된 파일들이 렌더링되어야 한다.', () => {
-    const mockFiles = [
-      new File(['content1'], 'test1.pdf', { type: 'application/pdf' }),
-      new File(['content2'], 'test2.pptx', {
-        type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-      }),
-    ];
+  it('업로드된 파일들이 리스트에 렌더링되어야 한다.', () => {
+    const mockFiles = [createMockFile('test1.pdf', 1024), createMockFile('test2.pptx', 2048)];
 
-    vi.mocked(useWatch).mockReturnValue(mockFiles);
-
-    render(<PresentationList />);
+    render(
+      <PresentationList
+        files={mockFiles}
+        onDelete={mockOnDelete}
+      />,
+    );
 
     expect(screen.getByText('test1.pdf')).toBeInTheDocument();
     expect(screen.getByText('test2.pptx')).toBeInTheDocument();
   });
 
-  it('파일 크기가 정확하게 포맷되어 표시되어야 한다.', () => {
-    const mockFile = new File(['a'.repeat(1024)], 'test.pdf', { type: 'application/pdf' });
+  it('파일 크기가 포맷되어 올바르게 표시되어야 한다.', () => {
+    const mockFiles = [createMockFile('size-test.pdf', 1024)];
 
-    vi.mocked(useWatch).mockReturnValue([mockFile]);
+    render(
+      <PresentationList
+        files={mockFiles}
+        onDelete={mockOnDelete}
+      />,
+    );
 
-    render(<PresentationList />);
-
-    expect(screen.getByText(/KB/)).toBeInTheDocument();
+    expect(screen.getByText(/1\.0 KB/i)).toBeInTheDocument();
   });
 
-  it('삭제 버튼을 클릭하면 파일이 삭제되어야 한다.', () => {
-    const mockFiles = [
-      new File(['content1'], 'test1.pdf', { type: 'application/pdf' }),
-      new File(['content2'], 'test2.pptx', {
-        type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-      }),
-    ];
+  it('삭제 버튼 클릭 시 해당 파일의 인덱스와 함께 onDelete가 호출되어야 한다.', () => {
+    const mockFiles = [createMockFile('file1.pdf', 100), createMockFile('file2.pdf', 200)];
 
-    vi.mocked(useWatch).mockReturnValue(mockFiles);
-
-    render(<PresentationList />);
-
-    const deleteButtons = screen.getAllByRole('button', { name: '파일 삭제' });
-    fireEvent.click(deleteButtons[0]);
-
-    expect(mockSetValue).toHaveBeenCalledWith('presentationFiles', [mockFiles[1]], {
-      shouldValidate: true,
-    });
-  });
-
-  it('여러 파일의 삭제 버튼이 개별적으로 동작해야 한다.', () => {
-    const mockFiles = [
-      new File(['content1'], 'test1.pdf', { type: 'application/pdf' }),
-      new File(['content2'], 'test2.pptx', {
-        type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-      }),
-      new File(['content3'], 'test3.pdf', { type: 'application/pdf' }),
-    ];
-
-    vi.mocked(useWatch).mockReturnValue(mockFiles);
-
-    render(<PresentationList />);
+    render(
+      <PresentationList
+        files={mockFiles}
+        onDelete={mockOnDelete}
+      />,
+    );
 
     const deleteButtons = screen.getAllByRole('button', { name: '파일 삭제' });
     fireEvent.click(deleteButtons[1]);
 
-    expect(mockSetValue).toHaveBeenCalledWith('presentationFiles', [mockFiles[0], mockFiles[2]], {
-      shouldValidate: true,
-    });
+    expect(mockOnDelete).toHaveBeenCalledTimes(1);
+    expect(mockOnDelete).toHaveBeenCalledWith(1);
   });
 });
