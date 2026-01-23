@@ -5,6 +5,7 @@ import { useMediaStore } from '../stores/useMediaStore';
 import { useRoomUIStore } from '../stores/useRoomUIStore';
 import { useMediaConnectionContext } from '../hooks/useMediaConnectionContext';
 import { usePollStore } from '../stores/usePollStore';
+import { useQnaStore } from '../stores/useQnaStore';
 import { useRoomStore } from '../stores/useRoomStore';
 import { ExitButton } from './ExitButton';
 
@@ -29,6 +30,7 @@ function MainMenu() {
   const hasActivePoll = usePollStore((state) =>
     state.polls.some((poll) => poll.status === 'active'),
   );
+  const hasActiveQna = useQnaStore((state) => state.qnas.some((qna) => qna.status === 'active'));
   const myRole = useRoomStore((state) => state.myInfo?.role);
   const {
     startCameraProducer,
@@ -69,6 +71,7 @@ function MainMenu() {
       icon: 'qna',
       tooltip: 'Q&A',
       isActive: activeDialog === 'qna',
+      hasAlarm: hasActiveQna,
       onClick: () => setActiveDialog('qna'),
     },
     {

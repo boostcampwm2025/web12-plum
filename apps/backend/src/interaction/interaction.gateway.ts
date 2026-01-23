@@ -395,7 +395,7 @@ export class InteractionGateway implements OnGatewayDisconnect {
       this.server.to(`${qna.roomId}:audience`).emit('qna_end', audiencePayload);
       this.logger.log(`[auto_close_qna] 전달 ${qna.roomId}: ${qna.id}`);
     } catch (error) {
-      this.logger.error(`[auto_close_poll] 전달 실패: `, error);
+      this.logger.error(`[auto_close_qna] 전달 실패: `, error);
     }
   }
 

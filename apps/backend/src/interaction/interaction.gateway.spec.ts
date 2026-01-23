@@ -786,7 +786,7 @@ describe('InteractionGateway', () => {
       await gateway.handleAutoClosedQnaEvent(mockEventPayload);
 
       expect(loggerSpy).toHaveBeenCalledWith(
-        expect.stringContaining('[auto_close_poll] 전달 실패:'),
+        expect.stringContaining('[auto_close_qna] 전달 실패:'),
         expect.any(Error),
       );
     });

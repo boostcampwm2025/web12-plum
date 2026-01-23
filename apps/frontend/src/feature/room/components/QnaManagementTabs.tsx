@@ -1,6 +1,5 @@
-import { Qna } from '@plum/shared-interfaces';
 import { AnimatePresence, motion } from 'motion/react';
-import { useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@/shared/components/Button';
 import { Icon } from '@/shared/components/icon/Icon';
 import { QnAModal } from '@/shared/components/QnAModal';
@@ -8,180 +7,114 @@ import { Tabs, TabsList, TabContent, type TabItem, type TabValue } from './Tabs'
 import { ScheduledCard } from './ScheduledCard';
 import { TimeLeft } from './TimeLeft';
 import { cn } from '@/shared/lib/utils';
-
-interface QnaResponse {
-  id: string;
-  userName: string;
-  content: string;
-  createdAt: string;
-}
-
-const scheduledQnas: Qna[] = [
-  {
-    id: 'qna-1',
-    roomId: 'room-1',
-    status: 'pending',
-    title: '오늘 저녁 메뉴로 가장 적절한 것은?',
-    timeLimit: 180,
-    isPublic: true,
-    createdAt: '2024-08-01T09:00:00.000Z',
-    updatedAt: '2024-08-01T09:00:00.000Z',
-    startedAt: '',
-    endedAt: '',
-    answers: [],
-  },
-  {
-    id: 'qna-2',
-    roomId: 'room-1',
-    status: 'pending',
-    title: '다음 팀 회의 날짜는 언제가 좋을까요?',
-    timeLimit: 300,
-    isPublic: false,
-    createdAt: '2024-08-01T10:00:00.000Z',
-    updatedAt: '2024-08-01T10:00:00.000Z',
-    startedAt: '',
-    endedAt: '',
-    answers: [],
-  },
-];
-
-const activeQna: Qna | null = {
-  id: 'qna-3',
-  roomId: 'room-1',
-  status: 'active',
-  title: '오늘 저녁 메뉴로 가장 적절한 것은?',
-  timeLimit: 300,
-  isPublic: true,
-  createdAt: '2024-08-01T11:00:00.000Z',
-  updatedAt: '2024-08-01T11:00:00.000Z',
-  startedAt: '2024-08-01T11:00:00.000Z',
-  endedAt: '',
-  answers: [],
-};
-
-const activeQnaResponses: QnaResponse[] = [
-  {
-    id: 'resp-1',
-    userName: '윤자두',
-    content:
-      '죽는 날까지 하늘을 우러러 한 점 부끄럼이 없기를, 잎새에 이는 바람에도 나는 괴로워했다.',
-    createdAt: '2024-08-01T11:05:00.000Z',
-  },
-  {
-    id: 'resp-2',
-    userName: '이자두',
-    content:
-      '죽는 날까지 하늘을 우러러 한 점 부끄럼이 없기를, 잎새에 이는 바람에도 나는 괴로워했다.',
-    createdAt: '2024-08-01T11:06:00.000Z',
-  },
-  {
-    id: 'resp-3',
-    userName: '김자두',
-    content:
-      '죽는 날까지 하늘을 우러러 한 점 부끄럼이 없기를, 잎새에 이는 바람에도 나는 괴로워했다.',
-    createdAt: '2024-08-01T11:07:00.000Z',
-  },
-  {
-    id: 'resp-4',
-    userName: '박자두',
-    content:
-      '죽는 날까지 하늘을 우러러 한 점 부끄럼이 없기를, 잎새에 이는 바람에도 나는 괴로워했다.',
-    createdAt: '2024-08-01T11:08:00.000Z',
-  },
-];
-
-const activeStartedAt = Date.now();
-
-const completedQnas: Qna[] = [
-  {
-    id: 'qna-4',
-    roomId: 'room-1',
-    status: 'ended',
-    title: '오늘 저녁 메뉴로 가장 적절한 것은?',
-    timeLimit: 180,
-    isPublic: true,
-    createdAt: '2024-08-01T08:00:00.000Z',
-    updatedAt: '2024-08-01T08:30:00.000Z',
-    startedAt: '2024-08-01T08:00:00.000Z',
-    endedAt: '2024-08-01T08:30:00.000Z',
-    answers: [],
-  },
-  {
-    id: 'qna-5',
-    roomId: 'room-1',
-    status: 'ended',
-    title: '가장 적절한 WebRTC 방식은?',
-    timeLimit: 300,
-    isPublic: false,
-    createdAt: '2024-08-01T07:00:00.000Z',
-    updatedAt: '2024-08-01T07:30:00.000Z',
-    startedAt: '2024-08-01T07:00:00.000Z',
-    endedAt: '2024-08-01T07:30:00.000Z',
-    answers: [],
-  },
-];
-
-const completedQnaDetails: Record<string, QnaResponse[]> = {
-  'qna-4': [
-    {
-      id: 'resp-5',
-      userName: '윤자두',
-      content:
-        '죽는 날까지 하늘을 우러러 한 점 부끄럼이 없기를, 잎새에 이는 바람에도 나는 괴로워했다.',
-      createdAt: '2024-08-01T08:05:00.000Z',
-    },
-    {
-      id: 'resp-6',
-      userName: '이자두',
-      content:
-        '죽는 날까지 하늘을 우러러 한 점 부끄럼이 없기를, 잎새에 이는 바람에도 나는 괴로워했다.',
-      createdAt: '2024-08-01T08:10:00.000Z',
-    },
-    {
-      id: 'resp-7',
-      userName: '김자두',
-      content:
-        '죽는 날까지 하늘을 우러러 한 점 부끄럼이 없기를, 일생에 이는 바람에도 나는 괴로워했다.',
-      createdAt: '2024-08-01T08:15:00.000Z',
-    },
-    {
-      id: 'resp-8',
-      userName: '박자두',
-      content:
-        '죽는 날까지 하늘을 우러러 한 점 부끄럼이 없기를, 일생에 이는 바람에도 나는 괴로워했다.',
-      createdAt: '2024-08-01T08:20:00.000Z',
-    },
-  ],
-  'qna-5': [
-    {
-      id: 'resp-9',
-      userName: '윤자두',
-      content: 'Mesh',
-      createdAt: '2024-08-01T07:05:00.000Z',
-    },
-    {
-      id: 'resp-10',
-      userName: '김자두',
-      content: 'MCU',
-      createdAt: '2024-08-01T07:10:00.000Z',
-    },
-    {
-      id: 'resp-11',
-      userName: '박자두',
-      content: 'SFU',
-      createdAt: '2024-08-01T07:15:00.000Z',
-    },
-  ],
-};
-
-const qnaTabs: TabItem[] = [
-  { value: 'scheduled', count: scheduledQnas.length },
-  { value: 'active', count: activeQna ? 1 : 0 },
-  { value: 'completed', count: completedQnas.length },
-];
+import { useSocketStore } from '@/store/useSocketStore';
+import { useQnaStore } from '../stores/useQnaStore';
+import { logger } from '@/shared/lib/logger';
+import type { QnAFormValues } from '@/shared/constants/qna';
+import { useToastStore } from '@/store/useToastStore';
 
 export function QnaManagementTabs() {
   const [activeTab, setActiveTab] = useState<TabValue>('scheduled');
+  const qnas = useQnaStore((state) => state.qnas);
+  const qnaActions = useQnaStore((state) => state.actions);
+  const addToast = useToastStore((state) => state.actions.addToast);
+  const emit = useSocketStore((state) => state.actions.emit);
+
+  const scheduledQnas = useMemo(() => qnas.filter((qna) => qna.status === 'pending'), [qnas]);
+  const activeQna = useMemo(() => qnas.find((qna) => qna.status === 'active'), [qnas]);
+  const completedQnas = useMemo(() => qnas.filter((qna) => qna.status === 'ended'), [qnas]);
+  const previousActiveQnaIdRef = useRef<string | null>(null);
+
+  const qnaTabs: TabItem[] = useMemo(
+    () => [
+      { value: 'scheduled', count: scheduledQnas.length },
+      { value: 'active', count: activeQna ? 1 : 0 },
+      { value: 'completed', count: completedQnas.length },
+    ],
+    [scheduledQnas.length, activeQna, completedQnas.length],
+  );
+
+  const fetchQnas = useCallback(() => {
+    emit('get_qna', (response) => {
+      if (!response.success) {
+        logger.socket.warn('Q&A 목록 조회 실패', response.error);
+        return;
+      }
+      qnaActions.hydrateFromQnas(response.qnas);
+    });
+  }, [emit, qnaActions]);
+
+  useEffect(() => {
+    fetchQnas();
+  }, [fetchQnas]);
+
+  useEffect(() => {
+    const currentActiveId = activeQna?.id ?? null;
+    const previousActiveId = previousActiveQnaIdRef.current;
+
+    if (!currentActiveId && previousActiveId) {
+      setActiveTab('completed');
+    }
+
+    previousActiveQnaIdRef.current = currentActiveId;
+  }, [activeQna?.id]);
+
+  const handleCreateQna = useCallback(
+    (data: QnAFormValues) => {
+      emit('create_qna', data, (response) => {
+        if (!response.success) {
+          logger.socket.warn('Q&A 생성 실패', response.error);
+          addToast({
+            type: 'error',
+            title: 'Q&A 생성에 실패했습니다.',
+          });
+          return;
+        }
+        fetchQnas();
+      });
+    },
+    [emit, fetchQnas, addToast],
+  );
+
+  const handleStartQna = useCallback(
+    (qnaId: string) => {
+      emit('emit_qna', { qnaId }, (response) => {
+        if (!response.success) {
+          logger.socket.warn('Q&A 시작 실패', response.error);
+          addToast({
+            type: 'error',
+            title: 'Q&A 시작에 실패했습니다.',
+          });
+          return;
+        }
+        setActiveTab('active');
+        fetchQnas();
+      });
+    },
+    [emit, fetchQnas, addToast],
+  );
+
+  const handleBreakQna = useCallback(() => {
+    if (!activeQna) return;
+    emit('break_qna', { qnaId: activeQna.id }, (response) => {
+      if (!response.success) {
+        logger.socket.warn('Q&A 종료 실패', response.error);
+        addToast({
+          type: 'error',
+          title: 'Q&A 종료에 실패했습니다.',
+        });
+        return;
+      }
+      qnaActions.setCompletedFromEndDetail({
+        qnaId: activeQna.id,
+        title: activeQna.title,
+        count: response.count,
+        answers: response.answers,
+      });
+      setActiveTab('completed');
+      fetchQnas();
+    });
+  }, [emit, activeQna, qnaActions, fetchQnas, addToast]);
 
   return (
     <>
@@ -200,9 +133,21 @@ export function QnaManagementTabs() {
               transition={{ duration: 0.2 }}
               className="flex min-h-0 flex-1 flex-col"
             >
-              {activeTab === 'scheduled' && <ScheduledQnaList />}
-              {activeTab === 'active' && <ActiveQnaSection />}
-              {activeTab === 'completed' && <CompletedQnaSection />}
+              {activeTab === 'scheduled' && (
+                <ScheduledQnaList
+                  scheduledQnas={scheduledQnas}
+                  onCreateQna={handleCreateQna}
+                  onStartQna={handleStartQna}
+                  isStartDisabled={Boolean(activeQna)}
+                />
+              )}
+              {activeTab === 'active' && (
+                <ActiveQnaSection
+                  qna={activeQna}
+                  onBreakQna={handleBreakQna}
+                />
+              )}
+              {activeTab === 'completed' && <CompletedQnaSection qnas={completedQnas} />}
             </motion.div>
           </AnimatePresence>
         </TabContent>
@@ -211,7 +156,19 @@ export function QnaManagementTabs() {
   );
 }
 
-function ScheduledQnaList() {
+interface ScheduledQnaListProps {
+  scheduledQnas: { id: string; title: string }[];
+  onCreateQna: (data: QnAFormValues) => void;
+  onStartQna: (qnaId: string) => void;
+  isStartDisabled: boolean;
+}
+
+function ScheduledQnaList({
+  scheduledQnas,
+  onCreateQna,
+  onStartQna,
+  isStartDisabled,
+}: ScheduledQnaListProps) {
   const [isQnaModalOpen, setIsQnaModalOpen] = useState(false);
 
   return (
@@ -227,8 +184,11 @@ function ScheduledQnaList() {
             <ScheduledCard
               key={qna.id}
               title={qna.title}
-              onEdit={() => undefined}
-              onStart={() => undefined}
+              onEdit={() => {
+                /* TODO: QnA 수정 추가 */
+              }}
+              onStart={() => onStartQna(qna.id)}
+              isStartDisabled={isStartDisabled}
             />
           ))}
         </div>
@@ -247,14 +207,25 @@ function ScheduledQnaList() {
       <QnAModal
         isOpen={isQnaModalOpen}
         onClose={() => setIsQnaModalOpen(false)}
-        onSubmit={() => undefined}
+        onSubmit={onCreateQna}
       />
     </>
   );
 }
 
-function ActiveQnaSection() {
-  if (!activeQna) {
+interface ActiveQnaSectionProps {
+  qna?: {
+    id: string;
+    title: string;
+    timeLimit: number;
+    startedAt: string;
+    answers: { participantId: string; participantName: string; text: string }[];
+  };
+  onBreakQna: () => void;
+}
+
+function ActiveQnaSection({ qna, onBreakQna }: ActiveQnaSectionProps) {
+  if (!qna) {
     return (
       <div className="text-subtext flex min-h-0 flex-1 items-center justify-center text-sm font-bold">
         현재 진행중인 Q&A가 없습니다.
@@ -262,7 +233,9 @@ function ActiveQnaSection() {
     );
   }
 
-  const totalResponses = activeQnaResponses.length;
+  const totalResponses = qna.answers?.length ?? 0;
+  const parsedStartedAt = qna.startedAt ? Date.parse(qna.startedAt) : NaN;
+  const startedAt = Number.isNaN(parsedStartedAt) ? Date.now() : parsedStartedAt;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4">
@@ -276,8 +249,8 @@ function ActiveQnaSection() {
         </div>
         <div className="rounded-lg bg-gray-400 px-2 py-1.5">
           <TimeLeft
-            timeLimitSeconds={activeQna.timeLimit}
-            startedAt={activeStartedAt}
+            timeLimitSeconds={qna.timeLimit}
+            startedAt={startedAt}
             className="text-text w-auto justify-start text-xs"
             iconSize={14}
           />
@@ -285,29 +258,48 @@ function ActiveQnaSection() {
       </div>
 
       <div className="text-text flex min-h-0 flex-col gap-4 rounded-xl bg-gray-400 p-4">
-        <h3 className="text-lg font-bold">{activeQna.title}</h3>
+        <h3 className="text-lg font-bold">{qna.title}</h3>
         <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
-          {activeQnaResponses.map((response) => (
-            <div
-              key={response.id}
-              className="flex gap-2 text-sm"
-            >
-              <span className="text-primary shrink-0 font-bold">{response.userName}</span>
-              <p className="text-text">{response.content}</p>
-            </div>
-          ))}
+          {qna.answers.length === 0 ? (
+            <div className="text-subtext text-sm">답변이 없습니다.</div>
+          ) : (
+            qna.answers.map((answer, index) => (
+              <div
+                key={`${qna.id}-${index}`}
+                className="flex gap-2 text-sm"
+              >
+                <span className="text-primary shrink-0 font-bold">
+                  {answer.participantName || '익명'}
+                </span>
+                <p className="text-text">{answer.text}</p>
+              </div>
+            ))
+          )}
         </div>
       </div>
 
-      <Button className="bg-error mt-auto w-full">종료하기</Button>
+      <Button
+        className="bg-error mt-auto w-full"
+        onClick={onBreakQna}
+      >
+        종료하기
+      </Button>
     </div>
   );
 }
 
-function CompletedQnaSection() {
+interface CompletedQnaSectionProps {
+  qnas: {
+    id: string;
+    title: string;
+    answers: { participantId: string; participantName: string; text: string }[];
+  }[];
+}
+
+function CompletedQnaSection({ qnas }: CompletedQnaSectionProps) {
   const [expandedQnaIds, setExpandedQnaIds] = useState<Set<string>>(new Set());
 
-  if (completedQnas.length === 0) {
+  if (qnas.length === 0) {
     return (
       <div className="text-subtext flex min-h-0 flex-1 items-center justify-center text-sm font-bold">
         완료된 Q&A가 없습니다.
@@ -317,9 +309,9 @@ function CompletedQnaSection() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
-      {completedQnas.map((qna) => {
+      {qnas.map((qna) => {
         const isExpanded = expandedQnaIds.has(qna.id);
-        const responses = completedQnaDetails[qna.id] ?? [];
+        const responses = qna.answers ?? [];
         const totalResponses = responses.length;
 
         return (
@@ -372,13 +364,15 @@ function CompletedQnaSection() {
                   <div className="text-subtext text-sm">답변이 없습니다.</div>
                 ) : (
                   <div className="flex flex-col gap-3">
-                    {responses.map((response) => (
+                    {responses.map((response, index) => (
                       <div
-                        key={response.id}
+                        key={`${qna.id}-${index}`}
                         className="flex gap-2 text-sm"
                       >
-                        <span className="text-primary shrink-0 font-bold">{response.userName}</span>
-                        <p className="text-text">{response.content}</p>
+                        <span className="text-primary shrink-0 font-bold">
+                          {response.participantName || '익명'}
+                        </span>
+                        <p className="text-text">{response.text}</p>
                       </div>
                     ))}
                   </div>
