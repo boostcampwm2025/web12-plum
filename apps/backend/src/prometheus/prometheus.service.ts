@@ -17,6 +17,24 @@ export class PrometheusService implements OnModuleInit {
   private mediasoupProducersActive: Gauge<string>;
   private mediasoupConsumersActive: Gauge<string>;
 
+  // Worker별 CPU 사용률 라벨- worker_id
+  private mediasoupWorkerCpu: Gauge<'worker_id'>;
+
+  // Producer 종류별 카운트 - kind
+  private mediasoupProducersByKind: Gauge<'kind'>;
+
+  // Consumer 종류별 카운트  - kind
+  private mediasoupConsumersByKind: Gauge<'kind'>;
+
+  // Transport 상태별 카운트  - state
+  private mediasoupTransportsByState: Gauge<'state'>;
+
+  // 제스처 이벤트 카운터 - gesture_type
+  private gestureEventsTotal: Counter<'gesture_type'>;
+
+  // 제스처 처리 시간 히스토그램 - gesture_type
+  private gestureProcessingDuration: Histogram<'gesture_type'>;
+
   constructor() {
     this.registry = new Registry();
 
@@ -78,6 +96,55 @@ export class PrometheusService implements OnModuleInit {
       help: 'Number of active Mediasoup consumers',
       registers: [this.registry],
     });
+
+    // Worker별 CPU 사용률 (게이지, 라벨: worker_id)
+    this.mediasoupWorkerCpu = new Gauge({
+      name: 'mediasoup_worker_cpu',
+      help: 'CPU usage percentage of each Mediasoup worker',
+      labelNames: ['worker_id'],
+      registers: [this.registry],
+    });
+
+    // Producer 종류별 카운트 (게이지, 라벨: kind)
+    this.mediasoupProducersByKind = new Gauge({
+      name: 'mediasoup_producers_by_kind',
+      help: 'Number of active Mediasoup producers by kind (video/audio/screen)',
+      labelNames: ['kind'],
+      registers: [this.registry],
+    });
+
+    // Consumer 종류별 카운트 (게이지, 라벨: kind)
+    this.mediasoupConsumersByKind = new Gauge({
+      name: 'mediasoup_consumers_by_kind',
+      help: 'Number of active Mediasoup consumers by kind (video/audio/screen)',
+      labelNames: ['kind'],
+      registers: [this.registry],
+    });
+
+    // Transport 상태별 카운트 (게이지, 라벨: state)
+    this.mediasoupTransportsByState = new Gauge({
+      name: 'mediasoup_transports_by_state',
+      help: 'Number of Mediasoup transports by state (connected/failed/closed)',
+      labelNames: ['state'],
+      registers: [this.registry],
+    });
+
+    // 제스처 이벤트 카운터 (카운터, 라벨: gesture_type)
+    this.gestureEventsTotal = new Counter({
+      name: 'gesture_events_total',
+      help: 'Total number of gesture events',
+      labelNames: ['gesture_type'],
+      registers: [this.registry],
+    });
+
+    // 제스처 처리 시간 히스토그램 (히스토그램, 라벨: gesture_type)
+    this.gestureProcessingDuration = new Histogram({
+      name: 'gesture_processing_duration_seconds',
+      help: 'Duration of gesture processing in seconds',
+      labelNames: ['gesture_type'],
+      buckets: [0.001, 0.005, 0.01, 0.05, 0.1, 0.3, 0.5, 1],
+      registers: [this.registry],
+    });
   }
 
   onModuleInit() {
@@ -94,6 +161,16 @@ export class PrometheusService implements OnModuleInit {
     this.mediasoupTransportsActive.set(0);
     this.mediasoupProducersActive.set(0);
     this.mediasoupConsumersActive.set(0);
+
+    // 새 메트릭 초기값 설정
+    ['video', 'audio', 'screen'].forEach((kind) => {
+      this.mediasoupProducersByKind.set({ kind }, 0);
+      this.mediasoupConsumersByKind.set({ kind }, 0);
+    });
+
+    ['connected', 'failed', 'closed'].forEach((state) => {
+      this.mediasoupTransportsByState.set({ state }, 0);
+    });
   }
 
   async getMetrics(): Promise<string> {
@@ -133,5 +210,45 @@ export class PrometheusService implements OnModuleInit {
   // Mediasoup Consumers 수 설정
   setMediasoupConsumers(count: number): void {
     this.mediasoupConsumersActive.set(count);
+  }
+
+  // Worker CPU 업데이트
+  setWorkerCpu(workerId: number, cpuPercent: number): void {
+    this.mediasoupWorkerCpu.set({ worker_id: workerId.toString() }, cpuPercent);
+  }
+
+  // Producer 종류별 증가
+  incrementProducerByKind(kind: 'video' | 'audio' | 'screen'): void {
+    this.mediasoupProducersByKind.inc({ kind });
+  }
+
+  // Producer 종류별 감소
+  decrementProducerByKind(kind: 'video' | 'audio' | 'screen'): void {
+    this.mediasoupProducersByKind.dec({ kind });
+  }
+
+  // Consumer 종류별 증가
+  incrementConsumerByKind(kind: 'video' | 'audio' | 'screen'): void {
+    this.mediasoupConsumersByKind.inc({ kind });
+  }
+
+  // Consumer 종류별 감소
+  decrementConsumerByKind(kind: 'video' | 'audio' | 'screen'): void {
+    this.mediasoupConsumersByKind.dec({ kind });
+  }
+
+  // Transport 상태 업데이트
+  incrementTransportByState(state: 'connected' | 'failed' | 'closed'): void {
+    this.mediasoupTransportsByState.inc({ state });
+  }
+
+  decrementTransportByState(state: 'connected' | 'failed' | 'closed'): void {
+    this.mediasoupTransportsByState.dec({ state });
+  }
+
+  // 제스처 이벤트 기록
+  recordGestureEvent(gestureType: string, durationMs: number): void {
+    this.gestureEventsTotal.inc({ gesture_type: gestureType });
+    this.gestureProcessingDuration.observe({ gesture_type: gestureType }, durationMs / 1000);
   }
 }

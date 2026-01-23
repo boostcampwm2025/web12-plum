@@ -7,7 +7,7 @@
  */
 
 import { chromium, Page, Browser } from 'playwright';
-import { RoomInfo, delay } from './utils';
+import { RoomInfo, delay, FRONTEND_URL, BACKEND_URL } from './utils';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -34,7 +34,7 @@ export class HostBrowser {
     });
 
     // 실제 프론트엔드 페이지 로드 (CORS 문제 없음)
-    const frontendUrl = `https://web12-plum-dev.vercel.app/enter/${roomInfo.roomId}`;
+    const frontendUrl = `${FRONTEND_URL}/enter/${roomInfo.roomId}`;
     console.log(`🌐 프론트엔드 페이지 로드: ${frontendUrl}`);
     await this.page.goto(frontendUrl, { waitUntil: 'networkidle' });
 
@@ -64,8 +64,10 @@ export class HostBrowser {
 
     // mediasoup-client 번들 주입
     const bundlePath = path.join(__dirname, '..', 'bundle-mediasoup.js');
+    console.log(`📦 번들 파일 경로: ${bundlePath}`);
     await this.page!.addScriptTag({ path: bundlePath });
-    await delay(500);
+    console.log('✅ 번들 파일 주입 완료');
+    await delay(1000); // 실행 시간 확보
 
     // Socket.IO 클라이언트 CDN 주입
     await this.page!.addScriptTag({
@@ -75,12 +77,28 @@ export class HostBrowser {
     // mediasoup-client 로드 확인 및 수정
     const mediasoupExists = await this.page!.evaluate(() => {
       const ms = (window as any).mediasoupClient;
+      console.log('[Test] mediasoupClient 값:', ms);
+      console.log('[Test] mediasoupClient 구조:', Object.keys(ms || {}));
+
+      // 여러 가지 export 패턴 처리
       if (ms?.default?.Device) {
         (window as any).mediasoupClient = ms.default;
-        console.log('[Test] mediasoup-client 로드 완료');
+        console.log('[Test] mediasoup-client 로드 완료 (default export)');
         return true;
+      } else if (ms?.Device) {
+        console.log('[Test] mediasoup-client 로드 완료 (direct export)');
+        return true;
+      } else if (typeof ms === 'object' && Object.keys(ms).length > 0) {
+        // mediasoupClient 객체가 있지만 Device가 직접 없는 경우
+        const deviceKey = Object.keys(ms).find((k) => ms[k]?.Device);
+        if (deviceKey) {
+          (window as any).mediasoupClient = ms[deviceKey];
+          console.log('[Test] mediasoup-client 로드 완료 (nested export)');
+          return true;
+        }
       }
-      return ms && ms.Device;
+      console.error('[Test] mediasoupClient 로드 실패. 구조:', ms);
+      return false;
     });
 
     if (!mediasoupExists) {
@@ -111,24 +129,29 @@ export class HostBrowser {
     const participantId = this.roomInfo!.hostId;
 
     await this.page!.evaluate(
-      async ({ roomId, participantId }) => {
+      async (args: { roomId: string; participantId: string; backendUrl: string }) => {
+        const { roomId, participantId, backendUrl } = args;
         return new Promise<void>((resolve, reject) => {
-          const socketUrl = 'https://tiki-plum.n-e.kr/session';
-          const socket = (window as any).io(socketUrl, {
+          // 실제 프론트엔드 앱과 동일한 연결 방식 사용
+          // namespace: 'session' 사용
+          const socketUrl = backendUrl.replace('/api', ''); // /api 제거
+
+          const socket = (window as any).io(`${socketUrl}/session`, {
+            path: '/socket.io/',
             transports: ['websocket', 'polling'],
             reconnection: true,
             reconnectionDelay: 1000,
             reconnectionAttempts: 3,
             timeout: 10000,
-            path: '/socket.io',
           });
 
           socket.on('connect', () => {
             console.log('[Test] Socket 연결 성공:', socket.id);
+            console.log('[Test] join_room 이벤트 전송 중...', { roomId, participantId });
 
             // join_room 이벤트 전송 (발표자로 입장)
             socket.emit('join_room', { roomId, participantId }, (response: any) => {
-              console.log('[Test] join_room 응답:', response);
+              console.log('[Test] join_room 응답 받음:', response);
               if (response && response.success) {
                 console.log('[Test] join_room 성공');
                 (window as any).testSocket = socket;
@@ -137,9 +160,24 @@ export class HostBrowser {
                 console.log('[Test] RTP Capabilities 저장 완료');
                 resolve();
               } else {
-                reject(new Error('join_room 실패: ' + JSON.stringify(response)));
+                const errorMsg = response?.error || JSON.stringify(response);
+                console.error('[Test] join_room 실패:', errorMsg);
+                reject(new Error('join_room 실패: ' + errorMsg));
               }
             });
+
+            // 5초 후에도 응답이 없으면 경고
+            setTimeout(() => {
+              console.warn('[Test] join_room 응답 대기 중... (5초 경과)');
+            }, 5000);
+          });
+
+          socket.on('error', (error: any) => {
+            console.error('[Test] Socket 에러:', error);
+          });
+
+          socket.on('disconnect', (reason: string) => {
+            console.warn('[Test] Socket 연결 끊김:', reason);
           });
 
           socket.on('connect_error', (error: Error) => {
@@ -150,7 +188,7 @@ export class HostBrowser {
           setTimeout(() => reject(new Error('Socket 연결 타임아웃')), 30000);
         });
       },
-      { roomId, participantId },
+      { roomId, participantId, backendUrl: BACKEND_URL },
     );
 
     console.log(`✅ Socket.IO 연결 및 join_room 완료`);
