@@ -1,23 +1,6 @@
 import { Button } from '@/shared/components/Button';
 import { Icon } from '@/shared/components/icon/Icon';
-import { usePresentation } from '@/shared/hooks/usePresentation';
-import { CreateRoomRequest } from '@plum/shared-interfaces';
-import { LECTURE_FORM_KEYS } from '../schema';
-
-/**
- * 파일 크기를 읽기 쉬운 형태로 변환
- * @param bytes 파일 크기 (바이트)
- * @returns 포맷된 파일 크기 문자열 (예: "1.5 MB")
- */
-function formatFileSize(bytes: number): string {
-  if (bytes === 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  const formattedSize = `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
-
-  return formattedSize;
-}
+import { formatFileSize } from '@/shared/lib/presentations';
 
 interface PresentationItemProps {
   file: File;
@@ -54,22 +37,24 @@ function PresentationItem({ file, onDelete }: PresentationItemProps) {
   );
 }
 
+interface PresentationListProps {
+  files: File[];
+  onDelete: (index: number) => void;
+}
+
 /**
  * 강의 발표자료 파일 리스트 컴포넌트
  */
-export function PresentationList() {
-  const filedName = LECTURE_FORM_KEYS.presentationFiles;
-  const { presentationFiles, removeFile } = usePresentation<CreateRoomRequest>({ filedName });
-
-  if (presentationFiles.length === 0) return null;
+export function PresentationList({ files, onDelete }: PresentationListProps) {
+  if (files.length === 0) return null;
 
   return (
     <ul className="mt-4 flex flex-col gap-2">
-      {presentationFiles.map((field, index) => (
+      {files.map((file, index) => (
         <PresentationItem
-          key={field.id}
-          file={field}
-          onDelete={() => removeFile(index)}
+          key={file.name}
+          file={file}
+          onDelete={() => onDelete(index)}
         />
       ))}
     </ul>

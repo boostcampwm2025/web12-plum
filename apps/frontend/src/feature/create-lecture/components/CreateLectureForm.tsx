@@ -12,6 +12,7 @@ import { logger } from '@/shared/lib/logger';
 import { FormField } from '@/shared/components/FormField';
 import { Icon } from '@/shared/components/icon/Icon';
 import { getUserFriendlyError } from '@/shared/api';
+import { usePresentation } from '@/shared/hooks/usePresentation';
 
 import { LECTURE_FORM_KEYS, lectureFormDefaultValues } from '../schema';
 import { ActivityProvider } from '../hooks/useActivityActionContext';
@@ -149,11 +150,18 @@ export function ActivitySection() {
  * 발표 자료 업로더 섹션 컴포넌트
  */
 export function PresentationSection() {
+  const { presentationFiles, addFile, removeFile } = usePresentation<CreateRoomRequest>({
+    fieldName: LECTURE_FORM_KEYS.presentationFiles,
+  });
+
   return (
     <FormField className="gap-3">
       <FormField.Legend className="mb-3 text-xl font-bold">발표 자료</FormField.Legend>
-      <PresentationUploader />
-      <PresentationList />
+      <PresentationUploader addFile={addFile} />
+      <PresentationList
+        files={presentationFiles}
+        onDelete={removeFile}
+      />
     </FormField>
   );
 }
