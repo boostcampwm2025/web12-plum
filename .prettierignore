@@ -1,6 +1,0 @@
-node_modules
-dist
-build
-.turbo
-coverage
-pnpm-lock.yaml
