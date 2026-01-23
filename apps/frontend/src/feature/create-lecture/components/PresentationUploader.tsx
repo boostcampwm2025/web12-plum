@@ -19,20 +19,19 @@ export function PresentationUploader() {
   const { addToast } = useToastStore((state) => state.actions);
   const { addFile } = usePresentation<CreateRoomRequest>({ filedName });
 
-  // 에러 처리 핸들러
-  const handleError = (errorMessage: string) => {
-    addToast({ type: 'error', title: errorMessage });
+  // 파일 추가 및 결과 처리
+  const handleAddFile = (file: File) => {
+    const result = addFile(file);
+    if (!result.success) addToast({ type: 'error', title: result.message });
   };
 
   // 드래그 앤 드롭
-  const { isDragging, dragHandlers } = useDragAndDrop({
-    onFileDrop: (file) => addFile({ file, onError: handleError }),
-  });
+  const { isDragging, dragHandlers } = useDragAndDrop({ onFileDrop: handleAddFile });
 
   // 파일 선택 핸들러
   const handleFileSelect = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) addFile({ file, onError: handleError });
+    if (file) handleAddFile(file);
     e.target.value = '';
   };
 

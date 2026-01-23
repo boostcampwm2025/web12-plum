@@ -32,6 +32,10 @@ const isAllowedMimeType = (mimeType: string): mimeType is AllowedMimeType => {
 interface UsePresentationParams<T extends FieldValues> {
   filedName: ArrayPath<T>;
 }
+/**
+ * 파일 추가 결과 타입
+ */
+type AddFileResult = { success: true } | { success: false; message: string };
 
 /**
  * 발표 자료 훅
@@ -48,20 +52,19 @@ export function usePresentation<T extends FieldValues>({ filedName }: UsePresent
   /**
    * 파일 추가 함수
    * @param file 추가할 파일 객체
+   * @returns 성공 시 { success: true }, 실패 시 { success: false, message: string }
    */
-  const addFile = ({ file, onError }: { file: File; onError?: (errorMessage: string) => void }) => {
+  const addFile = (file: File): AddFileResult => {
     // 허용 MIME 타입 검사
     if (!isAllowedMimeType(file.type)) {
       logger.ui.error('[Presentation]', ERROR_MESSAGES.invalidMimeType);
-      onError?.(ERROR_MESSAGES.invalidMimeType);
-      return;
+      return { success: false, message: ERROR_MESSAGES.invalidMimeType };
     }
 
     // 파일 크기 검사
     if (file.size > FILE_MAX_SIZE_BYTES) {
       logger.ui.error('[Presentation]', ERROR_MESSAGES.tooLargeFile);
-      onError?.(ERROR_MESSAGES.tooLargeFile);
-      return;
+      return { success: false, message: ERROR_MESSAGES.tooLargeFile };
     }
 
     // 중복 검사
@@ -72,11 +75,11 @@ export function usePresentation<T extends FieldValues>({ filedName }: UsePresent
 
     if (isDuplicate) {
       logger.ui.error('[Presentation]', ERROR_MESSAGES.duplicateFile);
-      onError?.(ERROR_MESSAGES.duplicateFile);
-      return;
+      return { success: false, message: ERROR_MESSAGES.duplicateFile };
     }
 
     append(file as unknown as FieldArray<T, ArrayPath<T>>);
+    return { success: true };
   };
 
   return {
