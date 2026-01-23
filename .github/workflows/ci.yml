@@ -1,0 +1,184 @@
+# CI 파이프라인 - 코드 품질 검증 및 Docker 이미지 빌드
+# 변경사항:
+# - 백엔드/프론트엔드 파일 변경 감지로 선택적 CI 실행
+# - 백엔드 수정 시 → 백엔드 CI만 실행 (Playwright 설치 X)
+# - 프론트엔드 수정 시 → 프론트엔드 CI만 실행
+# - 공유 패키지 수정 시 → 백엔드 + 프론트엔드 모두 실행
+# - push 시 테스트 통과 후 Docker 이미지를 Registry에 push (CD에서 재사용)
+name: CI 파이프라인
+
+on:
+  pull_request:
+    branches:
+      - develop
+      - main
+
+  push:
+    branches:
+      - develop
+      - main
+
+jobs:
+  # STEP 1: 변경된 파일 감지
+  # apps/backend, apps/frontend, packages/* 중 어느 부분이 변경되었는지 확인
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      shared: ${{ steps.filter.outputs.shared }}
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v4
+
+      - name: 변경된 파일 확인
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'apps/backend/**'
+            frontend:
+              - 'apps/frontend/**'
+            shared:
+              - 'packages/**'
+
+  # STEP 2: 백엔드 CI (백엔드 또는 공유 패키지가 변경되었을 때만 실행)
+  backend-ci:
+    needs: detect-changes
+    # 백엔드 파일이나 공유 패키지가 변경되지 않으면 스킵
+    if: needs.detect-changes.outputs.backend == 'true' || needs.detect-changes.outputs.shared == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: pnpm 설정
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+
+      - name: Node.js 설정
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: 의존성 설치
+        run: pnpm install --frozen-lockfile
+
+      - name: 백엔드 린트 검사
+        run: pnpm --filter @plum/backend run lint
+
+      - name: 백엔드 빌드
+        run: pnpm --filter @plum/backend... run build
+
+      - name: E2E 테스트용 .env 파일 생성
+        run: |
+          cd apps/backend
+          echo "AWS_S3_REGION=ap-northeast-2" >> .env
+          echo "AWS_S3_ACCESS_KEY=dummy" >> .env
+          echo "AWS_S3_SECRET_KEY=dummy" >> .env
+
+      - name: 백엔드 테스트
+        run: pnpm --filter @plum/backend run test
+
+      - name: 백엔드 E2E 테스트
+        run: pnpm --filter @plum/backend run test:e2e
+        env:
+          CI: true
+
+      # Docker 이미지 빌드 및 Registry push (push 이벤트에서만)
+      # CI에서 테스트 완료된 이미지를 CD에서 그대로 사용
+      - name: Docker Buildx 설정
+        if: github.event_name == 'push'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Docker Hub 로그인
+        if: github.event_name == 'push'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: 이미지 태그 설정
+        if: github.event_name == 'push'
+        id: tags
+        run: |
+          SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
+          if [ "${{ github.ref_name }}" == "main" ]; then
+            echo "TAG=latest" >> $GITHUB_OUTPUT
+            echo "SHA_TAG=prod-${SHORT_SHA}" >> $GITHUB_OUTPUT
+          else
+            echo "TAG=staging" >> $GITHUB_OUTPUT
+            echo "SHA_TAG=dev-${SHORT_SHA}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 백엔드 Docker 이미지 빌드 및 푸시
+        if: github.event_name == 'push'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./apps/backend/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/plum-backend:${{ steps.tags.outputs.TAG }}
+            ${{ secrets.DOCKER_USERNAME }}/plum-backend:${{ steps.tags.outputs.SHA_TAG }}
+          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/plum-backend:buildcache
+          cache-to: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/plum-backend:buildcache,mode=max
+
+      # PR에서는 빌드 테스트만 수행 (push 안 함)
+      - name: Docker 빌드 테스트 (PR 전용)
+        if: github.event_name == 'pull_request'
+        run: |
+          docker build \
+            --file ./apps/backend/Dockerfile \
+            --tag plum-backend:test \
+            .
+
+  # STEP 3: 프론트엔드 CI (프론트엔드 또는 공유 패키지가 변경되었을 때만 실행)
+  frontend-ci:
+    needs: detect-changes
+    # 프론트엔드 파일이나 공유 패키지가 변경되지 않으면 스킵
+    if: needs.detect-changes.outputs.frontend == 'true' || needs.detect-changes.outputs.shared == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: pnpm 설정
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+
+      - name: Node.js 설정
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: 의존성 설치
+        run: pnpm install --frozen-lockfile
+
+      - name: 프론트엔드 린트 검사
+        run: pnpm --filter @plum/frontend run lint
+
+      - name: 프론트엔드 빌드
+        run: pnpm --filter @plum/frontend... run build
+
+      - name: 프론트엔드 테스트
+        run: pnpm --filter @plum/frontend run test
+
+      - name: Playwright 브라우저 설치
+        run: pnpm --filter @plum/frontend exec playwright install --with-deps chromium
+
+      - name: 프론트엔드 E2E 테스트
+        run: pnpm --filter @plum/frontend run test:e2e
+        env:
+          CI: true

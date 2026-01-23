@@ -1,0 +1,7 @@
+{
+  "buildCommand": "pnpm turbo run build --filter=@plum/frontend",
+  "outputDirectory": "apps/frontend/dist",
+  "installCommand": "pnpm install",
+  "framework": "vite",
+  "rewrites": [{ "source": "/(.*)", "destination": "/" }]
+}

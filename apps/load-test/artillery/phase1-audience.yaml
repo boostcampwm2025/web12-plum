@@ -1,0 +1,38 @@
+# Phase 1: 청중 20명 부하테스트 (Artillery + WebRTC)
+# - Socket.IO 연결
+# - WebRTC Transport 생성
+# - Consumer 생성 (실제 미디어 수신)
+# - 2분 유지
+
+config:
+  target: "https://tiki-plum.n-e.kr"
+  phases:
+    # 1단계: 20초 동안 20명 입장 (초당 1명)
+    - duration: 20
+      arrivalRate: 1
+    # 2단계: 2분(120초) 동안 연결 유지
+    - duration: 120
+      arrivalRate: 0
+
+  processor: "../load-test-processor.js"
+
+scenarios:
+  - name: "청중 (WebRTC 수신)"
+    flow:
+      # 1. 강의실 정보 가져오기 (발표자가 생성한 것)
+      - function: "ensureRoom"
+
+      # 2. 참가자 등록 (HTTP POST)
+      - function: "joinAsParticipant"
+
+      # 3. Socket.IO 연결 + join_room
+      - function: "connectAndJoinRoom"
+
+      # 4. WebRTC Transport 생성 + Consumer 생성 (실제 미디어 수신)
+      - function: "createWebRTCTransportAndConsume"
+
+      # 5. 2분 연결 유지
+      - function: "maintain2Minutes"
+
+      # 6. 연결 종료
+      - function: "disconnectSocket"

@@ -1,0 +1,33 @@
+{
+  "name": "@plum/load-test",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "artillery run artillery/plum-load-test.yaml",
+    "test:quick": "artillery run artillery/quick-test.yaml",
+    "test:http": "artillery run artillery/http-only-test.yaml",
+    "test:report": "artillery run --output load-test-report.json artillery/plum-load-test.yaml && artillery report load-test-report.json",
+    "k6": "k6 run k6/mediasoup-smoke.ts",
+    "playwright": "playwright test",
+    "build:bundle": "esbuild node_modules/mediasoup-client/lib/index.js --bundle --format=iife --global-name=mediasoupClient --outfile=bundle-mediasoup.js",
+    "phase1": "tsx playwright/phase1-orchestrator.ts",
+    "phase1:host": "tsx playwright/phase1-host-only.ts",
+    "phase1:audience": "artillery run artillery/phase1-audience.yaml",
+    "clean": "rimraf reports/ tmp/ test-results/ *.json *.html"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.57.0",
+    "@types/k6": "^1.4.0",
+    "@types/node": "^22.10.2",
+    "artillery": "^2.0.0",
+    "esbuild": "^0.27.2",
+    "playwright": "^1.57.0",
+    "rimraf": "^5.0.0",
+    "socket.io-client": "^4.7.0",
+    "tsx": "^4.21.0"
+  },
+  "dependencies": {
+    "mediasoup-client": "^3.18.3"
+  }
+}
