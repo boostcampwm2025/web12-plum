@@ -157,22 +157,29 @@ interface RoomMenuBarProps {
 }
 
 export function RoomMenuBar({ className, roomTitle = '강의실' }: RoomMenuBarProps) {
+  const myRole = useRoomStore((state) => state.myInfo?.role);
+
   return (
     <nav
       className={cn('grid h-20 w-full grid-cols-[1fr_auto_1fr] items-center px-4', className)}
       aria-label="강의실 메뉴바"
+      aria-busy={!myRole}
     >
       <div className="flex min-w-0 justify-start">
         <h1 className="text-text text-md truncate font-bold">{roomTitle}</h1>
       </div>
 
       <div className="flex items-center gap-3 justify-self-center">
-        <MainMenu />
-        <div className="mx-2 h-8 w-px bg-gray-400" />
-        <ExitButton />
+        {myRole ? (
+          <>
+            <MainMenu />
+            <div className="mx-2 h-8 w-px bg-gray-400" />
+            <ExitButton />
+          </>
+        ) : null}
       </div>
 
-      <SideMenu />
+      {myRole ? <SideMenu /> : <div className="justify-self-end" />}
     </nav>
   );
 }
