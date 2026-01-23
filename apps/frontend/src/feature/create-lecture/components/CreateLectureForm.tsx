@@ -11,6 +11,7 @@ import { cn } from '@/shared/lib/utils';
 import { logger } from '@/shared/lib/logger';
 import { FormField } from '@/shared/components/FormField';
 import { Icon } from '@/shared/components/icon/Icon';
+import { getUserFriendlyError } from '@/shared/api';
 
 import { LECTURE_FORM_KEYS, lectureFormDefaultValues } from '../schema';
 import { ActivityProvider } from '../hooks/useActivityActionContext';
@@ -178,10 +179,10 @@ export function CreateLectureForm() {
       const response = await createRoom(data);
       navigate(ROUTES.ROOM(response.roomId));
     } catch (error) {
-      logger.ui.error('강의실 입장 실패:', error);
-      // TODO: API 에러별 메시지 추가
-      // if (error instanceof ApiError) {}
-      addToast({ type: 'error', title: '강의실 입장에 실패했습니다. 잠시 후 다시 시도해주세요.' });
+      logger.ui.error('강의실 생성 실패:', error);
+      const { title, description } = getUserFriendlyError(error);
+
+      addToast({ type: 'error', title, description });
     }
   };
 
