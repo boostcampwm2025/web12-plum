@@ -4,11 +4,11 @@ import type { EnterLectureRequestBody } from '@plum/shared-interfaces';
 import { roomApi } from '@/shared/api';
 import { logger } from '@/shared/lib/logger';
 import { ENTER_LECTURE_KEYS } from '../schema';
+import { useSafeRoomId } from '@/shared/hooks/useSafeRoomId';
 
 type CheckVariant = 'default' | 'success' | 'error';
 
 interface UseNicknameValidationParams {
-  roomId: string;
   control: Control<EnterLectureRequestBody>;
   trigger: UseFormTrigger<EnterLectureRequestBody>;
   getValues: UseFormGetValues<EnterLectureRequestBody>;
@@ -25,12 +25,13 @@ interface UseNicknameValidationReturn {
 }
 
 export function useNicknameValidation({
-  roomId,
   control,
   trigger,
   getValues,
 }: UseNicknameValidationParams): UseNicknameValidationReturn {
+  const roomId = useSafeRoomId();
   const nicknameValue = useWatch({ name: ENTER_LECTURE_KEYS.nickname, control }) ?? '';
+
   const [checkMessage, setCheckMessage] = useState('');
   const [checkVariant, setCheckVariant] = useState<CheckVariant>('default');
   const [hasCheckedNickname, setHasCheckedNickname] = useState(false);
@@ -53,6 +54,7 @@ export function useNicknameValidation({
   }, [nicknameValue]);
 
   const handleCheckNickname = async () => {
+    if (!roomId) return;
     const isValid = await trigger(ENTER_LECTURE_KEYS.nickname);
     if (!isValid) {
       applyCheckState('닉네임을 올바르게 입력해주세요.', 'error', false, false);
