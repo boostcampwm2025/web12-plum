@@ -50,7 +50,7 @@ export function PollDialog({
                   >
                     <div
                       className={cn(
-                        'pointer-events-none absolute inset-0 rounded-r-lg',
+                        'pointer-events-none absolute inset-0 rounded-r-lg transition-[width] duration-500 ease-out',
                         isSelected ? 'bg-primary/90' : 'bg-gray-200/80',
                       )}
                       style={{ width: `${percentage}%` }}
