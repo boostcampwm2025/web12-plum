@@ -46,7 +46,7 @@ export function useRoomInit() {
   const { initParticipants, addParticipant, removeParticipant, addProducer, setMyInfo } =
     useRoomStore((state) => state.actions);
   const { removeRemoteStreamByParticipant } = useMediaStore((state) => state.actions);
-  const { connect: connectSocket } = useSocketStore((state) => state.actions);
+  const { connect: connectSocket, emit } = useSocketStore((state) => state.actions);
   const { addToast } = useToastStore((state) => state.actions);
   const pollActions = usePollStore((state) => state.actions);
   const qnaActions = useQnaStore((state) => state.actions);
@@ -88,7 +88,16 @@ export function useRoomInit() {
         },
       });
 
-      if (myInfo.role === 'presenter') {
+      // 3. 방 입장 요청
+      const { routerRtpCapabilities, role } = await RoomSignaling.joinRoom(
+        connectedSocket,
+        roomId,
+        myInfo.id,
+        initParticipants,
+        setMyInfo,
+      );
+
+      if (role === 'presenter') {
         InteractionSignaling.setupPresenterHandlers(connectedSocket, {
           handleUpdateGestureStatus: (data) => {
             addToast({ type: 'gesture', title: data.participantName, gesture: data.gesture });
@@ -150,14 +159,19 @@ export function useRoomInit() {
         });
       }
 
-      // 3. 방 입장 요청
-      const routerRtpCapabilities = await RoomSignaling.joinRoom(
-        connectedSocket,
-        roomId,
-        myInfo.id,
-        initParticipants,
-        setMyInfo,
-      );
+      if (role === 'audience') {
+        emit('get_active_poll', (response) => {
+          if (!response.success || !response.poll) return;
+
+          pollActions.setActivePoll(response.poll);
+          if (response.votedOptionId !== null) {
+            pollActions.setAudienceVotedOption(response.poll.id, response.votedOptionId);
+          }
+
+          const { activeDialog, setActiveDialog } = useRoomUIStore.getState();
+          if (activeDialog !== 'vote') setActiveDialog('vote');
+        });
+      }
 
       // 4. Mediasoup Device 초기화
       await initDevice(routerRtpCapabilities);
