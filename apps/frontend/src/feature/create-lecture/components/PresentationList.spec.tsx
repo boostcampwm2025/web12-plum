@@ -1,7 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useFormContext, useWatch, UseFormReturn } from 'react-hook-form';
-import { LecturePresentationList } from './LecturePresentationList';
+import { PresentationList } from './PresentationList';
 import '@testing-library/jest-dom';
 
 vi.mock('react-hook-form', () => ({
@@ -9,7 +9,7 @@ vi.mock('react-hook-form', () => ({
   useWatch: vi.fn(),
 }));
 
-describe('LecturePresentationList 테스트', () => {
+describe('PresentationList 테스트', () => {
   const mockSetValue = vi.fn();
 
   beforeEach(() => {
@@ -23,7 +23,7 @@ describe('LecturePresentationList 테스트', () => {
   it('파일이 없을 때 아무것도 렌더링하지 않아야 한다.', () => {
     vi.mocked(useWatch).mockReturnValue([]);
 
-    const { container } = render(<LecturePresentationList />);
+    const { container } = render(<PresentationList />);
 
     expect(container.firstChild).toBeNull();
   });
@@ -38,7 +38,7 @@ describe('LecturePresentationList 테스트', () => {
 
     vi.mocked(useWatch).mockReturnValue(mockFiles);
 
-    render(<LecturePresentationList />);
+    render(<PresentationList />);
 
     expect(screen.getByText('test1.pdf')).toBeInTheDocument();
     expect(screen.getByText('test2.pptx')).toBeInTheDocument();
@@ -49,7 +49,7 @@ describe('LecturePresentationList 테스트', () => {
 
     vi.mocked(useWatch).mockReturnValue([mockFile]);
 
-    render(<LecturePresentationList />);
+    render(<PresentationList />);
 
     expect(screen.getByText(/KB/)).toBeInTheDocument();
   });
@@ -64,7 +64,7 @@ describe('LecturePresentationList 테스트', () => {
 
     vi.mocked(useWatch).mockReturnValue(mockFiles);
 
-    render(<LecturePresentationList />);
+    render(<PresentationList />);
 
     const deleteButtons = screen.getAllByRole('button', { name: '파일 삭제' });
     fireEvent.click(deleteButtons[0]);
@@ -85,7 +85,7 @@ describe('LecturePresentationList 테스트', () => {
 
     vi.mocked(useWatch).mockReturnValue(mockFiles);
 
-    render(<LecturePresentationList />);
+    render(<PresentationList />);
 
     const deleteButtons = screen.getAllByRole('button', { name: '파일 삭제' });
     fireEvent.click(deleteButtons[1]);

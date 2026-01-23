@@ -1,8 +1,8 @@
-import { useFormContext, useWatch } from 'react-hook-form';
-import { CreateRoomRequest } from '@plum/shared-interfaces';
-import { LECTURE_FORM_KEYS } from '../schema';
 import { Button } from '@/shared/components/Button';
 import { Icon } from '@/shared/components/icon/Icon';
+import { usePresentation } from '@/shared/hooks/usePresentation';
+import { CreateRoomRequest } from '@plum/shared-interfaces';
+import { LECTURE_FORM_KEYS } from '../schema';
 
 /**
  * 파일 크기를 읽기 쉬운 형태로 변환
@@ -19,7 +19,7 @@ function formatFileSize(bytes: number): string {
   return formattedSize;
 }
 
-interface FileListItemProps {
+interface PresentationItemProps {
   file: File;
   onDelete: () => void;
 }
@@ -27,10 +27,9 @@ interface FileListItemProps {
 /**
  * 업로드된 파일 리스트 아이템 컴포넌트
  * @param file 파일 객체
- * @param onDelete 삭제 버튼 클릭 핸들러
- * @returns 파일 리스트 아이템 JSX 요소
+ * @param onDelete 삭제 핸들러
  */
-function FileListItem({ file, onDelete }: FileListItemProps) {
+function PresentationItem({ file, onDelete }: PresentationItemProps) {
   return (
     <li className="flex items-center gap-4 rounded-xl bg-gray-400 px-4 py-3">
       <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -57,27 +56,20 @@ function FileListItem({ file, onDelete }: FileListItemProps) {
 
 /**
  * 강의 발표자료 파일 리스트 컴포넌트
- * @returns 강의 발표자료 파일 리스트 JSX 요소
  */
-export function LecturePresentationList() {
-  const { setValue } = useFormContext<CreateRoomRequest>();
-  const presentationFiles: File[] = useWatch({ name: LECTURE_FORM_KEYS.presentationFiles }) || [];
-
-  // 파일 삭제 핸들러
-  const handleFileDelete = (index: number) => {
-    const updatedFiles = presentationFiles.filter((_, i) => i !== index);
-    setValue(LECTURE_FORM_KEYS.presentationFiles, updatedFiles, { shouldValidate: true });
-  };
+export function PresentationList() {
+  const filedName = LECTURE_FORM_KEYS.presentationFiles;
+  const { presentationFiles, removeFile } = usePresentation<CreateRoomRequest>({ filedName });
 
   if (presentationFiles.length === 0) return null;
 
   return (
     <ul className="mt-4 flex flex-col gap-2">
-      {presentationFiles.map((file, index) => (
-        <FileListItem
-          key={`${file.name}-${index}`}
-          file={file}
-          onDelete={() => handleFileDelete(index)}
+      {presentationFiles.map((field, index) => (
+        <PresentationItem
+          key={field.id}
+          file={field}
+          onDelete={() => removeFile(index)}
         />
       ))}
     </ul>

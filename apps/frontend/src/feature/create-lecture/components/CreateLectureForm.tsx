@@ -1,29 +1,28 @@
 import { FormProvider, useForm, useFormContext, useWatch } from 'react-hook-form';
+import { useNavigate } from 'react-router';
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { CreateRoomRequest } from '@plum/shared-interfaces';
 import { createLectureSchema } from '@plum/shared-interfaces';
 
+import { ROUTES } from '@/app/routes/routes';
+import { useToastStore } from '@/store/useToastStore';
 import { Button } from '@/shared/components/Button';
-import { FormField } from '@/shared/components/FormField';
-import { Icon } from '@/shared/components/icon/Icon';
 import { cn } from '@/shared/lib/utils';
 import { logger } from '@/shared/lib/logger';
+import { FormField } from '@/shared/components/FormField';
+import { Icon } from '@/shared/components/icon/Icon';
 
 import { LECTURE_FORM_KEYS, lectureFormDefaultValues } from '../schema';
 import { ActivityProvider } from '../hooks/useActivityActionContext';
 import { ActivityModalProvider, useActivityModalContext } from '../hooks/useActivityModalContext';
 import { useCreateRoom } from '../hooks/useCreateRoom';
-import { ActivityList } from './ActivityList';
 import { ActivityModals } from './ActivityModals';
-import { LecturePresentationUpload } from './LecturePresentationUpload';
-import { LecturePresentationList } from './LecturePresentationList';
-import { useNavigate } from 'react-router';
-import { ROUTES } from '@/app/routes/routes';
-import { useRoomStore } from '@/feature/room/stores/useRoomStore';
+import { PresentationUploader } from './PresentationUploader';
+import { PresentationList } from './PresentationList';
+import { ActivityList } from './ActivityList';
 
 /**
  * 강의실 이름 섹션 컴포넌트
- * @returns 강의실 이름 섹션 JSX 요소
  */
 function LectureNameSection() {
   const { register } = useFormContext<CreateRoomRequest>();
@@ -37,6 +36,7 @@ function LectureNameSection() {
         <FormField.Legend className="m-0 text-xl font-bold">강의실 이름</FormField.Legend>
         <FormField.HelpText className="m-0">5~30자 이내</FormField.HelpText>
       </div>
+
       <FormField.Input
         {...register(LECTURE_FORM_KEYS.name)}
         size="lg"
@@ -48,9 +48,8 @@ function LectureNameSection() {
 
 /**
  * 호스트 이름 섹션 컴포넌트
- * @returns 호스트 이름 섹션 JSX 요소
  */
-function HostNameSection() {
+export function HostNameSection() {
   const { register } = useFormContext<CreateRoomRequest>();
 
   return (
@@ -62,6 +61,7 @@ function HostNameSection() {
         <FormField.Legend className="m-0 text-xl font-bold">호스트 이름</FormField.Legend>
         <FormField.HelpText className="m-0">2~16자 이내</FormField.HelpText>
       </div>
+
       <FormField.Input
         {...register(LECTURE_FORM_KEYS.hostName)}
         size="lg"
@@ -73,9 +73,8 @@ function HostNameSection() {
 
 /**
  * 데이터 수집 동의 섹션 컴포넌트
- * @returns 데이터 수집 동의 섹션 JSX 요소
  */
-function AgreementSection() {
+export function AgreementSection() {
   const { register } = useFormContext<CreateRoomRequest>();
   const isAgreed = useWatch({ name: LECTURE_FORM_KEYS.isAgreed });
 
@@ -106,15 +105,15 @@ function AgreementSection() {
 
 /**
  * 강의 활동 섹션 컴포넌트
- * @returns 강의 활동 섹션 JSX 요소
  */
-function ActivitySection() {
+export function ActivitySection() {
   const { openCreatePollModal, openCreateQnaModal } = useActivityModalContext();
 
   return (
     <FormField className="gap-3">
       <FormField.Legend className="mb-3 text-xl font-bold">강의 활동 구성</FormField.Legend>
       <ActivityList />
+
       <div className="ml-auto flex gap-3">
         <Button
           type="button"
@@ -128,6 +127,7 @@ function ActivitySection() {
           />
           <span>투표 추가</span>
         </Button>
+
         <Button
           type="button"
           onClick={openCreateQnaModal}
@@ -146,47 +146,24 @@ function ActivitySection() {
 
 /**
  * 발표 자료 업로더 섹션 컴포넌트
- * @returns 발표 자료 업로더 섹션 JSX 요소
  */
-function PresentationUploaderSection() {
-  const { setValue } = useFormContext<CreateRoomRequest>();
-  const presentationFiles: File[] = useWatch({ name: LECTURE_FORM_KEYS.presentationFiles }) || [];
-
-  // 파일 선택 핸들러
-  const handleFileSelect = (file: File) => {
-    const isDuplicate = presentationFiles.some(
-      (existingFile) => existingFile.name === file.name && existingFile.size === file.size,
-    );
-
-    if (isDuplicate) {
-      logger.ui.error('파일 업로드 에러:', '이미 동일한 파일이 업로드되어 있습니다.');
-      return;
-    }
-
-    const updatedFiles = [...presentationFiles, file];
-    setValue(LECTURE_FORM_KEYS.presentationFiles, updatedFiles, { shouldValidate: true });
-  };
-
+export function PresentationSection() {
   return (
     <FormField className="gap-3">
-      <FormField.Legend className="m-0 text-xl font-bold">발표 자료</FormField.Legend>
-      <LecturePresentationUpload
-        onFileSelect={handleFileSelect}
-        onValidationError={(err) => logger.ui.error('파일 업로드 에러:', err)}
-      />
-      <LecturePresentationList />
+      <FormField.Legend className="mb-3 text-xl font-bold">발표 자료</FormField.Legend>
+      <PresentationUploader />
+      <PresentationList />
     </FormField>
   );
 }
 
 /**
  * 강의 생성 폼 컴포넌트
- * @returns 강의 생성 폼 JSX 요소
  */
 export function CreateLectureForm() {
   const navigate = useNavigate();
+  const { addToast } = useToastStore((state) => state.actions);
   const { createRoom, isSubmitting } = useCreateRoom();
-  const { setMyInfo } = useRoomStore((state) => state.actions);
 
   const formMethods = useForm<CreateRoomRequest>({
     resolver: zodResolver(createLectureSchema),
@@ -199,10 +176,12 @@ export function CreateLectureForm() {
   const onSubmit = async (data: CreateRoomRequest) => {
     try {
       const response = await createRoom(data);
-      setMyInfo(response.host);
       navigate(ROUTES.ROOM(response.roomId));
-    } catch (err) {
-      alert(`강의실 생성에 실패했습니다: ${err}`);
+    } catch (error) {
+      logger.ui.error('강의실 입장 실패:', error);
+      // TODO: API 에러별 메시지 추가
+      // if (error instanceof ApiError) {}
+      addToast({ type: 'error', title: '강의실 입장에 실패했습니다. 잠시 후 다시 시도해주세요.' });
     }
   };
 
@@ -218,7 +197,7 @@ export function CreateLectureForm() {
             <HostNameSection />
             <AgreementSection />
             <ActivitySection />
-            <PresentationUploaderSection />
+            <PresentationSection />
 
             <Button
               type="submit"
