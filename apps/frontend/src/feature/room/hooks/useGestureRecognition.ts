@@ -1,14 +1,13 @@
 import { useEffect, useRef } from 'react';
-import { useParams } from 'react-router';
 import type { GestureType } from '@plum/shared-interfaces';
 import { logger } from '@/shared/lib/logger';
-import { useRoomStore } from '../stores/useRoomStore';
-import { useSocketStore } from '@/store/useSocketStore';
 import { useGestureStore } from '../stores/useGestureStore';
 
 type GestureRecognitionOptions = {
   enabled: boolean;
   videoElement: HTMLVideoElement | null;
+  onConfirmedGesture?: (gesture: GestureType) => void;
+  shouldAllowGesture?: (gesture: GestureType) => boolean;
 };
 
 type GestureRecognitionState = {
@@ -34,17 +33,26 @@ type GestureWorkerMessage =
   | { type: 'error'; message: string }
   | GestureWorkerResult;
 
-export function useGestureRecognition({ enabled, videoElement }: GestureRecognitionOptions) {
-  const { roomId } = useParams();
-  const myInfo = useRoomStore((state) => state.myInfo);
-  const { emit } = useSocketStore((state) => state.actions);
+export function useGestureRecognition({
+  enabled,
+  videoElement,
+  onConfirmedGesture,
+  shouldAllowGesture,
+}: GestureRecognitionOptions) {
   const { setGestureProgress, resetGestureProgress } = useGestureStore((state) => state.actions);
+  const onConfirmedGestureRef = useRef<typeof onConfirmedGesture>(onConfirmedGesture);
+  const shouldAllowGestureRef = useRef<typeof shouldAllowGesture>(shouldAllowGesture);
 
   const gestureStateRef = useRef<GestureRecognitionState>({
     gesture: null,
     startedAt: 0,
     confirmedGesture: null,
   });
+
+  useEffect(() => {
+    onConfirmedGestureRef.current = onConfirmedGesture;
+    shouldAllowGestureRef.current = shouldAllowGesture;
+  }, [onConfirmedGesture, shouldAllowGesture]);
 
   useEffect(() => {
     if (!enabled || !videoElement) {
@@ -107,6 +115,11 @@ export function useGestureRecognition({ enabled, videoElement }: GestureRecognit
     };
 
     const updateGestureState = (nextGesture: GestureType | null, now: number) => {
+      if (nextGesture && shouldAllowGestureRef.current) {
+        if (!shouldAllowGestureRef.current(nextGesture)) {
+          nextGesture = null;
+        }
+      }
       const state = gestureStateRef.current;
 
       // 제스처가 인식되지 않는 경우 상태 초기화
@@ -145,18 +158,9 @@ export function useGestureRecognition({ enabled, videoElement }: GestureRecognit
           confirmedGesture: nextGesture,
         };
         logger.media.info('제스처 인식 확정', { gesture: nextGesture });
-        if (!roomId || !myInfo?.id) {
-          logger.socket.warn('제스처 전송 불가: roomId 또는 participantId 없음', {
-            roomId,
-            participantId: myInfo?.id,
-          });
-          return;
+        if (onConfirmedGestureRef.current) {
+          onConfirmedGestureRef.current(nextGesture);
         }
-        emit('action_gesture', { gesture: nextGesture }, (res) => {
-          if (!res.success) {
-            logger.socket.warn('제스처 전송 실패', res.error);
-          }
-        });
       }
     };
 
