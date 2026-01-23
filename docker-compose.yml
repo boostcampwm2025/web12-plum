@@ -1,9 +1,0 @@
-# Base Docker Compose 파일
-# 로컬, Dev, Prod 환경에서 공통으로 사용되는 네트워크 설정
-
-version: '3.8'
-
-# 네트워크 설정
-networks:
-  plum-network:
-    driver: bridge # 브릿지 네트워크로 서비스 간 통신 가능
