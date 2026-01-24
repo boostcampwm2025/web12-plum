@@ -15,6 +15,8 @@ describe('InteractionService (투표 및 Q&A 생성 테스트)', () => {
     submitVote: jest.fn(),
     closePoll: jest.fn(),
     getFinalResults: jest.fn(),
+    getVoteCounts: jest.fn(),
+    getVotedOptionId: jest.fn(),
   };
 
   // 2. QnaManagerService 모킹
@@ -133,6 +135,77 @@ describe('InteractionService (투표 및 Q&A 생성 테스트)', () => {
 
       expect(result).toEqual([]);
       expect(mockPollManager.getPollsInRoom).toHaveBeenCalledWith('empty-room');
+    });
+
+    it('진행 중인 투표가 있으면 카운트를 합쳐서 반환해야 한다', async () => {
+      const roomId = 'room-active';
+      const mockPolls = [
+        {
+          id: 'poll-active',
+          status: 'active',
+          options: [
+            { id: 0, value: 'A', count: 0 },
+            { id: 1, value: 'B', count: 0 },
+          ],
+        },
+      ];
+
+      mockPollManager.getPollsInRoom.mockResolvedValue(mockPolls);
+      mockPollManager.getVoteCounts.mockResolvedValue({ 0: 3, 1: 5 });
+
+      const result = await service.getPolls(roomId);
+
+      expect(result[0].options).toEqual([
+        { id: 0, value: 'A', count: 3 },
+        { id: 1, value: 'B', count: 5 },
+      ]);
+      expect(mockPollManager.getVoteCounts).toHaveBeenCalledWith('poll-active');
+    });
+  });
+
+  describe('getActivePoll (진행 중 투표 조회)', () => {
+    it('진행 중인 투표가 없으면 null을 반환해야 한다', async () => {
+      mockPollManager.getPollsInRoom.mockResolvedValue([]);
+
+      const result = await service.getActivePoll('room-1', 'participant-1');
+
+      expect(result).toEqual({ poll: null, votedOptionId: null });
+    });
+
+    it('진행 중인 투표가 있으면 카운트와 선택 정보를 포함해 반환해야 한다', async () => {
+      const activePoll = {
+        id: 'poll-1',
+        title: '테스트',
+        status: 'active',
+        timeLimit: 60,
+        startedAt: 'start',
+        endedAt: 'end',
+        options: [
+          { id: 0, value: 'A', count: 0, voters: [] },
+          { id: 1, value: 'B', count: 0, voters: [] },
+        ],
+      };
+
+      mockPollManager.getPollsInRoom.mockResolvedValue([activePoll]);
+      mockPollManager.getVoteCounts.mockResolvedValue({ 0: 2, 1: 4 });
+      mockPollManager.getVotedOptionId.mockResolvedValue(1);
+
+      const result = await service.getActivePoll('room-1', 'participant-1');
+
+      expect(result.poll).toEqual({
+        id: 'poll-1',
+        title: '테스트',
+        options: [
+          { id: 0, value: 'A', count: 2, voters: [] },
+          { id: 1, value: 'B', count: 4, voters: [] },
+        ],
+        timeLimit: 60,
+        startedAt: 'start',
+        endedAt: 'end',
+      });
+      expect(result.votedOptionId).toBe(1);
+      expect(mockPollManager.getVoteCounts).toHaveBeenCalledWith('poll-1');
+      expect(mockPollManager.getVotedOptionId).toHaveBeenCalledWith('poll-1', 'participant-1');
     });
   });
 
