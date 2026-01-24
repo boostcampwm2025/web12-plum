@@ -150,9 +150,15 @@ export function ActivitySection() {
  * 발표 자료 업로더 섹션 컴포넌트
  */
 export function PresentationSection() {
+  const { addToast } = useToastStore((state) => state.actions);
   const { presentationFiles, addFile, removeFile } = usePresentation<CreateRoomRequest>({
     fieldName: LECTURE_FORM_KEYS.presentationFiles,
   });
+
+  const handleDelete = (index: number) => {
+    removeFile(index);
+    addToast({ type: 'success', title: '파일이 성공적으로 삭제되었습니다.' });
+  };
 
   return (
     <FormField className="gap-3">
@@ -160,7 +166,7 @@ export function PresentationSection() {
       <PresentationUploader addFile={addFile} />
       <PresentationList
         files={presentationFiles}
-        onDelete={removeFile}
+        onDelete={handleDelete}
       />
     </FormField>
   );
