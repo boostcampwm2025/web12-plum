@@ -5,9 +5,7 @@ import { useRoomUIStore } from '../stores/useRoomUIStore';
 import { useRoomStore } from '../stores/useRoomStore';
 import { useSocketStore } from '@/store/useSocketStore';
 import type { GestureHandler } from './useGestureHandlers';
-
-const NUMERIC_GESTURES = ['one', 'two', 'three', 'four'] as const;
-type NumericGesture = (typeof NUMERIC_GESTURES)[number];
+import { isNumericGesture, type NumericGesture } from './gestureCategory';
 
 const POLL_GESTURE_MAP: Record<NumericGesture, number> = {
   one: 0,
@@ -15,10 +13,6 @@ const POLL_GESTURE_MAP: Record<NumericGesture, number> = {
   three: 2,
   four: 3,
 };
-
-function isNumericGesture(gesture: GestureType): gesture is NumericGesture {
-  return NUMERIC_GESTURES.includes(gesture as NumericGesture);
-}
 
 // audience 역할이고, vote 다이얼로그가 열려있고, 활성 투표가 있고, 아직 투표하지 않은 경우에만 처리
 export function usePollGestureHandler(): GestureHandler {

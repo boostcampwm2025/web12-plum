@@ -2,6 +2,7 @@ import { useCallback, useMemo } from 'react';
 import type { GestureType } from '@plum/shared-interfaces';
 import { usePollGestureHandler } from './usePollGesture';
 import { useBroadcastGestureHandler } from './useBroadcastGesture';
+import { getGestureCategory, type GestureCategory } from './gestureCategory';
 
 export type GestureHandler = {
   canHandle: (gesture: GestureType) => boolean;
@@ -12,24 +13,33 @@ export function useGestureHandlers() {
   const pollHandler = usePollGestureHandler();
   const broadcastHandler = useBroadcastGestureHandler();
 
-  const handlers = useMemo<GestureHandler[]>(
-    () => [pollHandler, broadcastHandler],
+  const handlerMap = useMemo<Record<GestureCategory, GestureHandler>>(
+    () => ({
+      numeric: pollHandler,
+      reaction: broadcastHandler,
+      pose: broadcastHandler,
+    }),
     [pollHandler, broadcastHandler],
   );
 
   const handleGesture = useCallback(
     (gesture: GestureType) => {
-      const handler = handlers.find((h) => h.canHandle(gesture));
-      handler?.handle(gesture);
+      const category = getGestureCategory(gesture);
+      const handler = handlerMap[category];
+      if (handler.canHandle(gesture)) {
+        handler.handle(gesture);
+      }
     },
-    [handlers],
+    [handlerMap],
   );
 
   const shouldAllowGesture = useCallback(
     (gesture: GestureType) => {
-      return handlers.some((h) => h.canHandle(gesture));
+      const category = getGestureCategory(gesture);
+      const handler = handlerMap[category];
+      return handler.canHandle(gesture);
     },
-    [handlers],
+    [handlerMap],
   );
 
   return { handleGesture, shouldAllowGesture };
