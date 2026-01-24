@@ -5,9 +5,8 @@ import {
 } from '@plum/shared-interfaces';
 import { FieldValues, Path, PathValue, useFormContext, useWatch } from 'react-hook-form';
 
-import { logger } from '@/shared/lib/logger';
-
 import { isAllowedMimeType } from '../lib/presentations';
+import { logger } from '../lib/logger';
 
 /**
  * 파일 업로드 에러 메시지
@@ -16,16 +15,29 @@ const ERROR_MESSAGES = {
   invalidMimeType: `${ALLOWED_FILE_EXTENSIONS_STRING} 파일만 업로드 가능합니다.`,
   tooLargeFile: `최대 ${FILE_MAX_SIZE_MB}MB까지 업로드 가능합니다.`,
   duplicateFile: '이미 동일한 파일이 업로드되어 있습니다.',
+  unknown: '파일 추가 중 오류가 발생했습니다.',
 };
+
+/**
+ * 파일 업로드 에러 클래스
+ */
+export class PresentationError extends Error {
+  type: keyof typeof ERROR_MESSAGES;
+
+  constructor(type: keyof typeof ERROR_MESSAGES) {
+    const message = ERROR_MESSAGES[type] ?? ERROR_MESSAGES.unknown;
+
+    super(message);
+    this.name = 'PresentationError';
+    this.type = type;
+
+    logger.ui.error('[Presentation]', message);
+  }
+}
 
 interface UsePresentationParams<T extends FieldValues> {
   fieldName: Path<T>;
 }
-
-/**
- * 파일 추가 결과 타입
- */
-export type AddFileResult = { success: true } | { success: false; message: string };
 
 /**
  * 발표 자료 훅
@@ -39,33 +51,27 @@ export function usePresentation<T extends FieldValues>({ fieldName }: UsePresent
   /**
    * 파일 추가 함수
    * @param file 추가할 파일 객체
-   * @returns 성공 시 { success: true }, 실패 시 { success: false, message: string }
    */
-  const addFile = (file: File): AddFileResult => {
+  const addFile = (file: File) => {
     // 허용 MIME 타입 검사
     if (!isAllowedMimeType(file.type)) {
-      logger.ui.error('[Presentation]', ERROR_MESSAGES.invalidMimeType);
-      return { success: false, message: ERROR_MESSAGES.invalidMimeType };
+      throw new PresentationError('invalidMimeType');
     }
 
     // 파일 크기 검사
     if (file.size > FILE_MAX_SIZE_BYTES) {
-      logger.ui.error('[Presentation]', ERROR_MESSAGES.tooLargeFile);
-      return { success: false, message: ERROR_MESSAGES.tooLargeFile };
+      throw new PresentationError('tooLargeFile');
     }
 
     // 중복 검사
     const isDuplicate = presentationFiles.some(
       (existingFile) => existingFile.name === file.name && existingFile.size === file.size,
     );
-
     if (isDuplicate) {
-      logger.ui.error('[Presentation]', ERROR_MESSAGES.duplicateFile);
-      return { success: false, message: ERROR_MESSAGES.duplicateFile };
+      throw new PresentationError('duplicateFile');
     }
 
     setValue(fieldName, [...presentationFiles, file] as PathValue<T, Path<T>>);
-    return { success: true };
   };
 
   /**
@@ -76,9 +82,5 @@ export function usePresentation<T extends FieldValues>({ fieldName }: UsePresent
     setValue(fieldName, presentationFiles.filter((_, i) => i !== index) as PathValue<T, Path<T>>);
   };
 
-  return {
-    presentationFiles,
-    addFile,
-    removeFile,
-  };
+  return { presentationFiles, addFile, removeFile };
 }

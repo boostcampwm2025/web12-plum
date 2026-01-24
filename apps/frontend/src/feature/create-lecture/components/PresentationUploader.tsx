@@ -4,11 +4,11 @@ import { ALLOWED_FILE_EXTENSIONS_STRING } from '@plum/shared-interfaces';
 import { useDragAndDrop } from '@/shared/hooks/useDragAndDrop';
 import { Icon } from '@/shared/components/icon/Icon';
 import { cn } from '@/shared/lib/utils';
-import { AddFileResult } from '@/shared/hooks/usePresentation';
 import { useToastStore } from '@/store/useToastStore';
+import { PresentationError } from '@/shared/hooks/usePresentation';
 
 interface PresentationUploaderProps {
-  addFile: (file: File) => AddFileResult;
+  addFile: (file: File) => void;
 }
 
 /**
@@ -20,9 +20,14 @@ export function PresentationUploader({ addFile }: PresentationUploaderProps) {
 
   // 파일 추가 및 결과 처리
   const handleAddFile = (file: File) => {
-    const result = addFile(file);
-    if (result.success) addToast({ type: 'success', title: '파일이 성공적으로 추가되었습니다.' });
-    else addToast({ type: 'error', title: result.message });
+    try {
+      addFile(file);
+      addToast({ type: 'success', title: '파일이 성공적으로 추가되었습니다.' });
+    } catch (error) {
+      if (error instanceof PresentationError) {
+        addToast({ type: 'error', title: error.message });
+      }
+    }
   };
 
   // 드래그 앤 드롭
