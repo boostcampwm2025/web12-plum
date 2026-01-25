@@ -17,7 +17,7 @@ export interface Participant {
   producers: Map<MediaType, string>; // type -> producerId
 }
 
-interface RoomActions {
+export interface RoomActions {
   setMyInfo: (info: MyInfo) => void;
   setRouterRtpCapabilities: (capabilities: RtpCapabilities) => void;
 

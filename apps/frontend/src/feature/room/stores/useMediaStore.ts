@@ -9,7 +9,7 @@ export interface RemoteStream {
   consumerId: string;
 }
 
-interface MediaActions {
+export interface MediaActions {
   // 로컬 미디어 토글
   toggleMic: () => void;
   toggleCamera: () => void;
