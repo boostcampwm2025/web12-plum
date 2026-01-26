@@ -59,9 +59,11 @@ export function useRoomInit() {
    * 초기 미디어 장치 설정 및 송출 시작
    */
   const handleInitialMedia = async () => {
-    const isMicOn = mediaState?.isAudioOn ?? false;
-    const isCameraOn = mediaState?.isVideoOn ?? false;
-    mediaActions.initialize(isMicOn, isCameraOn);
+    const currentState = useMediaStore.getState();
+    const isMicOn = mediaState?.isAudioOn ?? currentState.isMicOn;
+    const isCameraOn = mediaState?.isVideoOn ?? currentState.isCameraOn;
+
+    if (mediaState) mediaActions.initialize(isMicOn, isCameraOn);
     if (!isCameraOn && !isMicOn) return;
 
     try {

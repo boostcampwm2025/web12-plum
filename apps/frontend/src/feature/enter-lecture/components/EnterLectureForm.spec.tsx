@@ -1,16 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
+import { useNavigate } from 'react-router';
 
 import { EnterLectureForm } from './EnterLectureForm';
 import { useEnterRoom } from '../hooks/useEnterRoom';
 import { useNicknameValidation } from '../hooks/useNicknameValidation';
-import { useMediaStore } from '../../../feature/room/stores/useMediaStore';
 
 vi.mock('../hooks/useEnterRoom');
 vi.mock('../hooks/useNicknameValidation');
-vi.mock('@/feature/room/stores/useMediaStore');
 vi.mock('@/shared/lib/logger');
 vi.mock('react-router', () => ({
   useNavigate: vi.fn(),
@@ -22,27 +21,22 @@ vi.mock('./LocalMediaPreview', () => ({
 
 const mockUseEnterRoom = vi.mocked(useEnterRoom);
 const mockUseNicknameValidation = vi.mocked(useNicknameValidation);
-const mockUseMediaStore = vi.mocked(useMediaStore);
+const mockNavigate = vi.fn();
+vi.mocked(useNavigate).mockReturnValue(mockNavigate);
 
 describe('EnterLectureForm (비즈니스 로직 포함)', () => {
   const mockEnterRoom = vi.fn();
-  const mockInitialize = vi.fn();
   const mockHandleCheckNickname = vi.fn();
   const mockRequireCheck = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(useNavigate).mockReturnValue(mockNavigate);
 
     mockUseEnterRoom.mockReturnValue({
       enterRoom: mockEnterRoom,
       isSubmitting: false,
     });
-
-    mockUseMediaStore.mockImplementation((selector) =>
-      selector({ actions: { initialize: mockInitialize } } as unknown as Parameters<
-        typeof selector
-      >[0]),
-    );
 
     mockUseNicknameValidation.mockReturnValue({
       nicknameValue: '',
@@ -96,37 +90,7 @@ describe('EnterLectureForm (비즈니스 로직 포함)', () => {
       const submitButton = screen.getByRole('button', { name: '강의실 입장하기' });
       await user.click(submitButton);
 
-      expect(mockInitialize).toHaveBeenCalled();
       expect(mockEnterRoom).toHaveBeenCalled();
-    });
-  });
-
-  describe('미디어 장치 설정 연동', () => {
-    it('토글 버튼 상태에 따라 initialize 함수에 올바른 값이 전달된다', async () => {
-      const user = userEvent.setup();
-
-      mockUseNicknameValidation.mockReturnValue({
-        nicknameValue: '호눅스',
-        checkMessage: '',
-        checkVariant: 'success',
-        hasCheckedNickname: true,
-        isNicknameAvailable: true,
-        handleCheckNickname: mockHandleCheckNickname,
-        requireCheck: mockRequireCheck,
-      });
-
-      render(<EnterLectureForm roomId="room-1" />);
-
-      await user.type(screen.getByPlaceholderText('예: 호눅스'), '호눅스');
-      await user.click(screen.getByRole('checkbox', { name: '데이터 수집에 동의합니다.' }));
-
-      const submitButton = screen.getByRole('button', { name: '강의실 입장하기' });
-      await waitFor(() => expect(submitButton).not.toBeDisabled());
-      await user.click(submitButton);
-
-      await waitFor(() => {
-        expect(mockInitialize).toHaveBeenCalledWith(false, false);
-      });
     });
   });
 
