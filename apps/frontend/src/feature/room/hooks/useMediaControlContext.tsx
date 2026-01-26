@@ -114,8 +114,11 @@ export function MediaControlsProvider({ children }: MediaControlsProviderProps) 
    */
   const consumeExistingProducers = useCallback(async () => {
     const participants = roomActions.getParticipantList();
+    const myId = useRoomStore.getState().myInfo?.id;
 
     const tasks = participants.flatMap((participant) => {
+      if (participant.id === myId) return [];
+
       const subTasks = [];
       const audioId = participant.producers.get('audio');
       const screenId = participant.producers.get('screen');
