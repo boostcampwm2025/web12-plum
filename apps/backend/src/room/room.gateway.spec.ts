@@ -19,6 +19,7 @@ describe('RoomGateway', () => {
   let participantManager: ParticipantManagerService;
   let socketMetadataService: SocketMetadataService;
   let roomManager: RoomManagerService;
+  let roomService: RoomService;
 
   const createMockSocket = (id: string = 'socket-123') =>
     ({
@@ -86,6 +87,7 @@ describe('RoomGateway', () => {
           provide: RoomService,
           useValue: {
             getRoomInfo: jest.fn(),
+            getFiles: jest.fn(),
           },
         },
         {
@@ -129,6 +131,7 @@ describe('RoomGateway', () => {
     participantManager = module.get<ParticipantManagerService>(ParticipantManagerService);
     socketMetadataService = module.get<SocketMetadataService>(SocketMetadataService);
     roomManager = module.get<RoomManagerService>(RoomManagerService);
+    roomService = module.get<RoomService>(RoomService);
 
     (gateway as any).server = {
       to: jest.fn().mockReturnThis(),
@@ -540,6 +543,58 @@ describe('RoomGateway', () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toContain('유효하지 않은 접근');
+    });
+  });
+
+  describe('handleGetPresentation', () => {
+    const mockRoomId = 'room-123';
+    const mockParticipantId = 'user-456';
+    const mockFiles = [
+      { url: 'https://s3.com/file1.pdf', size: 1024 },
+      { url: 'https://s3.com/file2.png', size: 2048 },
+    ];
+
+    it('성공적으로 발표 자료 파일 목록을 반환해야 함', async () => {
+      const socket = createMockSocket();
+
+      jest.spyOn(socketMetadataService, 'get').mockReturnValue({
+        roomId: mockRoomId,
+        participantId: mockParticipantId,
+        transportIds: [],
+      });
+
+      jest.spyOn(roomService, 'getFiles').mockResolvedValue(mockFiles);
+
+      const result = await gateway.handleGetPresentation(socket);
+
+      expect(result).toEqual({ success: true, files: mockFiles });
+      expect(roomService.getFiles).toHaveBeenCalledWith(mockRoomId);
+    });
+
+    it('메타데이터가 없는 소켓인 경우 에러를 반환해야 함', async () => {
+      const socket = createMockSocket('unregistered-socket');
+
+      jest.spyOn(socketMetadataService, 'get').mockReturnValue(undefined);
+
+      const result = await gateway.handleGetPresentation(socket);
+
+      expect(result).toEqual({ success: false, error: '먼저 join_room을 호출하세요.' });
+    });
+
+    it('RoomService에서 에러가 발생한 경우 실패 응답을 반환해야 함', async () => {
+      const socket = createMockSocket();
+
+      jest.spyOn(socketMetadataService, 'get').mockReturnValue({
+        roomId: mockRoomId,
+        participantId: mockParticipantId,
+        transportIds: [],
+      });
+
+      jest.spyOn(roomService, 'getFiles').mockRejectedValue(new Error('DB Error'));
+
+      const result = await gateway.handleGetPresentation(socket);
+
+      expect(result).toEqual({ success: false, error: '발표자료 조회에 실패하였습니다.' });
     });
   });
 });

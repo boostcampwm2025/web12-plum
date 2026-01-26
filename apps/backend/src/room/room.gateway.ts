@@ -27,6 +27,7 @@ import {
   ConsumeResumeResponse,
   CreateTransportRequest,
   CreateTransportResponse,
+  GetPresentationResponse,
   GetProducerRequest,
   GetProducerResponse,
   JoinRoomRequest,
@@ -450,6 +451,24 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
     } catch (error) {
       this.logger.error(`[break_room] 실패:`, error);
       return { success: false, error: `종료 처리 중 서버 내부 오류가 발생하였습니다.` };
+    }
+  }
+
+  @SubscribeMessage('get_presentation')
+  async handleGetPresentation(@ConnectedSocket() socket: Socket): Promise<GetPresentationResponse> {
+    const metadata = this.socketMetadataService.get(socket.id);
+    if (!metadata) return { success: false, error: '먼저 join_room을 호출하세요.' };
+
+    try {
+      const files = await this.roomService.getFiles(metadata.roomId);
+
+      this.logger.log(
+        `[get_presentation] ${metadata.participantId} 님의 ${metadata.roomId} 발표자료 조회에 성공하였습니다.`,
+      );
+      return { success: true, files };
+    } catch (error) {
+      this.logger.error(`[get_presentation] 실패:`, error.message);
+      return { success: false, error: '발표자료 조회에 실패하였습니다.' };
     }
   }
 

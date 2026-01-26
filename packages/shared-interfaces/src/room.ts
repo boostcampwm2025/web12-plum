@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { pollFormSchema } from './poll.js';
 import { qnaFormSchema } from './qna.js';
 import { type Status } from './shared.js';
-import { fileSchema } from './file.js';
+import { FileInfo, fileSchema } from './file.js';
 import { NICKNAME_CONSTRAINT } from './participant.js';
 
 /**
@@ -77,6 +77,6 @@ export interface Room {
   createdAt: string;
   startedAt: string;
   endedAt: string;
-  files: string[];
+  files: FileInfo[];
   aiSummery: string;
 }

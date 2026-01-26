@@ -13,6 +13,7 @@ import {
   CreateRoomResponse,
   EnterLectureRequestBody,
   EnterRoomResponse,
+  FileInfo,
   MediasoupProducer,
   Participant,
   ParticipantRole,
@@ -52,8 +53,9 @@ export class RoomService {
     });
   }
 
-  private async uploadFile(file: Express.Multer.File): Promise<string> {
-    const fileName = `${ulid()}_${file.originalname}`;
+  private async uploadFile(file: Express.Multer.File): Promise<FileInfo> {
+    const originalName = Buffer.from(file.originalname, 'latin1').toString('utf8');
+    const fileName = `${ulid()}_${originalName}`;
 
     try {
       const upload = new Upload({
@@ -69,13 +71,16 @@ export class RoomService {
       await upload.done();
 
       // 환경 변수로 관리되는 region과 bucketName을 사용하여 URL 반환
-      return `https://${this.bucketName}.s3.${this.region}.amazonaws.com/${fileName}`;
+      return {
+        url: `https://${this.bucketName}.s3.${this.region}.amazonaws.com/${fileName}`,
+        size: file.size,
+      };
     } catch (error) {
       throw new InternalServerErrorException('파일 업로드 중 오류가 발생했습니다.', error);
     }
   }
 
-  private async multipleFileUpload(files: Express.Multer.File[]): Promise<string[]> {
+  private async multipleFileUpload(files: Express.Multer.File[]): Promise<FileInfo[]> {
     if (!files || files.length === 0) return [];
 
     return await Promise.all(files.map((file) => this.uploadFile(file)));
@@ -274,5 +279,13 @@ export class RoomService {
 
   async validateNickname(roomId: string, nickname: string): Promise<boolean> {
     return await this.roomManagerService.isNameAvailable(roomId, nickname);
+  }
+
+  async getFiles(roomId: string): Promise<FileInfo[]> {
+    const room = await this.roomManagerService.findOne(roomId);
+
+    if (!room) throw new NotFoundException(`Room with ID ${roomId} not found`);
+
+    return room.files;
   }
 }
