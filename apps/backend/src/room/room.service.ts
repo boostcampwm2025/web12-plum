@@ -15,6 +15,7 @@ import {
   EnterRoomResponse,
   MediasoupProducer,
   Participant,
+  ParticipantPayload,
   ParticipantRole,
   Room,
   RoomInfo,
@@ -23,8 +24,6 @@ import {
 import { InteractionService } from '../interaction/interaction.service.js';
 import { RoomManagerService } from '../redis/repository-manager/index.js';
 import { MediasoupService } from '../mediasoup/mediasoup.service.js';
-
-const AUDIENCE_VIDEO_LIMIT = 5;
 
 @Injectable()
 export class RoomService {
@@ -119,80 +118,56 @@ export class RoomService {
 
   async getRoomInfo(roomId: string, participant: Participant): Promise<RoomInfo> {
     const rtpCapabilities = this.mediasoupService.getRouterRtpCapabilities(roomId);
-    const allParticipants = (await this.roomManagerService.getParticipantsInRoom(roomId)).sort(
-      (a, b) => new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime(),
-    );
+    const allParticipants = await this.roomManagerService.getParticipantsInRoom(roomId);
 
-    if (allParticipants.length === 0) {
-      // 조기 종료
-      return {
-        mediasoup: {
-          routerRtpCapabilities: rtpCapabilities,
-          existingProducers: [],
-        },
-        participants: [],
-      };
-    }
-
-    const others = allParticipants.filter((p) => p.id !== participant.id);
-    const audienceVideoCandidates = others
-      .filter((p) => p.role === 'audience' && p.producers.video)
-      .slice(0, AUDIENCE_VIDEO_LIMIT - 1);
-
-    const videoTargetIds = new Set(audienceVideoCandidates.map((p) => p.id));
     const existingProducers: MediasoupProducer[] = [];
+    const otherParticipants: ParticipantPayload[] = [];
+    let presenterInfo: ParticipantPayload | undefined = undefined;
 
     for (const p of allParticipants) {
-      if (p.id === participant.id) continue; // 본인 제외
+      if (p.id === participant.id) continue;
 
-      if (p.producers.audio) {
-        existingProducers.push({
-          producerId: p.producers.audio,
-          participantId: p.id,
-          kind: 'audio',
-          type: 'audio',
-        });
-      }
-
-      if (p.role === 'presenter') {
-        if (p.producers.video) {
+      if (p.producers) {
+        if (p.producers.audio)
+          existingProducers.push({
+            producerId: p.producers.audio,
+            participantId: p.id,
+            kind: 'audio',
+            type: 'audio',
+          });
+        if (p.producers.video)
           existingProducers.push({
             producerId: p.producers.video,
             participantId: p.id,
             kind: 'video',
             type: 'video',
           });
-        }
-        if (p.producers.screen) {
+        if (p.producers.screen)
           existingProducers.push({
             producerId: p.producers.screen,
             participantId: p.id,
             kind: 'video',
             type: 'screen',
           });
-        }
-      } else if (videoTargetIds.has(p.id)) {
-        existingProducers.push({
-          producerId: p.producers.video,
-          participantId: p.id,
-          kind: 'video',
-          type: 'video',
-        });
       }
+
+      const info = {
+        id: p.id,
+        name: p.name,
+        role: p.role,
+        joinedAt: new Date(p.joinedAt),
+      };
+
+      if (p.role === 'presenter') presenterInfo = info;
+      else otherParticipants.push(info);
     }
 
-    const existingParticipants = allParticipants.filter((p) => p.id !== participant.id);
     return {
       mediasoup: {
         routerRtpCapabilities: rtpCapabilities,
         existingProducers,
       },
-      participants: existingParticipants.map((p) => ({
-        id: p.id,
-        name: p.name,
-        role: p.role,
-        joinedAt: new Date(p.joinedAt),
-      })),
+      participants: presenterInfo ? [presenterInfo, ...otherParticipants] : otherParticipants,
     };
   }
 
