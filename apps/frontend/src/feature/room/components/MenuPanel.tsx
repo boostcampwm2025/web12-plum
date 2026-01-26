@@ -5,7 +5,7 @@ import type { IconName } from '@/shared/components/icon/iconMap';
 import { SidePanelHeader, SidePanelContent } from './SidePanel';
 import { PollManagementTabs } from './PollManagementTabs';
 import { QnaManagementTabs } from './QnaManagementTabs';
-import { PresentationManagementTabs } from './PresentationMangementTabs';
+import { PresentationManagementTabs } from './PresentationManagementTabs';
 
 type SubPage = 'breakroom' | 'vote' | 'qna' | 'material' | 'participant';
 
