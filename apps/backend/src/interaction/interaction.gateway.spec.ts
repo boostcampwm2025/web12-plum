@@ -50,6 +50,7 @@ describe('InteractionGateway', () => {
             createPoll: jest.fn(),
             getPoll: jest.fn(),
             getPolls: jest.fn(),
+            getActivePoll: jest.fn(),
             startPoll: jest.fn(),
             vote: jest.fn(),
             stopPoll: jest.fn(),
@@ -182,6 +183,39 @@ describe('InteractionGateway', () => {
 
       expect(result).toEqual({ success: true, polls: mockPolls });
       expect(interactionService.getPolls).toHaveBeenCalledWith('r1');
+    });
+  });
+
+  describe('get_active_poll', () => {
+    it('참여자가 진행 중 투표 스냅샷을 조회한다', async () => {
+      const metadata = { participantId: 'p1', roomId: 'r1' };
+      const participant = { id: 'p1', role: 'audience' };
+      const room = { id: 'r1', status: 'active' };
+      const snapshot = { poll: { id: 'poll-1' }, votedOptionId: 1 };
+
+      jest.spyOn(socketMetadataService, 'get').mockReturnValue(metadata as any);
+      jest.spyOn(participantManagerService, 'findOne').mockResolvedValue(participant as any);
+      jest.spyOn(roomManagerService, 'findOne').mockResolvedValue(room as any);
+      jest.spyOn(interactionService, 'getActivePoll').mockResolvedValue(snapshot as any);
+
+      const result = await gateway.getActivePoll(mockSocket);
+
+      expect(result).toEqual({ success: true, ...snapshot });
+      expect(interactionService.getActivePoll).toHaveBeenCalledWith('r1', 'p1');
+    });
+
+    it('발표자는 권한 오류가 발생해야 한다', async () => {
+      const metadata = { participantId: 'p1', roomId: 'r1' };
+      const participant = { id: 'p1', role: 'presenter' };
+      const room = { id: 'r1', presenter: 'p1', status: 'active' };
+
+      jest.spyOn(socketMetadataService, 'get').mockReturnValue(metadata as any);
+      jest.spyOn(participantManagerService, 'findOne').mockResolvedValue(participant as any);
+      jest.spyOn(roomManagerService, 'findOne').mockResolvedValue(room as any);
+
+      const result = await gateway.getActivePoll(mockSocket);
+
+      expect(result.success).toBe(false);
     });
   });
 

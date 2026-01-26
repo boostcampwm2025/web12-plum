@@ -25,13 +25,19 @@ export const RoomSignaling = {
     myId: string,
     initParticipants: (map: Map<string, Participant>) => void,
     setMyInfo: (info: { id: string; name: string; role: ParticipantRole }) => void,
-  ): Promise<RtpCapabilities> => {
+  ): Promise<{ routerRtpCapabilities: RtpCapabilities; role: ParticipantRole }> => {
     return new Promise((resolve, reject) => {
       const payload = { roomId, participantId: myId };
 
       const handleResponse = (response: JoinRoomResponse) => {
         if (response.success) {
-          const { mediasoup, participants: rawParticipants } = response;
+          const {
+            mediasoup,
+            participants: rawParticipants,
+            participantId,
+            participantName,
+            role,
+          } = response;
           const { routerRtpCapabilities, existingProducers } = mediasoup;
 
           const participantMap = new Map<string, Participant>();
@@ -47,10 +53,7 @@ export const RoomSignaling = {
             });
           });
 
-          const me = participantMap.get(myId);
-          if (me) {
-            setMyInfo({ id: me.id, name: me.name, role: me.role });
-          }
+          setMyInfo({ id: participantId, name: participantName, role });
 
           // 본인 정보는 원격 목록에서 제외
           if (participantMap.has(myId)) participantMap.delete(myId);
@@ -65,7 +68,10 @@ export const RoomSignaling = {
           initParticipants(participantMap);
           logger.media.info(`[Room] 방 입장 완료 (참여자: ${participantMap.size}명)`);
 
-          resolve(routerRtpCapabilities as RtpCapabilities);
+          resolve({
+            routerRtpCapabilities: routerRtpCapabilities as RtpCapabilities,
+            role,
+          });
         } else {
           logger.media.error(`[Room] 방 입장 실패:`, response.error);
           reject(new Error(response.error || '방 입장 실패'));

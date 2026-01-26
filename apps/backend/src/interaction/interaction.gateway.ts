@@ -36,6 +36,7 @@ import {
   Answer,
   EndQnaPayload,
   EndQnaDetailPayload,
+  GetActivePollResponse,
   GetQnaResponse,
 } from '@plum/shared-interfaces';
 
@@ -159,6 +160,24 @@ export class InteractionGateway implements OnGatewayDisconnect {
       const errorMessage =
         error instanceof BusinessException ? error.message : '투표 조회에 실패했습니다.';
       this.logger.error(`[get_poll] 실패:`, error);
+      return { success: false, error: errorMessage };
+    }
+  }
+
+  @SubscribeMessage('get_active_poll')
+  async getActivePoll(@ConnectedSocket() socket: Socket): Promise<GetActivePollResponse> {
+    try {
+      const { room, participant } = await this.validateAudienceAction(socket.id);
+      const { poll, votedOptionId } = await this.interactionService.getActivePoll(
+        room.id,
+        participant.id,
+      );
+
+      return { success: true, poll, votedOptionId };
+    } catch (error) {
+      const errorMessage =
+        error instanceof BusinessException ? error.message : '진행중 투표 조회에 실패했습니다.';
+      this.logger.error(`[get_active_poll] 실패:`, error);
       return { success: false, error: errorMessage };
     }
   }

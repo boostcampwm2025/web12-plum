@@ -9,6 +9,7 @@ import { useMediaStore } from '../stores/useMediaStore';
 import { MyInfo, useRoomStore } from '../stores/useRoomStore';
 import { useEffect, useRef, useState } from 'react';
 import { useGestureRecognition } from '../hooks/useGestureRecognition';
+import { useGestureHandlers } from '../hooks/useGestureHandlers';
 import DodoReady from '@/assets/logo/dodo-ready.svg';
 
 /**
@@ -105,10 +106,13 @@ export function RoomMainSection() {
 
   const myInfo = useRoomStore((state) => state.myInfo);
   const currentUser = myInfo ?? { id: '', name: '', role: 'audience' };
+  const { handleGesture, shouldAllowGesture } = useGestureHandlers();
 
   useGestureRecognition({
     enabled: isCameraOn && userVideoMode !== 'minimize',
     videoElement: gestureVideoElement,
+    shouldAllowGesture,
+    onConfirmedGesture: handleGesture,
   });
 
   return (
