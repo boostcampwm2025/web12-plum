@@ -23,6 +23,7 @@ import {
 import { InteractionService } from '../interaction/interaction.service.js';
 import { RoomManagerService } from '../redis/repository-manager/index.js';
 import { MediasoupService } from '../mediasoup/mediasoup.service.js';
+import { RoomType } from '../mediasoup/mediasoup.type.js';
 
 const AUDIENCE_VIDEO_LIMIT = 5;
 
@@ -207,7 +208,7 @@ export class RoomService {
       this.multipleFileUpload(files),
       this.interactionService.createMultiplePoll(roomId, body.polls),
       this.interactionService.createMultipleQna(roomId, body.qnas),
-      this.mediasoupService.createRouter(roomId),
+      this.mediasoupService.createRoutersWithStrategy(roomId, RoomType.LECTURE),
     ]);
 
     const room: Room = {

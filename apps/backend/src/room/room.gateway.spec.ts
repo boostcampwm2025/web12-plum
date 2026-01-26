@@ -80,6 +80,14 @@ describe('RoomGateway', () => {
 
             // Cleanup 관련
             cleanupParticipantFromMaps: jest.fn(),
+
+            // Multi-Router 관련
+            assignRouterForParticipant: jest.fn(),
+            getParticipantRouterIndex: jest.fn().mockReturnValue(0),
+            pipeProducerToAllRouters: jest.fn().mockResolvedValue(undefined),
+            cleanupPipeProducers: jest.fn().mockResolvedValue(undefined),
+            removeParticipantFromRouter: jest.fn(),
+            closeRoutersWithStrategy: jest.fn().mockResolvedValue(undefined),
           },
         },
         {
@@ -188,7 +196,7 @@ describe('RoomGateway', () => {
         transportIds: [],
       });
 
-      jest
+      const createTransportSpy = jest
         .spyOn(mediasoupService, 'createWebRtcTransport')
         .mockResolvedValue({ id: 't-123', iceParameters: {} } as any);
       jest.spyOn(participantManager, 'findOne').mockResolvedValue({ transports: [] } as any);
@@ -198,6 +206,8 @@ describe('RoomGateway', () => {
       expect(result.success).toBe(true);
       if (!('id' in result)) fail('result must have id when success is true');
       expect(result.id).toBe('t-123');
+      // Multi-Router: participantId가 전달되는지 확인
+      expect(createTransportSpy).toHaveBeenCalledWith('room-1', 'user-1');
     });
   });
 
@@ -472,7 +482,7 @@ describe('RoomGateway', () => {
 
       const updateSpy = jest.spyOn(roomManager, 'updatePartial').mockResolvedValue(undefined);
       const closeRouterSpy = jest
-        .spyOn(mediasoupService, 'closeRouter')
+        .spyOn(mediasoupService, 'closeRoutersWithStrategy')
         .mockResolvedValue(undefined);
 
       // 3. 실행

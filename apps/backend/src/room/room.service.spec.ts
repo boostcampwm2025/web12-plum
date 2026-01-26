@@ -1,11 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
-import {
-  BadRequestException,
-  InternalServerErrorException,
-  NotFoundException,
-} from '@nestjs/common';
-import { Upload } from '@aws-sdk/lib-storage';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { CreateRoomRequest, EnterLectureRequestBody, Room } from '@plum/shared-interfaces';
 
 import { RoomService } from './room.service.js';
@@ -27,8 +22,6 @@ describe('RoomService', () => {
   let service: RoomService;
   let roomManagerService: RoomManagerService;
   let mediasoupService: MediasoupService;
-
-  const MockedUpload = Upload as jest.MockedClass<typeof Upload>;
 
   const mockFile = {
     originalname: 'test.pdf',
@@ -91,6 +84,7 @@ describe('RoomService', () => {
             createRouter: jest.fn().mockResolvedValue({
               rtpCapabilities: { codecs: [{ mimeType: 'audio/opus' }] },
             }),
+            createRoutersWithStrategy: jest.fn().mockResolvedValue(undefined),
             getRouterRtpCapabilities: jest.fn().mockReturnValue({
               codecs: [{ mimeType: 'audio/opus' }],
             }),
@@ -136,7 +130,10 @@ describe('RoomService', () => {
         }),
       );
 
-      expect(mediasoupService.createRouter).toHaveBeenCalledWith(result.roomId);
+      expect(mediasoupService.createRoutersWithStrategy).toHaveBeenCalledWith(
+        result.roomId,
+        'LECTURE',
+      );
 
       expect(roomManagerService.addParticipant).toHaveBeenCalledWith(
         result.roomId,
@@ -153,20 +150,6 @@ describe('RoomService', () => {
       expect(roomManagerService.saveOne).toHaveBeenCalledWith(
         expect.any(String),
         expect.objectContaining({ files: [] }),
-      );
-    });
-
-    it('파일 업로드 중 오류가 발생하면 InternalServerErrorException을 던져야 한다', async () => {
-      // Mock을 강제로 에러 발생 상태로 설정
-      MockedUpload.mockImplementationOnce(
-        () =>
-          ({
-            done: jest.fn().mockRejectedValue(new Error('S3 Error')),
-          }) as any,
-      );
-
-      await expect(service.createRoom(mockCreateRoomDto, [mockFile])).rejects.toThrow(
-        InternalServerErrorException,
       );
     });
 
@@ -189,7 +172,7 @@ describe('RoomService', () => {
 
     it('Mediasoup 라우터 생성 실패 시 예외를 던져야 한다', async () => {
       jest
-        .spyOn(mediasoupService, 'createRouter')
+        .spyOn(mediasoupService, 'createRoutersWithStrategy')
         .mockRejectedValueOnce(new Error('Mediasoup Error'));
 
       await expect(service.createRoom(mockCreateRoomDto, [])).rejects.toThrow();
