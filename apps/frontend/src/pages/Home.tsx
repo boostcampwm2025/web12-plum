@@ -5,6 +5,7 @@ import { Header } from '@/shared/components/Header';
 import { Button } from '@/shared/components/Button';
 import { ROUTES } from '@/app/routes/routes';
 import { Icon } from '@/shared/components/icon/Icon';
+import logoImg from '@/assets/logo/logo.svg';
 
 const features = [
   {
@@ -90,7 +91,14 @@ export function Home() {
         <section className="bg-gray-600 px-6 py-20 md:px-12 md:py-28 lg:px-24">
           <div className="mx-auto max-w-7xl">
             <h2 className="text-text mb-16 text-center text-3xl font-bold md:text-4xl">
-              <span className="text-primary">Plum</span>은 당신의 회의를 이렇게 바꿉니다.
+              <img
+                src={logoImg}
+                alt="Plum"
+                width={120}
+                height={88}
+                className="mr-2 inline-block h-7 w-auto align-middle sm:h-8 md:h-9"
+              />
+              은 당신의 회의를 이렇게 바꿉니다.
             </h2>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 lg:gap-8">
               {features.map((feature, i) => (

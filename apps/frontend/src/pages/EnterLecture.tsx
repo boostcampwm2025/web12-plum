@@ -59,9 +59,9 @@ export function EnterLecture() {
   if (isLoading) return <Loading />;
 
   return (
-    <>
+    <div className="flex min-h-screen flex-col bg-gray-500">
       <Header />
-      <main className="mx-auto my-12 w-full max-w-4xl flex-1 px-4">
+      <main className="mx-auto w-full max-w-4xl flex-1 px-6 py-12 md:px-12 lg:px-24">
         <PageSubHeader
           title="강의실 입장"
           description="강의실에 들어가기 위한 필수 정보를 입력해주세요."
@@ -72,6 +72,6 @@ export function EnterLecture() {
         />
       </main>
       <Footer />
-    </>
+    </div>
   );
 }

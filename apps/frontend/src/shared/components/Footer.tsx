@@ -51,13 +51,13 @@ interface InternalLinkSectionProps {
 function InternalLinkSection({ title, links }: InternalLinkSectionProps) {
   return (
     <div>
-      <h4 className="text-primary text-center text-sm font-bold">{title}</h4>
-      <ul className="flex flex-col gap-1">
+      <h4 className="text-primary text-center text-sm font-bold md:text-left">{title}</h4>
+      <ul className="flex flex-col gap-1 md:items-start">
         {links.map((link) => (
           <li key={link.label}>
             <Link
               to={link.to}
-              className="text-subtext-light hover:text-subtext block text-center text-sm transition-all duration-200"
+              className="text-subtext-light hover:text-subtext block text-center text-sm transition-all duration-200 md:text-left"
             >
               {link.label}
             </Link>
@@ -80,15 +80,15 @@ interface ExternalLinkSectionProps {
 function ExternalLinkSection({ section }: ExternalLinkSectionProps) {
   return (
     <div className="mb-3">
-      <h4 className="text-primary text-center text-sm font-bold">{section.label}</h4>
-      <ul className="flex flex-col gap-1">
+      <h4 className="text-primary text-center text-sm font-bold md:text-left">{section.label}</h4>
+      <ul className="flex flex-col gap-1 md:items-start">
         {section.link.map((item) => (
           <li key={item.label}>
             <a
               href={item.to}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-subtext-light hover:text-subtext block text-center text-sm transition-all duration-200"
+              className="text-subtext-light hover:text-subtext block text-center text-sm transition-all duration-200 md:text-left"
             >
               {item.label}
               <span className="sr-only"> (새 창에서 열림)</span>
@@ -106,36 +106,38 @@ function ExternalLinkSection({ section }: ExternalLinkSectionProps) {
  */
 export function Footer() {
   return (
-    <footer className="flex items-center justify-between gap-8 bg-gray-400 px-18.5 py-20">
-      <div className="flex-1">
-        <img
-          src={logoImg}
-          alt="Plum Logo"
-          width={86}
-          height={60}
-          className="h-15"
-        />
-        <p className="text-text mt-1 text-xl font-bold">강의는 놀이처럼, 성과는 전문가처럼!</p>
-        <p className="text-subtext-light mt-3 text-sm">
-          Copyright ⓒ {currentYear} Plum All rights reserved.
-        </p>
-      </div>
-
-      <nav
-        className="flex gap-6"
-        aria-label="푸터 네비게이션"
-      >
-        <InternalLinkSection
-          title="사이트맵"
-          links={SITEMAP_LINKS}
-        />
-        {FOOTER_LINKS.map((section) => (
-          <ExternalLinkSection
-            key={section.label}
-            section={section}
+    <footer className="bg-gray-400 px-6 py-16 md:px-12 md:py-20 lg:px-24">
+      <div className="mx-auto flex w-full max-w-7xl flex-col items-center gap-10 md:flex-row md:items-start md:justify-between">
+        <div className="flex-1 text-center md:text-left">
+          <img
+            src={logoImg}
+            alt="Plum Logo"
+            width={86}
+            height={60}
+            className="mx-auto h-12 w-auto md:mx-0 md:h-15"
           />
-        ))}
-      </nav>
+          <p className="text-text mt-1 text-xl font-bold">강의는 놀이처럼, 성과는 전문가처럼!</p>
+          <p className="text-subtext-light mt-3 text-sm">
+            Copyright ⓒ {currentYear} Plum All rights reserved.
+          </p>
+        </div>
+
+        <nav
+          className="grid w-full gap-6 text-center sm:grid-cols-2 md:w-auto md:grid-cols-3 md:text-left"
+          aria-label="푸터 네비게이션"
+        >
+          <InternalLinkSection
+            title="사이트맵"
+            links={SITEMAP_LINKS}
+          />
+          {FOOTER_LINKS.map((section) => (
+            <ExternalLinkSection
+              key={section.label}
+              section={section}
+            />
+          ))}
+        </nav>
+      </div>
     </footer>
   );
 }
