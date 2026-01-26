@@ -5,7 +5,7 @@ import { Status } from './shared.js';
  * 투표 선택지 개수 제한
  */
 export const MIN_POLL_OPTIONS = 2;
-export const MAX_POLL_OPTIONS = 5;
+export const MAX_POLL_OPTIONS = 4;
 
 /**
  * 투표 폼 유효성 검사 제약 조건

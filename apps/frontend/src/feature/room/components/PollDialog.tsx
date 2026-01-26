@@ -75,9 +75,6 @@ export function PollDialog({
           <div className="text-error flex w-full justify-center text-xs">
             선택 후에는 변경할 수 없습니다.
           </div>
-          <div className="text-subtext flex w-full justify-center text-xs">
-            제스처(1~4)로도 투표할 수 있으며 5번은 제스처로 선택할 수 없습니다.
-          </div>
 
           <TimeLeft
             timeLimitSeconds={poll.timeLimit}
