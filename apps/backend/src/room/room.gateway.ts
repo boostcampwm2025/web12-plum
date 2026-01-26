@@ -113,7 +113,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
         consumers: [],
       });
 
-      this.cleanupMediasoup(pending.transportIds, participant!);
+      await this.cleanupMediasoup(pending.transportIds, participant!, roomId);
     }
 
     try {
@@ -342,16 +342,51 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const participant = await this.participantManagerService.findOne(metadata.participantId);
       if (!participant) return { success: false, error: '참가자를 찾을 수 없습니다.' };
 
+      // Producer 먼저 조회
+      const producer = this.mediasoupService.getProducer(data.producerId);
+      if (!producer) return { success: false, error: 'Producer를 찾을 수 없습니다.' };
+
+      // 청중 video인 경우 Lazy 파이프 적용
+      let targetProducerId = data.producerId;
+      if (producer.appData.source === 'video') {
+        const producerOwner = await this.participantManagerService.findOne(
+          producer.appData.ownerId,
+        );
+        if (producerOwner && producerOwner.role === 'audience') {
+          // 청중 video → on-demand 파이프
+          const producerRouterIdx = this.mediasoupService.getParticipantRouterIndex(
+            metadata.roomId,
+            producer.appData.ownerId,
+          );
+          const consumerRouterIdx = this.mediasoupService.getParticipantRouterIndex(
+            metadata.roomId,
+            metadata.participantId,
+          );
+
+          const pipeProducer = await this.mediasoupService.pipeProducerOnDemand(
+            metadata.roomId,
+            producer,
+            producerRouterIdx,
+            consumerRouterIdx,
+          );
+          targetProducerId = pipeProducer.id;
+
+          this.logger.log(
+            `🔗 [Lazy Pipe] 청중 video on-demand: ${producer.id} → Router #${consumerRouterIdx}`,
+          );
+        }
+      }
+
+      // Consumer 생성
       const consumer = await this.mediasoupService.createConsumer(
         data.transportId,
-        data.producerId,
+        targetProducerId,
         metadata.participantId,
         data.rtpCapabilities,
       );
       await this.participantManagerService.updatePartial(metadata.participantId, {
         consumers: [...participant.consumers, consumer.id],
       });
-      const producer = this.mediasoupService.getProducer(data.producerId)!;
 
       this.logger.log(
         `✅ [consume] ${participant.name} - Consumer 생성 (ID: ${consumer.id}, 구독 대상 Producer: ${data.producerId})`,
@@ -464,7 +499,8 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
     try {
       await this.roomManagerService.updatePartial(room.id, { status: 'ended' });
       this.server.to(room.id).emit('room_end');
-      await this.mediasoupService.closeRouter(room.id);
+      // Multi-Router 정리 (모든 Router + PipeProducer)
+      await this.mediasoupService.closeRoutersWithStrategy(room.id);
       // TODO: 강의록 생성 기능 추가
 
       // 강의실 내부에 있는 모든 참가자 퇴장 처리
@@ -508,10 +544,23 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
       );
   }
 
-  private cleanupMediasoup(transportIds: string[], participant: Participant): void {
+  private async cleanupMediasoup(
+    transportIds: string[],
+    participant: Participant,
+    roomId: string,
+  ): Promise<void> {
+    // 1. PipeProducer 먼저 정리
+    const producerIds = Object.values(participant.producers).filter(Boolean);
+    for (const producerId of producerIds) {
+      await this.mediasoupService.cleanupPipeProducers(roomId, producerId);
+    }
+
+    // 2. Transport 정리
     for (const transportId of transportIds) {
       this.mediasoupService.closeTransport(transportId);
     }
+
+    // 3. Producer/Consumer 정리
     this.mediasoupService.cleanupParticipantFromMaps(
       Object.values(participant.producers),
       participant.consumers,
@@ -538,7 +587,10 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
       };
       this.server.to(roomId).emit('user_left', payload);
 
-      this.cleanupMediasoup(transportIds, participant);
+      await this.cleanupMediasoup(transportIds, participant, roomId);
+
+      // Multi-Router에서 참가자 제거
+      this.mediasoupService.removeParticipantFromRouter(roomId, participantId);
 
       await this.roomManagerService.removeParticipant(roomId, participantId);
       this.logger.log(`[${reason}] ${participant?.name || participantId} left room ${roomId}`);

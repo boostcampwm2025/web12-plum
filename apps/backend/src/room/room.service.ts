@@ -208,7 +208,7 @@ export class RoomService {
       this.multipleFileUpload(files),
       this.interactionService.createMultiplePoll(roomId, body.polls),
       this.interactionService.createMultipleQna(roomId, body.qnas),
-      this.mediasoupService.createRoutersWithStrategy(roomId, RoomType.Lecture),
+      this.mediasoupService.createRoutersWithStrategy(roomId, RoomType.LECTURE),
     ]);
 
     const room: Room = {
