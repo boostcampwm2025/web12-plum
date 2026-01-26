@@ -1,5 +1,5 @@
 import { AnimatePresence } from 'motion/react';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Dialog as RoomDialog } from './Dialog';
 import { useRoomUIStore } from '../stores/useRoomUIStore';
 import { PollDialog } from './PollDialog';
@@ -17,9 +17,10 @@ export function RoomDialogs() {
   const audienceVotedOptionByPollId = usePollStore((state) => state.audienceVotedOptionByPollId);
   const pollActions = usePollStore((state) => state.actions);
   const qnas = useQnaStore((state) => state.qnas);
+  const answeredByQnaId = useQnaStore((state) => state.answeredByQnaId);
+  const qnaActions = useQnaStore((state) => state.actions);
   const emit = useSocketStore((state) => state.actions.emit);
   const addToast = useToastStore((state) => state.actions.addToast);
-  const [submittedQnaById, setSubmittedQnaById] = useState<Record<string, boolean>>({});
 
   const activePoll = useMemo(() => polls.find((poll) => poll.status === 'active'), [polls]);
   const activeQna = useMemo(() => qnas.find((qna) => qna.status === 'active'), [qnas]);
@@ -46,14 +47,9 @@ export function RoomDialogs() {
         });
         return;
       }
-      setSubmittedQnaById((state) => ({ ...state, [qnaId]: true }));
+      qnaActions.setAnswered(qnaId, true);
     });
   };
-
-  useEffect(() => {
-    if (activeQna) return;
-    setSubmittedQnaById({});
-  }, [activeQna]);
 
   return (
     <AnimatePresence>
@@ -82,7 +78,7 @@ export function RoomDialogs() {
             qna={activeQna}
             startedAt={qnaStartedAt}
             onSubmit={handleAnswer}
-            isSubmitted={activeQna ? (submittedQnaById[activeQna.id] ?? false) : false}
+            isSubmitted={activeQna ? (answeredByQnaId[activeQna.id] ?? false) : false}
           />
         </RoomDialog>
       )}
