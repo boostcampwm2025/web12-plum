@@ -330,10 +330,6 @@ export function MediaControlsProvider({ children }: MediaControlsProviderProps) 
     mediaActions.setScreenStream(null);
     mediaActions.setScreenSharing(false);
 
-    // 미디어 상태 초기화
-    if (useMediaStore.getState().isMicOn) mediaActions.toggleMic();
-    if (useMediaStore.getState().isCameraOn) mediaActions.toggleCamera();
-
     logger.media.info('[MediaControls] 모든 미디어 자원 정리 완료');
   }, [infra, streamActions, mediaActions]);
 
