@@ -16,7 +16,7 @@ interface UseCreateRoomReturn {
  */
 export function useCreateRoom(): UseCreateRoomReturn {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { setMyInfo } = useRoomStore((state) => state.actions);
+  const { setMyInfo, setRoomTitle } = useRoomStore((state) => state.actions);
 
   /**
    * 강의실 생성 처리
@@ -30,6 +30,7 @@ export function useCreateRoom(): UseCreateRoomReturn {
 
       const roomData = response.data;
       setMyInfo(roomData.host);
+      setRoomTitle(data.name);
       return roomData;
     } catch (error) {
       logger.api.error(`강의실 생성 실패: ${error}`);

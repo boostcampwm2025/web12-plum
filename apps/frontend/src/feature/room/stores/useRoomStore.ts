@@ -19,6 +19,7 @@ export interface Participant {
 
 export interface RoomActions {
   setMyInfo: (info: MyInfo) => void;
+  setRoomTitle: (title: string) => void;
   setRouterRtpCapabilities: (capabilities: RtpCapabilities) => void;
 
   initParticipants: (participantMap: Map<string, Participant>) => void;
@@ -35,6 +36,7 @@ export interface RoomActions {
 interface RoomState {
   // 내 정보
   myInfo: MyInfo | null;
+  roomTitle: string | null;
   routerRtpCapabilities: RtpCapabilities | null;
   actions: RoomActions;
 
@@ -44,6 +46,7 @@ interface RoomState {
 
 const initialState: Omit<RoomState, 'actions'> = {
   myInfo: null,
+  roomTitle: null,
   routerRtpCapabilities: null,
   participants: new Map(),
 };
@@ -54,6 +57,7 @@ export const useRoomStore = create<RoomState>()(
       ...initialState,
       actions: {
         setMyInfo: (info) => set({ myInfo: info }),
+        setRoomTitle: (title) => set({ roomTitle: title }),
         setRouterRtpCapabilities: (capabilities) => set({ routerRtpCapabilities: capabilities }),
 
         /** 참가자 목록 초기화 */
@@ -150,6 +154,7 @@ export const useRoomStore = create<RoomState>()(
       storage: createJSONStorage(() => sessionStorage),
       partialize: (state) => ({
         myInfo: { id: state.myInfo?.id, name: state.myInfo?.name },
+        roomTitle: state.roomTitle,
       }),
     },
   ),
