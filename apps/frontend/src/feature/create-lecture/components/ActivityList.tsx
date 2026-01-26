@@ -18,7 +18,6 @@ interface ActivityItemProps {
  * @param title 활동 제목
  * @param onEdit 활동 수정 핸들러
  * @param onDelete 활동 삭제 핸들러
- * @returns 활동 아이템 JSX 요소
  */
 function ActivityItem({ type, title, onEdit, onDelete }: ActivityItemProps) {
   const typeLabel = type === 'poll' ? '투표' : 'Q&A';
@@ -69,7 +68,6 @@ function ActivityItem({ type, title, onEdit, onDelete }: ActivityItemProps) {
 /**
  * 활동 리스트 컴포넌트
  * 투표 및 Q&A 활동들을 나열
- * @returns 활동 리스트 JSX 요소
  */
 export function ActivityList() {
   const { polls, qnas, actions } = useActivityActionContext();

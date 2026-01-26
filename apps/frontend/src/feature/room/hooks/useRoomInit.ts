@@ -173,6 +173,19 @@ export function useRoomInit() {
 
       // 3. 방 입장 요청
       const routerRtpCapabilities = await roomManager.join(roomId, myInfo.id);
+      if (myInfo.role === 'audience') {
+        socketActions.emit('get_active_poll', (response) => {
+          if (!response.success || !response.poll) return;
+
+          pollActions.setActivePoll(response.poll);
+          if (response.votedOptionId !== null) {
+            pollActions.setAudienceVotedOption(response.poll.id, response.votedOptionId);
+          }
+
+          const { activeDialog, setActiveDialog } = useRoomUIStore.getState();
+          if (activeDialog !== 'vote') setActiveDialog('vote');
+        });
+      }
 
       // 4. Mediasoup Device 초기화
       await infra.initDevice(routerRtpCapabilities);

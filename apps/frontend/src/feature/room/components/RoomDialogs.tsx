@@ -14,12 +14,11 @@ export function RoomDialogs() {
   const activeDialog = useRoomUIStore((state) => state.activeDialog);
   const setActiveDialog = useRoomUIStore((state) => state.setActiveDialog);
   const polls = usePollStore((state) => state.polls);
+  const audienceVotedOptionByPollId = usePollStore((state) => state.audienceVotedOptionByPollId);
+  const pollActions = usePollStore((state) => state.actions);
   const qnas = useQnaStore((state) => state.qnas);
   const emit = useSocketStore((state) => state.actions.emit);
   const addToast = useToastStore((state) => state.actions.addToast);
-  const [selectedOptionByPollId, setSelectedOptionByPollId] = useState<
-    Record<string, number | null>
-  >({});
   const [submittedQnaById, setSubmittedQnaById] = useState<Record<string, boolean>>({});
 
   const activePoll = useMemo(() => polls.find((poll) => poll.status === 'active'), [polls]);
@@ -27,7 +26,7 @@ export function RoomDialogs() {
   const handleCloseDialog = () => setActiveDialog(activeDialog!);
   const pollStartedAt = getStartedAt(activePoll?.startedAt);
   const qnaStartedAt = getStartedAt(activeQna?.startedAt);
-  const selectedOptionId = activePoll ? (selectedOptionByPollId[activePoll.id] ?? null) : null;
+  const selectedOptionId = activePoll ? (audienceVotedOptionByPollId[activePoll.id] ?? null) : null;
 
   const handleVote = (pollId: string, optionId: number) => {
     emit('vote', { pollId, optionId }, (response) => {
@@ -52,11 +51,6 @@ export function RoomDialogs() {
   };
 
   useEffect(() => {
-    if (activePoll) return;
-    setSelectedOptionByPollId({});
-  }, [activePoll]);
-
-  useEffect(() => {
     if (activeQna) return;
     setSubmittedQnaById({});
   }, [activeQna]);
@@ -74,10 +68,7 @@ export function RoomDialogs() {
             onVote={handleVote}
             selectedOptionId={selectedOptionId}
             onSelectOption={(pollId, optionId) =>
-              setSelectedOptionByPollId((state) => ({
-                ...state,
-                [pollId]: optionId,
-              }))
+              pollActions.setAudienceVotedOption(pollId, optionId)
             }
           />
         </RoomDialog>

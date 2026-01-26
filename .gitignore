@@ -29,3 +29,11 @@ apps/backend/logs/
 
 # 로드 테스트 번들 파일 - 자동 생성됨
 apps/load-test/bundle-*.js
+
+# agent skills
+.agent
+.agents
+.claude
+.codex
+.gemini
+CLAUDE.md
