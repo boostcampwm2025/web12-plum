@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useLocation } from 'react-router';
 
 import { logger } from '@/shared/lib/logger';
 import { useStreamStore } from '@/store/useLocalStreamStore';
@@ -41,10 +40,6 @@ export function useRoomInit() {
   const infra = useMediaInfra();
   const controls = useMediaControlContext();
 
-  // 라우터 상태
-  const location = useLocation();
-  const mediaState = location.state as { isAudioOn?: boolean; isVideoOn?: boolean } | null;
-
   // 전역 상태
   const hasHydrated = useMediaStore((state) => state.hasHydrated);
   const roomActions = useRoomStore((state) => state.actions);
@@ -59,11 +54,8 @@ export function useRoomInit() {
    * 초기 미디어 장치 설정 및 송출 시작
    */
   const handleInitialMedia = async () => {
-    const currentState = useMediaStore.getState();
-    const isMicOn = mediaState?.isAudioOn ?? currentState.isMicOn;
-    const isCameraOn = mediaState?.isVideoOn ?? currentState.isCameraOn;
-
-    if (mediaState) mediaActions.initialize(isMicOn, isCameraOn);
+    const isMicOn = useMediaStore.getState().isMicOn;
+    const isCameraOn = useMediaStore.getState().isCameraOn;
     if (!isCameraOn && !isMicOn) return;
 
     try {
