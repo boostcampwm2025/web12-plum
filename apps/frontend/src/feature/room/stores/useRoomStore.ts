@@ -6,7 +6,7 @@ import { RtpCapabilities } from 'mediasoup-client/types';
 export interface MyInfo {
   id: string;
   name: string;
-  role: ParticipantRole;
+  role?: ParticipantRole;
 }
 
 export interface Participant {

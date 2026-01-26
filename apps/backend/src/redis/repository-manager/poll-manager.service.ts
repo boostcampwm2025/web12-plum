@@ -107,6 +107,85 @@ export class PollManagerService extends BaseRedisRepository<Poll> {
   }
 
   /**
+   * 투표 선택지별 현재 집계 수 조회
+   */
+  async getVoteCounts(pollId: string): Promise<Record<number, number>> {
+    const client = this.redisService.getClient();
+    const countKey = this.getVoteCountKey(pollId);
+    const countsRaw = await client.hgetall(countKey);
+
+    const counts: Record<number, number> = {};
+    Object.entries(countsRaw || {}).forEach(([id, count]) => {
+      const optionId = Number(id);
+      if (!Number.isNaN(optionId)) {
+        counts[optionId] = Number(count);
+      }
+    });
+
+    return counts;
+  }
+
+  /**
+   * 여러 투표의 집계 데이터를 한 번에 조회
+   */
+  async getMultiVoteCounts(pollIds: string[]): Promise<Record<string, Record<number, number>>> {
+    if (pollIds.length === 0) return {};
+
+    try {
+      const client = this.redisService.getClient();
+      const pipeline = client.pipeline();
+
+      pollIds.forEach((id) => {
+        pipeline.hgetall(this.getVoteCountKey(id));
+      });
+
+      const results = await pipeline.exec();
+      if (!results) return {};
+
+      const multiCounts: Record<string, Record<number, number>> = {};
+      results.forEach((entry, index) => {
+        if (!entry) return;
+
+        const [err, rawData] = entry;
+        if (err || !rawData) return;
+
+        const pollId = pollIds[index];
+        const counts: Record<number, number> = {};
+        Object.entries(rawData as Record<string, string>).forEach(([optId, count]) => {
+          const optionId = Number(optId);
+          if (!Number.isNaN(optionId)) {
+            counts[optionId] = Number(count);
+          }
+        });
+
+        multiCounts[pollId] = counts;
+      });
+
+      return multiCounts;
+    } catch (error) {
+      this.logger.error('[getMultiVoteCounts] Failed to fetch vote counts', error.stack);
+      return {};
+    }
+  }
+
+  /**
+   * 특정 참가자의 투표 선택지 조회
+   */
+  async getVotedOptionId(pollId: string, participantId: string): Promise<number | null> {
+    const client = this.redisService.getClient();
+    const voterKey = this.getVoterKey(pollId);
+    const storedValue = await client.hget(voterKey, participantId);
+
+    if (!storedValue) return null;
+
+    const separatorIndex = storedValue.indexOf(':');
+    const optionIdRaw =
+      separatorIndex === -1 ? storedValue : storedValue.substring(0, separatorIndex);
+    const optionId = Number(optionIdRaw);
+    return Number.isNaN(optionId) ? null : optionId;
+  }
+
+  /**
    * 투표 시작
    */
   async startPoll(
