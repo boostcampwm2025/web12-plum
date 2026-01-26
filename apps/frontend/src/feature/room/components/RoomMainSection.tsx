@@ -48,7 +48,7 @@ function ScreenShareVideo() {
             className="h-full w-full rounded-2xl bg-black object-contain"
           />
         ) : (
-          <div className="flex h-full w-full flex-col items-center justify-center rounded-2xl bg-gray-500">
+          <div className="flex h-full w-full flex-col items-center justify-center overflow-hidden rounded-2xl bg-gray-500">
             <img
               src={DodoReady}
               alt="화면공유 대기중"
