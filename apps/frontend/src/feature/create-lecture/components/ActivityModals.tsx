@@ -8,7 +8,6 @@ import { useActivityModalContext } from '../hooks/useActivityModalContext';
 
 /**
  * 활동 모달 컴포넌트 (투표/Q&A 생성 및 수정)
- * @returns 활동 모달 JSX 요소
  */
 export function ActivityModals() {
   const { modalState, closeModal } = useActivityModalContext();
