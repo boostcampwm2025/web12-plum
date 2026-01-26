@@ -211,14 +211,10 @@ export function EnterLectureForm({ roomId, lectureName = '예시 강의실' }: E
 
     try {
       await enterRoom(data);
-
       logger.ui.info('강의실 입장 폼 제출 성공');
-      const mediaState = { isAudioOn: data.isAudioOn, isVideoOn: data.isVideoOn };
-      navigate(ROUTES.ROOM(roomId), { state: mediaState });
+      navigate(ROUTES.ROOM(roomId));
     } catch (error) {
       logger.ui.error('강의실 입장 실패:', error);
-      // TODO: API 에러별 메시지 추가
-      // if (error instanceof ApiError) {}
       addToast({ type: 'error', title: '강의실 입장에 실패했습니다. 잠시 후 다시 시도해주세요.' });
     }
     logger.ui.info('강의실 입장 폼 제출 완료');
