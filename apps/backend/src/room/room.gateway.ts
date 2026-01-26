@@ -143,6 +143,9 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
           joinedAt: new Date(),
         };
 
+        // 5. Multi-Router: 참가자에게 Router 할당
+        this.mediasoupService.assignRouterForParticipant(roomId, participantId);
+
         socket.to(roomId).emit('user_joined', payload);
       }
 
