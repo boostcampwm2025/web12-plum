@@ -120,6 +120,17 @@ export function Footer() {
           <p className="text-subtext-light mt-3 text-sm">
             Copyright ⓒ {currentYear} Plum All rights reserved.
           </p>
+          <p className="text-subtext-light mt-2 text-xs">
+            Designed by{' '}
+            <a
+              href="https://www.freepik.com"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Freepik
+              <span className="sr-only"> (새 창에서 열림)</span>
+            </a>
+          </p>
         </div>
 
         <nav
