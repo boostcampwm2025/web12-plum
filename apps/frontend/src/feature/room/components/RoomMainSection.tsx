@@ -100,7 +100,7 @@ function MyVideo({ currentUser, videoMode, onModeChange, onVideoElementChange }:
  * 강의 화면과 참가자 비디오를 포함
  */
 export function RoomMainSection() {
-  const [userVideoMode, setUserVideoMode] = useState<VideoDisplayMode>('pip');
+  const [userVideoMode, setUserVideoMode] = useState<VideoDisplayMode>('side');
   const [gestureVideoElement, setGestureVideoElement] = useState<HTMLVideoElement | null>(null);
   const isCameraOn = useMediaStore((state) => state.isCameraOn);
 

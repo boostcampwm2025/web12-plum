@@ -198,7 +198,7 @@ function ParticipantVideoComponent({
         },
       }}
       className={cn(
-        'relative z-50 w-50.5 overflow-hidden rounded-lg',
+        'relative z-25 w-50.5 overflow-hidden rounded-lg',
         isCurrentUser && 'group',
         mode === 'minimize' && 'flex h-9 items-center justify-between bg-gray-500 px-2 shadow-md',
         mode === 'pip' && 'shadow-md',
