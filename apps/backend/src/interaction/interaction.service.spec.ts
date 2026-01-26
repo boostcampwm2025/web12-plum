@@ -29,6 +29,8 @@ describe('InteractionService (투표 및 Q&A 생성 테스트)', () => {
     submitAnswer: jest.fn(),
     closeQna: jest.fn(),
     getFinalResults: jest.fn(),
+    getActiveAnswers: jest.fn(),
+    hasAnswered: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -512,6 +514,61 @@ describe('InteractionService (투표 및 Q&A 생성 테스트)', () => {
 
       expect(result).toEqual([]);
       expect(mockQnaManager.getQnasInRoom).toHaveBeenCalledWith('empty-room');
+    });
+
+    it('진행 중 질문에 대해서는 응답 목록이 함께 포함되어야 한다', async () => {
+      const roomId = 'room-123';
+      const activeQna = { id: 'qna-1', title: '질문 1', status: 'active' };
+      const pendingQna = { id: 'qna-2', title: '질문 2', status: 'pending' };
+      const mockAnswers = [{ participantId: 'u1', participantName: 'A', text: '답변1' }];
+
+      mockQnaManager.getQnasInRoom.mockResolvedValue([activeQna, pendingQna]);
+      mockQnaManager.getActiveAnswers.mockResolvedValue(mockAnswers);
+
+      const result = await service.getQnas(roomId);
+
+      expect(mockQnaManager.getActiveAnswers).toHaveBeenCalledWith('qna-1');
+      expect(result).toEqual([{ ...activeQna, answers: mockAnswers }, pendingQna]);
+    });
+  });
+
+  describe('getActiveQna (진행 중 질문 조회)', () => {
+    it('진행 중 질문이 없으면 null과 answered=false를 반환해야 한다', async () => {
+      mockQnaManager.getQnasInRoom.mockResolvedValue([]);
+
+      const result = await service.getActiveQna('room-1', 'participant-1');
+
+      expect(result).toEqual({ qna: null, answered: false });
+      expect(mockQnaManager.getQnasInRoom).toHaveBeenCalledWith('room-1');
+      expect(mockQnaManager.hasAnswered).not.toHaveBeenCalled();
+    });
+
+    it('진행 중 질문이 있으면 payload와 answered 여부를 반환해야 한다', async () => {
+      const activeQna = {
+        id: 'qna-1',
+        title: '질문 1',
+        status: 'active',
+        timeLimit: 60,
+        startedAt: '2024-01-01T00:00:00Z',
+        endedAt: '2024-01-01T00:01:00Z',
+      };
+
+      mockQnaManager.getQnasInRoom.mockResolvedValue([activeQna]);
+      mockQnaManager.hasAnswered.mockResolvedValue(true);
+
+      const result = await service.getActiveQna('room-1', 'participant-1');
+
+      expect(result).toEqual({
+        qna: {
+          id: activeQna.id,
+          title: activeQna.title,
+          timeLimit: activeQna.timeLimit,
+          startedAt: activeQna.startedAt,
+          endedAt: activeQna.endedAt,
+        },
+        answered: true,
+      });
+      expect(mockQnaManager.hasAnswered).toHaveBeenCalledWith('qna-1', 'participant-1');
     });
   });
 
