@@ -131,9 +131,9 @@ function SideMenu() {
     },
   ];
   const visibleSideButtons =
-    myRole === 'audience'
-      ? sideMenuButtons.filter((button) => button.icon !== 'menu')
-      : sideMenuButtons;
+    myRole === 'presenter'
+      ? sideMenuButtons
+      : sideMenuButtons.filter((button) => button.icon !== 'menu');
 
   return (
     <div className="flex items-center gap-1 justify-self-end">
@@ -170,16 +170,14 @@ export function RoomMenuBar({ className, roomTitle = '강의실' }: RoomMenuBarP
       </div>
 
       <div className="flex items-center gap-3 justify-self-center">
-        {myRole ? (
-          <>
-            <MainMenu />
-            <div className="mx-2 h-8 w-px bg-gray-400" />
-            <ExitButton />
-          </>
-        ) : null}
+        <>
+          <MainMenu />
+          <div className="mx-2 h-8 w-px bg-gray-400" />
+          <ExitButton />
+        </>
       </div>
 
-      {myRole ? <SideMenu /> : <div className="justify-self-end" />}
+      <SideMenu />
     </nav>
   );
 }
