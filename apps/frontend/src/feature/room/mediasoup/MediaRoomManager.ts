@@ -51,8 +51,11 @@ export class MediaRoomManager {
 
     // 미디어 상태 변경 처리
     this.socket.on('media_state_changed', (data) => {
+      logger.media.info(`[Room] 미디어 상태 변경: (${data.type}) - ${data.action}`);
       if (data.action === 'pause') {
         this.actions.media.removeRemoteStreamByParticipant(data.participantId, data.type);
+      } else if (data.action === 'resume') {
+        this.actions.controls.consumeRemoteProducer(data);
       }
     });
 
