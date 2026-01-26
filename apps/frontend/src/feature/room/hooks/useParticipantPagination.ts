@@ -4,12 +4,13 @@ import { useRoomStore } from '../stores/useRoomStore';
 
 const MAX_ITEMS = 5;
 
-export function useParticipantPagination(dynamicItemsPerPage: number) {
+export function useParticipantPagination(dynamicItemsPerPage: number | null) {
   const [currentPage, setCurrentPage] = useState(0);
   const participantsMap = useRoomStore(useShallow((state) => state.participants));
   const participants = useMemo(() => Array.from(participantsMap.values()), [participantsMap]);
 
-  const itemsPerPage = Math.min(MAX_ITEMS, dynamicItemsPerPage) || MAX_ITEMS;
+  // 아직 측정되지 않았으면 0으로 처리 (빈 윈도우)
+  const itemsPerPage = dynamicItemsPerPage !== null ? Math.min(MAX_ITEMS, dynamicItemsPerPage) : 0;
 
   /**
    * 비디오를 송출하는 참가자를 우선적으로 정렬
