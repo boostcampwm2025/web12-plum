@@ -4,7 +4,7 @@ import { cn } from '@/shared/lib/utils';
 import { Icon } from '@/shared/components/icon/Icon';
 import { Button } from '@/shared/components/Button';
 import { MediaType, ParticipantRole } from '@plum/shared-interfaces';
-import { useMediaConnectionContext } from '../hooks/useMediaConnectionContext';
+import { useMediaControlContext } from '../hooks/useMediaControlContext';
 import { logger } from '@/shared/lib/logger';
 import { useMediaStore } from '../stores/useMediaStore';
 import { useGestureStore } from '../stores/useGestureStore';
@@ -109,7 +109,7 @@ function ParticipantVideoComponent({
   onVideoElementChange,
 }: ParticipantVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const { consumeRemoteProducer, stopConsuming } = useMediaConnectionContext();
+  const { consumeRemoteProducer, stopConsuming } = useMediaControlContext();
 
   // 원격 스트림인 경우에만 스토어에서 비디오 스트림 구독
   const remoteStream = useRemoteVideoStream(isCurrentUser ? '' : id);
@@ -138,14 +138,14 @@ function ParticipantVideoComponent({
     } // 수신 중단 (마운트는 유지되나 윈도우에서 밀려남)
     else {
       logger.ui.debug(`[Network] 수신 중단(InActive): ${name} (ID: ${id})`);
-      stopConsuming(videoProducerId, 'video');
+      stopConsuming(id, 'video');
     }
 
-    // 언마운트 로그 (DOM에서 완전히 제거됨)
+    // 언마운트 시 정리 (DOM에서 완전히 제거됨)
     return () => {
       if (videoProducerId) {
         logger.ui.debug(`[Network] 수신 중단(언마운트): ${name} (ID: ${id})`);
-        stopConsuming(videoProducerId, 'video');
+        stopConsuming(id, 'video');
       }
     };
   }, [

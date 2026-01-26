@@ -4,16 +4,16 @@ import '@testing-library/jest-dom';
 
 import { ParticipantVideo } from './ParticipantVideo';
 import { useMediaStore, RemoteStream } from '../stores/useMediaStore';
-import { useMediaConnectionContext } from '../hooks/useMediaConnectionContext';
 import type { ParticipantRole } from '@plum/shared-interfaces';
+import { useMediaControlContext } from '../hooks/useMediaControlContext';
 
 // 1. 외부 의존성 모킹
 vi.mock('../stores/useMediaStore', () => ({
   useMediaStore: vi.fn(),
 }));
 
-vi.mock('../hooks/useMediaConnectionContext', () => ({
-  useMediaConnectionContext: vi.fn(),
+vi.mock('../hooks/useMediaControlContext', () => ({
+  useMediaControlContext: vi.fn(),
 }));
 
 vi.mock('@/shared/lib/logger', () => ({
@@ -21,7 +21,7 @@ vi.mock('@/shared/lib/logger', () => ({
 }));
 
 const mockUseMediaStore = vi.mocked(useMediaStore);
-const mockUseMediaConnectionContext = vi.mocked(useMediaConnectionContext);
+const mockUseMediaControlContext = vi.mocked(useMediaControlContext);
 
 describe('ParticipantVideo', () => {
   const mockConsume = vi.fn();
@@ -40,10 +40,10 @@ describe('ParticipantVideo', () => {
     vi.clearAllMocks();
 
     // 기본적으로 수신 컨텍스트 모킹
-    mockUseMediaConnectionContext.mockReturnValue({
+    mockUseMediaControlContext.mockReturnValue({
       consumeRemoteProducer: mockConsume,
       stopConsuming: mockStopConsuming,
-    } as unknown as ReturnType<typeof useMediaConnectionContext>);
+    } as unknown as ReturnType<typeof useMediaControlContext>);
 
     // 기본적으로 스토어에서 스트림이 없는 상태로 시작
     mockUseMediaStore.mockImplementation((selector) =>
@@ -78,7 +78,7 @@ describe('ParticipantVideo', () => {
         />,
       );
 
-      expect(mockStopConsuming).toHaveBeenCalledWith(defaultProps.videoProducerId, 'video');
+      expect(mockStopConsuming).toHaveBeenCalledWith(defaultProps.id, 'video');
     });
 
     it('컴포넌트가 언마운트될 때 반드시 stopConsuming이 호출되어 리소스를 정리한다', () => {
@@ -91,7 +91,7 @@ describe('ParticipantVideo', () => {
 
       unmount();
 
-      expect(mockStopConsuming).toHaveBeenCalledWith(defaultProps.videoProducerId, 'video');
+      expect(mockStopConsuming).toHaveBeenCalledWith(defaultProps.id, 'video');
     });
   });
 
