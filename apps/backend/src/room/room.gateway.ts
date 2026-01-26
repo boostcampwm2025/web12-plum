@@ -269,6 +269,29 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
         type: data.type,
       };
 
+      // Producer 생성 후에 파이프 전략 적용
+      const isPresenter = participant.role === 'presenter';
+      const isAudio = data.type === 'audio';
+
+      if (isPresenter || isAudio) {
+        // 발표자 전체 + 청중 audio는 Eager 파이프
+        // 지금 라우터 가져오기
+        const routerIndex = this.mediasoupService.getParticipantRouterIndex(
+          metadata.roomId,
+          metadata.participantId,
+        );
+        // 내 라우터 제외하고 파이프 연결하기
+        await this.mediasoupService.pipeProducerToAllRouters(
+          metadata.roomId,
+          producer,
+          routerIndex,
+        );
+        this.logger.log(
+          `🎤 [Eager Pipe] ${participant.name} ${data.type} → 모든 Router로 파이프 완료`,
+        );
+      }
+      // 청중 video는 파이프 안 함 (Lazy - consume 시점에)
+
       socket.to(metadata.roomId).emit('new_producer', payload);
 
       this.logger.log(
