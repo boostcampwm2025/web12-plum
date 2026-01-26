@@ -19,7 +19,6 @@ export function RoomEndedModal() {
   const isRoomEnded = useRoomStore((state) => state.isRoomEnded);
 
   const [countdown, setCountdown] = useState(REDIRECT_DELAY_SECONDS);
-  const { setRoomEnded } = useRoomStore((state) => state.actions);
 
   useEffect(() => {
     if (!isRoomEnded) return;
@@ -42,7 +41,6 @@ export function RoomEndedModal() {
     return () => {
       clearInterval(interval);
       clearTimeout(timeout);
-      setRoomEnded(false);
     };
   }, [isRoomEnded, navigate]);
 

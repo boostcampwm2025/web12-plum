@@ -260,6 +260,7 @@ export function useRoomInit() {
 
       // 미디어 자원 정리
       controls.cleanup();
+      roomActions.setRoomEnded(false);
 
       if (socket?.connected) socketActions.disconnect();
 
