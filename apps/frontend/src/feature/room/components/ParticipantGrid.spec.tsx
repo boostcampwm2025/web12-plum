@@ -101,7 +101,7 @@ describe('ParticipantGrid', () => {
       goToNextPage: mockGoToNextPage,
       hasPrevPage: false,
       hasNextPage: true,
-      sortedParticipants: participants,
+      participants,
       visibleWindowParticipants: participants,
       currentItems: [],
       ...overrides,
