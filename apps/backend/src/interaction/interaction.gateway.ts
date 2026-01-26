@@ -47,6 +47,7 @@ import {
   RoomManagerService,
 } from '../redis/repository-manager/index.js';
 import { ZodValidationPipeSocket } from '../common/pipes/index.js';
+import { PrometheusService } from '../prometheus/prometheus.service.js';
 import { BusinessException, SocketMetadata } from '../common/types/index.js';
 import { InteractionService } from './interaction.service.js';
 
@@ -63,6 +64,7 @@ export class InteractionGateway implements OnGatewayDisconnect {
     private readonly interactionService: InteractionService,
     private readonly participantManagerService: ParticipantManagerService,
     private readonly roomManagerService: RoomManagerService,
+    private readonly prometheusService: PrometheusService,
   ) {}
 
   /**
@@ -78,6 +80,8 @@ export class InteractionGateway implements OnGatewayDisconnect {
     @ConnectedSocket() socket: Socket,
     @MessageBody() data: ActionGestureRequest,
   ): Promise<ActionGestureResponse> {
+    const startTime = Date.now();
+
     const metadata = this.socketMetadataService.get(socket.id);
     if (!metadata) {
       return { success: false, error: '먼저 join_room을 호출하세요.' };
@@ -108,9 +112,18 @@ export class InteractionGateway implements OnGatewayDisconnect {
 
       this.logger.log(`[action_gesture] ${participant.name}님이 ${data.gesture} 제스처`);
 
+      // 제스처 처리 시간 측정 및 기록
+      const duration = Date.now() - startTime;
+      this.prometheusService.recordGestureEvent(data.gesture, duration);
+
       return { success: true };
     } catch (error) {
       this.logger.error(`[action_gesture] 실패:`, error);
+
+      // 에러 발생 시에도 시간 측정 (실패한 경우 추적용)
+      const duration = Date.now() - startTime;
+      this.prometheusService.recordGestureEvent(data.gesture || 'unknown', duration);
+
       return { success: false, error: '제스처 처리에 실패했습니다.' };
     }
   }
@@ -382,7 +395,7 @@ export class InteractionGateway implements OnGatewayDisconnect {
       this.server.to(`${qna.roomId}:audience`).emit('qna_end', audiencePayload);
       this.logger.log(`[auto_close_qna] 전달 ${qna.roomId}: ${qna.id}`);
     } catch (error) {
-      this.logger.error(`[auto_close_poll] 전달 실패: `, error);
+      this.logger.error(`[auto_close_qna] 전달 실패: `, error);
     }
   }
 

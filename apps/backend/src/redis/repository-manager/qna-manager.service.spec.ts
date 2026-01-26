@@ -394,7 +394,7 @@ describe('QnaManagerService', () => {
 
       expect(closeQnaSpy).toHaveBeenCalledWith('qna-123');
       expect((service as any).eventEmitter.emit).toHaveBeenCalledWith(
-        'poll.autoClosed',
+        'qna.autoClosed',
         expect.objectContaining({ qnaId: 'qna-123' }),
       );
     });

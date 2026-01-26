@@ -9,6 +9,7 @@ import { useMediaStore } from '../stores/useMediaStore';
 import { MyInfo, useRoomStore } from '../stores/useRoomStore';
 import { useEffect, useRef, useState } from 'react';
 import { useGestureRecognition } from '../hooks/useGestureRecognition';
+import DodoReady from '@/assets/logo/dodo-ready.svg';
 
 /**
  * 화면공유 영상을 표시하는 컴포넌트
@@ -27,7 +28,6 @@ function ScreenShareVideo() {
 
   // 표시할 스트림 결정: 로컬 화면공유 > 원격 화면공유
   const displayStream = isScreenSharing ? screenStream : remoteScreenStream?.stream;
-  const hasScreenShare = isScreenSharing || !!remoteScreenStream;
 
   useEffect(() => {
     if (videoRef.current && displayStream) {
@@ -35,16 +35,29 @@ function ScreenShareVideo() {
     }
   }, [displayStream]);
 
-  if (!hasScreenShare) return <div className="aspect-video w-full rounded-2xl bg-gray-200"></div>;
-
   return (
-    <video
-      ref={videoRef}
-      autoPlay
-      playsInline
-      muted
-      className="h-full w-full rounded-2xl bg-black object-contain"
-    />
+    <div className="flex h-full max-h-full w-full max-w-full items-center justify-center">
+      <div className="aspect-video max-h-full w-full max-w-full">
+        {displayStream ? (
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            className="h-full w-full rounded-2xl bg-black object-contain"
+          />
+        ) : (
+          <div className="flex h-full w-full flex-col items-center justify-center rounded-2xl bg-gray-500">
+            <img
+              src={DodoReady}
+              alt="화면공유 대기중"
+              className="w-[clamp(6rem,20vw,10rem)] object-contain"
+            />
+            <span className="text-text text-[clamp(1rem,2.5vw,1.5rem)]">화면 공유 대기중...</span>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -105,7 +118,7 @@ export function RoomMainSection() {
         <ToastStack />
         <motion.div
           layout
-          className="relative flex grow items-center justify-center"
+          className="relative flex grow items-center justify-center overflow-hidden"
           transition={{
             duration: 0.3,
             ease: 'easeInOut',

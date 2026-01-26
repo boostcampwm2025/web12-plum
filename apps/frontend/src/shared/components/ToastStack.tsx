@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useRef } from 'react';
+import { forwardRef, memo, useEffect, useRef } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { Icon } from '@/shared/components/icon/Icon';
 import type { IconName } from '@/shared/components/icon/iconMap';
@@ -59,7 +59,7 @@ const ToastItem = forwardRef<HTMLDivElement, { toast: Toast }>(({ toast }, ref) 
   );
 });
 
-export function ToastStack() {
+export const ToastStack = memo(function ToastStack() {
   const toasts = useToastStore((state) => state.toasts);
   const removeToast = useToastStore((state) => state.actions.removeToast);
   const timersRef = useRef<Map<string, number>>(new Map());
@@ -111,4 +111,4 @@ export function ToastStack() {
       </AnimatePresence>
     </div>
   );
-}
+});

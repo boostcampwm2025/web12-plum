@@ -12,6 +12,9 @@ vi.mock('../hooks/useEnterRoom');
 vi.mock('../hooks/useNicknameValidation');
 vi.mock('@/feature/room/stores/useMediaStore');
 vi.mock('@/shared/lib/logger');
+vi.mock('react-router', () => ({
+  useNavigate: vi.fn(),
+}));
 
 vi.mock('./LocalMediaPreview', () => ({
   LocalMediaPreview: () => <div data-testid="media-preview">미디어 프리뷰</div>,

@@ -4,6 +4,7 @@ import { RoomMainSection } from '../feature/room/components/RoomMainSection';
 import { RoomSideSection } from '../feature/room/components/RoomSideSection';
 import { MediaConnectionProvider } from '@/feature/room/hooks/useMediaConnectionContext';
 import { useRoomInit } from '@/feature/room/hooks/useRoomInit';
+import { RemoteAudioPlayer } from '@/feature/room/components/RemoteAudioPlayer';
 
 function RoomContent() {
   const { isLoading, isSuccess, error, retry } = useRoomInit();
@@ -23,6 +24,7 @@ function RoomContent() {
 
   return (
     <div className="flex h-full w-full flex-col bg-gray-700 pt-4">
+      <RemoteAudioPlayer />
       <RoomDialogs />
       <div className="flex h-full overflow-hidden px-4">
         <RoomMainSection />

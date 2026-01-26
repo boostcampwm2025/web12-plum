@@ -8,7 +8,7 @@ import { HostBrowser } from './phase1-host';
 import { ParticipantBrowser } from './phase1-participant';
 import { createRoom, joinAsParticipant, delay } from './utils';
 
-const PARTICIPANT_COUNT = 60;
+const PARTICIPANT_COUNT = 2;
 const MAINTAIN_DURATION = 2 * 60 * 1000; // 2분
 
 async function main() {

@@ -19,7 +19,7 @@ export function ScreenShareBanner({ userName }: ScreenShareBannerProps) {
   if (!isScreenSharing) return null;
 
   return (
-    <div className="flex w-full items-center justify-between rounded-lg bg-gray-400 py-1 pr-1 pl-5">
+    <div className="mb-2 flex w-full items-center justify-between rounded-lg bg-gray-500 py-1 pr-1 pl-5">
       <span className="text-text min-w-0 truncate">{userName}의 화면</span>
 
       <Button

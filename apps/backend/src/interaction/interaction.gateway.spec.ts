@@ -9,6 +9,7 @@ import {
 } from '../redis/repository-manager/index.js';
 import { Socket } from 'socket.io';
 import { BusinessException } from '../common/types/index.js';
+import { PrometheusService } from '../prometheus/prometheus.service.js';
 
 describe('InteractionGateway', () => {
   let gateway: InteractionGateway;
@@ -58,6 +59,13 @@ describe('InteractionGateway', () => {
             startQna: jest.fn(),
             answer: jest.fn(),
             stopQna: jest.fn(),
+          },
+        },
+        {
+          provide: PrometheusService,
+          useValue: {
+            recordGestureEvent: jest.fn(),
+            recordGestureProcessingTime: jest.fn(),
           },
         },
       ],
@@ -778,7 +786,7 @@ describe('InteractionGateway', () => {
       await gateway.handleAutoClosedQnaEvent(mockEventPayload);
 
       expect(loggerSpy).toHaveBeenCalledWith(
-        expect.stringContaining('[auto_close_poll] 전달 실패:'),
+        expect.stringContaining('[auto_close_qna] 전달 실패:'),
         expect.any(Error),
       );
     });

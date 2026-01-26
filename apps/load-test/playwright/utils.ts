@@ -2,7 +2,17 @@
  * Phase 1: WebRTC 전체 플로우 부하테스트 - 공통 유틸리티
  */
 
+// 배포 서버 테스트
+// export const BACKEND_URL = 'http://localhost:3000';
 export const BACKEND_URL = 'https://tiki-plum.n-e.kr/api'; // nginx 프록시 경로
+
+// 프론트엔드 URL
+// export const FRONTEND_URL = 'http://localhost:5173';
+export const FRONTEND_URL = 'https://web12-plum-dev.vercel.app';
+
+// Origin 헤더
+// export const ORIGIN = 'http://localhost:5173';
+export const ORIGIN = 'https://web12-plum-dev.vercel.app';
 
 export interface RoomInfo {
   roomId: string;
@@ -26,7 +36,7 @@ export async function createRoom(): Promise<RoomInfo> {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Origin: 'https://web12-plum-dev.vercel.app',
+      Origin: ORIGIN,
     },
     body: JSON.stringify({
       name: roomName,
@@ -62,7 +72,7 @@ export async function joinAsParticipant(
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Origin: 'https://web12-plum-dev.vercel.app',
+      Origin: ORIGIN,
     },
     body: JSON.stringify({
       name: roomName,

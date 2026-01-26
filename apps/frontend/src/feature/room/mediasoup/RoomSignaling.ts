@@ -24,6 +24,7 @@ export const RoomSignaling = {
     roomId: string,
     myId: string,
     initParticipants: (map: Map<string, Participant>) => void,
+    setMyInfo: (info: { id: string; name: string; role: ParticipantRole }) => void,
   ): Promise<RtpCapabilities> => {
     return new Promise((resolve, reject) => {
       const payload = { roomId, participantId: myId };
@@ -45,6 +46,11 @@ export const RoomSignaling = {
               producers: new Map(),
             });
           });
+
+          const me = participantMap.get(myId);
+          if (me) {
+            setMyInfo({ id: me.id, name: me.name, role: me.role });
+          }
 
           // 본인 정보는 원격 목록에서 제외
           if (participantMap.has(myId)) participantMap.delete(myId);
