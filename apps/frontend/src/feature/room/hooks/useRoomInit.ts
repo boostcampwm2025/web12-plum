@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useLocation } from 'react-router';
 
 import { logger } from '@/shared/lib/logger';
 import { useStreamStore } from '@/store/useLocalStreamStore';
@@ -40,6 +41,10 @@ export function useRoomInit() {
   const infra = useMediaInfra();
   const controls = useMediaControlContext();
 
+  // 라우터 상태
+  const location = useLocation();
+  const mediaState = location.state as { isAudioOn?: boolean; isVideoOn?: boolean } | null;
+
   // 전역 상태
   const hasHydrated = useMediaStore((state) => state.hasHydrated);
   const roomActions = useRoomStore((state) => state.actions);
@@ -54,8 +59,11 @@ export function useRoomInit() {
    * 초기 미디어 장치 설정 및 송출 시작
    */
   const handleInitialMedia = async () => {
-    const isMicOn = useMediaStore.getState().isMicOn;
-    const isCameraOn = useMediaStore.getState().isCameraOn;
+    const currentState = useMediaStore.getState();
+    const isMicOn = mediaState?.isAudioOn ?? currentState.isMicOn;
+    const isCameraOn = mediaState?.isVideoOn ?? currentState.isCameraOn;
+
+    if (mediaState) mediaActions.initialize(isMicOn, isCameraOn);
     if (!isCameraOn && !isMicOn) return;
 
     try {
@@ -165,6 +173,19 @@ export function useRoomInit() {
 
       // 3. 방 입장 요청
       const routerRtpCapabilities = await roomManager.join(roomId, myInfo.id);
+      if (myInfo.role === 'audience') {
+        socketActions.emit('get_active_poll', (response) => {
+          if (!response.success || !response.poll) return;
+
+          pollActions.setActivePoll(response.poll);
+          if (response.votedOptionId !== null) {
+            pollActions.setAudienceVotedOption(response.poll.id, response.votedOptionId);
+          }
+
+          const { activeDialog, setActiveDialog } = useRoomUIStore.getState();
+          if (activeDialog !== 'vote') setActiveDialog('vote');
+        });
+      }
 
       // 4. Mediasoup Device 초기화
       await infra.initDevice(routerRtpCapabilities);

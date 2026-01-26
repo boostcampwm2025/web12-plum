@@ -6,7 +6,6 @@ import { FormField } from '@/shared/components/FormField';
 import { logger } from '@/shared/lib/logger';
 import { Button } from '@/shared/components/Button';
 import { cn } from '@/shared/lib/utils';
-import { useMediaStore } from '@/feature/room/stores/useMediaStore';
 
 import { enterLectureDefaultValues, ENTER_LECTURE_KEYS } from '../schema';
 import { LocalMediaPreview } from './LocalMediaPreview';
@@ -176,7 +175,6 @@ export function EnterLectureForm({ roomId, lectureName = '예시 강의실' }: E
 
   const { enterRoom, isSubmitting } = useEnterRoom();
   const { addToast } = useToastStore((state) => state.actions);
-  const { initialize } = useMediaStore((state) => state.actions);
 
   const formMethods = useForm<EnterLectureRequestBody>({
     resolver: zodResolver(enterLectureSchema),
@@ -210,11 +208,11 @@ export function EnterLectureForm({ roomId, lectureName = '예시 강의실' }: E
     }
 
     try {
-      initialize(data.isAudioOn, data.isVideoOn);
       await enterRoom(data);
 
       logger.ui.info('강의실 입장 폼 제출 성공');
-      navigate(ROUTES.ROOM(roomId));
+      const mediaState = { isAudioOn: data.isAudioOn, isVideoOn: data.isVideoOn };
+      navigate(ROUTES.ROOM(roomId), { state: mediaState });
     } catch (error) {
       logger.ui.error('강의실 입장 실패:', error);
       // TODO: API 에러별 메시지 추가

@@ -13,7 +13,9 @@ import { ToastStack } from './shared/components/ToastStack';
 function ToastLayout() {
   return (
     <>
-      <ToastStack />
+      <div className="fixed top-4 right-4 z-50">
+        <ToastStack />
+      </div>
       <Outlet />
     </>
   );
