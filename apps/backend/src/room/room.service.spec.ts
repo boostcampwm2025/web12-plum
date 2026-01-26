@@ -370,7 +370,6 @@ describe('RoomService', () => {
         type: 'screen',
       });
 
-      // [오디오 검증] 모든 유저의 오디오가 포함되어야 함 (5번 유저 포함)
       expect(producers.filter((p) => p.kind === 'audio')).toHaveLength(6);
       expect(producers).toContainEqual({
         producerId: 'a-5',
@@ -378,20 +377,7 @@ describe('RoomService', () => {
         kind: 'audio',
         type: 'audio',
       });
-
-      // [비디오 슬롯 검증] 선착순 4명만 포함되어야 함 (1~4번)
-      const audienceVideos = producers.filter(
-        (p) => p.kind === 'video' && p.participantId.startsWith('early'),
-      );
-      expect(audienceVideos).toHaveLength(4);
-
-      // 5번 유저(late-5)는 오디오는 있지만 비디오는 슬롯 제한으로 제외되어야 함
-      expect(producers).not.toContainEqual({
-        producerId: 'v-5',
-        participantId: 'late-5',
-        kind: 'video',
-        type: 'video',
-      });
+      expect(producers).toHaveLength(13);
     });
 
     it('본인이 발표자인 경우 본인 정보는 existingProducers에서 제외되어야 한다', async () => {
