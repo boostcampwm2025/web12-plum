@@ -80,6 +80,14 @@ describe('RoomGateway', () => {
 
             // Cleanup 관련
             cleanupParticipantFromMaps: jest.fn(),
+
+            // Multi-Router 관련
+            assignRouterForParticipant: jest.fn(),
+            getParticipantRouterIndex: jest.fn().mockReturnValue(0),
+            pipeProducerToAllRouters: jest.fn().mockResolvedValue(undefined),
+            cleanupPipeProducers: jest.fn().mockResolvedValue(undefined),
+            removeParticipantFromRouter: jest.fn(),
+            closeRoutersWithStrategy: jest.fn().mockResolvedValue(undefined),
           },
         },
         {
@@ -472,7 +480,7 @@ describe('RoomGateway', () => {
 
       const updateSpy = jest.spyOn(roomManager, 'updatePartial').mockResolvedValue(undefined);
       const closeRouterSpy = jest
-        .spyOn(mediasoupService, 'closeRouter')
+        .spyOn(mediasoupService, 'closeRoutersWithStrategy')
         .mockResolvedValue(undefined);
 
       // 3. 실행
