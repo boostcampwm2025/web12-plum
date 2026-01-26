@@ -1,9 +1,10 @@
 import { create } from 'zustand';
+import { createJSONStorage, persist } from 'zustand/middleware';
 
 export type ChatItem =
   | {
       id: string;
-      type: 'qna-summary';
+      type: 'qna-result';
       title: string;
       answers: string[];
       createdAt: number;
@@ -19,45 +20,56 @@ export type ChatItem =
 interface ChatState {
   items: ChatItem[];
   actions: {
-    addQnaSummary: (title: string, answers: string[]) => void;
+    addQnaResult: (title: string, answers: string[]) => void;
     addChat: (name: string, message: string) => void;
     clear: () => void;
   };
 }
 
-export const useChatStore = create<ChatState>((set) => ({
-  items: [],
-  actions: {
-    addQnaSummary: (title, answers) => {
-      const id = `qna-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      set((state) => ({
-        items: [
-          ...state.items,
-          {
-            id,
-            type: 'qna-summary',
-            title,
-            answers,
-            createdAt: Date.now(),
-          },
-        ],
-      }));
+export const useChatStore = create<ChatState>()(
+  persist(
+    (set) => ({
+      items: [],
+      actions: {
+        addQnaResult: (title, answers) => {
+          const id = `qna-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+          set((state) => ({
+            items: [
+              ...state.items,
+              {
+                id,
+                type: 'qna-result',
+                title,
+                answers,
+                createdAt: Date.now(),
+              },
+            ],
+          }));
+        },
+        addChat: (name, message) => {
+          const id = `chat-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+          set((state) => ({
+            items: [
+              ...state.items,
+              {
+                id,
+                type: 'chat',
+                name,
+                message,
+                createdAt: Date.now(),
+              },
+            ],
+          }));
+        },
+        clear: () => set({ items: [] }),
+      },
+    }),
+    {
+      name: 'room-chat',
+      storage: createJSONStorage(() => sessionStorage),
+      partialize: (state) => ({
+        items: state.items.filter((item) => item.type === 'qna-result'),
+      }),
     },
-    addChat: (name, message) => {
-      const id = `chat-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      set((state) => ({
-        items: [
-          ...state.items,
-          {
-            id,
-            type: 'chat',
-            name,
-            message,
-            createdAt: Date.now(),
-          },
-        ],
-      }));
-    },
-    clear: () => set({ items: [] }),
-  },
-}));
+  ),
+);
