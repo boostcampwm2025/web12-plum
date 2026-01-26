@@ -20,6 +20,7 @@ export interface Participant {
 export interface RoomActions {
   setMyInfo: (info: MyInfo) => void;
   setRouterRtpCapabilities: (capabilities: RtpCapabilities) => void;
+  setRoomEnded: (isEnded: boolean) => void;
 
   initParticipants: (participantMap: Map<string, Participant>) => void;
   addParticipant: (data: UserJoinedPayload) => void;
@@ -36,6 +37,7 @@ interface RoomState {
   // 내 정보
   myInfo: MyInfo | null;
   routerRtpCapabilities: RtpCapabilities | null;
+  isRoomEnded: boolean;
   actions: RoomActions;
 
   // 참가자 목록
@@ -45,6 +47,7 @@ interface RoomState {
 const initialState: Omit<RoomState, 'actions'> = {
   myInfo: null,
   routerRtpCapabilities: null,
+  isRoomEnded: false,
   participants: new Map(),
 };
 
@@ -55,6 +58,7 @@ export const useRoomStore = create<RoomState>()(
       actions: {
         setMyInfo: (info) => set({ myInfo: info }),
         setRouterRtpCapabilities: (capabilities) => set({ routerRtpCapabilities: capabilities }),
+        setRoomEnded: (isEnded) => set({ isRoomEnded: isEnded }),
 
         /** 참가자 목록 초기화 */
         initParticipants: (participantMap: Map<string, Participant>) => {

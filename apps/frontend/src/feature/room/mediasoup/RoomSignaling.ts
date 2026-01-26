@@ -1,4 +1,4 @@
-import { JoinRoomResponse } from '@plum/shared-interfaces';
+import { JoinRoomResponse, BreakRoomResponse } from '@plum/shared-interfaces';
 
 import { MediaSocket } from '../types';
 
@@ -32,6 +32,20 @@ export const RoomSignaling = {
 
       socket.emit('leave_room', handleResponse);
     });
+    return promise;
+  },
+
+  /**
+   * 강의 종료
+   */
+  breakRoom: (socket: MediaSocket) => {
+    const promise: Promise<BreakRoomResponse> = new Promise((resolve) => {
+      const handleResponse = (response: BreakRoomResponse) => {
+        resolve(response);
+      };
+      socket.emit('break_room', handleResponse);
+    });
+
     return promise;
   },
 };

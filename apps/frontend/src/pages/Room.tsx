@@ -3,6 +3,7 @@ import { RoomDialogs } from '../feature/room/components/RoomDialogs';
 import { RoomMainSection } from '../feature/room/components/RoomMainSection';
 import { RoomSideSection } from '../feature/room/components/RoomSideSection';
 import { RemoteAudioPlayer } from '../feature/room/components/RemoteAudioPlayer';
+import { RoomEndedModal } from '../feature/room/components/RoomEndedModal';
 import { useRoomInit } from '@/feature/room/hooks/useRoomInit';
 import { MediaControlsProvider } from '@/feature/room/hooks/useMediaControlContext';
 
@@ -31,6 +32,7 @@ function RoomContent() {
         <RoomSideSection />
       </div>
       <RoomMenuBar roomTitle="강의실 제목" />
+      <RoomEndedModal />
     </div>
   );
 }
