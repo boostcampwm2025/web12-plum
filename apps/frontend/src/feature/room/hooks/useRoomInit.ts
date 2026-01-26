@@ -109,7 +109,24 @@ export function useRoomInit() {
       // 2. 실시간 이벤트 핸들러 설정
       roomManager.setupSystemHandlers();
 
-      if (myInfo.role === 'presenter') {
+      // 3. 방 입장 요청
+      const routerRtpCapabilities = await roomManager.join(roomId, myInfo.id);
+      const role = useRoomStore.getState().myInfo?.role ?? myInfo.role;
+      if (role === 'audience') {
+        socketActions.emit('get_active_poll', (response) => {
+          if (!response.success || !response.poll) return;
+
+          pollActions.setActivePoll(response.poll);
+          if (response.votedOptionId !== null) {
+            pollActions.setAudienceVotedOption(response.poll.id, response.votedOptionId);
+          }
+
+          const { activeDialog, setActiveDialog } = useRoomUIStore.getState();
+          if (activeDialog !== 'vote') setActiveDialog('vote');
+        });
+      }
+
+      if (role === 'presenter') {
         InteractionSignaling.setupPresenterHandlers(socket, {
           handleUpdateGestureStatus: (data) => {
             addToast({ type: 'gesture', title: data.participantName, gesture: data.gesture });
@@ -168,22 +185,6 @@ export function useRoomInit() {
             });
             // TODO: 익명으로 답변 공개인 경우에 채팅창에 표시
           },
-        });
-      }
-
-      // 3. 방 입장 요청
-      const routerRtpCapabilities = await roomManager.join(roomId, myInfo.id);
-      if (myInfo.role === 'audience') {
-        socketActions.emit('get_active_poll', (response) => {
-          if (!response.success || !response.poll) return;
-
-          pollActions.setActivePoll(response.poll);
-          if (response.votedOptionId !== null) {
-            pollActions.setAudienceVotedOption(response.poll.id, response.votedOptionId);
-          }
-
-          const { activeDialog, setActiveDialog } = useRoomUIStore.getState();
-          if (activeDialog !== 'vote') setActiveDialog('vote');
         });
       }
 
