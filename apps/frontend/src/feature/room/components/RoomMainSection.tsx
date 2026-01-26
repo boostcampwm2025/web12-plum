@@ -48,7 +48,7 @@ function ScreenShareVideo() {
             className="h-full w-full rounded-2xl bg-black object-contain"
           />
         ) : (
-          <div className="flex h-full w-full flex-col items-center justify-center rounded-2xl bg-gray-500">
+          <div className="flex h-full w-full flex-col items-center justify-center overflow-hidden rounded-2xl bg-gray-500">
             <img
               src={DodoReady}
               alt="화면공유 대기중"
@@ -100,7 +100,7 @@ function MyVideo({ currentUser, videoMode, onModeChange, onVideoElementChange }:
  * 강의 화면과 참가자 비디오를 포함
  */
 export function RoomMainSection() {
-  const [userVideoMode, setUserVideoMode] = useState<VideoDisplayMode>('pip');
+  const [userVideoMode, setUserVideoMode] = useState<VideoDisplayMode>('side');
   const [gestureVideoElement, setGestureVideoElement] = useState<HTMLVideoElement | null>(null);
   const isCameraOn = useMediaStore((state) => state.isCameraOn);
 

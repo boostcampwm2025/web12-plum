@@ -78,7 +78,13 @@ export class MediaRoomManager {
     }
 
     // 비즈니스 로직: 응답 파싱 및 스토어 업데이트
-    const { mediasoup, participants: rawParticipants } = response as {
+    const {
+      mediasoup,
+      participants: rawParticipants,
+      participantId,
+      participantName,
+      role,
+    } = response as {
       success: true;
       participantId: string;
       participantName: string;
@@ -99,9 +105,12 @@ export class MediaRoomManager {
       });
     });
 
-    // 내 정보 설정
-    const me = participantMap.get(myId);
-    if (me) this.actions.room.setMyInfo(me);
+    // 내 정보 설정 (서버 응답 기준)
+    this.actions.room.setMyInfo({
+      id: participantId ?? myId,
+      name: participantName ?? participantMap.get(myId)?.name,
+      role,
+    });
 
     // 본인 정보는 원격 목록에서 제외
     participantMap.delete(myId);

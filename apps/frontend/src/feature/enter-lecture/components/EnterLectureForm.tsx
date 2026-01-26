@@ -49,6 +49,7 @@ interface NicknameSectionProps {
   checkMessage?: string;
   checkVariant?: 'default' | 'success' | 'error';
   isCheckDisabled: boolean;
+  hasCheckedNickname: boolean;
   onCheckNickname: () => void;
 }
 
@@ -57,6 +58,7 @@ function NicknameSection({
   checkMessage,
   checkVariant = 'default',
   isCheckDisabled,
+  hasCheckedNickname,
   onCheckNickname,
 }: NicknameSectionProps) {
   const { register } = useFormContext<EnterLectureRequestBody>();
@@ -81,7 +83,7 @@ function NicknameSection({
           type="button"
           className="text-base font-extrabold"
           onClick={onCheckNickname}
-          disabled={isCheckDisabled}
+          disabled={isCheckDisabled || hasCheckedNickname}
         >
           중복 확인
         </Button>
@@ -236,6 +238,7 @@ export function EnterLectureForm({ roomId, lectureName = '예시 강의실' }: E
           checkMessage={checkMessage}
           checkVariant={checkVariant}
           isCheckDisabled={!nicknameValue?.trim()}
+          hasCheckedNickname={hasCheckedNickname}
           onCheckNickname={handleCheckNickname}
         />
         <AgreementSection />

@@ -6,9 +6,11 @@ import { RemoteAudioPlayer } from '../feature/room/components/RemoteAudioPlayer'
 import { RoomEndedModal } from '../feature/room/components/RoomEndedModal';
 import { useRoomInit } from '@/feature/room/hooks/useRoomInit';
 import { MediaControlsProvider } from '@/feature/room/hooks/useMediaControlContext';
+import { useRoomStore } from '@/feature/room/stores/useRoomStore';
 
 function RoomContent() {
   const { isLoading, isSuccess, error, retry } = useRoomInit();
+  const roomTitle = useRoomStore((state) => state.roomTitle);
 
   if (isLoading) {
     return <div>연결 중</div>;
@@ -31,7 +33,7 @@ function RoomContent() {
         <RoomMainSection />
         <RoomSideSection />
       </div>
-      <RoomMenuBar roomTitle="강의실 제목" />
+      <RoomMenuBar roomTitle={roomTitle ?? '강의실'} />
       <RoomEndedModal />
     </div>
   );

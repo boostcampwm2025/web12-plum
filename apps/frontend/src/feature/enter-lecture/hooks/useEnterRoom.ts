@@ -18,7 +18,7 @@ export function useEnterRoom() {
   const roomId = useSafeRoomId();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { setMyInfo, setRouterRtpCapabilities, initParticipants } = useRoomStore(
+  const { setMyInfo, setRoomTitle, setRouterRtpCapabilities, initParticipants } = useRoomStore(
     (state) => state.actions,
   );
 
@@ -63,6 +63,7 @@ export function useEnterRoom() {
 
       // 상태 업데이트
       setMyInfo({ id: participantId, name, role });
+      setRoomTitle(data.name);
       setRouterRtpCapabilities(routerRtpCapabilities as RtpCapabilities);
       initParticipants(participantMap as Map<string, Participant>);
 
