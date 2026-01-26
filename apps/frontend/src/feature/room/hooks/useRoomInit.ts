@@ -239,6 +239,10 @@ export function useRoomInit() {
 
       // 미디어 자원 정리
       controls.cleanup();
+
+      if (socket?.connected) socketActions.disconnect();
+
+      hasStartedInit.current = false;
       logger.custom.info('[RoomInit] 미디어 연결 자원 정리 완료');
     };
   }, []);
