@@ -16,6 +16,7 @@ describe('InteractionService (투표 및 Q&A 생성 테스트)', () => {
     closePoll: jest.fn(),
     getFinalResults: jest.fn(),
     getVoteCounts: jest.fn(),
+    getMultiVoteCounts: jest.fn(),
     getVotedOptionId: jest.fn(),
   };
 
@@ -151,7 +152,9 @@ describe('InteractionService (투표 및 Q&A 생성 테스트)', () => {
       ];
 
       mockPollManager.getPollsInRoom.mockResolvedValue(mockPolls);
-      mockPollManager.getVoteCounts.mockResolvedValue({ 0: 3, 1: 5 });
+      mockPollManager.getMultiVoteCounts.mockResolvedValue({
+        'poll-active': { 0: 3, 1: 5 },
+      });
 
       const result = await service.getPolls(roomId);
 
@@ -159,7 +162,53 @@ describe('InteractionService (투표 및 Q&A 생성 테스트)', () => {
         { id: 0, value: 'A', count: 3 },
         { id: 1, value: 'B', count: 5 },
       ]);
-      expect(mockPollManager.getVoteCounts).toHaveBeenCalledWith('poll-active');
+      expect(mockPollManager.getMultiVoteCounts).toHaveBeenCalledWith(['poll-active']);
+    });
+
+    it('진행 중인 투표가 여러 개면 각각의 카운트를 합쳐서 반환해야 한다', async () => {
+      const roomId = 'room-multi-active';
+      const mockPolls = [
+        {
+          id: 'poll-1',
+          status: 'active',
+          options: [
+            { id: 0, value: 'A', count: 0 },
+            { id: 1, value: 'B', count: 0 },
+          ],
+        },
+        {
+          id: 'poll-2',
+          status: 'active',
+          options: [
+            { id: 0, value: 'C', count: 0 },
+            { id: 1, value: 'D', count: 0 },
+          ],
+        },
+        {
+          id: 'poll-3',
+          status: 'closed',
+          options: [{ id: 0, value: 'E', count: 1 }],
+        },
+      ];
+
+      mockPollManager.getPollsInRoom.mockResolvedValue(mockPolls);
+      mockPollManager.getMultiVoteCounts.mockResolvedValue({
+        'poll-1': { 0: 2, 1: 4 },
+        'poll-2': { 0: 1, 1: 3 },
+      });
+
+      const result = await service.getPolls(roomId);
+
+      expect(result[0].options).toEqual([
+        { id: 0, value: 'A', count: 2 },
+        { id: 1, value: 'B', count: 4 },
+      ]);
+      expect(result[1].options).toEqual([
+        { id: 0, value: 'C', count: 1 },
+        { id: 1, value: 'D', count: 3 },
+      ]);
+      expect(result[2]).toEqual(mockPolls[2]);
+      expect(mockPollManager.getMultiVoteCounts).toHaveBeenCalledWith(['poll-1', 'poll-2']);
     });
   });
 

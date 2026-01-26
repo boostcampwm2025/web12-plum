@@ -91,13 +91,16 @@ export class InteractionService {
 
   async getPolls(roomId: string): Promise<Poll[]> {
     const polls = await this.pollManagerService.getPollsInRoom(roomId);
-    const activePollId = polls.find((poll) => poll.status === 'active')?.id;
+    const activePollIds = polls.filter((poll) => poll.status === 'active').map((poll) => poll.id);
 
-    if (!activePollId) return polls;
+    if (activePollIds.length === 0) return polls;
 
-    const counts = await this.pollManagerService.getVoteCounts(activePollId);
+    const countsByPoll = await this.pollManagerService.getMultiVoteCounts(activePollIds);
     return polls.map((poll) => {
-      if (poll.id !== activePollId) return poll;
+      if (poll.status !== 'active') return poll;
+
+      const counts = countsByPoll[poll.id];
+      if (!counts) return poll;
 
       return {
         ...poll,

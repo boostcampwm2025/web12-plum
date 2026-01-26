@@ -126,6 +126,49 @@ export class PollManagerService extends BaseRedisRepository<Poll> {
   }
 
   /**
+   * 여러 투표의 집계 데이터를 한 번에 조회
+   */
+  async getMultiVoteCounts(pollIds: string[]): Promise<Record<string, Record<number, number>>> {
+    if (pollIds.length === 0) return {};
+
+    try {
+      const client = this.redisService.getClient();
+      const pipeline = client.pipeline();
+
+      pollIds.forEach((id) => {
+        pipeline.hgetall(this.getVoteCountKey(id));
+      });
+
+      const results = await pipeline.exec();
+      if (!results) return {};
+
+      const multiCounts: Record<string, Record<number, number>> = {};
+      results.forEach((entry, index) => {
+        if (!entry) return;
+
+        const [err, rawData] = entry;
+        if (err || !rawData) return;
+
+        const pollId = pollIds[index];
+        const counts: Record<number, number> = {};
+        Object.entries(rawData as Record<string, string>).forEach(([optId, count]) => {
+          const optionId = Number(optId);
+          if (!Number.isNaN(optionId)) {
+            counts[optionId] = Number(count);
+          }
+        });
+
+        multiCounts[pollId] = counts;
+      });
+
+      return multiCounts;
+    } catch (error) {
+      this.logger.error('[getMultiVoteCounts] Failed to fetch vote counts', error.stack);
+      return {};
+    }
+  }
+
+  /**
    * 특정 참가자의 투표 선택지 조회
    */
   async getVotedOptionId(pollId: string, participantId: string): Promise<number | null> {
