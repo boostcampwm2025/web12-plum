@@ -226,7 +226,52 @@ export class InteractionService {
   }
 
   async getQnas(roomId: string): Promise<Qna[]> {
-    return await this.qnaManagerService.getQnasInRoom(roomId);
+    const qnas = await this.qnaManagerService.getQnasInRoom(roomId);
+
+    const activeQnas = qnas.filter((qna) => qna.status === 'active');
+    if (activeQnas.length === 0) return qnas;
+
+    const answersByQnaId = await Promise.all(
+      activeQnas.map(async (qna) => ({
+        id: qna.id,
+        answers: await this.qnaManagerService.getActiveAnswers(qna.id),
+      })),
+    );
+    const answersMap = new Map(answersByQnaId.map((entry) => [entry.id, entry.answers]));
+
+    return qnas.map((qna) => {
+      if (qna.status !== 'active') return qna;
+
+      const answers = answersMap.get(qna.id);
+      if (!answers) return qna;
+
+      return {
+        ...qna,
+        answers,
+      };
+    });
+  }
+
+  async getActiveQna(
+    roomId: string,
+    participantId: string,
+  ): Promise<{ qna: QnaPayload | null; answered: boolean }> {
+    const qnas = await this.qnaManagerService.getQnasInRoom(roomId);
+    const activeQna = qnas.find((qna) => qna.status === 'active');
+
+    if (!activeQna) return { qna: null, answered: false };
+
+    const qnaPayload: QnaPayload = {
+      id: activeQna.id,
+      title: activeQna.title,
+      timeLimit: activeQna.timeLimit,
+      startedAt: activeQna.startedAt,
+      endedAt: activeQna.endedAt,
+    };
+
+    const answered = await this.qnaManagerService.hasAnswered(activeQna.id, participantId);
+
+    return { qna: qnaPayload, answered };
   }
 
   async startQna(qnaId: string): Promise<QnaPayload> {
