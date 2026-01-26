@@ -47,4 +47,17 @@ export const ConsumerSignaling = {
     });
     return promise;
   },
+
+  close: (socket: MediaSocket, consumerId: string) => {
+    const promise: Promise<void> = new Promise((resolve, reject) => {
+      const payload = { consumerId };
+      const handleResponse = (response: BaseResponse) => {
+        if (response.success) resolve();
+        else reject(new Error(response.error || 'Close 실패'));
+      };
+
+      socket.emit('close_consumer', payload, handleResponse);
+    });
+    return promise;
+  },
 };

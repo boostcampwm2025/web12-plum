@@ -3,8 +3,10 @@ import { Consumer, Device, Transport } from 'mediasoup-client/types';
 
 import { logger } from '@/shared/lib/logger';
 import { MediaSocket } from '@/feature/room/types';
+import { useSocketStore } from '@/store/useSocketStore';
 
 import { MediaConsumerManager } from './MediaConsumerManager';
+import { ConsumerSignaling } from './ConsumerSignaling';
 
 /**
  * Consumer 오류 메시지 매핑
@@ -104,12 +106,22 @@ export const useMediaConsumer = () => {
   /**
    * 특정 Consumer 자원 정리
    */
-  const removeConsumer = useCallback((consumerId: string) => {
+  const removeConsumer = useCallback(async (consumerId: string) => {
     const consumer = consumersRef.current.get(consumerId);
     if (consumer) {
       consumer.close();
       consumersRef.current.delete(consumerId);
       streamsRef.current.delete(consumerId);
+
+      // 서버에 Consumer 닫힘 알림
+      try {
+        const socket = useSocketStore.getState().socket;
+        if (!socket) throw new Error('소켓 연결이 없습니다.');
+        await ConsumerSignaling.close(socket, consumerId);
+      } catch (error) {
+        logger.media.warn(`[Consumer] 서버에 Consumer 닫힘 알림 실패: ${consumerId}`, error);
+      }
+
       logger.media.info(`[Consumer] 리소스 제거 완료: ${consumerId}`);
     }
   }, []);
