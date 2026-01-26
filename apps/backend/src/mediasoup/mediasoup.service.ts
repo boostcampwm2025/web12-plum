@@ -341,11 +341,38 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
    * 클라이언트와 서버 간 미디어 송수신 통로 생성
    *
    * @param roomId 강의실 고유 ID
+   * @param participantId 참가자 ID (Multi-Router)
    * @returns Transport 정보 (id, iceParameters, iceCandidates, dtlsParameters)
    * 공식문서: https://mediasoup.org/documentation/v3/mediasoup/api/#WebRtcTransportOptions
    */
-  async createWebRtcTransport(roomId: string) {
-    const router = this.routers.get(roomId);
+  async createWebRtcTransport(roomId: string, participantId?: string) {
+    // Multi-Router 전략: 참가자에게 할당된 Router 사용
+    // Single Router 전략: 기존 방식 (roomId로 Router 조회)
+    let router: Router;
+
+    if (participantId) {
+      // 참가자에게 할당된 Router 인덱스 조회
+      const routerIndex = this.multiRouterManager.getParticipantRouterIndex(roomId, participantId);
+      if (routerIndex !== undefined) {
+        const routers = this.multiRouterManager.getRoomRouters(roomId);
+        if (routers && routers[routerIndex]) {
+          router = routers[routerIndex];
+          this.logger.log(
+            `🔀 Transport 생성: Router #${routerIndex} 사용 (participant: ${participantId})`,
+          );
+        } else {
+          // fallback: 기존 방식
+          router = this.routers.get(roomId)!;
+        }
+      } else {
+        // fallback: 기존 방식
+        router = this.routers.get(roomId)!;
+      }
+    } else {
+      // participantId가 없으면 기존 방식 (Single Router)
+      router = this.routers.get(roomId)!;
+    }
+
     if (!router) {
       throw new Error(`${roomId} 강의실의 Router를 찾을 수 없습니다.`);
     }

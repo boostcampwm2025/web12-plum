@@ -189,6 +189,14 @@ export class MultiRouterManagerService {
   }
 
   /**
+   * Room의 모든 Router 조회
+   */
+  getRoomRouters(roomId: string): Router[] | undefined {
+    const roomInfo = this.rooms.get(roomId);
+    return roomInfo?.routers;
+  }
+
+  /**
    * Producer를 모든 Router로 즉시 파이프 (Eager Loading)
    *
    * 사용 대상:

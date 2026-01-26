@@ -177,8 +177,11 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     try {
-      // 1. Transport 생성
-      const transportParams = await this.mediasoupService.createWebRtcTransport(metadata.roomId);
+      // 1. Transport 생성 (Multi-Router-: participantId 전달)
+      const transportParams = await this.mediasoupService.createWebRtcTransport(
+        metadata.roomId,
+        metadata.participantId,
+      );
 
       // 2. transportId 저장
       metadata.transportIds.push(transportParams.id);
