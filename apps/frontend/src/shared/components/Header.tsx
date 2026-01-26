@@ -10,20 +10,23 @@ import logoImg from '@/assets/logo/logo.svg';
  */
 export function Header() {
   return (
-    <header className="mx-auto w-full px-20 pt-5">
-      <Link
-        to={ROUTES.HOME}
-        className="grid h-25.25 w-fit place-items-center"
-        aria-label="홈으로 이동"
-      >
-        <img
-          src={logoImg}
-          alt="Plum Logo"
-          width={137}
-          height={101}
-        />
-        <h1 className="sr-only">Plum</h1>
-      </Link>
+    <header className="w-full px-6 pt-5 md:px-12 lg:px-24">
+      <div className="mx-auto w-full max-w-7xl">
+        <Link
+          to={ROUTES.HOME}
+          className="grid h-20 w-fit place-items-center md:h-24"
+          aria-label="홈으로 이동"
+        >
+          <img
+            src={logoImg}
+            alt="Plum Logo"
+            width={137}
+            height={101}
+            className="h-14 w-auto md:h-16"
+          />
+          <h1 className="sr-only">Plum</h1>
+        </Link>
+      </div>
     </header>
   );
 }
