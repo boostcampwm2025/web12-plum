@@ -51,9 +51,18 @@ export class MediaRoomManager {
 
     // 미디어 상태 변경 처리
     this.socket.on('media_state_changed', (data) => {
+      logger.media.info(`[Room] 미디어 상태 변경: (${data.type}) - ${data.action}`);
       if (data.action === 'pause') {
         this.actions.media.removeRemoteStreamByParticipant(data.participantId, data.type);
+      } else if (data.action === 'resume') {
+        this.actions.controls.consumeRemoteProducer(data);
       }
+    });
+
+    // 강의 종료 처리
+    this.socket.on('room_end', () => {
+      logger.media.info('[Room] 강의가 종료되었습니다.');
+      this.actions.room.setRoomEnded(true);
     });
   }
 
@@ -126,6 +135,7 @@ export class MediaRoomManager {
     this.socket.off('user_left');
     this.socket.off('new_producer');
     this.socket.off('media_state_changed');
+    this.socket.off('room_end');
     logger.media.info('[Room] 모든 시그널링 리스너 해제 완료');
   }
 }

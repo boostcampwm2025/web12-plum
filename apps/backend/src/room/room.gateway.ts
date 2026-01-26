@@ -113,7 +113,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
         consumers: [],
       });
 
-      this.cleanupMediasoup(pending.transportIds, participant!);
+      await this.cleanupMediasoup(pending.transportIds, participant!, roomId);
     }
 
     try {
@@ -142,6 +142,9 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
           role: participant.role,
           joinedAt: new Date(),
         };
+
+        // 5. Multi-Router: 참가자에게 Router 할당
+        this.mediasoupService.assignRouterForParticipant(roomId, participantId);
 
         socket.to(roomId).emit('user_joined', payload);
       }
@@ -174,8 +177,11 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     try {
-      // 1. Transport 생성
-      const transportParams = await this.mediasoupService.createWebRtcTransport(metadata.roomId);
+      // 1. Transport 생성 (Multi-Router-: participantId 전달)
+      const transportParams = await this.mediasoupService.createWebRtcTransport(
+        metadata.roomId,
+        metadata.participantId,
+      );
 
       // 2. transportId 저장
       metadata.transportIds.push(transportParams.id);
@@ -266,6 +272,29 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
         type: data.type,
       };
 
+      // Producer 생성 후에 파이프 전략 적용
+      const isPresenter = participant.role === 'presenter';
+      const isAudio = data.type === 'audio';
+
+      if (isPresenter || isAudio) {
+        // 발표자 전체 + 청중 audio는 Eager 파이프
+        // 지금 라우터 가져오기
+        const routerIndex = this.mediasoupService.getParticipantRouterIndex(
+          metadata.roomId,
+          metadata.participantId,
+        );
+        // 내 라우터 제외하고 파이프 연결하기
+        await this.mediasoupService.pipeProducerToAllRouters(
+          metadata.roomId,
+          producer,
+          routerIndex,
+        );
+        this.logger.log(
+          `🎤 [Eager Pipe] ${participant.name} ${data.type} → 모든 Router로 파이프 완료`,
+        );
+      }
+      // 청중 video는 파이프 안 함 (Lazy - consume 시점에)
+
       socket.to(metadata.roomId).emit('new_producer', payload);
 
       this.logger.log(
@@ -316,16 +345,51 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const participant = await this.participantManagerService.findOne(metadata.participantId);
       if (!participant) return { success: false, error: '참가자를 찾을 수 없습니다.' };
 
+      // Producer 먼저 조회
+      const producer = this.mediasoupService.getProducer(data.producerId);
+      if (!producer) return { success: false, error: 'Producer를 찾을 수 없습니다.' };
+
+      // 청중 video인 경우 Lazy 파이프 적용
+      let targetProducerId = data.producerId;
+      if (producer.appData.source === 'video') {
+        const producerOwner = await this.participantManagerService.findOne(
+          producer.appData.ownerId,
+        );
+        if (producerOwner && producerOwner.role === 'audience') {
+          // 청중 video → on-demand 파이프
+          const producerRouterIdx = this.mediasoupService.getParticipantRouterIndex(
+            metadata.roomId,
+            producer.appData.ownerId,
+          );
+          const consumerRouterIdx = this.mediasoupService.getParticipantRouterIndex(
+            metadata.roomId,
+            metadata.participantId,
+          );
+
+          const pipeProducer = await this.mediasoupService.pipeProducerOnDemand(
+            metadata.roomId,
+            producer,
+            producerRouterIdx,
+            consumerRouterIdx,
+          );
+          targetProducerId = pipeProducer.id;
+
+          this.logger.log(
+            `🔗 [Lazy Pipe] 청중 video on-demand: ${producer.id} → Router #${consumerRouterIdx}`,
+          );
+        }
+      }
+
+      // Consumer 생성
       const consumer = await this.mediasoupService.createConsumer(
         data.transportId,
-        data.producerId,
+        targetProducerId,
         metadata.participantId,
         data.rtpCapabilities,
       );
       await this.participantManagerService.updatePartial(metadata.participantId, {
         consumers: [...participant.consumers, consumer.id],
       });
-      const producer = this.mediasoupService.getProducer(data.producerId)!;
 
       this.logger.log(
         `✅ [consume] ${participant.name} - Consumer 생성 (ID: ${consumer.id}, 구독 대상 Producer: ${data.producerId})`,
@@ -438,7 +502,8 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
     try {
       await this.roomManagerService.updatePartial(room.id, { status: 'ended' });
       this.server.to(room.id).emit('room_end');
-      await this.mediasoupService.closeRouter(room.id);
+      // Multi-Router 정리 (모든 Router + PipeProducer)
+      await this.mediasoupService.closeRoutersWithStrategy(room.id);
       // TODO: 강의록 생성 기능 추가
 
       // 강의실 내부에 있는 모든 참가자 퇴장 처리
@@ -482,10 +547,23 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
       );
   }
 
-  private cleanupMediasoup(transportIds: string[], participant: Participant): void {
+  private async cleanupMediasoup(
+    transportIds: string[],
+    participant: Participant,
+    roomId: string,
+  ): Promise<void> {
+    // 1. PipeProducer 먼저 정리
+    const producerIds = Object.values(participant.producers).filter(Boolean);
+    for (const producerId of producerIds) {
+      await this.mediasoupService.cleanupPipeProducers(roomId, producerId);
+    }
+
+    // 2. Transport 정리
     for (const transportId of transportIds) {
       this.mediasoupService.closeTransport(transportId);
     }
+
+    // 3. Producer/Consumer 정리
     this.mediasoupService.cleanupParticipantFromMaps(
       Object.values(participant.producers),
       participant.consumers,
@@ -512,7 +590,10 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
       };
       this.server.to(roomId).emit('user_left', payload);
 
-      this.cleanupMediasoup(transportIds, participant);
+      await this.cleanupMediasoup(transportIds, participant, roomId);
+
+      // Multi-Router에서 참가자 제거
+      this.mediasoupService.removeParticipantFromRouter(roomId, participantId);
 
       await this.roomManagerService.removeParticipant(roomId, participantId);
       this.logger.log(`[${reason}] ${participant?.name || participantId} left room ${roomId}`);
