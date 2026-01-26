@@ -3,7 +3,7 @@ import { RoomButton } from './RoomButton';
 import type { IconName } from '@/shared/components/icon/iconMap';
 import { useMediaStore } from '../stores/useMediaStore';
 import { useRoomUIStore } from '../stores/useRoomUIStore';
-import { useMediaConnectionContext } from '../hooks/useMediaConnectionContext';
+import { useMediaControlContext } from '../hooks/useMediaControlContext';
 import { usePollStore } from '../stores/usePollStore';
 import { useQnaStore } from '../stores/useQnaStore';
 import { useRoomStore } from '../stores/useRoomStore';
@@ -33,32 +33,32 @@ function MainMenu() {
   const hasActiveQna = useQnaStore((state) => state.qnas.some((qna) => qna.status === 'active'));
   const myRole = useRoomStore((state) => state.myInfo?.role);
   const {
-    startCameraProducer,
-    startMicProducer,
-    stopCameraProducer,
-    stopMicProducer,
-    startScreenShare,
-    stopScreenShare,
-  } = useMediaConnectionContext();
+    enableMic,
+    disableMic,
+    enableCamera,
+    disableCamera,
+    enableScreenShare,
+    disableScreenShare,
+  } = useMediaControlContext();
 
   const menuButtons: MenuButton[] = [
     {
       icon: isMicOn ? 'mic' : 'mic-disabled',
       tooltip: isMicOn ? '마이크 끄기' : '마이크 켜기',
       isActive: isMicOn,
-      onClick: isMicOn ? stopMicProducer : startMicProducer,
+      onClick: isMicOn ? disableMic : enableMic,
     },
     {
       icon: isCameraOn ? 'cam' : 'cam-disabled',
       tooltip: isCameraOn ? '카메라 끄기' : '카메라 켜기',
       isActive: isCameraOn,
-      onClick: isCameraOn ? stopCameraProducer : startCameraProducer,
+      onClick: isCameraOn ? disableCamera : enableCamera,
     },
     {
       icon: 'screen-share',
       tooltip: isScreenSharing ? '화면공유 중지' : '화면공유',
       isActive: isScreenSharing,
-      onClick: isScreenSharing ? stopScreenShare : startScreenShare,
+      onClick: isScreenSharing ? disableScreenShare : enableScreenShare,
     },
     {
       icon: 'vote',

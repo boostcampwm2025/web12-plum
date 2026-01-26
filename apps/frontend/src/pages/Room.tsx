@@ -2,9 +2,9 @@ import { RoomMenuBar } from '../feature/room/components/RoomMenuBar';
 import { RoomDialogs } from '../feature/room/components/RoomDialogs';
 import { RoomMainSection } from '../feature/room/components/RoomMainSection';
 import { RoomSideSection } from '../feature/room/components/RoomSideSection';
-import { MediaConnectionProvider } from '@/feature/room/hooks/useMediaConnectionContext';
+import { RemoteAudioPlayer } from '../feature/room/components/RemoteAudioPlayer';
 import { useRoomInit } from '@/feature/room/hooks/useRoomInit';
-import { RemoteAudioPlayer } from '@/feature/room/components/RemoteAudioPlayer';
+import { MediaControlsProvider } from '@/feature/room/hooks/useMediaControlContext';
 
 function RoomContent() {
   const { isLoading, isSuccess, error, retry } = useRoomInit();
@@ -37,8 +37,8 @@ function RoomContent() {
 
 export default function Room() {
   return (
-    <MediaConnectionProvider>
+    <MediaControlsProvider>
       <RoomContent />
-    </MediaConnectionProvider>
+    </MediaControlsProvider>
   );
 }

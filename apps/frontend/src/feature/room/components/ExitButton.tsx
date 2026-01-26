@@ -3,11 +3,11 @@ import { useNavigate } from 'react-router';
 
 import { logger } from '@/shared/lib/logger';
 import { useSocketStore } from '@/store/useSocketStore';
-
-import { useMediaConnectionContext } from '../hooks/useMediaConnectionContext';
-import { RoomButton } from './RoomButton';
-import { RoomSignaling } from '../mediasoup/RoomSignaling';
 import { ROUTES } from '@/app/routes/routes';
+
+import { RoomButton } from './RoomButton';
+import { useMediaControlContext } from '../hooks/useMediaControlContext';
+import { RoomSignaling } from '../mediasoup/RoomSignaling';
 
 /**
  * 강의실 퇴장 버튼 컴포넌트
@@ -15,7 +15,7 @@ import { ROUTES } from '@/app/routes/routes';
 export function ExitButton() {
   const navigate = useNavigate();
   const { socket } = useSocketStore();
-  const { cleanup } = useMediaConnectionContext();
+  const { cleanup } = useMediaControlContext();
 
   /**
    * 강의실 퇴장 처리

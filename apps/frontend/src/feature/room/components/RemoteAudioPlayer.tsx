@@ -19,7 +19,7 @@ function AudioElement({ stream }: { stream: MediaStream }) {
       try {
         await el.play();
       } catch (error) {
-        logger.media.error('오디오 재생 실패 (사용자 인터랙션 필요):', error);
+        logger.media.info('오디오 재생 실패 (사용자 인터랙션 필요):', error);
       }
     };
 
