@@ -572,6 +572,17 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
     const consumer = this.getConsumer(consumerId);
     if (!consumer) throw new Error(`${consumerId} Consumer를 찾을 수 없습니다.`);
     await consumer.resume();
+
+    if (consumer.kind === 'video') {
+      setTimeout(async () => {
+        try {
+          await consumer.requestKeyFrame();
+          this.logger.log(`Consumer ${consumerId}에 키프레임 요청 보냄`);
+        } catch (error) {
+          this.logger.warn(`키프레임 요청 실패: ${error.message}`);
+        }
+      }, 100);
+    }
   }
 
   closeConsumer(consumerId: string) {
