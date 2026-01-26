@@ -23,25 +23,18 @@ export function RoomEndedModal() {
   useEffect(() => {
     if (!isRoomEnded) return;
 
-    // 카운트다운 시작
-    const interval = setInterval(() => {
+    const timer = setInterval(() => {
       setCountdown((prev) => {
         if (prev <= 1) {
-          clearInterval(interval);
+          clearInterval(timer);
+          navigate(ROUTES.HOME, { replace: true });
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
 
-    const timeout = setTimeout(() => {
-      navigate(ROUTES.HOME, { replace: true });
-    }, REDIRECT_DELAY_SECONDS * 1000);
-
-    return () => {
-      clearInterval(interval);
-      clearTimeout(timeout);
-    };
+    return () => clearInterval(timer);
   }, [isRoomEnded, navigate]);
 
   return (
