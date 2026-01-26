@@ -51,38 +51,130 @@ export function Home() {
       <Header />
       <main className="flex-1">
         {/* Hero */}
-        <section className="flex min-h-[calc(100vh-80px)] items-center px-6 md:px-12 lg:px-24">
-          <div className="mx-auto w-full max-w-7xl">
-            <motion.h1
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, ease: 'easeOut' }}
-              className="text-text mb-6 text-4xl leading-tight font-bold sm:text-5xl md:text-6xl lg:text-7xl"
-            >
-              강의는 놀이처럼,
-              <br />
-              성과는 전문가처럼!
-            </motion.h1>
-            <motion.p
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, ease: 'easeOut', delay: 0.15 }}
-              className="text-subtext-light mb-10 max-w-2xl text-base sm:text-lg md:text-xl"
-            >
-              실시간 참여도 점수와 제스처 반응, 투표 기능으로 팀원 모두의 몰입도를 100%로
-              끌어올리세요.
-            </motion.p>
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, ease: 'easeOut', delay: 0.3 }}
-            >
-              <Button
-                onClick={() => navigate(ROUTES.CREATE)}
-                className="rounded-full px-8 py-4 text-base font-semibold transition-all duration-300 hover:scale-105 sm:text-lg"
+        <section className="flex min-h-[calc(80vh-80px)] items-center px-6 py-16 md:px-12 md:py-24 lg:px-24 lg:py-32">
+          <div className="mx-auto grid w-full max-w-7xl items-center gap-12 lg:grid-cols-2">
+            {/* 텍스트 영역 */}
+            <div className="min-w-0 lg:min-w-120">
+              <motion.h1
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, ease: 'easeOut' }}
+                className="text-text mb-6 text-4xl leading-tight font-bold whitespace-nowrap sm:text-4xl md:text-5xl lg:text-6xl"
               >
-                강의하러 가기
-              </Button>
+                강의는 놀이처럼,
+                <br />
+                성과는 전문가처럼!
+              </motion.h1>
+              <motion.p
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, ease: 'easeOut', delay: 0.15 }}
+                className="text-subtext-light mb-10 text-base sm:text-lg md:text-xl"
+              >
+                실시간 참여도 점수와 제스처 반응, 투표 기능으로 팀원 모두의 몰입도를 100%로
+                끌어올리세요.
+              </motion.p>
+              <motion.div
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, ease: 'easeOut', delay: 0.3 }}
+              >
+                <Button
+                  onClick={() => navigate(ROUTES.CREATE)}
+                  className="rounded-full px-8 py-4 text-base font-semibold transition-all duration-300 hover:scale-105 sm:text-lg"
+                >
+                  강의하러 가기
+                </Button>
+              </motion.div>
+            </div>
+
+            {/* 목업 영역 */}
+            <motion.div
+              initial={{ opacity: 0, y: 40 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, ease: 'easeOut', delay: 0.3 }}
+              className="relative hidden h-80 lg:block"
+            >
+              {/* 참여도 점수 목업 */}
+              <div className="absolute top-2 left-8 w-64 -rotate-3 overflow-hidden rounded-2xl border border-gray-400 bg-gray-600 p-5 shadow-xl">
+                <div className="mb-4 flex items-center gap-2">
+                  <Icon
+                    name="ranking"
+                    size={20}
+                    decorative
+                    className="text-text"
+                  />
+                  <span className="text-text font-medium">참여도 점수</span>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <span className="text-primary text-sm font-bold">1</span>
+                    <div className="flex-1">
+                      <div className="mb-1 flex justify-between text-sm">
+                        <span className="text-text">김민수</span>
+                        <span className="text-primary font-medium">94점</span>
+                      </div>
+                      <div className="h-2 overflow-hidden rounded-full bg-gray-500">
+                        <div className="bg-primary h-full w-[94%]" />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-subtext text-sm font-bold">2</span>
+                    <div className="flex-1">
+                      <div className="mb-1 flex justify-between text-sm">
+                        <span className="text-text">이서연</span>
+                        <span className="text-subtext font-medium">87점</span>
+                      </div>
+                      <div className="h-2 overflow-hidden rounded-full bg-gray-500">
+                        <div className="bg-primary/70 h-full w-[87%]" />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-subtext text-sm font-bold">3</span>
+                    <div className="flex-1">
+                      <div className="mb-1 flex justify-between text-sm">
+                        <span className="text-text">박지훈</span>
+                        <span className="text-subtext font-medium">82점</span>
+                      </div>
+                      <div className="h-2 overflow-hidden rounded-full bg-gray-500">
+                        <div className="bg-primary/50 h-full w-[82%]" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 투표 목업 */}
+              <div className="absolute right-8 bottom-2 z-10 w-56 rotate-2 overflow-hidden rounded-2xl border border-gray-400 bg-gray-600 p-5 shadow-2xl">
+                <div className="mb-4 flex items-center gap-2">
+                  <Icon
+                    name="vote"
+                    size={20}
+                    decorative
+                  />
+                  <span className="text-text font-medium">실시간 투표</span>
+                </div>
+                <p className="text-text mb-4 text-sm">오늘 강의 이해됐나요?</p>
+                <div className="space-y-2">
+                  <div className="relative h-9 overflow-hidden rounded-lg bg-gray-500">
+                    <div className="bg-primary absolute inset-y-0 left-0 w-[75%]" />
+                    <span className="relative z-10 flex h-full items-center justify-between px-3 text-sm text-white">
+                      <span>네!</span>
+                      <span className="font-medium">75%</span>
+                    </span>
+                  </div>
+                  <div className="relative h-9 overflow-hidden rounded-lg bg-gray-500">
+                    <div className="bg-primary/50 absolute inset-y-0 left-0 w-[25%]" />
+                    <span className="relative z-10 flex h-full items-center justify-between px-3 text-sm text-white">
+                      <span>아니요</span>
+                      <span className="font-medium">25%</span>
+                    </span>
+                  </div>
+                </div>
+                <p className="text-subtext mt-3 text-center text-xs">12명 참여</p>
+              </div>
             </motion.div>
           </div>
         </section>
