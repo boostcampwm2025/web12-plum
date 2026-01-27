@@ -36,13 +36,12 @@ export class ChatManagerService {
    *
    * Redis 구조:
    * - 키: room:{roomId}:chat
-   * - 타입: ZSET (Sorted Set)
+   * - 타입: ZSET
    * - Score: timestamp (밀리초)
    * - Member: JSON 문자열
    *
-   * ZSET 장점:
+   * ZSET로 사용됨
    * - timestamp 기반 범위 조회 O(log(n) + m)
-   * - 자동 정렬 (score 기준)
    * - ZREMRANGEBYRANK로 개수 제한
    */
   async saveMessage(roomId: string, message: ChatMessage): Promise<void> {
@@ -70,14 +69,11 @@ export class ChatManagerService {
   /**
    * 재연결 동기화: lastMessageId 이후 메시지 조회
    *
-   * ZSET 범위 조회:
+   * ZSET 범위 조회
    * - ZRANGEBYSCORE로 timestamp 기반 범위 조회
    * - Redis가 직접 필터링 → O(log(n) + m)
-   * - 정렬 불필요 (ZSET가 자동 정렬 해줌
+   * - 정렬 불필요 (ZSET가 자동 정렬 해줌)
    *
-   * - lastMessageId: 1706345678901-abc
-   * - lastTimestamp: 1706345678901
-   * - ZRANGEBYSCORE room:r123:chat (1706345678901 +inf
    * 그럼 timestamp > 1706345678901인 메시지들 (자동 정렬)
    */
   async getMessagesAfter(roomId: string, lastMessageId: string): Promise<ChatMessage[]> {
@@ -127,14 +123,9 @@ export class ChatManagerService {
    * Redis 구조:
    * - 키: room:{roomId}:ratelimit:chat:{participantId}
    * - 타입: ZSET
-   * - Score/Member: 타임스탬프 (밀리초)
+   * - Score/Member: 타임스탬프
    * - TTL: 3초
-   *
-   * Sliding Window 방식:
-   * - 정확한 3초 윈도우 (윈도우 경계 문제 없음)
-   * - ZREMRANGEBYSCORE로 오래된 데이터 자동 삭제
-   * - ZCARD로 현재 개수 확인
-   *
+
    * - 2.9초: 5개 메시지
    * - 3.1초: 6번째 메시지 시도
    * - 0.2초 간격이지만 3초 윈도우 내 6개 → 차단됨

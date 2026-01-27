@@ -228,7 +228,7 @@ export type GetPresentationResponse =
   | { success: true; files: FileInfo[] };
 
 export type SendChatResponse =
-  | (BaseResponse & { success: false })
+  | (BaseResponse & { success: false; retryable?: boolean })
   | { success: true; messageId: string };
 
 export type SyncChatResponse =
