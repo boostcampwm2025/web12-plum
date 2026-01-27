@@ -4,24 +4,26 @@ import { Button } from '@/shared/components/Button';
 import { Icon } from '@/shared/components/icon/Icon';
 import { logger } from '@/shared/lib/logger';
 import { useRoomPresentation } from '../hooks/useRoomPresentation';
+import { useToastStore } from '@/store/useToastStore';
 
 interface InfoPanelProps {
   joinLink: string;
   onClose: () => void;
 }
 
-const copyText = async (text: string) => {
-  try {
-    await navigator.clipboard.writeText(text);
-    // TODO: 토스트로 복사완료 메세지
-  } catch (err) {
-    logger.ui.error('참여 링크 복사 실패', err);
-    // TODO: 토스트로 복사실패 메세지
-  }
-};
-
 export function InfoPanel({ joinLink, onClose }: InfoPanelProps) {
   const { files, isLoading, fetchPresentation } = useRoomPresentation();
+  const addToast = useToastStore((state) => state.actions.addToast);
+
+  const copyText = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      addToast({ type: 'success', title: '참여 링크가 복사되었습니다.' });
+    } catch (err) {
+      logger.ui.error('참여 링크 복사 실패', err);
+      addToast({ type: 'error', title: '참여 링크 복사에 실패했습니다.' });
+    }
+  };
 
   useEffect(() => {
     fetchPresentation();
