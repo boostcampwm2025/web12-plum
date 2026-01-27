@@ -1,4 +1,5 @@
 import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import * as mediasoup from 'mediasoup';
 import {
   Worker,
@@ -39,6 +40,7 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
   constructor(
     private readonly prometheusService: PrometheusService,
     private readonly multiRouterManager: MultiRouterManagerService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   /**
@@ -576,6 +578,15 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
       // Prometheus 메트릭 업데이트
       this.prometheusService.setMediasoupConsumers(this.consumers.size);
       this.prometheusService.decrementConsumerByKind(consumerKind);
+    });
+    consumer.on('producerclose', () => {
+      consumer.close();
+
+      this.eventEmitter.emit('consumer.closed', {
+        consumerId: consumer.id,
+        participantId: participantId,
+        producerId: producerId,
+      });
     });
 
     // Prometheus 메트릭 업데이트

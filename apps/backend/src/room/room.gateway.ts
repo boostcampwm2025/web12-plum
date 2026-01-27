@@ -19,6 +19,10 @@ import {
 } from 'mediasoup/node/lib/types';
 import {
   BreakRoomResponse,
+  CloseConsumerRequest,
+  CloseConsumerResponse,
+  CloseProducerRequest,
+  CloseProducerResponse,
   ConnectTransportRequest,
   ConnectTransportResponse,
   ConsumeRequest,
@@ -127,6 +131,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
       // 2. Socket.IO room에 join
       socket.join(roomId);
       socket.join(`${roomId}:${participant.role}`);
+      socket.join(participantId);
 
       // 3. 메타데이터 저장
       this.socketMetadataService.set(socket.id, {
@@ -333,6 +338,18 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
+  // close_producer: 클라이언트가 Producer를 닫을 때 서버에 알림
+  @SubscribeMessage('close_producer')
+  handleCloseProducer(@MessageBody() data: CloseProducerRequest): CloseProducerResponse {
+    try {
+      this.mediasoupService.closeProducer(data.producerId);
+      return { success: true };
+    } catch (error) {
+      this.logger.error(`❌ [close_producer] 실패:`, error);
+      return { success: false };
+    }
+  }
+
   // consume: 특정 Producer에 대해 consume 요청
   @SubscribeMessage('consume')
   async handleConsume(
@@ -426,7 +443,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   // close_consumer: 클라이언트가 Consumer를 닫을 때 서버에 알림
   @SubscribeMessage('close_consumer')
-  handleCloseConsumer(@MessageBody() data: { consumerId: string }): { success: boolean } {
+  handleCloseConsumer(@MessageBody() data: CloseConsumerRequest): CloseConsumerResponse {
     try {
       this.mediasoupService.closeConsumer(data.consumerId);
       return { success: true };
@@ -576,6 +593,18 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
         participantId!,
         metadata.transportIds,
       );
+  }
+
+  @OnEvent('consumer.closed')
+  handleConsumerClosed(payload: { consumerId: string; participantId: string; producerId: string }) {
+    const { consumerId, participantId, producerId } = payload;
+
+    this.server.to(participantId).emit('consumer_closed', {
+      consumerId,
+      producerId,
+    });
+
+    this.logger.log(`📢 [Consumer 종료] 대상 유저: ${participantId}, ID: ${consumerId}`);
   }
 
   private async cleanupMediasoup(

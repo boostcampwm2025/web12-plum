@@ -16,7 +16,10 @@ export class MediaRoomManager {
     private actions: {
       room: RoomActions;
       media: MediaActions;
-      controls: { consumeRemoteProducer: (data: NewProducerPayload) => Promise<void> };
+      controls: {
+        consumeRemoteProducer: (data: NewProducerPayload) => Promise<void>;
+        removeConsumer: (consumerId: string) => Promise<void>;
+      };
     },
   ) {}
 
@@ -63,6 +66,23 @@ export class MediaRoomManager {
     this.socket.on('room_end', () => {
       logger.media.info('[Room] 강의가 종료되었습니다.');
       this.actions.room.setRoomEnded(true);
+    });
+
+    this.socket.on('consumer_closed', (data) => {
+      const { consumerId, producerId } = data;
+      logger.media.info(`[Room] 컨슈머 종료 이벤트 수신: ${consumerId}`);
+
+      // 1. Consumer 리소스 정리
+      this.actions.controls.removeConsumer(consumerId);
+
+      // 2. 스토어 상태 업데이트 (UI)
+      const { type, participantId } = this.actions.room.findProducerInfo(producerId);
+      if (type && participantId) {
+        this.actions.room.removeProducer(participantId, type);
+        this.actions.media.removeRemoteStream(consumerId);
+      } else {
+        logger.media.warn(`[Room] Producer 정보를 찾을 수 없음: ${producerId}`);
+      }
     });
   }
 
@@ -136,6 +156,7 @@ export class MediaRoomManager {
     this.socket.off('new_producer');
     this.socket.off('media_state_changed');
     this.socket.off('room_end');
+    this.socket.off('consumer_closed');
     logger.media.info('[Room] 모든 시그널링 리스너 해제 완료');
   }
 }

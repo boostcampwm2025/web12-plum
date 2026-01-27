@@ -30,6 +30,10 @@ export interface RoomActions {
   removeProducer: (participantId: string, type: MediaType) => void;
   getParticipantList: () => Participant[];
   getParticipant: (id: string) => Participant | undefined;
+  findProducerInfo: (producerId: string) => {
+    participantId: string | null;
+    type: MediaType | null;
+  };
 
   reset: () => void;
 }
@@ -147,6 +151,19 @@ export const useRoomStore = create<RoomState>()(
         getParticipant: (id: string) => {
           const participants = get().participants;
           return participants.get(id);
+        },
+
+        /** Producer ID로 정보 찾기 */
+        findProducerInfo: (producerId: string) => {
+          const participants = get().participants;
+          for (const [participantId, participant] of participants) {
+            for (const [type, pId] of participant.producers) {
+              if (pId === producerId) {
+                return { participantId, type };
+              }
+            }
+          }
+          return { participantId: null, type: null };
         },
 
         /** 스토어 초기화 */

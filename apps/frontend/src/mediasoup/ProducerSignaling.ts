@@ -1,4 +1,9 @@
-import { MediaType, ToggleActionType, ToggleMediaResponse } from '@plum/shared-interfaces';
+import {
+  CloseProducerResponse,
+  MediaType,
+  ToggleActionType,
+  ToggleMediaResponse,
+} from '@plum/shared-interfaces';
 
 import { MediaSocket } from '@/feature/room/types';
 
@@ -23,6 +28,22 @@ export const ProducerSignaling = {
       };
 
       socket.emit('toggle_media', payload, handleResponse);
+    });
+    return promise;
+  },
+
+  /**
+   * Producer 종료 요청
+   */
+  closeProducer: (socket: MediaSocket, producerId: string) => {
+    const promise: Promise<void> = new Promise((resolve, reject) => {
+      const payload = { producerId };
+      const handleResponse = (response: CloseProducerResponse) => {
+        if (response.success) resolve();
+        else reject(new Error('Producer 종료 실패'));
+      };
+
+      socket.emit('close_producer', payload, handleResponse);
     });
     return promise;
   },

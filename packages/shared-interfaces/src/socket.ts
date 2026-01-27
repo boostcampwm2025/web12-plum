@@ -46,6 +46,10 @@ export interface GetProducerRequest {
   type: MediaType;
 }
 
+export interface CloseProducerRequest {
+  producerId: string;
+}
+
 export interface ConsumeRequest<T = any> {
   transportId: string;
   producerId: string;
@@ -145,6 +149,8 @@ export type GetProducerResponse =
       producerId?: string;
     };
 
+export type CloseProducerResponse = BaseResponse;
+
 export type ConsumeResponse<T = any> =
   | (BaseResponse & { success: false })
   | {
@@ -241,6 +247,11 @@ export interface NewProducerPayload extends MediasoupProducer {
   type: MediaType;
 }
 
+export interface ConsumerClosedPayload {
+  consumerId: string;
+  producerId: string;
+}
+
 export type MediaStateChangedPayload = NewProducerPayload & {
   action: ToggleActionType;
 };
@@ -314,6 +325,8 @@ export interface ServerToClientEvents {
 
   new_producer: (data: NewProducerPayload) => void;
 
+  consumer_closed: (data: ConsumerClosedPayload) => void;
+
   media_state_changed: (data: MediaStateChangedPayload) => void;
 
   update_gesture_status: (data: UpdateGestureStatusPayload) => void;
@@ -358,6 +371,8 @@ export interface ClientToServerEvents {
   ) => void;
 
   produce: (data: ProduceRequest, cb: (res: ProduceResponse) => void) => void;
+
+  close_producer: (data: CloseProducerRequest, cb: (res: CloseProducerResponse) => void) => void;
 
   consume: (data: ConsumeRequest, cb: (res: ConsumeResponse) => void) => void;
 

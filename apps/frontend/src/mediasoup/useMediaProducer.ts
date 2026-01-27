@@ -4,8 +4,10 @@ import { MediaType } from '@plum/shared-interfaces';
 
 import { logger } from '@/shared/lib/logger';
 import { MediaSocket } from '@/feature/room/types';
+import { useSocketStore } from '@/store/useSocketStore';
 
 import { MediaProducerManager } from './MediaProducerManager';
+import { ProducerSignaling } from './ProducerSignaling';
 
 /**
  * Producer 오류 메시지 매핑
@@ -90,7 +92,11 @@ export const useMediaProducer = () => {
           logger.media.info(`[Producer] ${type} 자원 정리 완료: ${reason}`);
         };
         producer.on('transportclose', () => cleanup('transport 닫힘'));
-        producer.on('trackended', () => cleanup('트랙 종료'));
+        producer.on('trackended', () => {
+          // 트랙이 종료되면 서버에도 알림
+          stopProducing(type);
+          cleanup('트랙 종료');
+        });
 
         producersRef.current.set(type, producer);
         return producer;
@@ -119,22 +125,52 @@ export const useMediaProducer = () => {
   /**
    * 특정 MediaType(video, audio, screen 등) 중단
    */
-  const stopProducing = useCallback((type: MediaType) => {
+  const stopProducing = useCallback(async (type: MediaType) => {
     const producer = producersRef.current.get(type);
 
-    if (producer) {
+    if (producer && !producer.closed) {
+      const producerId = producer.id;
       producer.close();
       producersRef.current.delete(type);
       logger.media.info(`[Producer] ${type} 송출 중단`);
+
+      try {
+        const socket = useSocketStore.getState().socket;
+        if (!socket) throw new Error('소켓 연결이 없습니다.');
+        await ProducerSignaling.closeProducer(socket, producerId);
+        logger.media.info(`[Producer] 서버에 ${type} 종료 알림 전송`);
+      } catch (error) {
+        logger.media.warn(`[Producer] 서버에 종료 알림 전송 실패: ${type}`, error);
+      }
     }
   }, []);
 
   /**
    * 전체 송출 중단
    */
-  const stopAllProducers = useCallback(() => {
-    producersRef.current.forEach((producer) => producer.close());
+  const stopAllProducers = useCallback(async () => {
+    const producersToClose = Array.from(producersRef.current.values());
     producersRef.current.clear();
+
+    const closePromises = producersToClose.map(async (producer) => {
+      if (!producer.closed) {
+        const producerId = producer.id;
+        producer.close();
+
+        try {
+          const socket = useSocketStore.getState().socket;
+          if (!socket) throw new Error('소켓 연결이 없습니다.');
+          await ProducerSignaling.closeProducer(socket, producerId);
+        } catch (error) {
+          logger.media.warn(
+            `[Producer] 서버에 종료 알림 전송 실패: ${producer.appData.type}`,
+            error,
+          );
+        }
+      }
+    });
+
+    await Promise.all(closePromises);
     logger.media.info('[Producer] 모든 미디어 송출 중단');
   }, []);
 
