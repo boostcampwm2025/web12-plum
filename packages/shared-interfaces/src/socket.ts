@@ -5,6 +5,7 @@ import { MediaKind, MediasoupProducer, MediaType, RoomInfo, ToggleActionType } f
 import { Poll, pollFormSchema, PollOption, PollPayload } from './poll.js';
 import { Answer, Qna, qnaFormSchema, QnaPayload } from './qna.js';
 import { FileInfo } from './file.js';
+import { ChatMessage, SendChatRequest, SyncChatRequest } from './chat.js';
 
 // 제스처 타입 정의
 export type GestureType =
@@ -226,6 +227,14 @@ export type GetPresentationResponse =
   | (BaseResponse & { success: false })
   | { success: true; files: FileInfo[] };
 
+export type SendChatResponse =
+  | (BaseResponse & { success: false })
+  | { success: true; messageId: string };
+
+export type SyncChatResponse =
+  | (BaseResponse & { success: false })
+  | { success: true; messages: ChatMessage[] };
+
 // 서버에서 보내는 브로드캐스트 페이로드
 export type UserJoinedPayload = ParticipantPayload;
 
@@ -339,6 +348,8 @@ export interface ServerToClientEvents {
   qna_end: (data: EndQnaPayload) => void;
 
   qna_end_detail: (data: EndQnaDetailPayload) => void;
+
+  new_chat: (data: ChatMessage) => void;
 }
 
 /**
@@ -400,4 +411,8 @@ export interface ClientToServerEvents {
   break_qna: (data: BreakQnaRequest, cb: (res: BreakQnaResponse) => void) => void;
 
   get_presentation: (cb: (res: GetPresentationResponse) => void) => void;
+
+  send_chat: (data: SendChatRequest, cb: (res: SendChatResponse) => void) => void;
+
+  sync_chat: (data: SyncChatRequest, cb: (res: SyncChatResponse) => void) => void;
 }

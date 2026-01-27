@@ -7,6 +7,7 @@ const managers = [
   Managers.ParticipantManagerService,
   Managers.PollManagerService,
   Managers.QnaManagerService,
+  Managers.ChatManagerService,
 ];
 @Global()
 @Module({
