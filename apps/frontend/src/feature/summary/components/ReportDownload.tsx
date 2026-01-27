@@ -13,7 +13,7 @@ interface ReportDownloadProps {
  */
 export function ReportDownload({ roomTitle, date }: ReportDownloadProps) {
   return (
-    <section className="mt-12 flex items-center gap-3 rounded-2xl bg-gray-600 p-6">
+    <section className="mt-10 flex items-center gap-3 rounded-2xl bg-gray-600 p-6">
       <div className="flex grow flex-col gap-3">
         <h3 className="text-text text-2xl font-bold">{roomTitle}</h3>
         <p className="text-subtext-light font-bold">{date}</p>
