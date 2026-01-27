@@ -6,6 +6,7 @@ import { CreateRoomRequest, EnterLectureRequestBody, Room } from '@plum/shared-i
 import { RoomService } from './room.service.js';
 import { InteractionService } from '../interaction/interaction.service.js';
 import {
+  ActivityScoreManagerService,
   ParticipantManagerService,
   RoomManagerService,
 } from '../redis/repository-manager/index.js'; // 경로 수정
@@ -71,6 +72,12 @@ describe('RoomService', () => {
             findOne: jest.fn().mockResolvedValue(undefined),
             isNameAvailable: jest.fn(),
             getParticipantsInRoom: jest.fn().mockResolvedValue([]),
+          },
+        },
+        {
+          provide: ActivityScoreManagerService,
+          useValue: {
+            initializeParticipantScore: jest.fn(),
           },
         },
         {

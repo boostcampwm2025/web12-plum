@@ -5,6 +5,7 @@ import { MediaKind, MediasoupProducer, MediaType, RoomInfo, ToggleActionType } f
 import { Poll, pollFormSchema, PollOption, PollPayload } from './poll.js';
 import { Answer, Qna, qnaFormSchema, QnaPayload } from './qna.js';
 import { FileInfo } from './file.js';
+import { RankItem } from './score.js';
 
 // 제스처 타입 정의
 export type GestureType =
@@ -86,6 +87,7 @@ export interface EmitQnaRequest {
 export interface VoteRequest {
   pollId: string;
   optionId: number;
+  isGesture: boolean;
 }
 
 export type AnswerRequest = {
@@ -304,6 +306,19 @@ export type EndQnaPayload = {
   text?: string[];
 };
 
+export interface ScoreUpdatePayload {
+  score: number;
+}
+
+export interface RankUpdatePayload {
+  top3: RankItem[];
+}
+
+export interface PresenterScoreInfoPayload {
+  top3: RankItem[];
+  lowest: RankItem | null;
+}
+
 /**
  * 서버 -> 클라이언트 이벤트
  */
@@ -339,6 +354,12 @@ export interface ServerToClientEvents {
   qna_end: (data: EndQnaPayload) => void;
 
   qna_end_detail: (data: EndQnaDetailPayload) => void;
+
+  score_update: (data: ScoreUpdatePayload) => void;
+
+  rank_update: (data: RankUpdatePayload) => void;
+
+  presenter_score_update: (data: PresenterScoreInfoPayload) => void;
 }
 
 /**

@@ -39,6 +39,10 @@ import {
   GetActivePollResponse,
   GetActiveQnaResponse,
   GetQnaResponse,
+  ScoreUpdatePayload,
+  RankUpdatePayload,
+  PresenterScoreInfoPayload,
+  RankItem,
 } from '@plum/shared-interfaces';
 
 import { SOCKET_CONFIG } from '../common/constants/socket.constants.js';
@@ -47,6 +51,7 @@ import { SocketMetadataService } from '../common/services/index.js';
 import {
   ParticipantManagerService,
   RoomManagerService,
+  ActivityScoreManagerService, // ActivityScoreManagerService 임포트
 } from '../redis/repository-manager/index.js';
 import { ZodValidationPipeSocket } from '../common/pipes/index.js';
 import { PrometheusService } from '../prometheus/prometheus.service.js';
@@ -67,6 +72,7 @@ export class InteractionGateway implements OnGatewayDisconnect {
     private readonly participantManagerService: ParticipantManagerService,
     private readonly roomManagerService: RoomManagerService,
     private readonly prometheusService: PrometheusService,
+    private readonly activityScoreManager: ActivityScoreManagerService, // ActivityScoreManagerService 주입
   ) {}
 
   /**
@@ -77,6 +83,7 @@ export class InteractionGateway implements OnGatewayDisconnect {
     this.logger.log(`Socket 해제됨 (Interaction): ${socket.id}`);
   }
 
+  // 기존 상호작용 이벤트 핸들러 (점수 업데이트 로직 추가)
   @SubscribeMessage('action_gesture')
   async handleActionGesture(
     @ConnectedSocket() socket: Socket,
@@ -92,18 +99,13 @@ export class InteractionGateway implements OnGatewayDisconnect {
     try {
       const { roomId, participantId } = metadata;
 
-      // 1. 참가자 정보 조회
       const participant = await this.participantManagerService.findOne(participantId);
       if (!participant) {
         return { success: false, error: '참가자를 찾을 수 없습니다.' };
       }
 
-      // 2. gestureCount 증가 (참여도 통계용)
-      await this.participantManagerService.updatePartial(participantId, {
-        gestureCount: participant.gestureCount + 1,
-      });
+      await this.activityScoreManager.updateScore(roomId, participantId, 'gesture');
 
-      // 3. 브로드캐스트 (본인 포함 전체에게)
       const payload: UpdateGestureStatusPayload = {
         participantId,
         participantName: participant.name,
@@ -218,6 +220,9 @@ export class InteractionGateway implements OnGatewayDisconnect {
         participant.name,
         data.optionId,
       );
+
+      const activityType = data.isGesture ? 'vote_gesture' : 'vote';
+      await this.activityScoreManager.updateScore(room.id, participant.id, activityType);
 
       this.server.to(`${room.id}:audience`).emit('update_poll', payload);
       this.server.to(`${room.id}:presenter`).emit('update_poll_detail', {
@@ -354,6 +359,8 @@ export class InteractionGateway implements OnGatewayDisconnect {
         data.text,
       );
 
+      await this.activityScoreManager.updateScore(room.id, participant.id, 'qna_answer');
+
       this.server.to(`${room.id}:audience`).emit('update_qna', result.audience);
       this.server.to(`${room.id}:presenter`).emit('update_qna_detail', result.presenter);
       this.logger.log(`[answer] ${participant.name}님이 질문 답변 제출: ${data.qnaId}`);
@@ -432,6 +439,34 @@ export class InteractionGateway implements OnGatewayDisconnect {
     } catch (error) {
       this.logger.error(`[auto_close_qna] 전달 실패: `, error);
     }
+  }
+
+  // 참여도 점수 관련 이벤트 핸들러 (ActivityScoreManagerService에서 발행한 내부 이벤트를 수신)
+  @OnEvent('activity.score.updated')
+  handleActivityScoreUpdated(payload: { roomId: string; participantId: string; newScore: number }) {
+    const { participantId, newScore } = payload;
+    const scorePayload: ScoreUpdatePayload = { score: newScore };
+    this.server.to(participantId).emit('score_update', scorePayload);
+    this.logger.log(`[Score] ${participantId} 점수 업데이트: ${newScore}`);
+  }
+
+  @OnEvent('activity.rank.changed')
+  handleActivityRankChanged(payload: {
+    roomId: string;
+    top3: RankItem[];
+    lowest: RankItem | null;
+  }) {
+    const { roomId, top3, lowest } = payload;
+
+    // 모든 청중에게 Top 3 랭킹 전송
+    const rankPayload: RankUpdatePayload = { top3 };
+    this.server.to(roomId).emit('rank_update', rankPayload);
+    this.logger.log(`[Rank] ${roomId} 랭킹 업데이트 (Top3: ${top3.length})`);
+
+    // 발표자에게만 꼴찌 점수 전송
+    const presenterPayload: PresenterScoreInfoPayload = { top3, lowest };
+    this.server.to(`${roomId}:presenter`).emit('presenter_score_update', presenterPayload);
+    this.logger.log(`[Rank] ${roomId} 발표자 꼴찌 점수 업데이트: ${lowest}`);
   }
 
   private validateMetadata(socketId: string): SocketMetadata {

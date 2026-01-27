@@ -10,10 +10,6 @@ export interface Participant {
   currentRoomId: string;
   name: string;
   role: ParticipantRole;
-  participationScore: number;
-  gestureCount: number;
-  chatCount: number;
-  pollParticipation: number;
   cameraEnable: boolean;
   micEnable: boolean;
   screenEnable: boolean;

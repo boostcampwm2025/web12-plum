@@ -49,11 +49,15 @@ export function usePollGestureHandler(): GestureHandler {
 
       const optionIndex = POLL_GESTURE_MAP[gesture];
       pollActions.setAudienceVotedOption(activePoll.id, optionIndex);
-      emit('vote', { pollId: activePoll.id, optionId: optionIndex }, (response) => {
-        if (!response.success) {
-          pollActions.setAudienceVotedOption(activePoll.id, null);
-        }
-      });
+      emit(
+        'vote',
+        { pollId: activePoll.id, optionId: optionIndex, isGesture: true },
+        (response) => {
+          if (!response.success) {
+            pollActions.setAudienceVotedOption(activePoll.id, null);
+          }
+        },
+      );
     },
     [activePoll, pollActions, emit],
   );
