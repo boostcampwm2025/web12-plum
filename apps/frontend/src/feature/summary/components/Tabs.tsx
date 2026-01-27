@@ -14,7 +14,7 @@ interface TabsProps {
  */
 export function Tabs({ activeTab, onChangeTab }: TabsProps) {
   return (
-    <div className="mt-12 grid grid-cols-4 gap-4">
+    <div className="mt-10 grid grid-cols-4 gap-4">
       {TABS.map(({ key, label }) => (
         <Button
           key={key}
