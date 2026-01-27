@@ -85,7 +85,7 @@ function QnaAnswerList({ isOpen, answers }: QnaAnswerListProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="mt-10 flex flex-col gap-8">
+    <div className="flex flex-col gap-6 p-6">
       {answers.length > 0 ? (
         answers.map((answer) => (
           <QnaAnswerItem
@@ -115,10 +115,10 @@ function QnaAccordionCard({ title, answers }: QnaResultCardProps) {
   const totalAnswers = answers.length;
 
   return (
-    <article className="flex flex-col rounded-2xl bg-gray-600 p-6">
+    <article className="flex flex-col rounded-2xl bg-gray-600">
       <button
         type="button"
-        className="flex w-full cursor-pointer items-center gap-3"
+        className="flex w-full cursor-pointer items-center gap-3 p-6"
         onClick={() => setIsOpen((prev) => !prev)}
       >
         <h4 className="text-text grow text-left text-xl font-bold">{title}</h4>
@@ -142,7 +142,7 @@ function QnaAccordionCard({ title, answers }: QnaResultCardProps) {
  */
 export function QnAResultsTab() {
   return (
-    <section className="mt-10 flex flex-col gap-10">
+    <section className="mt-10 flex flex-col gap-4">
       {mockQnaData.map((qna) => (
         <QnaAccordionCard
           key={qna.id}
