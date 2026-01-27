@@ -4,6 +4,7 @@ import { ParticipantPayload, ParticipantRole } from './participant.js';
 import { MediaKind, MediasoupProducer, MediaType, RoomInfo, ToggleActionType } from './shared.js';
 import { Poll, pollFormSchema, PollOption, PollPayload } from './poll.js';
 import { Answer, Qna, qnaFormSchema, QnaPayload } from './qna.js';
+import { FileInfo } from './file.js';
 
 // 제스처 타입 정의
 export type GestureType =
@@ -207,6 +208,10 @@ export type BreakQnaResponse =
   | (BaseResponse & { success: false })
   | { success: true; answers: Answer[]; count: number };
 
+export type GetPresentationResponse =
+  | (BaseResponse & { success: false })
+  | { success: true; files: FileInfo[] };
+
 // 서버에서 보내는 브로드캐스트 페이로드
 export type UserJoinedPayload = ParticipantPayload;
 
@@ -375,4 +380,6 @@ export interface ClientToServerEvents {
   break_poll: (data: BreakPollRequest, cb: (res: BreakPollResponse) => void) => void;
 
   break_qna: (data: BreakQnaRequest, cb: (res: BreakQnaResponse) => void) => void;
+
+  get_presentation: (cb: (res: GetPresentationResponse) => void) => void;
 }

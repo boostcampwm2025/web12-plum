@@ -1,12 +1,12 @@
+import { useEffect } from 'react';
 import { SidePanelHeader, SidePanelContent } from './SidePanel';
 import { Button } from '@/shared/components/Button';
 import { Icon } from '@/shared/components/icon/Icon';
 import { logger } from '@/shared/lib/logger';
+import { useRoomPresentation } from '../hooks/useRoomPresentation';
 
 interface InfoPanelProps {
   joinLink: string;
-  // TODO: 파일 타입 정의 필요
-  files: { name: string; url: string }[];
   onClose: () => void;
 }
 
@@ -20,7 +20,13 @@ const copyText = async (text: string) => {
   }
 };
 
-export function InfoPanel({ joinLink, files, onClose }: InfoPanelProps) {
+export function InfoPanel({ joinLink, onClose }: InfoPanelProps) {
+  const { files, isLoading, fetchPresentation } = useRoomPresentation();
+
+  useEffect(() => {
+    fetchPresentation();
+  }, [fetchPresentation]);
+
   return (
     <>
       <SidePanelHeader
@@ -46,7 +52,9 @@ export function InfoPanel({ joinLink, files, onClose }: InfoPanelProps) {
           </div>
 
           <h3 className="mb-3 text-sm">발표 자료</h3>
-          {files.length === 0 ? (
+          {isLoading ? (
+            <p className="text-text/60 text-xs">자료를 불러오는 중...</p>
+          ) : files.length === 0 ? (
             <p className="text-text/60 text-xs">업로드된 파일이 없습니다.</p>
           ) : (
             <ul className="flex flex-col gap-3">

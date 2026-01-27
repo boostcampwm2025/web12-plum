@@ -5,6 +5,7 @@ import type { IconName } from '@/shared/components/icon/iconMap';
 import { SidePanelHeader, SidePanelContent } from './SidePanel';
 import { PollManagementTabs } from './PollManagementTabs';
 import { QnaManagementTabs } from './QnaManagementTabs';
+import { PresentationManagementTabs } from './PresentationManagementTabs';
 
 type SubPage = 'breakroom' | 'vote' | 'qna' | 'material' | 'participant';
 
@@ -89,7 +90,7 @@ export function MenuPanel({ onClose }: MenuPanelProps) {
           {subPage === 'breakroom' && <div>소강의실</div>}
           {subPage === 'vote' && <PollManagementTabs />}
           {subPage === 'qna' && <QnaManagementTabs />}
-          {subPage === 'material' && <div>발표 자료 관리</div>}
+          {subPage === 'material' && <PresentationManagementTabs />}
           {subPage === 'participant' && <div>참가자 관리</div>}
         </div>
       </SidePanelContent>

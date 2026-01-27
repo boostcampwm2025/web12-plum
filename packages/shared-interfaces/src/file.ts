@@ -44,3 +44,8 @@ export const fileSchema = z.custom<any>(
     message: '유효한 파일 형식이 아닙니다.',
   },
 );
+
+export interface FileInfo {
+  url: string;
+  size: number;
+}
