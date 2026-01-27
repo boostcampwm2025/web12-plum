@@ -56,6 +56,10 @@ export interface ConsumeResumeRequest {
   consumerId: string;
 }
 
+export interface CloseConsumerRequest {
+  consumerId: string;
+}
+
 export interface ToggleMediaRequest {
   producerId: string;
   action: ToggleActionType;
@@ -153,6 +157,8 @@ export type ConsumeResponse<T = any> =
     };
 
 export type ConsumeResumeResponse = BaseResponse;
+
+export type CloseConsumerResponse = BaseResponse;
 
 export type ToggleMediaResponse = BaseResponse;
 
@@ -356,6 +362,8 @@ export interface ClientToServerEvents {
   consume: (data: ConsumeRequest, cb: (res: ConsumeResponse) => void) => void;
 
   consume_resume: (data: ConsumeResumeRequest, cb: (res: ConsumeResumeResponse) => void) => void;
+
+  close_consumer: (data: CloseConsumerRequest, cb: (res: CloseConsumerResponse) => void) => void;
 
   toggle_media: (data: ToggleMediaRequest, cb: (res: ToggleMediaResponse) => void) => void;
 

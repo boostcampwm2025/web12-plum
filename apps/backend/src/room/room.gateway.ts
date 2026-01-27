@@ -424,6 +424,18 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
+  // close_consumer: 클라이언트가 Consumer를 닫을 때 서버에 알림
+  @SubscribeMessage('close_consumer')
+  handleCloseConsumer(@MessageBody() data: { consumerId: string }): { success: boolean } {
+    try {
+      this.mediasoupService.closeConsumer(data.consumerId);
+      return { success: true };
+    } catch (error) {
+      this.logger.error(`❌ [close_consumer] 실패:`, error);
+      return { success: false };
+    }
+  }
+
   // toggle_media
   @SubscribeMessage('toggle_media')
   async handleToggleMedia(

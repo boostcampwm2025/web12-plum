@@ -40,7 +40,7 @@ export function ParticipantGrid({
     goToNextPage,
     hasPrevPage,
     hasNextPage,
-    sortedParticipants,
+    participants,
     visibleWindowParticipants,
   } = useParticipantPagination(dynamicItemsPerPage);
 
@@ -79,7 +79,7 @@ export function ParticipantGrid({
 
         <div className="flex flex-1 flex-col justify-center gap-3 overflow-hidden">
           {visibleWindowParticipants.map((participant) => {
-            const participantIdx = sortedParticipants.findIndex((p) => participant.id === p.id);
+            const participantIdx = participants.findIndex((p) => participant.id === p.id);
             const isCurrentlyVisible =
               participantIdx >= currentPage * itemsPerPage &&
               participantIdx < (currentPage + 1) * itemsPerPage;

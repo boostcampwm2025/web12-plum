@@ -1,4 +1,4 @@
-import { createContext, useContext, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useCallback, type ReactNode, useMemo } from 'react';
 import type { MediaKind, MediaType, NewProducerPayload } from '@plum/shared-interfaces';
 
 import { logger } from '@/shared/lib/logger';
@@ -114,8 +114,11 @@ export function MediaControlsProvider({ children }: MediaControlsProviderProps) 
    */
   const consumeExistingProducers = useCallback(async () => {
     const participants = roomActions.getParticipantList();
+    const myId = useRoomStore.getState().myInfo?.id;
 
     const tasks = participants.flatMap((participant) => {
+      if (participant.id === myId) return [];
+
       const subTasks = [];
       const audioId = participant.producers.get('audio');
       const screenId = participant.producers.get('screen');
@@ -333,18 +336,32 @@ export function MediaControlsProvider({ children }: MediaControlsProviderProps) 
     logger.media.info('[MediaControls] 모든 미디어 자원 정리 완료');
   }, [infra, streamActions, mediaActions]);
 
-  const value: MediaControlsContextType = {
-    enableMic,
-    disableMic,
-    enableCamera,
-    disableCamera,
-    enableScreenShare,
-    disableScreenShare,
-    consumeRemoteProducer,
-    consumeExistingProducers,
-    stopConsuming,
-    cleanup,
-  };
+  const value: MediaControlsContextType = useMemo(
+    () => ({
+      enableMic,
+      disableMic,
+      enableCamera,
+      disableCamera,
+      enableScreenShare,
+      disableScreenShare,
+      consumeRemoteProducer,
+      consumeExistingProducers,
+      stopConsuming,
+      cleanup,
+    }),
+    [
+      enableMic,
+      disableMic,
+      enableCamera,
+      disableCamera,
+      enableScreenShare,
+      disableScreenShare,
+      consumeRemoteProducer,
+      consumeExistingProducers,
+      stopConsuming,
+      cleanup,
+    ],
+  );
 
   return <MediaControlsContext.Provider value={value}>{children}</MediaControlsContext.Provider>;
 }
