@@ -25,7 +25,7 @@ export function PollDialog({
         <div className="flex flex-col gap-4">
           <h3 className="text-text text-2xl font-bold">{poll.title}</h3>
           <ul className="space-y-3">
-            {poll.options.map((option) => {
+            {poll.options.map((option, index) => {
               const percentage = totalVotes > 0 ? Math.round((option.count / totalVotes) * 100) : 0;
               const isSelected = selectedOptionId === option.id;
               const isDisabled = selectedOptionId !== null && !isSelected;
@@ -56,7 +56,17 @@ export function PollDialog({
                       style={{ width: `${percentage}%` }}
                     />
                     <div className="relative z-5 flex w-full items-center justify-between p-4">
-                      <span className="truncate">{option.value}</span>
+                      <div className="flex items-center gap-3">
+                        <span
+                          className={cn(
+                            'flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-sm font-extrabold',
+                            isSelected ? 'bg-text/80 text-primary' : 'bg-primary/20 text-primary',
+                          )}
+                        >
+                          {index + 1}
+                        </span>
+                        <span className="truncate">{option.value}</span>
+                      </div>
                       <span
                         className={cn(
                           'shrink-0 font-bold',
