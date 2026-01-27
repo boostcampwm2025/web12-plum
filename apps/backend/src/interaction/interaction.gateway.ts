@@ -108,7 +108,9 @@ export class InteractionGateway implements OnGatewayDisconnect {
         return { success: false, error: '참가자를 찾을 수 없습니다.' };
       }
 
-      await this.activityScoreManager.updateScore(roomId, participantId, 'gesture');
+      if (participant.role === 'audience') {
+        await this.activityScoreManager.updateScore(roomId, participantId, 'gesture');
+      }
 
       const payload: UpdateGestureStatusPayload = {
         participantId,
@@ -415,7 +417,8 @@ export class InteractionGateway implements OnGatewayDisconnect {
         return { success: true, top, lowest }; // 발표자용 (Top3 + Lowest)
       }
 
-      return { success: true, top }; // 청중용 (Top3만)
+      const myScore = await this.activityScoreManager.getParticipantScore(room.id, participant.id);
+      return { success: true, top, score: myScore }; // 청중용 (Top3만)
     } catch (error) {
       this.logger.error(`[get_current_rank] 실패: ${error.message}`);
       return { success: false, error: '랭킹 정보 조회에 실패했습니다.' };
@@ -482,12 +485,12 @@ export class InteractionGateway implements OnGatewayDisconnect {
 
     // 모든 청중에게 Top 3 랭킹 전송
     const rankPayload: RankUpdatePayload = { top };
-    this.server.to(roomId).emit('rank_update', rankPayload);
+    this.server.to(`${roomId}:audience`).emit('rank_update', rankPayload);
     this.logger.log(`[Rank] ${roomId} 랭킹 업데이트 (Top: ${top.length})`);
 
     // 발표자에게만 꼴찌 점수 전송
     const presenterPayload: PresenterScoreInfoPayload = { top, lowest };
-    this.server.to(`${roomId}:presenter`).emit('presenter_score_update', presenterPayload);
+    this.server.to(`${roomId}:presenter`).emit('presenter_rank_update', presenterPayload);
     this.logger.log(`[Rank] ${roomId} 발표자 꼴찌 점수 업데이트: ${lowest}`);
   }
 

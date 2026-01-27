@@ -136,6 +136,36 @@ describe('ActivityScoreManagerService', () => {
     });
   });
 
+  describe('getParticipantScore', () => {
+    const roomId = 'room1';
+    const pId = 'user1';
+
+    it('사용자의 점수가 존재할 경우, 소수점을 제외한 정수 점수만 반환해야 한다', async () => {
+      redisClientMock.zscore.mockResolvedValue('15.2524');
+
+      const result = await service.getParticipantScore(roomId, pId);
+
+      expect(redisClientMock.zscore).toHaveBeenCalledWith(`room:${roomId}:scores`, pId);
+      expect(result).toBe(15);
+    });
+
+    it('사용자의 데이터가 Redis에 없을 경우 0을 반환해야 한다', async () => {
+      redisClientMock.zscore.mockResolvedValue(null);
+
+      const result = await service.getParticipantScore(roomId, pId);
+
+      expect(result).toBe(0);
+    });
+
+    it('점수가 0점이고 우선순위 소수점만 있는 경우 0을 반환해야 한다', async () => {
+      redisClientMock.zscore.mockResolvedValue('0.9876');
+
+      const result = await service.getParticipantScore(roomId, pId);
+
+      expect(result).toBe(0);
+    });
+  });
+
   describe('getLowest', () => {
     it(`참가자가 ${RANK_LIMIT + 1}명 미만일 경우 null을 반환해야 한다 (최소 비교 대상 부재)`, async () => {
       redisClientMock.zcard.mockResolvedValue(1);

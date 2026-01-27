@@ -118,10 +118,7 @@ export class RoomService {
 
   private async createHost(roomId: string, hostId: string, name: string) {
     const host = this.generateParticipantObject(hostId, roomId, name, 'presenter');
-    await Promise.all([
-      this.roomManagerService.addParticipant(roomId, host),
-      this.activityScoreManagerService.initializeParticipantScore(roomId, hostId),
-    ]);
+    await this.roomManagerService.addParticipant(roomId, host);
     return host;
   }
 

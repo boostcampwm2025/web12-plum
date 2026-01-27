@@ -230,7 +230,7 @@ export type GetPresentationResponse =
 
 export type GetActivityScoreRank =
   | (BaseResponse & { success: false })
-  | ({ success: true } & RankUpdatePayload)
+  | ({ success: true; score: number } & RankUpdatePayload)
   | ({ success: true } & PresenterScoreInfoPayload);
 
 // 서버에서 보내는 브로드캐스트 페이로드
@@ -364,7 +364,7 @@ export interface ServerToClientEvents {
 
   rank_update: (data: RankUpdatePayload) => void;
 
-  presenter_score_update: (data: PresenterScoreInfoPayload) => void;
+  presenter_rank_update: (data: PresenterScoreInfoPayload) => void;
 }
 
 /**

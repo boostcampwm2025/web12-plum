@@ -146,6 +146,22 @@ export class ActivityScoreManagerService {
   }
 
   /**
+   * 특정 참가자의 현재 점수 조회
+   * @param roomId 방 ID
+   * @param participantId 참가자 ID
+   */
+  async getParticipantScore(roomId: string, participantId: string): Promise<number> {
+    const zsetKey = `room:${roomId}:scores`;
+    const scoreWithFraction = await this.redisService.getClient().zscore(zsetKey, participantId);
+
+    if (!scoreWithFraction) {
+      return 0;
+    }
+
+    return Math.floor(parseFloat(scoreWithFraction));
+  }
+
+  /**
    * 최하위 점수 조회
    * @param roomId 방 ID
    * @returns 최하위 점수
