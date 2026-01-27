@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { ActivityType, RankItem } from '@plum/shared-interfaces';
+import { ActivityType, RANK_LIMIT, RankItem } from '@plum/shared-interfaces';
 import { RedisService } from '../redis.service.js';
 import { ParticipantManagerService } from './participant-manager.service.js';
 
@@ -101,12 +101,11 @@ export class ActivityScoreManagerService {
       });
 
       // 랭킹 정보는 매번 계산해서 전송
-      const totalParticipants = await this.redisService.getClient().zcard(zsetKey);
-      const top3 = await this.getTopRankings(roomId, 3);
-      const lowest = totalParticipants >= 4 ? await this.getLowest(roomId) : null;
+      const top = await this.getTopRankings(roomId, RANK_LIMIT);
+      const lowest = await this.getLowest(roomId);
       this.eventEmitter.emit('activity.rank.changed', {
         roomId,
-        top3,
+        top,
         lowest,
       });
     } catch (error) {
@@ -120,7 +119,7 @@ export class ActivityScoreManagerService {
    * @param limit 조회할 랭킹 수
    * @returns 랭킹 아이템 배열
    */
-  private async getTopRankings(roomId: string, limit: number): Promise<RankItem[]> {
+  async getTopRankings(roomId: string, limit: number): Promise<RankItem[]> {
     const zsetKey = `room:${roomId}:scores`;
     // 점수 높은 순으로 조회 (Member, Score, Member, Score ... 형태)
     const rawResult = await this.redisService
@@ -151,11 +150,11 @@ export class ActivityScoreManagerService {
    * @param roomId 방 ID
    * @returns 최하위 점수
    */
-  private async getLowest(roomId: string): Promise<RankItem | null> {
+  async getLowest(roomId: string): Promise<RankItem | null> {
     const zsetKey = `room:${roomId}:scores`;
     // 전체 참가자 수 조회
     const totalParticipants = await this.redisService.getClient().zcard(zsetKey);
-    if (totalParticipants < 2) return null;
+    if (totalParticipants <= RANK_LIMIT) return null;
 
     // 점수가 가장 낮은 1명 조회 (zrange는 오름차순이므로 0번이 최하위)
     const result = await this.redisService.getClient().zrange(zsetKey, 0, 0, 'WITHSCORES');

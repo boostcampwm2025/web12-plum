@@ -3,6 +3,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { ActivityScoreManagerService } from './activity-score-manager.service';
 import { RedisService } from '../redis.service';
 import { ParticipantManagerService } from './participant-manager.service.js';
+import { RANK_LIMIT } from '@plum/shared-interfaces';
 
 describe('ActivityScoreManagerService', () => {
   let service: ActivityScoreManagerService;
@@ -97,14 +98,14 @@ describe('ActivityScoreManagerService', () => {
         'activity.rank.changed',
         expect.objectContaining({
           roomId,
-          top3: expect.any(Array),
+          top: expect.any(Array),
           lowest: expect.any(Object),
         }),
       );
     });
 
-    it('참가자가 4명 미만일 경우 lowest는 null로 발행되어야 한다', async () => {
-      redisClientMock.zcard.mockResolvedValue(3);
+    it(`참가자가 ${RANK_LIMIT + 1}명 미만일 경우 lowest는 null로 발행되어야 한다`, async () => {
+      redisClientMock.zcard.mockResolvedValue(RANK_LIMIT);
 
       await service.updateScore(roomId, pId, 'gesture');
 
@@ -117,8 +118,8 @@ describe('ActivityScoreManagerService', () => {
       expect(redisClientMock.zrange).not.toHaveBeenCalled();
     });
 
-    it('참가자가 4명 이상일 경우 lowest 정보가 포함되어 발행되어야 한다', async () => {
-      redisClientMock.zcard.mockResolvedValue(4);
+    it(`참가자가 ${RANK_LIMIT + 1}명 이상일 경우 lowest 정보가 포함되어 발행되어야 한다`, async () => {
+      redisClientMock.zcard.mockResolvedValue(RANK_LIMIT + 1);
       redisClientMock.zrange.mockResolvedValue(['user4', '1.1234']);
 
       await service.updateScore(roomId, pId, 'gesture');
@@ -136,23 +137,23 @@ describe('ActivityScoreManagerService', () => {
   });
 
   describe('getLowest', () => {
-    it('참가자가 2명 미만일 경우 null을 반환해야 한다 (최소 비교 대상 부재)', async () => {
+    it(`참가자가 ${RANK_LIMIT + 1}명 미만일 경우 null을 반환해야 한다 (최소 비교 대상 부재)`, async () => {
       redisClientMock.zcard.mockResolvedValue(1);
-      const result = await service['getLowest']('room1');
+      const result = await service.getLowest('room1');
       expect(result).toBeNull();
     });
 
-    it('참가자가 2명 이상일 때 가장 점수가 낮은 사람의 정보를 반환한다', async () => {
+    it('참가자가 ${RANK_LIMIT + 1}명 이상일 때 가장 점수가 낮은 사람의 정보를 반환한다', async () => {
       const roomId = 'room1';
-      redisClientMock.zcard.mockResolvedValue(2);
+      redisClientMock.zcard.mockResolvedValue(RANK_LIMIT + 1);
       redisClientMock.zrange.mockResolvedValue(['user2', '5.5']);
       (participantManagerService.findOne as jest.Mock).mockResolvedValue({ name: '꼴찌' });
 
-      const result = await service['getLowest'](roomId);
+      const result = await service.getLowest(roomId);
 
       expect(result).toEqual(
         expect.objectContaining({
-          rank: 2,
+          rank: 4,
           participantId: 'user2',
           score: 5,
         }),

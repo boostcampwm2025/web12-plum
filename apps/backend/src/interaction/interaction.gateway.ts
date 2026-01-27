@@ -43,6 +43,10 @@ import {
   RankUpdatePayload,
   PresenterScoreInfoPayload,
   RankItem,
+  GetActivityScoreRank,
+  Participant,
+  Room,
+  RANK_LIMIT,
 } from '@plum/shared-interfaces';
 
 import { SOCKET_CONFIG } from '../common/constants/socket.constants.js';
@@ -396,6 +400,28 @@ export class InteractionGateway implements OnGatewayDisconnect {
     }
   }
 
+  @SubscribeMessage('get_activity_score_rank')
+  async getCurrentActivityRank(@ConnectedSocket() socket: Socket): Promise<GetActivityScoreRank> {
+    try {
+      const { room, participant } = await this.validateMetadata(socket.id);
+
+      // 점수 매니저를 통해 데이터 조회
+      const top = await this.activityScoreManager.getTopRankings(room.id, RANK_LIMIT);
+
+      // 역할(Role)에 따른 데이터 분기 처리
+      if (participant.role === 'presenter') {
+        const lowest = await this.activityScoreManager.getLowest(room.id);
+
+        return { success: true, top, lowest }; // 발표자용 (Top3 + Lowest)
+      }
+
+      return { success: true, top }; // 청중용 (Top3만)
+    } catch (error) {
+      this.logger.error(`[get_current_rank] 실패: ${error.message}`);
+      return { success: false, error: '랭킹 정보 조회에 실패했습니다.' };
+    }
+  }
+
   @OnEvent('poll.autoClosed')
   async handleAutoClosedPollEvent(payload: { pollId: string; results: PollOption[] }) {
     try {
@@ -451,34 +477,27 @@ export class InteractionGateway implements OnGatewayDisconnect {
   }
 
   @OnEvent('activity.rank.changed')
-  handleActivityRankChanged(payload: {
-    roomId: string;
-    top3: RankItem[];
-    lowest: RankItem | null;
-  }) {
-    const { roomId, top3, lowest } = payload;
+  handleActivityRankChanged(payload: { roomId: string; top: RankItem[]; lowest: RankItem | null }) {
+    const { roomId, top, lowest } = payload;
 
     // 모든 청중에게 Top 3 랭킹 전송
-    const rankPayload: RankUpdatePayload = { top3 };
+    const rankPayload: RankUpdatePayload = { top };
     this.server.to(roomId).emit('rank_update', rankPayload);
-    this.logger.log(`[Rank] ${roomId} 랭킹 업데이트 (Top3: ${top3.length})`);
+    this.logger.log(`[Rank] ${roomId} 랭킹 업데이트 (Top: ${top.length})`);
 
     // 발표자에게만 꼴찌 점수 전송
-    const presenterPayload: PresenterScoreInfoPayload = { top3, lowest };
+    const presenterPayload: PresenterScoreInfoPayload = { top, lowest };
     this.server.to(`${roomId}:presenter`).emit('presenter_score_update', presenterPayload);
     this.logger.log(`[Rank] ${roomId} 발표자 꼴찌 점수 업데이트: ${lowest}`);
   }
 
-  private validateMetadata(socketId: string): SocketMetadata {
+  private async validateMetadata(
+    socketId: string,
+  ): Promise<{ room: Room; participant: Participant; metadata: SocketMetadata }> {
     const metadata = this.socketMetadataService.get(socketId);
     if (!metadata) {
       throw new BusinessException('세션이 만료되었거나 유효하지 않은 접근입니다.');
     }
-    return metadata;
-  }
-
-  private async validatePresenterAction(socketId: string) {
-    const metadata = this.validateMetadata(socketId);
 
     const [participant, room] = await Promise.all([
       this.participantManagerService.findOne(metadata.participantId),
@@ -488,6 +507,12 @@ export class InteractionGateway implements OnGatewayDisconnect {
     if (!participant || !room) {
       throw new BusinessException('방 정보를 찾을 수 없습니다.');
     }
+
+    return { room, participant, metadata };
+  }
+
+  private async validatePresenterAction(socketId: string) {
+    const { room, participant, metadata } = await this.validateMetadata(socketId);
 
     if (participant.role !== 'presenter' || room.presenter !== participant.id) {
       throw new BusinessException('해당 작업을 수행할 권한이 없습니다.');
@@ -501,16 +526,7 @@ export class InteractionGateway implements OnGatewayDisconnect {
   }
 
   private async validateAudienceAction(socketId: string) {
-    const metadata = this.validateMetadata(socketId);
-
-    const [participant, room] = await Promise.all([
-      this.participantManagerService.findOne(metadata.participantId),
-      this.roomManagerService.findOne(metadata.roomId),
-    ]);
-
-    if (!participant || !room) {
-      throw new BusinessException('방 정보를 찾을 수 없습니다.');
-    }
+    const { room, participant, metadata } = await this.validateMetadata(socketId);
 
     if (participant.role !== 'audience') {
       throw new BusinessException('해당 작업을 수행할 권한이 없습니다.');

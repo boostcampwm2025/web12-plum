@@ -22,3 +22,5 @@ export interface ParticipantStats {
   voteCount: number;
   answerCount: number;
 }
+
+export const RANK_LIMIT = 3;

@@ -228,6 +228,11 @@ export type GetPresentationResponse =
   | (BaseResponse & { success: false })
   | { success: true; files: FileInfo[] };
 
+export type GetActivityScoreRank =
+  | (BaseResponse & { success: false })
+  | ({ success: true } & RankUpdatePayload)
+  | ({ success: true } & PresenterScoreInfoPayload);
+
 // 서버에서 보내는 브로드캐스트 페이로드
 export type UserJoinedPayload = ParticipantPayload;
 
@@ -311,11 +316,11 @@ export interface ScoreUpdatePayload {
 }
 
 export interface RankUpdatePayload {
-  top3: RankItem[];
+  top: RankItem[];
 }
 
 export interface PresenterScoreInfoPayload {
-  top3: RankItem[];
+  top: RankItem[];
   lowest: RankItem | null;
 }
 
@@ -421,4 +426,6 @@ export interface ClientToServerEvents {
   break_qna: (data: BreakQnaRequest, cb: (res: BreakQnaResponse) => void) => void;
 
   get_presentation: (cb: (res: GetPresentationResponse) => void) => void;
+
+  get_activity_score_rank: (cb: (res: GetActivityScoreRank) => void) => void;
 }
