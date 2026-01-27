@@ -79,9 +79,10 @@ export class ChatGateway {
       // 1. Zod 검증
       const validation = chatMessageSchema.safeParse(data);
       if (!validation.success) {
+        const firstError = validation.error.issues[0];
         return {
           success: false,
-          error: validation.error.errors[0]?.message || '메시지 형식이 올바르지 않습니다.',
+          error: firstError?.message || '메시지 형식이 올바르지 않습니다.',
         };
       }
 

@@ -152,27 +152,28 @@ export class ChatManagerService {
       // 1. 3초 이전 데이터 삭제 (Sliding Window!)
       pipeline.zremrangebyscore(key, '-inf', threeSecondsAgo);
 
-      // 2. 현재 타임스탬프 추가
-      pipeline.zadd(key, now, now.toString());
-
-      // 3. 현재 개수 확인
+      // 2. 현재 개수 확인 (추가 전!)
       pipeline.zcard(key);
 
-      // 4. TTL 설정
+      // 3. TTL 설정
       pipeline.expire(key, 3);
 
       const results = await pipeline.exec();
 
-      // zcard 결과 추출 (3번째 명령어)
-      const count = (results?.[2]?.[1] as number) || 0;
+      // zcard 결과 추출 (2번째 명령어)
+      const count = (results?.[1]?.[1] as number) || 0;
 
-      // 5. 5개 초과 시 차단
-      if (count > 5) {
+      // 4. 5개 이상이면 차단 (추가 전 개수 체크!)
+      if (count >= 5) {
         this.logger.warn(
           `[Rate Limit] ${participantId} (${roomId}) - 3초당 5개 초과 (현재: ${count}개)`,
         );
         return false;
       }
+
+      // 5. 통과 시에만 타임스탬프 추가
+      await client.zadd(key, now, now.toString());
+      await client.expire(key, 3);
 
       return true;
     } catch (error) {
