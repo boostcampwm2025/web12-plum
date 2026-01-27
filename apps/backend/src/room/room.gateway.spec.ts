@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Socket } from 'socket.io';
+import { Server, Socket } from 'socket.io';
 
 import { RoomGateway } from './room.gateway.js';
 import { RedisService } from '../redis/redis.service.js';
@@ -15,11 +16,12 @@ import { PrometheusService } from '../prometheus/prometheus.service.js';
 
 describe('RoomGateway', () => {
   let gateway: RoomGateway;
-  let mediasoupService: MediasoupService;
+  let mediasoupService: jest.Mocked<MediasoupService>;
   let participantManager: ParticipantManagerService;
   let socketMetadataService: SocketMetadataService;
   let roomManager: RoomManagerService;
   let roomService: RoomService;
+  let mockServer: jest.Mocked<Server>;
 
   const createMockSocket = (id: string = 'socket-123') =>
     ({
@@ -34,6 +36,7 @@ describe('RoomGateway', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         RoomGateway,
+        EventEmitter2, // EventEmitter2를 providers에 추가
         {
           provide: WINSTON_MODULE_NEST_PROVIDER,
           useValue: {
@@ -70,6 +73,7 @@ describe('RoomGateway', () => {
             }),
             pauseProducer: jest.fn().mockResolvedValue(undefined),
             resumeProducer: jest.fn().mockResolvedValue(undefined),
+            closeProducer: jest.fn(), // 테스트를 위해 mock 함수 추가
 
             // Consumer 관련
             createConsumer: jest.fn().mockResolvedValue({
@@ -135,24 +139,28 @@ describe('RoomGateway', () => {
     }).compile();
 
     gateway = module.get<RoomGateway>(RoomGateway);
-    mediasoupService = module.get<MediasoupService>(MediasoupService);
+    mediasoupService = module.get(MediasoupService);
     participantManager = module.get<ParticipantManagerService>(ParticipantManagerService);
     socketMetadataService = module.get<SocketMetadataService>(SocketMetadataService);
     roomManager = module.get<RoomManagerService>(RoomManagerService);
     roomService = module.get<RoomService>(RoomService);
 
-    (gateway as any).server = {
+    mockServer = {
       to: jest.fn().mockReturnThis(),
       emit: jest.fn(),
       in: jest.fn().mockReturnThis(),
       socketsLeave: jest.fn(),
       disconnectSockets: jest.fn(),
-    };
+    } as unknown as jest.Mocked<Server>;
+
+    (gateway as any).server = mockServer;
   });
 
   it('should be defined', () => {
     expect(gateway).toBeDefined();
   });
+
+  // --- 기존 테스트 코드 생략 ---
 
   describe('handleJoinRoom', () => {
     it('참가자가 존재하면 방 입장에 성공해야 함', async () => {
@@ -343,6 +351,63 @@ describe('RoomGateway', () => {
       expect(socket.to).toHaveBeenCalled();
     });
   });
+
+  // --- 추가된 테스트 케이스 ---
+  describe('handleCloseProducer', () => {
+    it('should call mediasoupService.closeProducer with the correct producerId', () => {
+      // Given
+      const producerId = 'test-producer-id';
+      const request = { producerId };
+
+      // When
+      const response = gateway.handleCloseProducer(request);
+
+      // Then
+      expect(mediasoupService.closeProducer).toHaveBeenCalledWith(producerId);
+      expect(response.success).toBe(true);
+    });
+
+    it('should return success: false when closeProducer throws an error', () => {
+      // Given
+      const producerId = 'error-producer-id';
+      const request = { producerId };
+      mediasoupService.closeProducer.mockImplementationOnce(() => {
+        throw new Error('Test error');
+      });
+
+      // When
+      const response = gateway.handleCloseProducer(request);
+
+      // Then
+      expect(mediasoupService.closeProducer).toHaveBeenCalledWith(producerId);
+      expect(response.success).toBe(false);
+    });
+  });
+
+  describe('handleConsumerClosed (Event)', () => {
+    it('should emit "consumer_closed" to the correct participant', () => {
+      // Given
+      const payload = {
+        consumerId: 'test-consumer-id',
+        participantId: 'test-participant-id',
+        producerId: 'test-producer-id',
+      };
+
+      // When
+      // EventEmitter를 통해 'consumer.closed' 이벤트를 수동으로 발생시켜 테스트
+      gateway.handleConsumerClosed(payload);
+
+      // Then
+      // gateway.server.to(participantId)가 호출되었는지 확인
+      expect(mockServer.to).toHaveBeenCalledWith(payload.participantId);
+      // 해당 participant에게 'consumer_closed' 이벤트와 올바른 데이터가 전송되었는지 확인
+      expect(mockServer.emit).toHaveBeenCalledWith('consumer_closed', {
+        consumerId: payload.consumerId,
+        producerId: payload.producerId,
+      });
+    });
+  });
+  // --- 기존 테스트 코드 계속 ---
 
   // 비정상 퇴장 시 Redis 예약 테스트
   describe('handleDisconnect', () => {
