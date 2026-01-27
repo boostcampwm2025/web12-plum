@@ -65,7 +65,7 @@ function PresentationFileList({ files, isLoading }: PresentationFileListProps) {
               key={`${file.name}-${index}`}
               className="flex items-center justify-between gap-4 rounded-lg bg-gray-400 p-4 text-white shadow-sm"
             >
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-1">
                 <span className="truncate text-sm font-medium">{file.name}</span>
                 <span className="text-subtext truncate text-xs">{formatFileSize(file.size)}</span>
               </div>
@@ -87,7 +87,7 @@ function PresentationFileList({ files, isLoading }: PresentationFileListProps) {
           ))
         )}
       </div>
-      <span className="truncate text-lg font-bold">총 {files.length}개 파일</span>
+      <span className="truncate text-sm font-bold">총 {files.length}개 파일</span>
     </div>
   );
 }
