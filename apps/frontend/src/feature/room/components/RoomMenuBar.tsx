@@ -84,7 +84,9 @@ function MainMenu() {
   const visibleButtons =
     myRole === 'presenter'
       ? menuButtons.filter((button) => button.icon !== 'vote' && button.icon !== 'qna')
-      : menuButtons;
+      : myRole === 'audience'
+        ? menuButtons.filter((button) => button.icon !== 'screen-share')
+        : menuButtons;
 
   return (
     <>
@@ -158,6 +160,7 @@ interface RoomMenuBarProps {
 
 export function RoomMenuBar({ className, roomTitle = '강의실' }: RoomMenuBarProps) {
   const myRole = useRoomStore((state) => state.myInfo?.role);
+  const participantCount = useRoomStore((state) => state.participants.size);
 
   return (
     <nav
@@ -165,8 +168,11 @@ export function RoomMenuBar({ className, roomTitle = '강의실' }: RoomMenuBarP
       aria-label="강의실 메뉴바"
       aria-busy={!myRole}
     >
-      <div className="flex min-w-0 justify-start">
+      <div className="flex min-w-0 items-center justify-start gap-2">
         <h1 className="text-text text-md truncate font-bold">{roomTitle}</h1>
+        <span className="text-subtext-light flex items-center gap-1 rounded-full bg-gray-200 px-2 py-1 text-xs font-bold">
+          {participantCount} 명
+        </span>
       </div>
 
       <div className="flex items-center gap-3 justify-self-center">
