@@ -87,11 +87,11 @@ export function MenuPanel({ onClose }: MenuPanelProps) {
               ))}
             </div>
           )}
-          {subPage === 'breakroom' && <div>소강의실</div>}
+          {/* {subPage === 'breakroom' && <div>소강의실</div>} */}
           {subPage === 'vote' && <PollManagementTabs />}
           {subPage === 'qna' && <QnaManagementTabs />}
           {subPage === 'material' && <PresentationManagementTabs />}
-          {subPage === 'participant' && <div>참가자 관리</div>}
+          {/* {subPage === 'participant' && <div>참가자 관리</div>} */}
         </div>
       </SidePanelContent>
     </>
