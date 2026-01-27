@@ -160,6 +160,7 @@ export type ConsumeResponse<T = any> =
       kind: MediaKind;
       type: MediaType;
       rtpParameters: T;
+      producerPaused: boolean; // 추가된 필드
     };
 
 export type ConsumeResumeResponse = BaseResponse;
@@ -243,6 +244,11 @@ export interface UserLeftPayload {
 
 export interface NewProducerPayload extends MediasoupProducer {
   participantRole: ParticipantRole;
+}
+
+export interface ProducerClosedPayload {
+  participantId: string;
+  producerId: string;
   kind: MediaKind;
   type: MediaType;
 }
@@ -324,6 +330,8 @@ export interface ServerToClientEvents {
   user_left: (data: UserLeftPayload) => void;
 
   new_producer: (data: NewProducerPayload) => void;
+
+  producer_closed: (data: ProducerClosedPayload) => void;
 
   consumer_closed: (data: ConsumerClosedPayload) => void;
 

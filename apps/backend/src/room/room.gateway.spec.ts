@@ -352,33 +352,46 @@ describe('RoomGateway', () => {
     });
   });
 
-  // --- 추가된 테스트 케이스 ---
   describe('handleCloseProducer', () => {
-    it('should call mediasoupService.closeProducer with the correct producerId', () => {
-      // Given
+    it('should call mediasoupService.closeProducer with the correct producerId', async () => {
+      const socket = createMockSocket();
       const producerId = 'test-producer-id';
       const request = { producerId };
+      const metadata = { roomId: 'room-1', participantId: 'user-1', transportIds: [] };
+      const participant = {
+        id: 'user-1',
+        name: '홍길동',
+        producers: { video: producerId },
+      };
 
-      // When
-      const response = gateway.handleCloseProducer(request);
+      jest.spyOn(socketMetadataService, 'get').mockReturnValue(metadata);
+      jest.spyOn(participantManager, 'findOne').mockResolvedValue(participant as any);
+      const updateSpy = jest
+        .spyOn(participantManager, 'updatePartial')
+        .mockResolvedValue(undefined);
+
+      const response = await gateway.handleCloseProducer(socket, request);
 
       // Then
-      expect(mediasoupService.closeProducer).toHaveBeenCalledWith(producerId);
+      expect(updateSpy).toHaveBeenCalledWith('user-1', {
+        producers: { video: '' },
+      });
       expect(response.success).toBe(true);
     });
 
-    it('should return success: false when closeProducer throws an error', () => {
-      // Given
+    it('should return success: false when closeProducer throws an error', async () => {
+      const socket = createMockSocket();
       const producerId = 'error-producer-id';
       const request = { producerId };
+      const metadata = { roomId: 'room-1', participantId: 'user-1', transportIds: [] };
+
+      jest.spyOn(socketMetadataService, 'get').mockReturnValue(metadata);
       mediasoupService.closeProducer.mockImplementationOnce(() => {
         throw new Error('Test error');
       });
 
-      // When
-      const response = gateway.handleCloseProducer(request);
+      const response = await gateway.handleCloseProducer(socket, request);
 
-      // Then
       expect(mediasoupService.closeProducer).toHaveBeenCalledWith(producerId);
       expect(response.success).toBe(false);
     });
@@ -386,28 +399,21 @@ describe('RoomGateway', () => {
 
   describe('handleConsumerClosed (Event)', () => {
     it('should emit "consumer_closed" to the correct participant', () => {
-      // Given
       const payload = {
         consumerId: 'test-consumer-id',
         participantId: 'test-participant-id',
         producerId: 'test-producer-id',
       };
 
-      // When
-      // EventEmitter를 통해 'consumer.closed' 이벤트를 수동으로 발생시켜 테스트
       gateway.handleConsumerClosed(payload);
 
-      // Then
-      // gateway.server.to(participantId)가 호출되었는지 확인
       expect(mockServer.to).toHaveBeenCalledWith(payload.participantId);
-      // 해당 participant에게 'consumer_closed' 이벤트와 올바른 데이터가 전송되었는지 확인
       expect(mockServer.emit).toHaveBeenCalledWith('consumer_closed', {
         consumerId: payload.consumerId,
         producerId: payload.producerId,
       });
     });
   });
-  // --- 기존 테스트 코드 계속 ---
 
   // 비정상 퇴장 시 Redis 예약 테스트
   describe('handleDisconnect', () => {

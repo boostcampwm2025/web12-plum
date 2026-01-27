@@ -40,6 +40,7 @@ import {
   MediaStateChangedPayload,
   NewProducerPayload,
   Participant,
+  ProducerClosedPayload,
   ProduceRequest,
   ProduceResponse,
   ToggleMediaRequest,
@@ -166,7 +167,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
         ...roomInfo,
       };
     } catch (error) {
-      this.logger.error(`❌ [join_room] 실패:`, error);
+      this.logger.error(`❌ [join_room] 실패: ${error.message}`);
       return { success: false, error: '강의실 입장에 실패했습니다.' };
     }
   }
@@ -210,7 +211,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
         ...transportParams,
       };
     } catch (error) {
-      this.logger.error(`❌ [create_transport] 실패:`, error);
+      this.logger.error(`❌ [create_transport] 실패: ${error.message}`);
       return { success: false, error: 'Transport 생성에 실패했습니다.' };
     }
   }
@@ -233,7 +234,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       return { success: true };
     } catch (error) {
-      this.logger.error(`❌ [connect_transport] 실패:`, error);
+      this.logger.error(`❌ [connect_transport] 실패: ${error.message}`);
       return { success: false, error: 'Transport 연결에 실패했습니다.' };
     }
   }
@@ -309,7 +310,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       return { success: true, kind: kind, producerId: producer.id, type: data.type };
     } catch (error) {
-      this.logger.error(`❌ [produce] 실패:`, error);
+      this.logger.error(`❌ [produce] 실패: ${error.message}`);
       return { success: false, error: 'Produce 생성에 실패하였습니다.' };
     }
   }
@@ -333,19 +334,61 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const producerId = targetParticipant.producers[data.type];
       return { success: true, producerId };
     } catch (error) {
-      this.logger.error(`❌ [get_producer] 실패:`, error);
+      this.logger.error(`❌ [get_producer] 실패: ${error.message}`);
       return { success: false, error: 'Producer 조회에 실패하였습니다.' };
     }
   }
 
   // close_producer: 클라이언트가 Producer를 닫을 때 서버에 알림
   @SubscribeMessage('close_producer')
-  handleCloseProducer(@MessageBody() data: CloseProducerRequest): CloseProducerResponse {
+  async handleCloseProducer(
+    @ConnectedSocket() socket: Socket,
+    @MessageBody() data: CloseProducerRequest,
+  ): Promise<CloseProducerResponse> {
+    const metadata = this.socketMetadataService.get(socket.id);
+    if (!metadata) return { success: false, error: '먼저 join_room을 호출하세요.' };
+
     try {
+      // 1. Mediasoup 리소스 정리
       this.mediasoupService.closeProducer(data.producerId);
+
+      // 2. Redis 상태 업데이트 및 브로드캐스트
+      const participant = await this.participantManagerService.findOne(metadata.participantId);
+      if (participant) {
+        const updatedProducers = { ...participant.producers };
+        let closedType: 'audio' | 'video' | 'screen' | null = null;
+
+        // 해당 producerId를 가진 키를 찾아 빈 문자열로 설정
+        for (const [key, value] of Object.entries(updatedProducers)) {
+          if (value === data.producerId) {
+            closedType = key as 'audio' | 'video' | 'screen';
+            updatedProducers[key as keyof typeof updatedProducers] = '';
+            break;
+          }
+        }
+
+        if (closedType) {
+          await this.participantManagerService.updatePartial(metadata.participantId, {
+            producers: updatedProducers,
+          });
+
+          // 3. producer_closed 이벤트 브로드캐스트
+          const payload: ProducerClosedPayload = {
+            participantId: metadata.participantId,
+            producerId: data.producerId,
+            kind: closedType === 'audio' ? 'audio' : 'video',
+            type: closedType,
+          };
+          socket.to(metadata.roomId).emit('producer_closed', payload);
+          this.logger.log(
+            `📢 [Producer 종료] ${participant.name} - ${closedType} (ID: ${data.producerId})`,
+          );
+        }
+      }
+
       return { success: true };
     } catch (error) {
-      this.logger.error(`❌ [close_producer] 실패:`, error);
+      this.logger.error(`❌ [close_producer] 실패: ${error.message}`);
       return { success: false };
     }
   }
@@ -420,9 +463,10 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
         kind: consumer.kind,
         type: producer.appData.source,
         rtpParameters: consumer.rtpParameters,
+        producerPaused: producer.paused,
       };
     } catch (error) {
-      this.logger.error(`❌ [consume] 실패:`, error);
+      this.logger.error(`❌ [consume] 실패: ${error.message}`);
       return { success: false, error: 'Consumer 생성에 실패하였습니다.' };
     }
   }
@@ -436,19 +480,36 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
       await this.mediasoupService.resumeConsumer(data.consumerId);
       return { success: true };
     } catch (error) {
-      this.logger.error(`❌ [consume_resume] 실패:`, error);
+      this.logger.error(`❌ [consume_resume] 실패: ${error.message}`);
       return { success: false, error: 'Consumer 데이터 수신 알림에 실패하였습니다.' };
     }
   }
 
   // close_consumer: 클라이언트가 Consumer를 닫을 때 서버에 알림
   @SubscribeMessage('close_consumer')
-  handleCloseConsumer(@MessageBody() data: CloseConsumerRequest): CloseConsumerResponse {
+  async handleCloseConsumer(
+    @ConnectedSocket() socket: Socket,
+    @MessageBody() data: CloseConsumerRequest,
+  ): Promise<CloseConsumerResponse> {
+    const metadata = this.socketMetadataService.get(socket.id);
+    if (!metadata) return { success: false, error: '먼저 join_room을 호출하세요.' };
+
     try {
+      // 1. Mediasoup 리소스 정리
       this.mediasoupService.closeConsumer(data.consumerId);
+
+      // 2. Redis 상태 업데이트
+      const participant = await this.participantManagerService.findOne(metadata.participantId);
+      if (participant) {
+        const updatedConsumers = participant.consumers.filter((id) => id !== data.consumerId);
+        await this.participantManagerService.updatePartial(metadata.participantId, {
+          consumers: updatedConsumers,
+        });
+      }
+
       return { success: true };
     } catch (error) {
-      this.logger.error(`❌ [close_consumer] 실패:`, error);
+      this.logger.error(`❌ [close_consumer] 실패: ${error.message}`);
       return { success: false };
     }
   }
@@ -485,7 +546,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
       socket.to(metadata.roomId).emit('media_state_changed', payload);
       return { success: true };
     } catch (error) {
-      this.logger.error(`❌ [toggle_media] 실패:`, error);
+      this.logger.error(`❌ [toggle_media] 실패: ${error.message}`);
       return { success: false, error: `특정 미디어를 ${data.action} 하는데 실패하였습니다.` };
     }
   }
@@ -543,7 +604,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.server.in(room.id).disconnectSockets(true);
       return { success: true };
     } catch (error) {
-      this.logger.error(`[break_room] 실패:`, error);
+      this.logger.error(`[break_room] 실패: ${error.message}`);
       return { success: false, error: `종료 처리 중 서버 내부 오류가 발생하였습니다.` };
     }
   }
@@ -561,7 +622,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
       );
       return { success: true, files };
     } catch (error) {
-      this.logger.error(`[get_presentation] 실패:`, error.message);
+      this.logger.error(`[get_presentation] 실패: ${error.message}`);
       return { success: false, error: '발표자료 조회에 실패하였습니다.' };
     }
   }
@@ -658,7 +719,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
       await this.roomManagerService.removeParticipant(roomId, participantId);
       this.logger.log(`[${reason}] ${participant?.name || participantId} left room ${roomId}`);
     } catch (error) {
-      this.logger.error(`❌ [${reason}] cleanup 실패:`, error);
+      this.logger.error(`❌ [${reason}] cleanup 실패: ${error.message}`);
     }
   }
 }

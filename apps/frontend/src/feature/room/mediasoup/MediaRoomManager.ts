@@ -68,21 +68,19 @@ export class MediaRoomManager {
       this.actions.room.setRoomEnded(true);
     });
 
+    // Producer 종료 (모든 참가자에게 브로드캐스트됨)
+    this.socket.on('producer_closed', (data) => {
+      logger.media.info(`[Room] 프로듀서 종료: ${data.participantId} (${data.type})`);
+      this.actions.room.removeProducer(data.participantId, data.type);
+    });
+
+    // Consumer 종료 (해당 Consumer를 가진 참가자에게만 전송됨)
     this.socket.on('consumer_closed', (data) => {
-      const { consumerId, producerId } = data;
+      const { consumerId } = data;
       logger.media.info(`[Room] 컨슈머 종료 이벤트 수신: ${consumerId}`);
 
-      // 1. Consumer 리소스 정리
       this.actions.controls.removeConsumer(consumerId);
-
-      // 2. 스토어 상태 업데이트 (UI)
-      const { type, participantId } = this.actions.room.findProducerInfo(producerId);
-      if (type && participantId) {
-        this.actions.room.removeProducer(participantId, type);
-        this.actions.media.removeRemoteStream(consumerId);
-      } else {
-        logger.media.warn(`[Room] Producer 정보를 찾을 수 없음: ${producerId}`);
-      }
+      this.actions.media.removeRemoteStream(consumerId);
     });
   }
 
@@ -156,6 +154,7 @@ export class MediaRoomManager {
     this.socket.off('new_producer');
     this.socket.off('media_state_changed');
     this.socket.off('room_end');
+    this.socket.off('producer_closed');
     this.socket.off('consumer_closed');
     logger.media.info('[Room] 모든 시그널링 리스너 해제 완료');
   }

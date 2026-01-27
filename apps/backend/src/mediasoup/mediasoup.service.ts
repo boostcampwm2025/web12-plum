@@ -478,7 +478,10 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
    */
   closeTransport(transportId: string) {
     const transport = this.transports.get(transportId);
-    if (transport) transport.close();
+    if (!transport || transport.closed) {
+      return;
+    }
+    transport.close();
   }
 
   async createProducer(
@@ -539,8 +542,9 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
 
   closeProducer(producerId: string) {
     const producer = this.getProducer(producerId);
-    if (!producer) throw new Error(`${producerId} Producer를 찾을 수 없습니다.`);
-
+    if (!producer || producer.closed) {
+      return;
+    }
     producer.close();
   }
 
@@ -580,7 +584,7 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
       this.prometheusService.decrementConsumerByKind(consumerKind);
     });
     consumer.on('producerclose', () => {
-      consumer.close();
+      if (!consumer.closed) consumer.close();
 
       this.eventEmitter.emit('consumer.closed', {
         consumerId: consumer.id,
@@ -602,22 +606,32 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
 
   async resumeConsumer(consumerId: string) {
     const consumer = this.getConsumer(consumerId);
-    if (!consumer) throw new Error(`${consumerId} Consumer를 찾을 수 없습니다.`);
+    if (!consumer) {
+      throw new Error(`${consumerId} Consumer를 찾을 수 없습니다.`);
+    }
+
+    const producer = this.getProducer(consumer.producerId);
+    if (producer?.paused) {
+      throw new Error(
+        `Producer ${producer.id}가 일시정지 상태이므로 Consumer를 재개할 수 없습니다.`,
+      );
+    }
+
     await consumer.resume();
   }
 
   closeConsumer(consumerId: string) {
     const consumer = this.getConsumer(consumerId);
-    if (!consumer) throw new Error(`${consumerId} Consumer를 찾을 수 없습니다.`);
+    if (!consumer || consumer.closed) {
+      return;
+    }
     consumer.close();
   }
 
   cleanupParticipantFromMaps(producers: string[] = [], consumers: string[] = []) {
     producers.forEach((producerId) => {
       try {
-        if (this.producers.has(producerId)) {
-          this.closeProducer(producerId);
-        }
+        this.closeProducer(producerId);
       } catch (error) {
         this.logger.warn(`Producer ${producerId} 정리 중 오류: ${error.message}`);
       }
@@ -625,9 +639,7 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
 
     consumers.forEach((consumerId) => {
       try {
-        if (this.consumers.has(consumerId)) {
-          this.closeConsumer(consumerId);
-        }
+        this.closeConsumer(consumerId);
       } catch (error) {
         this.logger.warn(`Consumer ${consumerId} 정리 중 오류: ${error.message}`);
       }

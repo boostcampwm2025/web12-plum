@@ -73,18 +73,38 @@ export function MediaControlsProvider({ children }: MediaControlsProviderProps) 
   }, [infra]);
 
   /**
+   * 원격 스트림 수신 중지
+   */
+  const stopConsuming = useCallback(
+    (participantId: string, type: MediaType) => {
+      const remoteStreams = useMediaStore.getState().remoteStreams;
+      for (const [consumerId, stream] of remoteStreams.entries()) {
+        if (stream.participantId === participantId && stream.type === type) {
+          infra.removeConsumer(consumerId);
+          mediaActions.removeRemoteStream(consumerId);
+          logger.media.debug(`[MediaControls] 스트림 정리 완료: ${participantId} (${type})`);
+          return;
+        }
+      }
+    },
+    [infra, mediaActions],
+  );
+
+  /**
    * 원격 Producer 수신
    */
   const consumeRemoteProducer = useCallback(
     async (data: NewProducerPayload) => {
-      // 이미 해당 참가자의 동일 타입 스트림이 있으면 중복 consume 방지
+      // 이미 해당 참가자의 동일 타입 스트림이 있으면 정리 후 재수신
+      // (페이지네이션 등으로 인한 빠른 언마운트/마운트 시 상태 불일치 방지)
       const existingStreams = useMediaStore.getState().remoteStreams;
       for (const stream of existingStreams.values()) {
         if (stream.participantId === data.participantId && stream.type === data.type) {
           logger.media.debug(
-            `[MediaControls] 이미 consume 중인 스트림 스킵: ${data.participantId} (${data.type})`,
+            `[MediaControls] 기존 스트림 정리 후 재수신: ${data.participantId} (${data.type})`,
           );
-          return;
+          stopConsuming(data.participantId, data.type);
+          break;
         }
       }
 
@@ -106,7 +126,7 @@ export function MediaControlsProvider({ children }: MediaControlsProviderProps) 
         consumerId: consumer.id,
       });
     },
-    [infra, mediaActions.addRemoteStream, mediaActions.removeRemoteStream],
+    [infra, mediaActions.addRemoteStream, mediaActions.removeRemoteStream, stopConsuming],
   );
 
   /**
@@ -293,24 +313,6 @@ export function MediaControlsProvider({ children }: MediaControlsProviderProps) 
     mediaActions.setScreenSharing(false);
     logger.media.info('[MediaControls] 화면 공유 중지');
   }, [infra, ensureSystemReady, mediaActions]);
-
-  /**
-   * 원격 스트림 수신 중지
-   */
-  const stopConsuming = useCallback(
-    (participantId: string, type: MediaType) => {
-      const remoteStreams = useMediaStore.getState().remoteStreams;
-      for (const [consumerId, stream] of remoteStreams.entries()) {
-        if (stream.participantId === participantId && stream.type === type) {
-          infra.removeConsumer(consumerId);
-          mediaActions.removeRemoteStream(consumerId);
-          logger.media.debug(`[MediaControls] 스트림 정리 완료: ${participantId} (${type})`);
-          return;
-        }
-      }
-    },
-    [infra, mediaActions],
-  );
 
   /**
    * 전체 정리
