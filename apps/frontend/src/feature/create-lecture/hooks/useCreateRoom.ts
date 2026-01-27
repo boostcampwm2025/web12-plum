@@ -3,6 +3,7 @@ import type { CreateRoomRequest, CreateRoomResponse } from '@plum/shared-interfa
 import { roomApi } from '@/shared/api';
 import { logger } from '@/shared/lib/logger';
 import { useRoomStore } from '@/feature/room/stores/useRoomStore';
+import { useMediaStore } from '@/feature/room/stores/useMediaStore';
 
 interface UseCreateRoomReturn {
   createRoom: (data: CreateRoomRequest) => Promise<CreateRoomResponse>;
@@ -17,6 +18,7 @@ interface UseCreateRoomReturn {
 export function useCreateRoom(): UseCreateRoomReturn {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { setMyInfo, setRoomTitle } = useRoomStore((state) => state.actions);
+  const { initialize: initializeMedia } = useMediaStore((state) => state.actions);
 
   /**
    * 강의실 생성 처리
@@ -31,6 +33,7 @@ export function useCreateRoom(): UseCreateRoomReturn {
       const roomData = response.data;
       setMyInfo(roomData.host);
       setRoomTitle(data.name);
+      initializeMedia(false, false);
       return roomData;
     } catch (error) {
       logger.api.error(`강의실 생성 실패: ${error}`);
