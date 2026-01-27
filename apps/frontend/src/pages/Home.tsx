@@ -111,7 +111,7 @@ export function Home() {
                     <span className="text-primary text-sm font-bold">1</span>
                     <div className="flex-1">
                       <div className="mb-1 flex justify-between text-sm">
-                        <span className="text-text">김민수</span>
+                        <span className="text-text">김자두</span>
                         <span className="text-primary font-medium">94점</span>
                       </div>
                       <div className="h-2 overflow-hidden rounded-full bg-gray-500">
@@ -123,7 +123,7 @@ export function Home() {
                     <span className="text-subtext text-sm font-bold">2</span>
                     <div className="flex-1">
                       <div className="mb-1 flex justify-between text-sm">
-                        <span className="text-text">이서연</span>
+                        <span className="text-text">이자두</span>
                         <span className="text-subtext font-medium">87점</span>
                       </div>
                       <div className="h-2 overflow-hidden rounded-full bg-gray-500">
@@ -135,7 +135,7 @@ export function Home() {
                     <span className="text-subtext text-sm font-bold">3</span>
                     <div className="flex-1">
                       <div className="mb-1 flex justify-between text-sm">
-                        <span className="text-text">박지훈</span>
+                        <span className="text-text">박자두</span>
                         <span className="text-subtext font-medium">82점</span>
                       </div>
                       <div className="h-2 overflow-hidden rounded-full bg-gray-500">
@@ -153,6 +153,7 @@ export function Home() {
                     name="vote"
                     size={20}
                     decorative
+                    className="text-text"
                   />
                   <span className="text-text font-medium">실시간 투표</span>
                 </div>
