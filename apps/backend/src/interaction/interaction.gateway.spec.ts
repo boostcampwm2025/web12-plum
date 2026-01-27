@@ -57,6 +57,7 @@ describe('InteractionGateway', () => {
             createQna: jest.fn(),
             getQna: jest.fn(),
             getQnas: jest.fn(),
+            getActiveQna: jest.fn(),
             startQna: jest.fn(),
             answer: jest.fn(),
             stopQna: jest.fn(),
@@ -214,6 +215,42 @@ describe('InteractionGateway', () => {
       jest.spyOn(roomManagerService, 'findOne').mockResolvedValue(room as any);
 
       const result = await gateway.getActivePoll(mockSocket);
+
+      expect(result.success).toBe(false);
+    });
+  });
+
+  describe('get_active_qna', () => {
+    it('참여자가 진행 중 질문 스냅샷을 조회한다', async () => {
+      const metadata = { participantId: 'p1', roomId: 'r1' };
+      const participant = { id: 'p1', role: 'audience' };
+      const room = { id: 'r1', status: 'active' };
+      const snapshot = {
+        qna: { id: 'qna-1', title: '질문 1', timeLimit: 60, startedAt: 's', endedAt: 'e' },
+        answered: true,
+      };
+
+      jest.spyOn(socketMetadataService, 'get').mockReturnValue(metadata as any);
+      jest.spyOn(participantManagerService, 'findOne').mockResolvedValue(participant as any);
+      jest.spyOn(roomManagerService, 'findOne').mockResolvedValue(room as any);
+      jest.spyOn(interactionService, 'getActiveQna').mockResolvedValue(snapshot as any);
+
+      const result = await gateway.getActiveQna(mockSocket);
+
+      expect(result).toEqual({ success: true, ...snapshot });
+      expect(interactionService.getActiveQna).toHaveBeenCalledWith('r1', 'p1');
+    });
+
+    it('발표자는 권한 오류가 발생해야 한다', async () => {
+      const metadata = { participantId: 'p1', roomId: 'r1' };
+      const participant = { id: 'p1', role: 'presenter' };
+      const room = { id: 'r1', presenter: 'p1', status: 'active' };
+
+      jest.spyOn(socketMetadataService, 'get').mockReturnValue(metadata as any);
+      jest.spyOn(participantManagerService, 'findOne').mockResolvedValue(participant as any);
+      jest.spyOn(roomManagerService, 'findOne').mockResolvedValue(room as any);
+
+      const result = await gateway.getActiveQna(mockSocket);
 
       expect(result.success).toBe(false);
     });

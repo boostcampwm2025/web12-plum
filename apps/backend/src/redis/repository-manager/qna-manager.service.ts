@@ -208,6 +208,41 @@ export class QnaManagerService extends BaseRedisRepository<Qna> {
   }
 
   /**
+   * 진행 중 질문의 응답 목록 조회
+   */
+  async getActiveAnswers(qnaId: string): Promise<Answer[]> {
+    try {
+      const client = this.redisService.getClient();
+      const answerKey = this.getAnswerListKey(qnaId);
+
+      const rawAnswers = (await client.lrange(answerKey, 0, -1)) || [];
+      return rawAnswers.map((raw) => JSON.parse(raw));
+    } catch (error) {
+      this.logger.error(`[GetActiveAnswers] Failed to fetch answers: ${qnaId}`, error.stack);
+      return [];
+    }
+  }
+
+  /**
+   * 특정 참가자가 질문에 답변했는지 여부
+   */
+  async hasAnswered(qnaId: string, participantId: string): Promise<boolean> {
+    try {
+      const client = this.redisService.getClient();
+      const answererKey = this.getAnswererSetKey(qnaId);
+
+      const result = await client.sismember(answererKey, participantId);
+      return result === 1;
+    } catch (error) {
+      this.logger.error(
+        `[HasAnswered] Failed to check answerer: ${qnaId}, ${participantId}`,
+        error.stack,
+      );
+      return false;
+    }
+  }
+
+  /**
    * 질문 종료
    */
   async closeQna(qnaId: string): Promise<Answer[]> {

@@ -188,6 +188,14 @@ export type GetQnaResponse =
       qnas: Qna[];
     };
 
+export type GetActiveQnaResponse =
+  | (BaseResponse & { success: false })
+  | {
+      success: true;
+      qna: QnaPayload | null;
+      answered?: boolean;
+    };
+
 export type EmitPollResponse =
   | (BaseResponse & { success: false })
   | ({ success: true } & Pick<PollPayload, 'startedAt' | 'endedAt'>);
@@ -368,6 +376,8 @@ export interface ClientToServerEvents {
   get_active_poll: (cb: (res: GetActivePollResponse) => void) => void;
 
   get_qna: (cb: (res: GetQnaResponse) => void) => void;
+
+  get_active_qna: (cb: (res: GetActiveQnaResponse) => void) => void;
 
   emit_poll: (data: EmitPollRequest, cb: (res: EmitPollResponse) => void) => void;
 

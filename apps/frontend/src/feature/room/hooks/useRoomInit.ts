@@ -13,6 +13,7 @@ import { useRoomStore } from '../stores/useRoomStore';
 import { useRoomUIStore } from '../stores/useRoomUIStore';
 import { usePollStore } from '../stores/usePollStore';
 import { useQnaStore } from '../stores/useQnaStore';
+import { useChatStore } from '../stores/useChatStore';
 import { MediaRoomManager } from '../mediasoup/MediaRoomManager';
 import { useMediaControlContext } from './useMediaControlContext';
 
@@ -48,6 +49,7 @@ export function useRoomInit() {
   const socketActions = useSocketStore((state) => state.actions);
   const pollActions = usePollStore((state) => state.actions);
   const qnaActions = useQnaStore((state) => state.actions);
+  const chatActions = useChatStore((state) => state.actions);
   const { addToast } = useToastStore((state) => state.actions);
 
   /**
@@ -116,6 +118,17 @@ export function useRoomInit() {
           const { activeDialog, setActiveDialog } = useRoomUIStore.getState();
           if (activeDialog !== 'vote') setActiveDialog('vote');
         });
+
+        socketActions.emit('get_active_qna', (response) => {
+          if (!response.success || !response.qna) return;
+
+          qnaActions.setActiveQna(response.qna);
+          if (response.answered) {
+            qnaActions.setAnswered(response.qna.id, true);
+          }
+          const { activeDialog, setActiveDialog } = useRoomUIStore.getState();
+          if (!activeDialog) setActiveDialog('qna');
+        });
       }
 
       if (role === 'presenter') {
@@ -174,8 +187,11 @@ export function useRoomInit() {
             addToast({
               type: 'info',
               title: 'Q&A가 종료되었습니다.',
+              description: 'Q&A 결과를 채팅창에서 확인하세요.',
             });
-            // TODO: 익명으로 답변 공개인 경우에 채팅창에 표시
+            if (data.text && data.text.length > 0) {
+              chatActions.addQnaResult(data.title, data.text);
+            }
           },
         });
       }

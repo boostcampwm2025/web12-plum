@@ -10,6 +10,7 @@ import type {
 
 interface QnaState {
   qnas: Qna[];
+  answeredByQnaId: Record<string, boolean>;
   actions: {
     hydrateFromQnas: (qnas: Qna[]) => void;
     setActiveQna: (qna: QnaPayload) => void;
@@ -17,6 +18,7 @@ interface QnaState {
     updateQnaSub: (data: UpdateQnaSubPayload) => void;
     updateQnaDetail: (data: UpdateQnaFullPayload) => void;
     setCompletedFromEndDetail: (data: EndQnaDetailPayload) => void;
+    setAnswered: (qnaId: string, answered: boolean) => void;
   };
 }
 
@@ -24,6 +26,7 @@ const ensureAnswers = (answers: Answer[] | undefined) => answers ?? [];
 
 export const useQnaStore = create<QnaState>((set) => ({
   qnas: [],
+  answeredByQnaId: {},
   actions: {
     hydrateFromQnas: (qnas) => {
       set({
@@ -69,6 +72,10 @@ export const useQnaStore = create<QnaState>((set) => ({
     clearActiveQna: (qnaId) => {
       set((state) => ({
         qnas: state.qnas.map((item) => (item.id === qnaId ? { ...item, status: 'ended' } : item)),
+        answeredByQnaId: {
+          ...state.answeredByQnaId,
+          [qnaId]: false,
+        },
       }));
     },
     updateQnaSub: (data) => {
@@ -118,6 +125,14 @@ export const useQnaStore = create<QnaState>((set) => ({
               }
             : item,
         ),
+      }));
+    },
+    setAnswered: (qnaId, answered) => {
+      set((state) => ({
+        answeredByQnaId: {
+          ...state.answeredByQnaId,
+          [qnaId]: answered,
+        },
       }));
     },
   },
