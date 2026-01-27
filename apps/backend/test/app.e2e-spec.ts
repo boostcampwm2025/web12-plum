@@ -14,6 +14,7 @@ const mockManagers = {
   ParticipantManagerService: {},
   PollManagerService: {},
   QnaManagerService: {},
+  ChatManagerService: {},
 };
 
 describe('AppController (e2e)', () => {
@@ -33,6 +34,7 @@ describe('AppController (e2e)', () => {
         },
         { provide: Managers.PollManagerService, useValue: mockManagers.PollManagerService },
         { provide: Managers.QnaManagerService, useValue: mockManagers.QnaManagerService },
+        { provide: Managers.ChatManagerService, useValue: mockManagers.ChatManagerService },
       ],
       exports: [RedisService, ...Object.values(Managers)],
     })
