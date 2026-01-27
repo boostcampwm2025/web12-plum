@@ -168,8 +168,8 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
         this.routers.set(roomId, routers[0]);
       }
 
-      // Prometheus 메트릭 업데이트
-      this.prometheusService.setMediasoupRouters(this.routers.size);
+      // Prometheus 메트릭 업데이트 - 실제 전체 Router 수 반영
+      this.prometheusService.setMediasoupRouters(this.getTotalRouterCount());
 
       return routers;
     } catch (error) {
@@ -232,8 +232,8 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
     await this.multiRouterManager.cleanupRoom(roomId);
     this.routers.delete(roomId);
 
-    // Prometheus 메트릭 업데이트
-    this.prometheusService.setMediasoupRouters(this.routers.size);
+    // Prometheus 메트릭 업데이트 - 실제 전체 Router 수 반영
+    this.prometheusService.setMediasoupRouters(this.getTotalRouterCount());
   }
 
   /**
@@ -321,6 +321,27 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
     const worker = this.workers[this.nextWorkerIdx];
     this.nextWorkerIdx = (this.nextWorkerIdx + 1) % this.workers.length;
     return worker;
+  }
+
+  /**
+   * 전체 Router 수 계산 (Multi-Router 포함)
+   * Prometheus 메트릭용
+   */
+  private getTotalRouterCount(): number {
+    let totalCount = 0;
+
+    // MultiRouterManager에서 관리하는 모든 Room의 Router 수 합산
+    for (const roomId of this.routers.keys()) {
+      const roomRouters = this.multiRouterManager.getRoomRouters(roomId);
+      if (roomRouters) {
+        totalCount += roomRouters.length;
+      } else {
+        // 단일 router
+        totalCount += 1;
+      }
+    }
+
+    return totalCount;
   }
 
   /**
