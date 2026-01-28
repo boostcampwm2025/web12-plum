@@ -187,13 +187,15 @@ export function useRoomInit() {
             qnaActions.clearActiveQna(data.qnaId);
             const { activeDialog, setActiveDialog } = useRoomUIStore.getState();
             if (activeDialog === 'qna') setActiveDialog('qna');
+            const answers = data.text ?? [];
+            const hasText = answers.length > 0;
             addToast({
               type: 'info',
               title: 'Q&A가 종료되었습니다.',
-              description: 'Q&A 결과를 채팅창에서 확인하세요.',
+              ...(hasText && { description: 'Q&A 결과를 채팅창에서 확인하세요.' }),
             });
-            if (data.text && data.text.length > 0) {
-              chatActions.addQnaResult(data.title, data.text);
+            if (hasText) {
+              chatActions.addQnaResult(data.title, answers);
             }
           },
         });
