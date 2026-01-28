@@ -92,7 +92,7 @@ const mockInteractions = [
  */
 export function StatisticsTab() {
   return (
-    <section className="mt-12 flex flex-col gap-15 rounded-2xl bg-gray-600 p-8">
+    <section className="mt-10 flex flex-col gap-15 rounded-2xl bg-gray-600 p-8">
       <OverallStatistics
         averageParticipationScore={85}
         totalInteractions={120}

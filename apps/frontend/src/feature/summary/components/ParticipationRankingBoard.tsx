@@ -1,20 +1,10 @@
 import { Icon } from '@/shared/components/icon/Icon';
+import { calculatePercentage } from '../utils';
 
 /**
  * 참여자별 상세 분석 컴포넌트에서 사용하는 참여자 통계 컴포넌트
  */
 const rankColors = ['text-gold', 'text-silver', 'text-bronze', 'text-error'];
-
-/**
- * 참여도 점수 백분율 계산 함수
- * @param totalScore 전체 참여도 점수
- * @param score 참여자 참여도 점수
- * @returns 백분율
- */
-function calculatePercentage(totalScore: number, score: number) {
-  const percentage = (score / totalScore) * 100;
-  return percentage;
-}
 
 interface RankingItemProps {
   name: string;
@@ -34,7 +24,7 @@ interface RankingItemProps {
  * @returns
  */
 function RankingItem({ name, rank, reactions, totalScore, participationScore }: RankingItemProps) {
-  const percentage = calculatePercentage(totalScore, participationScore);
+  const percentage = calculatePercentage(participationScore, totalScore);
 
   return (
     <div className="flex flex-col gap-3">
