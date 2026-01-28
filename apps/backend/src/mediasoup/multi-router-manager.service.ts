@@ -38,6 +38,13 @@ export class MultiRouterManagerService {
   // 점진적 활성화 임계값 (5명씩)
   private readonly PARTICIPANTS_PER_ROUTER = 5;
 
+  // 버스트 감지 설정
+  private readonly BURST_THRESHOLD = 10; // 짧은 시간 내 10명 이상 = 버스트
+  private readonly BURST_WINDOW_MS = 2000; // 2초 이내
+
+  // Room별 첫 참가자 입장 시간 추적 (버스트 감지용)
+  private roomFirstJoinTime: Map<string, number> = new Map();
+
   /**
    * Room 생성 시 Multi-Router 설정
    * @param roomId Room ID
@@ -92,7 +99,10 @@ export class MultiRouterManagerService {
 
   /**
    * 참가자 입장 시 Router 할당
-   * 점진적 활성화 전략 적용
+   * 점진적 활성화 + 버스트 감지 전략 적용
+   *
+   * 평소: 5명씩 점진적으로 Router 활성화
+   * 버스트: 2초 내 10명 이상 접속 시 즉시 전체 Router 활성화
    *
    * @param roomId Room ID
    * @param participantId 참가자 ID
@@ -112,19 +122,39 @@ export class MultiRouterManagerService {
     // 참가자 수 증가
     roomInfo.participantCount++;
 
-    // 활성화할 Router 수 계산 (점진적 활성화)
-    const neededRouters = Math.min(
-      Math.ceil(roomInfo.participantCount / this.PARTICIPANTS_PER_ROUTER),
-      roomInfo.routers.length,
-    );
+    // 버스트 감지 1: 첫 참가자 입장 시간 기록
+    if (roomInfo.participantCount === 1) {
+      this.roomFirstJoinTime.set(roomId, Date.now());
+    }
 
-    // 필요시 활성 Router 수 증가
-    if (neededRouters > roomInfo.activeRouterCount) {
-      const prevCount = roomInfo.activeRouterCount;
-      roomInfo.activeRouterCount = neededRouters;
+    // 버스트 감지 2: 짧은 시간에 많은 참가자 접속 감지
+    const firstJoinTime = this.roomFirstJoinTime.get(roomId) || Date.now();
+    const elapsed = Date.now() - firstJoinTime;
+
+    if (
+      elapsed < this.BURST_WINDOW_MS &&
+      roomInfo.participantCount >= this.BURST_THRESHOLD &&
+      roomInfo.activeRouterCount < roomInfo.routers.length
+    ) {
+      // 버스트 감지 3: 즉시 전체 Router 활성화
+      roomInfo.activeRouterCount = roomInfo.routers.length;
       this.logger.log(
-        `📈 Room ${roomId}: 활성 Router ${prevCount} → ${neededRouters} (참가자: ${roomInfo.participantCount}명)`,
+        `🚀 버스트 감지! ${elapsed}ms 내 ${roomInfo.participantCount}명 접속 → 전체 Router ${roomInfo.routers.length}개 활성화`,
       );
+    } else {
+      // 평소: 점진적 활성화
+      const neededRouters = Math.min(
+        Math.ceil(roomInfo.participantCount / this.PARTICIPANTS_PER_ROUTER),
+        roomInfo.routers.length,
+      );
+
+      if (neededRouters > roomInfo.activeRouterCount) {
+        const prevCount = roomInfo.activeRouterCount;
+        roomInfo.activeRouterCount = neededRouters;
+        this.logger.log(
+          `📈 Room ${roomId}: 활성 Router ${prevCount} → ${neededRouters} (참가자: ${roomInfo.participantCount}명)`,
+        );
+      }
     }
 
     // 활성화된 Router 중 가장 적은 참가자가 있는 Router 선택
@@ -505,7 +535,6 @@ export class MultiRouterManagerService {
     // Map에서 제거
     this.rooms.delete(roomId);
     this.participantRouterMap.delete(roomId);
-
     this.logger.log(`🗑️  Room ${roomId} 정리 완료`);
   }
 
