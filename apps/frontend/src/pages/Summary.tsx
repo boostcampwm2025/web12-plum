@@ -33,20 +33,22 @@ export function Summary() {
   return (
     <>
       <Header />
-      <main className="mx-auto w-full max-w-4xl py-12">
-        <PageSubHeader
-          title="강의 요약"
-          description="AI가 자동으로 생성한 회의 요약 내용입니다."
-        />
-        <ReportDownload
-          roomTitle={mockReportData.roomTitle}
-          date={mockReportData.date}
-        />
-        <Tabs
-          activeTab={activeTab}
-          onChangeTab={setActiveTab}
-        />
-        <ActiveTabContent />
+      <main className="px-12">
+        <div className="mx-auto w-full max-w-4xl py-12">
+          <PageSubHeader
+            title="강의 요약"
+            description="AI가 자동으로 생성한 회의 요약 내용입니다."
+          />
+          <ReportDownload
+            roomTitle={mockReportData.roomTitle}
+            date={mockReportData.date}
+          />
+          <Tabs
+            activeTab={activeTab}
+            onChangeTab={setActiveTab}
+          />
+          <ActiveTabContent />
+        </div>
       </main>
       <Footer />
     </>
