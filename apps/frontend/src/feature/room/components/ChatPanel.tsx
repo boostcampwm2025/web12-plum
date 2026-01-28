@@ -112,12 +112,12 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
         >
           {items.map((item) => {
             if (item.type === 'qna-result') {
-              const isExpanded = expandedQnaIds[item.qnaId] ?? true;
+              const isExpanded = expandedQnaIds[item.qnaId] ?? false;
 
               return (
                 <div
                   key={item.qnaId}
-                  className="my-1.5 rounded-2xl bg-[#343451] px-4 py-3 text-white"
+                  className="my-1.5 rounded-xl bg-gray-400 px-4 py-3 text-white"
                 >
                   <button
                     type="button"
