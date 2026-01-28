@@ -55,12 +55,13 @@ jobs:
           AWS_KEY: ${{ secrets.AWS_S3_ACCESS_KEY }}
           AWS_SECRET: ${{ secrets.AWS_S3_SECRET_KEY }}
           AWS_BUCKET: ${{ secrets.AWS_S3_BUCKET_NAME }}
+          REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD_DEV }}
         with:
           host: ${{ secrets.NCP_DEV_HOST }}
           username: ${{ secrets.NCP_DEV_USERNAME }}
           key: ${{ secrets.NCP_DEV_SSH_KEY }}
           port: ${{ secrets.NCP_DEV_PORT || 22 }}
-          envs: DOCKER_USERNAME,TAG,FE_URL,AWS_REGION,AWS_KEY,AWS_SECRET,AWS_BUCKET
+          envs: DOCKER_USERNAME,TAG,FE_URL,AWS_REGION,AWS_KEY,AWS_SECRET,AWS_BUCKET,REDIS_PASSWORD
           script: |
             DEPLOY_BRANCH="${{ needs.prepare.outputs.branch }}"
             echo "배포 브랜치: ${DEPLOY_BRANCH}"
@@ -104,6 +105,7 @@ jobs:
             update_env "REDIS_HOST" "${{ secrets.NCP_DEV_REDIS_HOST }}"
             update_env "REDIS_PORT" "${{ secrets.NCP_DEV_REDIS_PORT }}"
             update_env "ANNOUNCED_IP" "${{ secrets.NCP_DEV_HOST }}"
+            update_env "REDIS_PASSWORD" "${REDIS_PASSWORD}"
 
             # 기존 컨테이너 중지 및 제거 (포트 충돌 방지)
             docker compose -f docker-compose.yml -f docker-compose.develop.yml down || true
@@ -145,12 +147,13 @@ jobs:
           AWS_KEY: ${{ secrets.AWS_S3_ACCESS_KEY }}
           AWS_SECRET: ${{ secrets.AWS_S3_SECRET_KEY }}
           AWS_BUCKET: ${{ secrets.AWS_S3_BUCKET_NAME }}
+          REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD_PROD }}
         with:
           host: ${{ secrets.NCP_PROD_HOST }}
           username: ${{ secrets.NCP_PROD_USERNAME }}
           key: ${{ secrets.NCP_PROD_SSH_KEY }}
           port: ${{ secrets.NCP_PROD_PORT || 22 }}
-          envs: DOCKER_USERNAME,TAG,FE_URL,AWS_REGION,AWS_KEY,AWS_SECRET,AWS_BUCKET
+          envs: DOCKER_USERNAME,TAG,FE_URL,AWS_REGION,AWS_KEY,AWS_SECRET,AWS_BUCKET,REDIS_PASSWORD
           script: |
             DEPLOY_BRANCH="${{ needs.prepare.outputs.branch }}"
             echo "배포 브랜치: ${DEPLOY_BRANCH}"
@@ -193,6 +196,7 @@ jobs:
             update_env "REDIS_HOST" "${{ secrets.NCP_PROD_REDIS_HOST }}"
             update_env "REDIS_PORT" "${{ secrets.NCP_PROD_REDIS_PORT }}"
             update_env "ANNOUNCED_IP" "${{ secrets.NCP_PROD_HOST }}"
+            update_env "REDIS_PASSWORD" "${REDIS_PASSWORD}"
 
             # 기존 컨테이너 중지 및 제거 (포트 충돌 방지)
             docker compose -f docker-compose.yml -f docker-compose.prod.yml down || true
@@ -273,14 +277,15 @@ jobs:
             # 환경 변수 설정
             echo "CONTAINER_PREFIX=plum-dev" > .env
             echo "REDIS_MAXMEMORY=1gb" >> .env
-
+            echo "REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD_DEV }}" >> .env
+            
             # 컨테이너 재시작
             docker compose pull
             docker compose up -d
 
             # 헬스체크
             sleep 5
-            docker exec plum-dev-redis redis-cli ping || echo "Redis health check failed"
+            docker exec plum-dev-redis redis-cli -a "${{ secrets.REDIS_PASSWORD_DEV }}" ping || echo "Redis health check failed"
 
             # 상태 확인
             docker compose ps
@@ -418,12 +423,14 @@ jobs:
             # 환경 변수 설정 (Prod는 메모리 2GB)
             echo "CONTAINER_PREFIX=plum-prod" > .env
             echo "REDIS_MAXMEMORY=2gb" >> .env
+            echo "REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD_PROD }}" >> .env
+
 
             docker compose pull
             docker compose up -d
 
             sleep 5
-            docker exec plum-prod-redis redis-cli ping || echo "Redis health check failed"
+            docker exec plum-prod-redis redis-cli -a "${{ secrets.REDIS_PASSWORD_PROD }}" ping || echo "Redis health check failed"
 
             docker compose ps
 
