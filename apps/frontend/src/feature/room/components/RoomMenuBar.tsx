@@ -1,13 +1,19 @@
+import { motion } from 'motion/react';
+import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/shared/lib/utils';
 import { RoomButton } from './RoomButton';
 import { GestureButton } from './GestureButton';
 import type { IconName } from '@/shared/components/icon/iconMap';
+import type { ActivityType, ScoreUpdatePayload } from '@plum/shared-interfaces';
+import { SCORE_RULES } from '@plum/shared-interfaces';
 import { useMediaStore } from '../stores/useMediaStore';
 import { useRoomUIStore } from '../stores/useRoomUIStore';
 import { useMediaControlContext } from '../hooks/useMediaControlContext';
 import { usePollStore } from '../stores/usePollStore';
 import { useQnaStore } from '../stores/useQnaStore';
 import { useRoomStore } from '../stores/useRoomStore';
+import { useRankStore } from '../stores/useRankStore';
+import { useSocketStore } from '@/store/useSocketStore';
 import { ExitButton } from './ExitButton';
 
 interface MenuButton {
@@ -16,6 +22,68 @@ interface MenuButton {
   isActive?: boolean;
   hasAlarm?: boolean;
   onClick?: () => void;
+}
+
+/**
+ * 점수 변화 애니메이션 컴포넌트
+ */
+function ScoreDeltaAnimation() {
+  const myScore = useRankStore((state) => state.myScore);
+  const socket = useSocketStore((state) => state.socket);
+  const [scoreDelta, setScoreDelta] = useState<number | null>(null);
+  const [scoreDeltaId, setScoreDeltaId] = useState(0);
+  const [showScoreDelta, setShowScoreDelta] = useState(false);
+  const myScoreRef = useRef(myScore);
+
+  useEffect(() => {
+    myScoreRef.current = myScore;
+  }, [myScore]);
+
+  useEffect(() => {
+    if (!socket) return;
+
+    const hasScoreRule = (reason: string): reason is ActivityType => reason in SCORE_RULES;
+    const handleScoreUpdate = (data: ScoreUpdatePayload) => {
+      const deltaFromReason = hasScoreRule(data.reason) ? SCORE_RULES[data.reason] : null;
+      const delta = deltaFromReason ?? data.score - myScoreRef.current;
+      myScoreRef.current = data.score;
+
+      if (!Number.isFinite(delta) || delta === 0) return;
+      setScoreDelta(delta);
+      setScoreDeltaId((prev) => prev + 1);
+    };
+
+    socket.on('score_update', handleScoreUpdate);
+    return () => {
+      socket.off('score_update', handleScoreUpdate);
+    };
+  }, [socket]);
+
+  useEffect(() => {
+    if (scoreDelta === null || scoreDelta === 0) return;
+    setShowScoreDelta(true);
+  }, [scoreDelta, scoreDeltaId]);
+
+  if (scoreDelta === null || scoreDelta === 0 || !showScoreDelta) return null;
+
+  const scoreDeltaText = `${scoreDelta > 0 ? '+' : ''}${scoreDelta}`;
+  const scoreDeltaClass = scoreDelta < 0 ? 'text-error' : 'text-primary';
+
+  return (
+    <motion.span
+      key={scoreDeltaId}
+      initial={{ opacity: 0, y: 4 }}
+      animate={{ opacity: [0, 1, 0], y: -20 }}
+      transition={{ duration: 1.5, ease: 'linear' }}
+      onAnimationComplete={() => setShowScoreDelta(false)}
+      className={cn(
+        'pointer-events-none absolute -top-4 left-1/2 -translate-x-1/2 text-base font-bold',
+        scoreDeltaClass,
+      )}
+    >
+      {scoreDeltaText}
+    </motion.span>
+  );
 }
 
 /**
@@ -92,14 +160,19 @@ function MainMenu() {
   return (
     <>
       {visibleButtons.map((button, index) => (
-        <RoomButton
+        <div
           key={`${button.icon}-${index}`}
-          icon={button.icon}
-          tooltip={button.tooltip}
-          isActive={button.isActive}
-          hasAlarm={button.hasAlarm}
-          onClick={button.onClick}
-        />
+          className={cn(button.icon === 'ranking' && 'relative inline-block')}
+        >
+          <RoomButton
+            icon={button.icon}
+            tooltip={button.tooltip}
+            isActive={button.isActive}
+            hasAlarm={button.hasAlarm}
+            onClick={button.onClick}
+          />
+          {button.icon === 'ranking' && <ScoreDeltaAnimation />}
+        </div>
       ))}
       <GestureButton />
     </>
