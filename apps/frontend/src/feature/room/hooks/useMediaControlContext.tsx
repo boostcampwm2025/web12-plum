@@ -8,6 +8,7 @@ import { useSocketStore } from '@/store/useSocketStore';
 
 import { useRoomStore } from '../stores/useRoomStore';
 import { useMediaStore } from '../stores/useMediaStore';
+import { useBackgroundEffect } from './useBackgroundEffect';
 
 const ERROR_MESSAGES = {
   notReady: '연결이 준비되지 않았습니다. 잠시 후 다시 시도해주세요.',
@@ -55,6 +56,7 @@ interface MediaControlsProviderProps {
 
 export function MediaControlsProvider({ children }: MediaControlsProviderProps) {
   const infra = useMediaInfra();
+  const { start: startBackgroundEffect, stop: stopBackgroundEffect } = useBackgroundEffect();
 
   const roomActions = useRoomStore((state) => state.actions);
   const mediaActions = useMediaStore((state) => state.actions);
@@ -207,20 +209,24 @@ export function MediaControlsProvider({ children }: MediaControlsProviderProps) 
     const localStream = await streamActions.ensureTracks({ video: true });
     const videoTrack = localStream.getVideoTracks()[0];
 
+    // 배경 효과 처리된 트랙 준비 후 produce (다른 참가자에게 원본이 노출되지 않도록)
+    const processedTrack = await startBackgroundEffect(videoTrack);
+    const trackToSend = processedTrack ?? videoTrack;
+
     const existingProducer = infra.getProducer('video');
 
-    // 서버 송출 또는 재개
     if (existingProducer && !existingProducer.closed) {
+      await existingProducer.replaceTrack({ track: trackToSend });
       await infra.togglePause('video', false, socket);
     } else {
       const sendTransport = await infra.ensureSendTransport(socket);
-      await infra.produce(sendTransport, videoTrack, { type: 'video' }, socket);
+      await infra.produce(sendTransport, trackToSend, { type: 'video' }, socket);
     }
 
     streamActions.setTracksEnabled(true, isMicOn);
     if (!isCameraOn) mediaActions.toggleCamera();
     logger.media.info('[MediaControls] 카메라 활성화 완료');
-  }, [infra, ensureSystemReady, streamActions, mediaActions]);
+  }, [infra, ensureSystemReady, streamActions, mediaActions, startBackgroundEffect]);
 
   /**
    * 화면 공유 활성화
@@ -285,10 +291,13 @@ export function MediaControlsProvider({ children }: MediaControlsProviderProps) 
       infra.stopProducing('video');
     }
 
+    stopBackgroundEffect();
+
     streamActions.stopTrack('video');
+
     if (isCameraOn) mediaActions.toggleCamera();
     logger.media.info('[MediaControls] 카메라 비활성화 완료');
-  }, [infra, ensureSystemReady, streamActions, mediaActions]);
+  }, [infra, ensureSystemReady, streamActions, mediaActions, stopBackgroundEffect]);
 
   /**
    * 화면 공유 비활성화
@@ -324,6 +333,7 @@ export function MediaControlsProvider({ children }: MediaControlsProviderProps) 
 
     // 로컬 카메라/마이크 트랙 정리
     streamActions.clearStream();
+    stopBackgroundEffect();
 
     // 인프라 계층 일괄 종료 (Producer, Consumer, Transport 모두 Close)
     infra.stopAllProducers();
@@ -336,7 +346,7 @@ export function MediaControlsProvider({ children }: MediaControlsProviderProps) 
     mediaActions.setScreenSharing(false);
 
     logger.media.info('[MediaControls] 모든 미디어 자원 정리 완료');
-  }, [infra, streamActions, mediaActions]);
+  }, [infra, streamActions, mediaActions, stopBackgroundEffect]);
 
   const value: MediaControlsContextType = useMemo(
     () => ({

@@ -91,7 +91,6 @@ export interface ParticipantVideoProps {
   participantRole?: ParticipantRole;
   isActive?: boolean;
   isCurrentlyVisible?: boolean;
-  onVideoElementChange?: (element: HTMLVideoElement | null) => void;
 }
 
 function ParticipantVideoComponent({
@@ -106,7 +105,6 @@ function ParticipantVideoComponent({
   participantRole,
   isActive = true,
   isCurrentlyVisible = true,
-  onVideoElementChange,
 }: ParticipantVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const { consumeRemoteProducer, stopConsuming } = useMediaControlContext();
@@ -177,15 +175,6 @@ function ParticipantVideoComponent({
       if (videoElement.srcObject !== null) videoElement.srcObject = null;
     }
   }, [activeStream, isVideoEnabled, mode]);
-
-  useEffect(() => {
-    const videoElement = videoRef.current;
-    if (videoElement && mode !== 'minimize' && activeStream && isVideoEnabled) {
-      onVideoElementChange?.(videoElement);
-    } else {
-      onVideoElementChange?.(null);
-    }
-  }, [onVideoElementChange, mode, activeStream, isVideoEnabled]);
 
   return (
     <motion.div
