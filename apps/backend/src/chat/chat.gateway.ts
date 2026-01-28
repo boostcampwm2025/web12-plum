@@ -222,6 +222,18 @@ export class ChatGateway {
         return { success: true, messages: [] };
       }
 
+      // Rate Limiting (30초당 10개)
+      const allowed = await this.chatManagerService.checkSyncRateLimit(
+        metadata.roomId,
+        metadata.participantId,
+      );
+      if (!allowed) {
+        return {
+          success: false,
+          error: '동기화 요청이 너무 빈번합니다. 잠시 후 다시 시도해주세요.',
+        };
+      }
+
       // Redis ZSET에서 timestamp 범위 조회
       const messages = await this.chatManagerService.getMessagesAfter(
         metadata.roomId,
