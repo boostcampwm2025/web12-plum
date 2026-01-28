@@ -120,11 +120,14 @@ describe('ParticipantVideo', () => {
       expect(videoElement).toBeInTheDocument();
     });
 
-    it('카메라가 꺼져 있거나 스트림이 없으면 cam-disabled 아이콘을 보여준다', () => {
+    it('카메라가 꺼져 있거나 스트림이 없으면 cam-disabled 아이콘 오버레이가 표시된다', () => {
       render(<ParticipantVideo {...defaultProps} />);
 
       expect(screen.getByRole('img', { name: 'cam-disabled' })).toBeInTheDocument();
-      expect(document.querySelector('video')).not.toBeInTheDocument();
+
+      const videoElement = document.querySelector('video') as HTMLVideoElement | null;
+      expect(videoElement).toBeInTheDocument();
+      expect(videoElement?.srcObject).toBeNull();
     });
   });
 
