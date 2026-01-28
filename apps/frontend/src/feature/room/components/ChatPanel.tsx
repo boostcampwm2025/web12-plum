@@ -117,7 +117,7 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
               return (
                 <div
                   key={item.qnaId}
-                  className="my-1.5 rounded-xl bg-gray-400 px-4 py-3 text-white"
+                  className="text-text my-1.5 rounded-xl bg-gray-400 px-3 py-2"
                 >
                   <button
                     type="button"
@@ -127,7 +127,7 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
                   >
                     <div className="flex flex-col gap-1">
                       <span className="font-bold">{item.title}</span>
-                      <span className="text-xs font-semibold text-white/50">
+                      <span className="text-subtext text-xs font-bold">
                         총 답변 수 {item.text?.length ?? item.count}개
                       </span>
                     </div>
@@ -135,7 +135,7 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
                       name="chevron"
                       size={20}
                       className={cn(
-                        'text-white/70 transition-transform duration-200 ease-in-out',
+                        'text-text transition-transform duration-200 ease-in-out',
                         isExpanded ? 'rotate-180' : 'rotate-0',
                       )}
                       decorative
