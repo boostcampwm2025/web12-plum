@@ -45,20 +45,24 @@ function useIsMobile() {
 
 function MobileBlocked() {
   return (
-    <main className="flex min-h-screen w-full flex-col items-center justify-center gap-4 bg-gray-600 px-6 text-center">
+    <div className="fixed inset-0 z-999 flex min-h-screen w-full flex-col items-center justify-center gap-4 bg-gray-600 px-6 text-center">
       <h1 className="text-text text-2xl font-bold">모바일 환경은 지원하지 않습니다</h1>
       <p className="text-subtext max-w-md">
         데스크톱 환경에서 접속해주세요. 모바일에서는 강의실 기능이 제한됩니다.
       </p>
-    </main>
+    </div>
   );
 }
 
 function MobileGate() {
   const isMobile = useIsMobile();
 
-  if (isMobile) return <MobileBlocked />;
-  return <Outlet />;
+  return (
+    <>
+      <Outlet />
+      {isMobile && <MobileBlocked />}
+    </>
+  );
 }
 
 function App() {
