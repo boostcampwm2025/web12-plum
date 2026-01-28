@@ -8,3 +8,4 @@ export * from './file.js';
 export * from './room.js';
 export * from './socket.js';
 export * from './api.js';
+export * from './chat.js';
