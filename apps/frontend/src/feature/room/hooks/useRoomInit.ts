@@ -96,7 +96,10 @@ export function useRoomInit() {
       const roomManager = new MediaRoomManager(socket, {
         room: roomActions,
         media: mediaActions,
-        controls: { consumeRemoteProducer: controls.consumeRemoteProducer },
+        controls: {
+          consumeRemoteProducer: controls.consumeRemoteProducer,
+          removeConsumer: infra.removeConsumer,
+        },
       });
       roomManagerRef.current = roomManager;
 

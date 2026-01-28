@@ -16,7 +16,10 @@ export class MediaRoomManager {
     private actions: {
       room: RoomActions;
       media: MediaActions;
-      controls: { consumeRemoteProducer: (data: NewProducerPayload) => Promise<void> };
+      controls: {
+        consumeRemoteProducer: (data: NewProducerPayload) => Promise<void>;
+        removeConsumer: (consumerId: string) => Promise<void>;
+      };
     },
   ) {}
 
@@ -63,6 +66,21 @@ export class MediaRoomManager {
     this.socket.on('room_end', () => {
       logger.media.info('[Room] 강의가 종료되었습니다.');
       this.actions.room.setRoomEnded(true);
+    });
+
+    // Producer 종료 (모든 참가자에게 브로드캐스트됨)
+    this.socket.on('producer_closed', (data) => {
+      logger.media.info(`[Room] 프로듀서 종료: ${data.participantId} (${data.type})`);
+      this.actions.room.removeProducer(data.participantId, data.type);
+    });
+
+    // Consumer 종료 (해당 Consumer를 가진 참가자에게만 전송됨)
+    this.socket.on('consumer_closed', (data) => {
+      const { consumerId } = data;
+      logger.media.info(`[Room] 컨슈머 종료 이벤트 수신: ${consumerId}`);
+
+      this.actions.controls.removeConsumer(consumerId);
+      this.actions.media.removeRemoteStream(consumerId);
     });
   }
 
@@ -136,6 +154,8 @@ export class MediaRoomManager {
     this.socket.off('new_producer');
     this.socket.off('media_state_changed');
     this.socket.off('room_end');
+    this.socket.off('producer_closed');
+    this.socket.off('consumer_closed');
     logger.media.info('[Room] 모든 시그널링 리스너 해제 완료');
   }
 }

@@ -15,20 +15,22 @@ export const ConsumerSignaling = {
     transportId: string,
     producerId: string,
     rtpCapabilities: RtpCapabilities,
-  ) => {
-    const promise: Promise<ConsumerOptions> = new Promise((resolve, reject) => {
-      const payload = { transportId, producerId, rtpCapabilities };
-      const handleResponse = (response: ConsumeResponse) => {
-        if (response.success && 'consumerId' in response) {
-          const { success: _, consumerId, ...options } = response;
-          resolve({ id: consumerId, ...options });
-        } else {
-          reject(new Error((response as BaseResponse).error || 'Consume 요청 실패'));
-        }
-      };
+  ): Promise<ConsumerOptions & { producerPaused: boolean }> => {
+    const promise: Promise<ConsumerOptions & { producerPaused: boolean }> = new Promise(
+      (resolve, reject) => {
+        const payload = { transportId, producerId, rtpCapabilities };
+        const handleResponse = (response: ConsumeResponse) => {
+          if (response.success && 'consumerId' in response) {
+            const { success: _, consumerId, producerPaused, ...options } = response;
+            resolve({ id: consumerId, producerPaused, ...options });
+          } else {
+            reject(new Error((response as BaseResponse).error || 'Consume 요청 실패'));
+          }
+        };
 
-      socket.emit('consume', payload, handleResponse);
-    });
+        socket.emit('consume', payload, handleResponse);
+      },
+    );
     return promise;
   },
 

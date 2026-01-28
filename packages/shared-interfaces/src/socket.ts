@@ -46,6 +46,10 @@ export interface GetProducerRequest {
   type: MediaType;
 }
 
+export interface CloseProducerRequest {
+  producerId: string;
+}
+
 export interface ConsumeRequest<T = any> {
   transportId: string;
   producerId: string;
@@ -145,6 +149,8 @@ export type GetProducerResponse =
       producerId?: string;
     };
 
+export type CloseProducerResponse = BaseResponse;
+
 export type ConsumeResponse<T = any> =
   | (BaseResponse & { success: false })
   | {
@@ -154,6 +160,7 @@ export type ConsumeResponse<T = any> =
       kind: MediaKind;
       type: MediaType;
       rtpParameters: T;
+      producerPaused: boolean; // 추가된 필드
     };
 
 export type ConsumeResumeResponse = BaseResponse;
@@ -237,8 +244,18 @@ export interface UserLeftPayload {
 
 export interface NewProducerPayload extends MediasoupProducer {
   participantRole: ParticipantRole;
+}
+
+export interface ProducerClosedPayload {
+  participantId: string;
+  producerId: string;
   kind: MediaKind;
   type: MediaType;
+}
+
+export interface ConsumerClosedPayload {
+  consumerId: string;
+  producerId: string;
 }
 
 export type MediaStateChangedPayload = NewProducerPayload & {
@@ -314,6 +331,10 @@ export interface ServerToClientEvents {
 
   new_producer: (data: NewProducerPayload) => void;
 
+  producer_closed: (data: ProducerClosedPayload) => void;
+
+  consumer_closed: (data: ConsumerClosedPayload) => void;
+
   media_state_changed: (data: MediaStateChangedPayload) => void;
 
   update_gesture_status: (data: UpdateGestureStatusPayload) => void;
@@ -358,6 +379,8 @@ export interface ClientToServerEvents {
   ) => void;
 
   produce: (data: ProduceRequest, cb: (res: ProduceResponse) => void) => void;
+
+  close_producer: (data: CloseProducerRequest, cb: (res: CloseProducerResponse) => void) => void;
 
   consume: (data: ConsumeRequest, cb: (res: ConsumeResponse) => void) => void;
 

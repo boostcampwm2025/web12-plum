@@ -14,18 +14,29 @@ export class MediaConsumerManager {
    * mediasoup Consumer 인스턴스 생성 및 활성화(Resume)
    */
   async create(device: Device, transport: Transport, remoteProducerId: string): Promise<Consumer> {
-    const options = await ConsumerSignaling.consume(
+    const { producerPaused, ...options } = await ConsumerSignaling.consume(
       this.socket,
       transport.id,
       remoteProducerId,
       device.rtpCapabilities,
     );
-    logger.media.info(`[Consumer] Consume 요청 성공: ${options.id}`);
+    logger.media.info(
+      `[Consumer] Consume 요청 성공: ${options.id}, Producer Paused: ${producerPaused}`,
+    );
 
     const consumer = await transport.consume(options);
 
-    await ConsumerSignaling.resume(this.socket, consumer.id);
-    logger.media.info(`[Consumer] Resume 성공: ${consumer.id}`);
+    if (producerPaused) {
+      // Producer가 일시정지 상태라면, 클라이언트 Consumer도 일시정지 상태로 변경
+      consumer.pause();
+      logger.media.info(
+        `[Consumer] Producer가 일시정지 상태이므로 Consumer도 일시정지: ${consumer.id}`,
+      );
+    } else {
+      // Producer가 송출 중이라면, 서버에 Resume 요청하여 데이터 수신 시작
+      await ConsumerSignaling.resume(this.socket, consumer.id);
+      logger.media.info(`[Consumer] Resume 성공: ${consumer.id}`);
+    }
 
     return consumer;
   }
