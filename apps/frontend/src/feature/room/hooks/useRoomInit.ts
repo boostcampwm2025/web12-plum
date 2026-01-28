@@ -194,7 +194,7 @@ export function useRoomInit() {
               description: 'Q&A 결과를 채팅창에서 확인하세요.',
             });
             if (data.text && data.text.length > 0) {
-              chatActions.addQnaResult(data.title, data.text);
+              chatActions.addQnaResult(data);
             }
           },
         });
@@ -203,7 +203,7 @@ export function useRoomInit() {
       // 채팅 이벤트 설정 (발표자/참여자 공통)
       InteractionSignaling.setupChatHandlers(socket, {
         handleNewChat: (data) => {
-          chatActions.addChat(data.messageId, data.senderName, data.text, data.timestamp);
+          chatActions.addChat(data);
         },
       });
 
@@ -273,7 +273,7 @@ export function useRoomInit() {
       socketActions.emit('sync_chat', { lastMessageId }, (response) => {
         if (!response.success || !response.messages) return;
         for (const msg of response.messages) {
-          chatActions.addChat(msg.messageId, msg.senderName, msg.text, msg.timestamp);
+          chatActions.addChat(msg);
         }
       });
     }
