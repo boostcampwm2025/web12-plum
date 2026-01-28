@@ -10,6 +10,18 @@ import { Button } from '@/shared/components/Button';
 
 const RATE_LIMIT_COOLDOWN = 3000;
 const MAX_CHAT_LENGTH = 60;
+const INPUT_LINE_HEIGHT = 20;
+const INPUT_PADDING_Y = 16;
+const INPUT_MAX_LINES = 3;
+const INPUT_MAX_HEIGHT = INPUT_LINE_HEIGHT * INPUT_MAX_LINES + INPUT_PADDING_Y;
+const SCROLL_BOTTOM_THRESHOLD = 8;
+
+const formatTime = (timestamp: number) =>
+  new Date(timestamp).toLocaleTimeString('ko-KR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
 
 interface ChatPanelProps {
   onClose: () => void;
@@ -20,7 +32,6 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
   const emit = useSocketStore((state) => state.actions.emit);
   const [expandedQnaIds, setExpandedQnaIds] = useState<Record<string, boolean>>({});
   const [text, setText] = useState('');
-  const [isSending, setIsSending] = useState(false);
   const [isRateLimited, setIsRateLimited] = useState(false);
   const [chatToast, setChatToast] = useState<string | null>(null);
   const [newItemPreview, setNewItemPreview] = useState<{
@@ -35,9 +46,18 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
   const contentRef = useRef<HTMLDivElement>(null);
   const scrollElRef = useRef<HTMLElement | null>(null);
   const isAtBottomRef = useRef(true);
+
   const toggleOpen = (id: string) => {
     setExpandedQnaIds((state) => ({ ...state, [id]: !state[id] }));
   };
+
+  const scrollToBottom = useCallback(() => {
+    const scrollEl = scrollElRef.current;
+    if (!scrollEl) return;
+    scrollEl.scrollTop = scrollEl.scrollHeight;
+    setHasNewItems(false);
+    setNewItemPreview(null);
+  }, []);
 
   const startRateLimitCooldown = useCallback(() => {
     setIsRateLimited(true);
@@ -58,8 +78,6 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
     };
   }, []);
 
-  const isInputDisabled = isSending || isRateLimited;
-
   const showChatToast = useCallback(
     (message: string) => {
       if (chatToast) return;
@@ -77,15 +95,9 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
 
   const handleSendChat = () => {
     const trimmed = text.trim();
-    if (!trimmed || isInputDisabled) return;
-    if (trimmed.length > MAX_CHAT_LENGTH) {
-      showChatToast(`최대 ${MAX_CHAT_LENGTH}자까지 입력할 수 있습니다.`);
-      return;
-    }
+    if (!trimmed || isRateLimited) return;
 
-    setIsSending(true);
     emit('send_chat', { text: trimmed }, (response) => {
-      setIsSending(false);
       if (!response.success) {
         logger.socket.warn('채팅 전송 실패', response.error);
         if (response.retryable === false) {
@@ -110,11 +122,8 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
     const el = inputRef.current;
     if (!el) return;
     el.style.height = 'auto';
-    const lineHeight = 20;
-    const paddingY = 16;
-    const maxHeight = lineHeight * 3 + paddingY;
-    el.style.height = `${Math.min(el.scrollHeight, maxHeight)}px`;
-    el.style.overflowY = el.scrollHeight > maxHeight ? 'auto' : 'hidden';
+    el.style.height = `${Math.min(el.scrollHeight, INPUT_MAX_HEIGHT)}px`;
+    el.style.overflowY = el.scrollHeight > INPUT_MAX_HEIGHT ? 'auto' : 'hidden';
   }, []);
 
   useEffect(() => {
@@ -126,10 +135,12 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
     if (!scrollEl) return;
 
     scrollElRef.current = scrollEl;
+    scrollEl.scrollTop = scrollEl.scrollHeight;
+
     const handleScroll = () => {
-      const threshold = 8;
       isAtBottomRef.current =
-        scrollEl.scrollTop + scrollEl.clientHeight >= scrollEl.scrollHeight - threshold;
+        scrollEl.scrollTop + scrollEl.clientHeight >=
+        scrollEl.scrollHeight - SCROLL_BOTTOM_THRESHOLD;
       if (isAtBottomRef.current) {
         setHasNewItems(false);
         setNewItemPreview(null);
@@ -145,25 +156,8 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
   }, []);
 
   useEffect(() => {
-    const scrollEl = contentRef.current?.parentElement;
-    if (!scrollEl) return;
-    scrollEl.scrollTop = scrollEl.scrollHeight;
-  }, []);
-
-  const formatTime = (timestamp: number) =>
-    new Date(timestamp).toLocaleTimeString('ko-KR', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    });
-
-  useEffect(() => {
-    const scrollEl = scrollElRef.current;
-    if (!scrollEl) return;
     if (isAtBottomRef.current) {
-      scrollEl.scrollTop = scrollEl.scrollHeight;
-      setHasNewItems(false);
-      setNewItemPreview(null);
+      scrollToBottom();
       return;
     }
     const latestItem = items[items.length - 1];
@@ -181,15 +175,7 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
       });
     }
     setHasNewItems(true);
-  }, [items]);
-
-  const handleJumpToBottom = () => {
-    const scrollEl = scrollElRef.current;
-    if (!scrollEl) return;
-    scrollEl.scrollTop = scrollEl.scrollHeight;
-    setHasNewItems(false);
-    setNewItemPreview(null);
-  };
+  }, [items, scrollToBottom]);
 
   return (
     <>
@@ -308,7 +294,7 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
             placeholder="채팅 입력하기"
             rows={1}
             className="placeholder-subtext flex-1 resize-none rounded-lg bg-gray-300 px-3 py-2 text-sm text-white outline-none"
-            disabled={isInputDisabled}
+            disabled={isRateLimited}
           />
           <Button
             onClick={handleSendChat}
@@ -323,7 +309,7 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
           {hasNewItems && newItemPreview && (
             <button
               type="button"
-              onClick={handleJumpToBottom}
+              onClick={scrollToBottom}
               className="text-text absolute right-0 bottom-full left-0 mb-5 flex items-center justify-between gap-2 rounded-lg bg-gray-400 px-2 py-2 text-xs shadow"
             >
               {newItemPreview.type === 'chat' && newItemPreview.name ? (
@@ -332,7 +318,7 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
                   <span className="truncate text-sm">{newItemPreview.text}</span>
                 </div>
               ) : (
-                <span className="truncate">newItemPreview.text</span>
+                <span className="truncate">{newItemPreview.text}</span>
               )}
               <Icon
                 name="chevron"
