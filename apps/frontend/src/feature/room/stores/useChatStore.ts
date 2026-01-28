@@ -19,17 +19,20 @@ export type ChatItem =
 
 interface ChatState {
   items: ChatItem[];
+  lastMessageId: string | null;
   actions: {
     addQnaResult: (title: string, answers: string[]) => void;
-    addChat: (name: string, message: string) => void;
+    addChat: (messageId: string, name: string, message: string, timestamp: number) => void;
+    getLastMessageId: () => string | null;
     clear: () => void;
   };
 }
 
 export const useChatStore = create<ChatState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       items: [],
+      lastMessageId: null,
       actions: {
         addQnaResult: (title, answers) => {
           const id = `qna-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -46,22 +49,29 @@ export const useChatStore = create<ChatState>()(
             ],
           }));
         },
-        addChat: (name, message) => {
-          const id = `chat-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-          set((state) => ({
-            items: [
-              ...state.items,
-              {
-                id,
-                type: 'chat',
-                name,
-                message,
-                createdAt: Date.now(),
-              },
-            ],
-          }));
+        addChat: (messageId, name, message, timestamp) => {
+          set((state) => {
+            // 중복 방지
+            if (state.items.some((item) => item.id === messageId)) {
+              return state;
+            }
+            return {
+              items: [
+                ...state.items,
+                {
+                  id: messageId,
+                  type: 'chat',
+                  name,
+                  message,
+                  createdAt: timestamp,
+                },
+              ],
+              lastMessageId: messageId,
+            };
+          });
         },
-        clear: () => set({ items: [] }),
+        getLastMessageId: () => get().lastMessageId,
+        clear: () => set({ items: [], lastMessageId: null }),
       },
     }),
     {

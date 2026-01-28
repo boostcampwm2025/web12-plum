@@ -43,6 +43,7 @@ export function useRoomInit() {
 
   // 전역 상태
   const hasHydrated = useMediaStore((state) => state.hasHydrated);
+  const isReconnected = useSocketStore((state) => state.isReconnected);
   const roomActions = useRoomStore((state) => state.actions);
   const mediaActions = useMediaStore((state) => state.actions);
   const streamActions = useStreamStore((state) => state.actions);
@@ -199,6 +200,13 @@ export function useRoomInit() {
         });
       }
 
+      // 채팅 이벤트 설정 (발표자/참여자 공통)
+      InteractionSignaling.setupChatHandlers(socket, {
+        handleNewChat: (data) => {
+          chatActions.addChat(data.messageId, data.senderName, data.text, data.timestamp);
+        },
+      });
+
       // 4. Mediasoup Device 초기화
       await infra.initDevice(routerRtpCapabilities);
 
@@ -227,6 +235,7 @@ export function useRoomInit() {
     socketActions,
     pollActions,
     qnaActions,
+    chatActions,
     controls,
     infra,
     addToast,
@@ -252,6 +261,26 @@ export function useRoomInit() {
     hasStartedInit.current = true;
     runInitPipeline();
   }, [hasHydrated, isSuccess, isLoading, runInitPipeline]);
+
+  /**
+   * 재연결 시 누락 메시지 동기화
+   */
+  useEffect(() => {
+    if (!isReconnected) return;
+
+    const lastMessageId = chatActions.getLastMessageId();
+    if (lastMessageId) {
+      socketActions.emit('sync_chat', { lastMessageId }, (response) => {
+        if (!response.success || !response.messages) return;
+        for (const msg of response.messages) {
+          chatActions.addChat(msg.messageId, msg.senderName, msg.text, msg.timestamp);
+        }
+      });
+    }
+
+    // 플래그 리셋
+    useSocketStore.setState({ isReconnected: false });
+  }, [isReconnected, chatActions, socketActions]);
 
   /**
    * 훅 언마운트 시 자동 정리
