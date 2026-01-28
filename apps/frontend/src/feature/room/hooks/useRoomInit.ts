@@ -14,6 +14,7 @@ import { useRoomUIStore } from '../stores/useRoomUIStore';
 import { usePollStore } from '../stores/usePollStore';
 import { useQnaStore } from '../stores/useQnaStore';
 import { useChatStore } from '../stores/useChatStore';
+import { useRankStore } from '../stores/useRankStore';
 import { MediaRoomManager } from '../mediasoup/MediaRoomManager';
 import { useMediaControlContext } from './useMediaControlContext';
 
@@ -50,6 +51,7 @@ export function useRoomInit() {
   const pollActions = usePollStore((state) => state.actions);
   const qnaActions = useQnaStore((state) => state.actions);
   const chatActions = useChatStore((state) => state.actions);
+  const rankActions = useRankStore((state) => state.actions);
   const { addToast } = useToastStore((state) => state.actions);
 
   /**
@@ -134,6 +136,29 @@ export function useRoomInit() {
         });
       }
 
+      socketActions.emit('get_activity_score_rank', (response) => {
+        if (!response.success) {
+          logger.socket.warn('[RoomInit] 랭킹 정보 조회 실패', response.error);
+          return;
+        }
+
+        logger.socket.info('[RoomInit] 랭킹 정보 수신', { role, response });
+
+        if (role === 'presenter') {
+          // 발표자: top + lowest
+          rankActions.initializeRank({
+            top: response.top,
+            lowest: 'lowest' in response ? response.lowest : null,
+          });
+        } else {
+          // 청중: top + 자신의 점수
+          rankActions.initializeRank({
+            top: response.top,
+            score: 'score' in response ? response.score : 0,
+          });
+        }
+      });
+
       if (role === 'presenter') {
         InteractionSignaling.setupPresenterHandlers(socket, {
           handleUpdateGestureStatus: (data) => {
@@ -151,6 +176,7 @@ export function useRoomInit() {
           handlePollEndDetail: pollActions.setCompletedFromEndDetail,
           handleUpdateQnaDetail: qnaActions.updateQnaDetail,
           handleQnaEndDetail: qnaActions.setCompletedFromEndDetail,
+          handlePresenterRankUpdate: rankActions.updatePresenterRank,
         });
       } else {
         InteractionSignaling.setupAudienceHandlers(socket, {
@@ -196,6 +222,8 @@ export function useRoomInit() {
               chatActions.addQnaResult(data.title, data.text);
             }
           },
+          handleScoreUpdate: rankActions.updateMyScore,
+          handleRankUpdate: rankActions.updateRank,
         });
       }
 
@@ -227,6 +255,8 @@ export function useRoomInit() {
     socketActions,
     pollActions,
     qnaActions,
+    rankActions,
+    chatActions,
     controls,
     infra,
     addToast,

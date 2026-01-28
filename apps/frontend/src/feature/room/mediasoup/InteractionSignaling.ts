@@ -10,6 +10,9 @@ import type {
   UpdateQnaSubPayload,
   EndQnaPayload,
   EndQnaDetailPayload,
+  ScoreUpdatePayload,
+  RankUpdatePayload,
+  PresenterScoreInfoPayload,
 } from '@plum/shared-interfaces';
 
 import { logger } from '@/shared/lib/logger';
@@ -30,6 +33,7 @@ export const InteractionSignaling = {
       handlePollEndDetail: (data: EndPollDetailPayload) => void;
       handleUpdateQnaDetail: (data: UpdateQnaFullPayload) => void;
       handleQnaEndDetail: (data: EndQnaDetailPayload) => void;
+      handlePresenterRankUpdate: (data: PresenterScoreInfoPayload) => void;
     },
   ) => {
     socket.on('update_gesture_status', (data) => {
@@ -56,6 +60,11 @@ export const InteractionSignaling = {
       logger.socket.info('QnA 종료 상세 이벤트 수신', data);
       actions.handleQnaEndDetail(data);
     });
+
+    socket.on('presenter_rank_update', (data) => {
+      logger.socket.info('발표자 랭킹 업데이트 수신', data);
+      actions.handlePresenterRankUpdate(data);
+    });
   },
 
   /**
@@ -71,6 +80,8 @@ export const InteractionSignaling = {
       handleStartQna: (data: StartQnaPayload) => void;
       handleUpdateQna: (data: UpdateQnaSubPayload) => void;
       handleQnaEnd: (data: EndQnaPayload) => void;
+      handleScoreUpdate: (data: ScoreUpdatePayload) => void;
+      handleRankUpdate: (data: RankUpdatePayload) => void;
     },
   ) => {
     socket.on('update_gesture_status', (data) => {
@@ -107,6 +118,16 @@ export const InteractionSignaling = {
       logger.socket.info('QnA 종료 이벤트 수신', data);
       actions.handleQnaEnd(data);
     });
+
+    socket.on('score_update', (data) => {
+      logger.socket.info('점수 업데이트 수신', data);
+      actions.handleScoreUpdate(data);
+    });
+
+    socket.on('rank_update', (data) => {
+      logger.socket.info('랭킹 업데이트 수신', data);
+      actions.handleRankUpdate(data);
+    });
   },
 
   /**
@@ -124,6 +145,9 @@ export const InteractionSignaling = {
     socket.off('update_qna_detail');
     socket.off('qna_end');
     socket.off('qna_end_detail');
+    socket.off('score_update');
+    socket.off('rank_update');
+    socket.off('presenter_rank_update');
     logger.socket.info('[Interaction] 모든 인터랙션 리스너 해제 완료');
   },
 };
