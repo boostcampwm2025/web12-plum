@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { motion } from 'motion/react';
+import { AnimatePresence, motion } from 'motion/react';
 import { SidePanelHeader, SidePanelContent } from './SidePanel';
 import { useChatStore } from '../stores/useChatStore';
 import { useSocketStore } from '@/store/useSocketStore';
@@ -9,6 +9,7 @@ import { logger } from '@/shared/lib/logger';
 import { Button } from '@/shared/components/Button';
 
 const RATE_LIMIT_COOLDOWN = 3000;
+const MAX_CHAT_LENGTH = 60;
 
 interface ChatPanelProps {
   onClose: () => void;
@@ -22,6 +23,12 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
   const [isSending, setIsSending] = useState(false);
   const [isRateLimited, setIsRateLimited] = useState(false);
   const [chatToast, setChatToast] = useState<string | null>(null);
+  const [newItemPreview, setNewItemPreview] = useState<{
+    type: 'chat' | 'qna';
+    name?: string;
+    text: string;
+  } | null>(null);
+  const [hasNewItems, setHasNewItems] = useState(false);
   const rateLimitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -53,27 +60,40 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
 
   const isInputDisabled = isSending || isRateLimited;
 
+  const showChatToast = useCallback(
+    (message: string) => {
+      if (chatToast) return;
+      setChatToast(message);
+      if (toastTimerRef.current) {
+        clearTimeout(toastTimerRef.current);
+      }
+      toastTimerRef.current = setTimeout(() => {
+        setChatToast(null);
+        toastTimerRef.current = null;
+      }, RATE_LIMIT_COOLDOWN);
+    },
+    [chatToast],
+  );
+
   const handleSendChat = () => {
     const trimmed = text.trim();
     if (!trimmed || isInputDisabled) return;
+    if (trimmed.length > MAX_CHAT_LENGTH) {
+      showChatToast(`최대 ${MAX_CHAT_LENGTH}자까지 입력할 수 있습니다.`);
+      return;
+    }
 
     setIsSending(true);
     emit('send_chat', { text: trimmed }, (response) => {
       setIsSending(false);
       if (!response.success) {
         logger.socket.warn('채팅 전송 실패', response.error);
-        setChatToast(response.error ?? '잠시 후 다시 시도해주세요.');
-        if (toastTimerRef.current) {
-          clearTimeout(toastTimerRef.current);
-        }
-        toastTimerRef.current = setTimeout(() => {
-          setChatToast(null);
-          toastTimerRef.current = null;
-        }, RATE_LIMIT_COOLDOWN);
-
         if (response.retryable === false) {
+          showChatToast('너무 많은 메시지를 보냈습니다. 잠시 후 다시 시도해주세요.');
           startRateLimitCooldown();
+          return;
         }
+        showChatToast('채팅 전송에 실패했습니다. 잠시 후 다시 시도해주세요.');
       }
     });
     setText('');
@@ -110,6 +130,10 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
       const threshold = 8;
       isAtBottomRef.current =
         scrollEl.scrollTop + scrollEl.clientHeight >= scrollEl.scrollHeight - threshold;
+      if (isAtBottomRef.current) {
+        setHasNewItems(false);
+        setNewItemPreview(null);
+      }
     };
 
     scrollEl.addEventListener('scroll', handleScroll);
@@ -120,6 +144,12 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
     };
   }, []);
 
+  useEffect(() => {
+    const scrollEl = contentRef.current?.parentElement;
+    if (!scrollEl) return;
+    scrollEl.scrollTop = scrollEl.scrollHeight;
+  }, []);
+
   const formatTime = (timestamp: number) =>
     new Date(timestamp).toLocaleTimeString('ko-KR', {
       hour: '2-digit',
@@ -128,26 +158,38 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
     });
 
   useEffect(() => {
-    (window as any).sendChatFromConsole = (message: string) => {
-      const trimmed = message.trim();
-      if (!trimmed) return;
-      emit('send_chat', { text: trimmed }, (response) => {
-        if (!response.success) {
-          logger.socket.warn('채팅 전송 실패', response.error);
-        }
-      });
-    };
-
-    return () => {
-      delete (window as any).sendChatFromConsole;
-    };
-  }, [emit]);
-
-  useEffect(() => {
     const scrollEl = scrollElRef.current;
-    if (!scrollEl || !isAtBottomRef.current) return;
-    scrollEl.scrollTop = scrollEl.scrollHeight;
+    if (!scrollEl) return;
+    if (isAtBottomRef.current) {
+      scrollEl.scrollTop = scrollEl.scrollHeight;
+      setHasNewItems(false);
+      setNewItemPreview(null);
+      return;
+    }
+    const latestItem = items[items.length - 1];
+    if (!latestItem) return;
+    if (latestItem.type === 'chat') {
+      setNewItemPreview({
+        type: 'chat',
+        name: latestItem.senderName,
+        text: latestItem.text,
+      });
+    } else {
+      setNewItemPreview({
+        type: 'qna',
+        text: latestItem.title,
+      });
+    }
+    setHasNewItems(true);
   }, [items]);
+
+  const handleJumpToBottom = () => {
+    const scrollEl = scrollElRef.current;
+    if (!scrollEl) return;
+    scrollEl.scrollTop = scrollEl.scrollHeight;
+    setHasNewItems(false);
+    setNewItemPreview(null);
+  };
 
   return (
     <>
@@ -235,18 +277,35 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
           })}
         </div>
       </SidePanelContent>
-      <div className="mt-auto flex flex-col gap-2 border-t border-gray-200 px-4 pt-3">
-        {chatToast && (
-          <div className="rounded-xl bg-white/10 px-3 py-2 text-xs text-white/80">{chatToast}</div>
-        )}
-        <div className="flex items-end gap-2">
+      <div className="mt-auto border-t border-gray-200 px-4 pt-3">
+        <div className="relative flex items-end gap-2">
+          <AnimatePresence>
+            {chatToast && (
+              <motion.div
+                key="chat-toast"
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 6 }}
+                transition={{ duration: 0.2, ease: 'easeOut' }}
+                className="text-text bg-error/80 absolute right-0 bottom-full left-0 mb-2 flex justify-center rounded-lg px-3 py-2 text-xs"
+              >
+                {chatToast}
+              </motion.div>
+            )}
+          </AnimatePresence>
           <textarea
             ref={inputRef}
             value={text}
-            onChange={(e) => setText(e.target.value)}
+            onChange={(e) => {
+              const next = e.target.value;
+              if (next.length > MAX_CHAT_LENGTH) {
+                showChatToast(`최대 ${MAX_CHAT_LENGTH}자까지 입력할 수 있습니다.`);
+                return;
+              }
+              setText(next);
+            }}
             onKeyDown={handleKeyDown}
             placeholder="채팅 입력하기"
-            maxLength={60}
             rows={1}
             className="placeholder-subtext flex-1 resize-none rounded-lg bg-gray-300 px-3 py-2 text-sm text-white outline-none"
             disabled={isInputDisabled}
@@ -261,6 +320,26 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
               decorative
             />
           </Button>
+          {hasNewItems && newItemPreview && (
+            <button
+              type="button"
+              onClick={handleJumpToBottom}
+              className="text-text absolute right-0 bottom-full left-0 mb-5 flex items-center justify-between gap-2 rounded-lg bg-gray-400 px-2 py-2 text-xs shadow"
+            >
+              {newItemPreview.type === 'chat' && newItemPreview.name ? (
+                <div className="inline-flex min-w-0 items-center gap-2">
+                  <span className="text-primary text-sm font-bold">{newItemPreview.name}</span>
+                  <span className="truncate text-sm">{newItemPreview.text}</span>
+                </div>
+              ) : (
+                <span className="truncate">newItemPreview.text</span>
+              )}
+              <Icon
+                name="chevron"
+                size={16}
+              />
+            </button>
+          )}
         </div>
       </div>
     </>
