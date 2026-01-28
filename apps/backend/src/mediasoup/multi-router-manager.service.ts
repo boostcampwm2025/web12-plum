@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Router, Worker, Producer } from 'mediasoup/node/lib/types';
+import { Mutex } from 'async-mutex';
 import {
   RoomType,
   RouterStrategy,
@@ -29,6 +30,10 @@ export class MultiRouterManagerService {
 
   // 참가자별 Router 매핑 (participantId -> routerIndex)
   private participantRouterMap: Map<string, Map<string, number>> = new Map();
+
+  // PipeProducer 생성할때 Race Condition 방지를 위한 Mutex Map
+  // Key: "producerId:targetRouterIndex"
+  private pipeProducerMutexes: Map<string, Mutex> = new Map();
 
   // 점진적 활성화 임계값 (5명씩)
   private readonly PARTICIPANTS_PER_ROUTER = 5;
@@ -273,6 +278,12 @@ export class MultiRouterManagerService {
    * Producer를 특정 Router로 On-Demand 파이프 (Lazy Loading)
    * consume 요청이 들어온 시점에만 파이프 생성
    *
+   * Double-Checked Locking 패턴으로 Race Condition 방지:
+   * 1. 첫 번째 체크 (락 없이) - 이미 생성된 파이프는 즉시 반환
+   * 2. 락 획득
+   * 3. 두 번째 체크 (락 내부) - 대기 중 다른 요청이 생성했을 수 있음
+   * 4. 파이프 생성 (정말 없을 때만)
+   *
    * 사용 대상:
    * - 청중의 카메라 (video) - 최대 5명만 선택적 시청
    *
@@ -298,21 +309,41 @@ export class MultiRouterManagerService {
       throw new Error(`Room ${roomId}을 찾을 수 없습니다.`);
     }
 
-    // 이미 파이프된 경우 기존 PipeProducer 반환
-    const existingPipes = roomInfo.pipeProducers.get(producer.id) || [];
-    const existingPipe = existingPipes.find(
-      (p) => p.targetRouter === roomInfo.routers[targetRouterIndex],
-    );
+    const targetRouter = roomInfo.routers[targetRouterIndex];
+
+    // 1. 체크 (락 없이 - Fast Path)
+    // 이미 생성된 파이프는 즉시 반환 (대부분의 경우)
+    const existingPipe = this.findExistingPipe(roomInfo, producer.id, targetRouter);
     if (existingPipe) {
-      this.logger.log(`기존 PipeProducer 재사용: ${producer.id} → Router #${targetRouterIndex}`);
+      this.logger.log(`✅ 기존 PipeProducer 재사용: ${producer.id} → Router #${targetRouterIndex}`);
       return existingPipe.pipeProducer;
     }
 
-    // 새로 파이프 생성
-    const sourceRouter = roomInfo.routers[sourceRouterIndex];
-    const targetRouter = roomInfo.routers[targetRouterIndex];
+    //  Mutex 획득 (파이프 생성이 필요한 경우만)
+    const lockKey = `${producer.id}:${targetRouterIndex}`;
+    if (!this.pipeProducerMutexes.has(lockKey)) {
+      this.pipeProducerMutexes.set(lockKey, new Mutex());
+    }
+    const mutex = this.pipeProducerMutexes.get(lockKey)!;
+    const release = await mutex.acquire();
 
     try {
+      // 2. 체크 (락 내부 - Double Check)
+      // 락 대기 중 다른 요청이 이미 생성했을 수 있음
+      const existingPipe = this.findExistingPipe(roomInfo, producer.id, targetRouter);
+      if (existingPipe) {
+        this.logger.log(
+          `✅ 기존 PipeProducer 재사용 (락 대기 중 생성됨): ${producer.id} → Router #${targetRouterIndex}`,
+        );
+        return existingPipe.pipeProducer;
+      }
+
+      // 파이프 생성 (정말 없을 때만)
+      this.logger.log(
+        `🔗 On-Demand 파이프 생성 시작: Producer ${producer.id} → Router #${targetRouterIndex}`,
+      );
+
+      const sourceRouter = roomInfo.routers[sourceRouterIndex];
       const { pipeProducer } = await sourceRouter.pipeToRouter({
         producerId: producer.id,
         router: targetRouter,
@@ -335,7 +366,7 @@ export class MultiRouterManagerService {
       roomInfo.pipeProducers.get(producer.id)!.push(pipeInfo);
 
       this.logger.log(
-        `🔗 On-Demand 파이프: Producer ${producer.id} → Router #${targetRouterIndex} (PipeProducer: ${pipeProducer.id})`,
+        `✅ On-Demand 파이프 생성 완료: Producer ${producer.id} → Router #${targetRouterIndex} (PipeProducer: ${pipeProducer.id})`,
       );
 
       return pipeProducer as Producer<ProducerAppData>;
@@ -345,7 +376,23 @@ export class MultiRouterManagerService {
         error,
       );
       throw error;
+    } finally {
+      // Mutex 해제
+      release();
     }
+  }
+
+  /**
+   * 기존 PipeProducer 찾기 (헬퍼 메서드)
+   * Double-Checked Locking에서 중복 코드 제거
+   */
+  private findExistingPipe(
+    roomInfo: MultiRouterRoomInfo,
+    producerId: string,
+    targetRouter: Router,
+  ): PipeProducerInfo | undefined {
+    const existingPipes = roomInfo.pipeProducers.get(producerId) || [];
+    return existingPipes.find((p) => p.targetRouter === targetRouter);
   }
 
   /**
