@@ -160,7 +160,7 @@ interface RoomMenuBarProps {
 
 export function RoomMenuBar({ className, roomTitle = '강의실' }: RoomMenuBarProps) {
   const myRole = useRoomStore((state) => state.myInfo?.role);
-  const participantCount = useRoomStore((state) => state.participants.size);
+  const participantCount = useRoomStore((state) => state.participants.size + 1);
 
   return (
     <nav
