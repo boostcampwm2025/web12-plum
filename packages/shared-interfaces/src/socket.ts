@@ -339,6 +339,8 @@ export type EndQnaPayload = {
 
 export interface ScoreUpdatePayload {
   score: number;
+  penaltyCount: number;
+  reason: string;
 }
 
 export interface RankUpdatePayload {

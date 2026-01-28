@@ -37,3 +37,18 @@ export interface ChatMessage {
 export interface SyncChatRequest {
   lastMessageId: string;
 }
+
+export const CHAT_POLICY = {
+  LIMIT: {
+    WINDOW_MS: 3 * 1000,
+    MAX_MESSAGES: 5,
+  },
+  SYNC_LIMIT: {
+    WINDOW_MS: 30 * 1000,
+    MAX_REQUESTS: 10,
+  },
+  PENALTY: {
+    DEDUCTION_PER_VIOLATION: 50,
+    BAN_THRESHOLD: 3,
+  },
+};

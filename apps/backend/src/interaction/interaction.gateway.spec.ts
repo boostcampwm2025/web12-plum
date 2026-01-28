@@ -935,13 +935,19 @@ describe('InteractionGateway', () => {
       const payload = {
         roomId: 'room-123',
         participantId: 'user-456',
-        newScore: 150,
+        score: 150,
+        penaltyCount: 0,
+        reason: 'test',
       };
 
       gateway.handleActivityScoreUpdated(payload);
 
       expect((gateway as any).server.to).toHaveBeenCalledWith('user-456');
-      expect((gateway as any).server.emit).toHaveBeenCalledWith('score_update', { score: 150 });
+      expect((gateway as any).server.emit).toHaveBeenCalledWith('score_update', {
+        score: 150,
+        penaltyCount: 0,
+        reason: 'test',
+      });
     });
   });
 

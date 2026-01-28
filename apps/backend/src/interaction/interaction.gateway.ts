@@ -472,11 +472,13 @@ export class InteractionGateway implements OnGatewayDisconnect {
 
   // 참여도 점수 관련 이벤트 핸들러 (ActivityScoreManagerService에서 발행한 내부 이벤트를 수신)
   @OnEvent('activity.score.updated')
-  handleActivityScoreUpdated(payload: { roomId: string; participantId: string; newScore: number }) {
-    const { participantId, newScore } = payload;
-    const scorePayload: ScoreUpdatePayload = { score: newScore };
+  handleActivityScoreUpdated(
+    payload: { roomId: string; participantId: string } & ScoreUpdatePayload,
+  ) {
+    const { participantId, score, penaltyCount, reason } = payload;
+    const scorePayload: ScoreUpdatePayload = { score, penaltyCount, reason };
     this.server.to(participantId).emit('score_update', scorePayload);
-    this.logger.log(`[Score] ${participantId} 점수 업데이트: ${newScore}`);
+    this.logger.log(`[Score] ${participantId} 점수 업데이트: ${score}`);
   }
 
   @OnEvent('activity.rank.changed')

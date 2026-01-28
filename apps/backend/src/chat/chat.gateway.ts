@@ -14,6 +14,7 @@ import {
   SyncChatRequest,
   SyncChatResponse,
   ChatMessage,
+  CHAT_POLICY,
 } from '@plum/shared-interfaces';
 
 import { SOCKET_CONFIG } from '../common/constants/socket.constants.js';
@@ -22,6 +23,7 @@ import { SocketMetadataService } from '../common/services/index.js';
 import {
   ParticipantManagerService,
   ChatManagerService,
+  ActivityScoreManagerService,
 } from '../redis/repository-manager/index.js';
 
 /**
@@ -52,6 +54,7 @@ export class ChatGateway {
     private readonly socketMetadataService: SocketMetadataService,
     private readonly participantManagerService: ParticipantManagerService,
     private readonly chatManagerService: ChatManagerService,
+    private readonly activityScoreManagerService: ActivityScoreManagerService,
   ) {}
 
   /**
@@ -97,14 +100,23 @@ export class ChatGateway {
       metadata.participantId,
     );
     if (!allowed) {
+      await this.activityScoreManagerService.applyPenalty(metadata.roomId, metadata.participantId);
+      const timeLimit = Math.ceil(CHAT_POLICY.LIMIT.WINDOW_MS / 1000);
       return {
         success: false,
-        error: '채팅 속도 제한: 3초당 최대 5개 메시지만 전송할 수 있습니다.',
+        error: `채팅 속도 제한: ${timeLimit}초당 최대 ${CHAT_POLICY.LIMIT.MAX_MESSAGES}개 메시지만 전송할 수 있습니다.`,
         retryable: false, // Rate Limit은 재시도하면 안 됨!
       };
     }
 
-    // 3. 메시지 생성
+    // 3. 참여도 점수 올리기
+    await this.activityScoreManagerService.updateScore(
+      metadata.roomId,
+      metadata.participantId,
+      'chat',
+    );
+
+    // 4. 메시지 생성
     const messageId = this.chatManagerService.generateMessageId();
     const timestamp = Date.now();
 
@@ -116,13 +128,13 @@ export class ChatGateway {
       timestamp,
     };
 
-    // 4. Redis 저장 (재시도 로직 포함)
+    // 5. Redis 저장 (재시도 로직 포함)
     const saveResult = await this.saveMessageWithRetry(metadata.roomId, message);
     if (!saveResult.success) {
       return saveResult;
     }
 
-    // 5. 브로드캐스트 (발신자 포함!) → new_chat 이벤트
+    // 6. 브로드캐스트 (발신자 포함!) → new_chat 이벤트
     this.server.to(metadata.roomId).emit('new_chat', message);
 
     this.logger.log(

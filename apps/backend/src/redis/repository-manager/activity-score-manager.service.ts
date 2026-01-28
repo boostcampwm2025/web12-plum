@@ -1,16 +1,15 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { ActivityType, RANK_LIMIT, RankItem } from '@plum/shared-interfaces';
+import {
+  ActivityType,
+  CHAT_POLICY,
+  PENALTY_LIMIT,
+  RANK_LIMIT,
+  RankItem,
+  SCORE_RULES,
+} from '@plum/shared-interfaces';
 import { RedisService } from '../redis.service.js';
 import { ParticipantManagerService } from './participant-manager.service.js';
-
-const SCORE_RULES: Record<ActivityType, number> = {
-  gesture: 5,
-  chat: 3,
-  vote: 5,
-  vote_gesture: 8,
-  qna_answer: 10,
-};
 
 @Injectable()
 export class ActivityScoreManagerService {
@@ -49,12 +48,11 @@ export class ActivityScoreManagerService {
     const scoreToAdd = SCORE_RULES[activity];
     const zsetKey = `room:${roomId}:scores`; // 랭킹용 ZSET Key
     const statsKey = `room:${roomId}:stats:${participantId}`; // 통계용 Hash Key
+    const client = this.redisService.getClient();
 
     try {
       // [랭킹용] Redis ZSET 점수 증가
-      const currentScoreWithFraction = await this.redisService
-        .getClient()
-        .zscore(zsetKey, participantId);
+      const currentScoreWithFraction = await client.zscore(zsetKey, participantId);
       let currentPureScore = 0;
 
       if (currentScoreWithFraction) {
@@ -93,11 +91,16 @@ export class ActivityScoreManagerService {
 
       await pipeline.exec();
 
+      const result = await client.hget(statsKey, 'penaltyCount');
+      const penaltyCount = parseInt(result || '0', 10);
+
       // 참가자에게 점수 업데이트 이벤트 발행
       this.eventEmitter.emit('activity.score.updated', {
         roomId,
         participantId,
-        newScore: newPureScore,
+        score: newPureScore,
+        penaltyCount,
+        reason: activity,
       });
 
       // 랭킹 정보는 매번 계산해서 전송
@@ -110,6 +113,69 @@ export class ActivityScoreManagerService {
       });
     } catch (error) {
       this.logger.error(`점수 업데이트 실패: ${error.message}`, error.stack);
+    }
+  }
+
+  /**
+   * 도배 발생 시 패널티 부여
+   * @param roomId 방 ID
+   * @param participantId 참가자 ID
+   */
+  async applyPenalty(roomId: string, participantId: string): Promise<void> {
+    const zsetKey = `room:${roomId}:scores`;
+    const statsKey = `room:${roomId}:stats:${participantId}`;
+
+    try {
+      const client = this.redisService.getClient();
+      const newPenaltyCount = await client.hincrby(statsKey, 'penaltyCount', 1);
+
+      const isCritical = newPenaltyCount > PENALTY_LIMIT;
+      const penaltyScore = CHAT_POLICY.PENALTY.DEDUCTION_PER_VIOLATION || 50;
+      const priority = this.getPriorityScore();
+
+      const pipeline = client.pipeline();
+
+      if (isCritical) {
+        // 💥 [임계치 초과] 점수 전체 초기화
+        pipeline.zadd(zsetKey, priority, participantId);
+        pipeline.hset(statsKey, 'participationScore', 0);
+        this.logger.warn(
+          `[CRITICAL PENALTY] ${participantId} 점수 초기화 (횟수: ${newPenaltyCount})`,
+        );
+      } else {
+        // ⚠️ [일반 도배] 설정된 벌점만큼 차감
+        const currentWithFraction = await client.zscore(zsetKey, participantId);
+        const currentPureScore = currentWithFraction
+          ? Math.floor(parseFloat(currentWithFraction))
+          : 0;
+
+        const newPureScore = Math.max(0, currentPureScore - penaltyScore);
+        const finalScore = newPureScore + priority;
+
+        // Redis 업데이트
+        pipeline.zadd(zsetKey, finalScore, participantId);
+        pipeline.hincrby(statsKey, 'participationScore', -penaltyScore);
+        this.logger.log(
+          `[PENALTY] ${participantId} -${penaltyScore}점 (누적: ${newPenaltyCount}회)`,
+        );
+      }
+
+      await pipeline.exec();
+      const newScore = await this.getParticipantScore(roomId, participantId);
+      this.eventEmitter.emit('activity.score.updated', {
+        roomId,
+        participantId,
+        score: newScore,
+        penaltyCount: newPenaltyCount,
+        reason: isCritical ? 'critical_penalty' : 'penalty',
+      });
+
+      // 랭킹 변경 이벤트 전송 (점수가 깎였으니 순위가 변함)
+      const top = await this.getTopRankings(roomId, RANK_LIMIT);
+      const lowest = await this.getLowest(roomId);
+      this.eventEmitter.emit('activity.rank.changed', { roomId, top, lowest });
+    } catch (error) {
+      this.logger.error(`패널티 적용 실패: ${error.message}`, error.stack);
     }
   }
 

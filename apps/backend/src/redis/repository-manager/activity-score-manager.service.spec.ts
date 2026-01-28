@@ -12,8 +12,10 @@ describe('ActivityScoreManagerService', () => {
 
   const pipelineMock = {
     hincrby: jest.fn().mockReturnThis(),
+    hset: jest.fn().mockReturnThis(),
     del: jest.fn().mockReturnThis(),
     exec: jest.fn().mockResolvedValue([]),
+    zadd: jest.fn().mockResolvedValue([]),
   };
 
   const redisClientMock = {
@@ -24,6 +26,8 @@ describe('ActivityScoreManagerService', () => {
     zcard: jest.fn(),
     keys: jest.fn(),
     pipeline: jest.fn(() => pipelineMock),
+    hget: jest.fn(),
+    hincrby: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -78,6 +82,7 @@ describe('ActivityScoreManagerService', () => {
       redisClientMock.zcard.mockResolvedValue(1);
       redisClientMock.zrevrange.mockResolvedValue(['user1', '13.1234']); // 업데이트 후 랭킹 조회 결과 모킹
       redisClientMock.zrange.mockResolvedValue(['u1', '8.0']);
+      redisClientMock.hget.mockResolvedValue('0');
       (participantManagerService.findOne as jest.Mock).mockResolvedValue({ name: '테스터' });
 
       await service.updateScore(roomId, pId, activity);
@@ -91,7 +96,9 @@ describe('ActivityScoreManagerService', () => {
       expect(eventEmitter.emit).toHaveBeenCalledWith('activity.score.updated', {
         roomId,
         participantId: pId,
-        newScore: 13,
+        score: 13,
+        penaltyCount: 0,
+        reason: activity,
       });
 
       expect(eventEmitter.emit).toHaveBeenCalledWith(
@@ -133,6 +140,92 @@ describe('ActivityScoreManagerService', () => {
           }),
         }),
       );
+    });
+  });
+
+  describe('applyPenalty', () => {
+    const roomId = 'room1';
+    const pId = 'user1';
+
+    beforeEach(() => {
+      // 랭킹 조회를 위한 기본 모킹
+      redisClientMock.zcard.mockResolvedValue(1);
+      redisClientMock.zrevrange.mockResolvedValue(['user1', '10.5']);
+      (participantManagerService.findOne as jest.Mock).mockResolvedValue({ name: '테스터' });
+    });
+
+    it('일반 패널티: 패널티 횟수를 증가시키고 설정된 벌점만큼 점수를 차감해야 한다', async () => {
+      // 1. 초기 상태 설정
+      const initialPenaltyCount = 1;
+      const initialScore = '100.999'; // 현재 100점
+      const expectedScore = 50;
+
+      redisClientMock.hincrby.mockResolvedValue(initialPenaltyCount);
+      redisClientMock.zscore.mockResolvedValueOnce(initialScore).mockResolvedValueOnce('50.1234');
+
+      await service.applyPenalty(roomId, pId);
+
+      // 패널티 카운트 증가 확인
+      expect(redisClientMock.hincrby).toHaveBeenCalledWith(
+        `room:${roomId}:stats:${pId}`,
+        'penaltyCount',
+        1,
+      );
+
+      // 점수 차감 확인 (100점 - 50점 = 50.xxxx)
+      const zaddCall = pipelineMock.zadd.mock.calls.find((call) => call[2] === pId);
+      const scoreArg = zaddCall[1];
+      expect(Math.floor(scoreArg)).toBe(50);
+
+      // 이벤트 발행 확인
+      expect(eventEmitter.emit).toHaveBeenCalledWith('activity.score.updated', {
+        roomId,
+        participantId: pId,
+        score: expectedScore,
+        penaltyCount: initialPenaltyCount,
+        reason: 'penalty',
+      });
+    });
+
+    it('크리티컬 패널티: 패널티 횟수가 임계치를 초과하면 점수를 0으로 초기화해야 한다', async () => {
+      // 1. PENALTY_LIMIT을 초과하는 카운트 설정 (예: 6회)
+      const criticalPenaltyCount = 6;
+      redisClientMock.hincrby.mockResolvedValue(criticalPenaltyCount);
+      redisClientMock.zscore.mockResolvedValue('0.1234');
+
+      await service.applyPenalty(roomId, pId);
+
+      // 점수가 0점대(우선순위 소수점만 존재)로 설정되었는지 확인
+      const zaddCall = pipelineMock.zadd.mock.calls.find((call) => call[2] === pId);
+      expect(Math.floor(zaddCall[1])).toBe(0);
+
+      // 통계 해시의 점수도 0으로 명시적 설정 확인
+      expect(pipelineMock.hset).toHaveBeenCalledWith(
+        `room:${roomId}:stats:${pId}`,
+        'participationScore',
+        0,
+      );
+
+      // 이벤트 발행 사유가 critical_penalty인지 확인
+      expect(eventEmitter.emit).toHaveBeenCalledWith('activity.score.updated', {
+        roomId,
+        participantId: pId,
+        score: 0,
+        penaltyCount: criticalPenaltyCount,
+        reason: 'critical_penalty',
+      });
+    });
+
+    it('점수가 벌점보다 낮을 경우, 0점 미만으로 내려가지 않아야 한다', async () => {
+      const lowScore = '30.123'; // 현재 30점인데 벌점은 50점인 상황
+      redisClientMock.hincrby.mockResolvedValue(1);
+      redisClientMock.zscore.mockResolvedValueOnce(lowScore).mockResolvedValueOnce('0.1234');
+
+      await service.applyPenalty(roomId, pId);
+
+      // 30 - 50 = -20 이지만 Math.max(0, ...)에 의해 0점대로 기록되어야 함
+      const zaddCall = pipelineMock.zadd.mock.calls.find((call) => call[2] === pId);
+      expect(Math.floor(zaddCall[1])).toBe(0);
     });
   });
 

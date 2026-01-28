@@ -21,6 +21,17 @@ export interface ParticipantStats {
   chatCount: number;
   voteCount: number;
   answerCount: number;
+  penaltyCount: number;
 }
 
 export const RANK_LIMIT = 3;
+
+export const PENALTY_LIMIT = 5;
+
+export const SCORE_RULES: Record<ActivityType, number> = {
+  gesture: 5,
+  chat: 3,
+  vote: 5,
+  vote_gesture: 8,
+  qna_answer: 10,
+};
