@@ -535,6 +535,7 @@ export class MultiRouterManagerService {
     // Map에서 제거
     this.rooms.delete(roomId);
     this.participantRouterMap.delete(roomId);
+    this.roomFirstJoinTime.delete(roomId); // 버스트 감지용 시간 정보 정리
     this.logger.log(`🗑️  Room ${roomId} 정리 완료`);
   }
 
