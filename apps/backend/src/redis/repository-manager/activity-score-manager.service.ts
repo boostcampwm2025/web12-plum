@@ -195,7 +195,7 @@ export class ActivityScoreManagerService {
     const result: RankItem[] = [];
     for (let i = 0; i < rawResult.length; i += 2) {
       const pId = rawResult[i];
-      const score = parseFloat(rawResult[i + 1]);
+      const score = Math.floor(parseFloat(rawResult[i + 1]));
 
       const participant = await this.participantManagerService.findOne(pId);
       const name = participant ? participant.name : '알 수 없음';
