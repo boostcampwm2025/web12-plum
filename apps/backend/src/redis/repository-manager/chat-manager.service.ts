@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ChatMessage } from '@plum/shared-interfaces';
+import { CHAT_POLICY, ChatMessage } from '@plum/shared-interfaces';
 import { RedisService } from '../redis.service.js';
 
 /**
@@ -132,13 +132,18 @@ export class ChatManagerService {
     const key = `room:${roomId}:ratelimit:chat:${participantId}`;
     const client = this.redisService.getClient();
     const now = Date.now();
-    const threeSecondsAgo = now - 3000;
+
+    const maxCount = CHAT_POLICY.LIMIT.MAX_MESSAGES;
+    const threeSecondsAgo = now - CHAT_POLICY.LIMIT.WINDOW_MS;
+    const ttl = Math.ceil(CHAT_POLICY.LIMIT.WINDOW_MS / 1000);
 
     // Lua 스크립트: 원자적으로 실행되면서 Race Condition 완전 방지
     const luaScript = `
       local key = KEYS[1]
       local now = tonumber(ARGV[1])
       local threeSecondsAgo = tonumber(ARGV[2])
+      local maxCount = tonumber(ARGV[3])
+      local ttl = tonumber(ARGV[4])
 
       -- 1. 3초 이전 데이터 삭제 (Sliding Window)
       redis.call('zremrangebyscore', key, '-inf', threeSecondsAgo)
@@ -147,13 +152,13 @@ export class ChatManagerService {
       local count = redis.call('zcard', key)
 
       -- 3. 5개 이상이면 차단
-      if count >= 5 then
+      if count >= maxCount then
         return 0
       end
 
       -- 4. 통과 시 타임스탬프 추가
       redis.call('zadd', key, now, tostring(now))
-      redis.call('expire', key, 3)
+      redis.call('expire', key, ttl)
 
       return 1
     `;
@@ -165,10 +170,14 @@ export class ChatManagerService {
         key, // KEYS[1]
         now.toString(), // ARGV[1]
         threeSecondsAgo.toString(), // ARGV[2]
+        maxCount.toString(), // ARGV[3]
+        ttl.toString(), // ARGV[4]
       );
 
       if (result === 0) {
-        this.logger.warn(`[Rate Limit] ${participantId} (${roomId}) - 3초당 5개 초과`);
+        this.logger.warn(
+          `[Rate Limit] ${participantId} (${roomId}) - ${ttl}초당 ${maxCount}개 초과`,
+        );
         return false;
       }
 
@@ -197,13 +206,18 @@ export class ChatManagerService {
     const key = `room:${roomId}:ratelimit:sync:${participantId}`;
     const client = this.redisService.getClient();
     const now = Date.now();
-    const thirtySecondsAgo = now - 30000;
+
+    const thirtySecondsAgo = now - CHAT_POLICY.SYNC_LIMIT.WINDOW_MS;
+    const maxRequests = CHAT_POLICY.SYNC_LIMIT.MAX_REQUESTS;
+    const ttl = Math.ceil(CHAT_POLICY.SYNC_LIMIT.WINDOW_MS / 1000);
 
     // Lua 스크립트: 원자적으로 실행되면서 Race Condition 완전 방지
     const luaScript = `
       local key = KEYS[1]
       local now = tonumber(ARGV[1])
       local thirtySecondsAgo = tonumber(ARGV[2])
+      local maxRequests = tonumber(ARGV[3])
+      local ttl = tonumber(ARGV[4])
 
       -- 1. 30초 이전 데이터 삭제 (Sliding Window)
       redis.call('zremrangebyscore', key, '-inf', thirtySecondsAgo)
@@ -212,13 +226,13 @@ export class ChatManagerService {
       local count = redis.call('zcard', key)
 
       -- 3. 10개 이상이면 차단
-      if count >= 10 then
+      if count >= maxRequests then
         return 0
       end
 
       -- 4. 통과 시 타임스탬프 추가
       redis.call('zadd', key, now, tostring(now))
-      redis.call('expire', key, 30)
+      redis.call('expire', key, ttl)
 
       return 1
     `;
@@ -230,10 +244,14 @@ export class ChatManagerService {
         key, // KEYS[1]
         now.toString(), // ARGV[1]
         thirtySecondsAgo.toString(), // ARGV[2]
+        maxRequests.toString(), // ARGV[3]
+        ttl.toString(), // ARGV[4]
       );
 
       if (result === 0) {
-        this.logger.warn(`[Sync Rate Limit] ${participantId} (${roomId}) - 30초당 10개 초과`);
+        this.logger.warn(
+          `[Sync Rate Limit] ${participantId} (${roomId}) - ${ttl}초당 ${maxRequests}개 초과`,
+        );
         return false;
       }
 

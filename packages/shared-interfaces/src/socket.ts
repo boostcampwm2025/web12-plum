@@ -6,6 +6,7 @@ import { Poll, pollFormSchema, PollOption, PollPayload } from './poll.js';
 import { Answer, Qna, qnaFormSchema, QnaPayload } from './qna.js';
 import { FileInfo } from './file.js';
 import { ChatMessage, SendChatRequest, SyncChatRequest } from './chat.js';
+import { RankItem } from './score.js';
 
 // 제스처 타입 정의
 export type GestureType =
@@ -91,6 +92,7 @@ export interface EmitQnaRequest {
 export interface VoteRequest {
   pollId: string;
   optionId: number;
+  isGesture: boolean;
 }
 
 export type AnswerRequest = {
@@ -242,6 +244,11 @@ export type SyncChatResponse =
   | (BaseResponse & { success: false })
   | { success: true; messages: ChatMessage[] };
 
+export type GetActivityScoreRank =
+  | (BaseResponse & { success: false })
+  | ({ success: true; score: number } & RankUpdatePayload)
+  | ({ success: true } & PresenterScoreInfoPayload);
+
 // 서버에서 보내는 브로드캐스트 페이로드
 export type UserJoinedPayload = ParticipantPayload;
 
@@ -330,6 +337,21 @@ export type EndQnaPayload = {
   text?: string[];
 };
 
+export interface ScoreUpdatePayload {
+  score: number;
+  penaltyCount: number;
+  reason: string;
+}
+
+export interface RankUpdatePayload {
+  top: RankItem[];
+}
+
+export interface PresenterScoreInfoPayload {
+  top: RankItem[];
+  lowest: RankItem | null;
+}
+
 /**
  * 서버 -> 클라이언트 이벤트
  */
@@ -371,6 +393,12 @@ export interface ServerToClientEvents {
   qna_end_detail: (data: EndQnaDetailPayload) => void;
 
   new_chat: (data: ChatMessage) => void;
+
+  score_update: (data: ScoreUpdatePayload) => void;
+
+  rank_update: (data: RankUpdatePayload) => void;
+
+  presenter_rank_update: (data: PresenterScoreInfoPayload) => void;
 }
 
 /**
@@ -438,4 +466,6 @@ export interface ClientToServerEvents {
   send_chat: (data: SendChatRequest, cb: (res: SendChatResponse) => void) => void;
 
   sync_chat: (data: SyncChatRequest, cb: (res: SyncChatResponse) => void) => void;
+
+  get_activity_score_rank: (cb: (res: GetActivityScoreRank) => void) => void;
 }

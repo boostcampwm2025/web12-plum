@@ -1,15 +1,17 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { Server, Socket } from 'socket.io';
 import { InteractionGateway } from './interaction.gateway.js';
 import { InteractionService } from './interaction.service.js';
 import { SocketMetadataService } from '../common/services/socket-metadata.service.js';
 import {
+  ActivityScoreManagerService,
   ParticipantManagerService,
   RoomManagerService,
 } from '../redis/repository-manager/index.js';
-import { Socket } from 'socket.io';
 import { BusinessException } from '../common/types/index.js';
 import { PrometheusService } from '../prometheus/prometheus.service.js';
+import { RANK_LIMIT } from '@plum/shared-interfaces';
 
 describe('InteractionGateway', () => {
   let gateway: InteractionGateway;
@@ -17,6 +19,8 @@ describe('InteractionGateway', () => {
   let participantManagerService: ParticipantManagerService;
   let roomManagerService: RoomManagerService;
   let interactionService: InteractionService;
+  let activityScoreManager: ActivityScoreManagerService;
+  let mockServer: Server;
 
   const mockSocket = {
     id: 'socket-id',
@@ -25,6 +29,11 @@ describe('InteractionGateway', () => {
   } as unknown as Socket;
 
   beforeEach(async () => {
+    mockServer = {
+      to: jest.fn().mockReturnThis(),
+      emit: jest.fn(),
+    } as unknown as Server;
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         InteractionGateway,
@@ -39,6 +48,15 @@ describe('InteractionGateway', () => {
         {
           provide: ParticipantManagerService,
           useValue: { findOne: jest.fn(), updatePartial: jest.fn() },
+        },
+        {
+          provide: ActivityScoreManagerService,
+          useValue: {
+            updateScore: jest.fn().mockResolvedValue(undefined),
+            getTopRankings: jest.fn(),
+            getLowest: jest.fn(),
+            getParticipantScore: jest.fn(),
+          },
         },
         {
           provide: RoomManagerService,
@@ -78,27 +96,67 @@ describe('InteractionGateway', () => {
     participantManagerService = module.get(ParticipantManagerService);
     roomManagerService = module.get(RoomManagerService);
     interactionService = module.get(InteractionService);
+    activityScoreManager = module.get(ActivityScoreManagerService);
+
+    (gateway as any).server = mockServer;
   });
 
   describe('handleActionGesture', () => {
-    it('제스처 카운트를 올리고 브로드캐스트한다', async () => {
-      const metadata = { participantId: 'p1', roomId: 'r1' };
-      const participant = { id: 'p1', name: '홍길동', gestureCount: 5 };
-      const gestureData = { gesture: 'THUMBS_UP' };
+    const roomId = 'r1';
+    const participantId = 'p1';
+    const mockMetadata = { roomId, participantId };
+    const mockGestureData = { gesture: 'THUMBS_UP' };
 
-      jest.spyOn(socketMetadataService, 'get').mockReturnValue(metadata as any);
+    beforeEach(() => {
+      jest.spyOn(socketMetadataService, 'get').mockReturnValue(mockMetadata as any);
+    });
+
+    it('audience인 경우 점수를 업데이트하고 이벤트를 브로드캐스트한다', async () => {
+      const participant = { id: participantId, name: '홍길동', role: 'audience' };
       jest.spyOn(participantManagerService, 'findOne').mockResolvedValue(participant as any);
 
-      // Gateway 내 server 객체 모킹
-      (gateway as any).server = { to: jest.fn().mockReturnThis(), emit: jest.fn() };
-
-      const result = await gateway.handleActionGesture(mockSocket, gestureData as any);
+      const result = await gateway.handleActionGesture(mockSocket, mockGestureData as any);
 
       expect(result).toEqual({ success: true });
-      expect(participantManagerService.updatePartial).toHaveBeenCalledWith('p1', {
-        gestureCount: 6,
+      expect(activityScoreManager.updateScore).toHaveBeenCalledWith(
+        roomId,
+        participantId,
+        'gesture',
+      );
+      expect(mockServer.to).toHaveBeenCalledWith(roomId);
+      expect(mockServer.emit).toHaveBeenCalledWith('update_gesture_status', {
+        participantId,
+        participantName: '홍길동',
+        gesture: 'THUMBS_UP',
       });
-      expect((gateway as any).server.to).toHaveBeenCalledWith('r1');
+    });
+
+    it('host인 경우 점수는 업데이트하지 않지만 이벤트는 브로드캐스트한다', async () => {
+      const participant = { id: participantId, name: '호스트', role: 'host' };
+      jest.spyOn(participantManagerService, 'findOne').mockResolvedValue(participant as any);
+
+      const result = await gateway.handleActionGesture(mockSocket, mockGestureData as any);
+
+      expect(result).toEqual({ success: true });
+      expect(activityScoreManager.updateScore).not.toHaveBeenCalled(); // 점수 업데이트 제외
+      expect(mockServer.emit).toHaveBeenCalled();
+    });
+
+    it('소켓 메타데이터가 없는 경우 에러를 반환한다', async () => {
+      jest.spyOn(socketMetadataService, 'get').mockReturnValue(undefined);
+
+      const result = await gateway.handleActionGesture(mockSocket, mockGestureData as any);
+
+      expect(result).toEqual({ success: false, error: '먼저 join_room을 호출하세요.' });
+      expect(mockServer.emit).not.toHaveBeenCalled();
+    });
+
+    it('참가자 정보를 찾을 수 없는 경우 에러를 반환한다', async () => {
+      jest.spyOn(participantManagerService, 'findOne').mockResolvedValue(null);
+
+      const result = await gateway.handleActionGesture(mockSocket, mockGestureData as any);
+
+      expect(result).toEqual({ success: false, error: '참가자를 찾을 수 없습니다.' });
     });
   });
 
@@ -311,7 +369,7 @@ describe('InteractionGateway', () => {
   });
 
   describe('vote', () => {
-    const voteDto = { pollId: 'poll-123', optionId: 1 };
+    const voteDto = { pollId: 'poll-123', optionId: 1, isGesture: false };
 
     it('청중이 투표에 참여하면 결과를 브로드캐스트하고 성공을 반환한다', async () => {
       const metadata = { participantId: 'p-student', roomId: 'r1' };
@@ -327,11 +385,6 @@ describe('InteractionGateway', () => {
       jest.spyOn(roomManagerService, 'findOne').mockResolvedValue(room as any);
       jest.spyOn(interactionService, 'vote').mockResolvedValue(mockUpdatePayload as any);
 
-      const mockEmit = jest.fn();
-      (gateway as any).server = {
-        to: jest.fn().mockReturnValue({ emit: mockEmit }),
-      };
-
       const result = await gateway.vote(mockSocket, voteDto);
 
       expect(result).toEqual({ success: true });
@@ -342,9 +395,9 @@ describe('InteractionGateway', () => {
         voteDto.optionId,
       );
 
-      expect((gateway as any).server.to).toHaveBeenCalledWith('r1:audience');
-      expect((gateway as any).server.to).toHaveBeenCalledWith('r1:presenter');
-      expect(mockEmit).toHaveBeenCalledWith('update_poll', mockUpdatePayload);
+      expect(mockServer.to).toHaveBeenCalledWith('r1:audience');
+      expect(mockServer.to).toHaveBeenCalledWith('r1:presenter');
+      expect(mockServer.emit).toHaveBeenCalledWith('update_poll', mockUpdatePayload);
     });
 
     it('발표자(presenter)가 투표를 시도할 경우 권한 에러를 반환해야 한다', async () => {
@@ -702,6 +755,12 @@ describe('InteractionGateway', () => {
         answerDto.text,
       );
 
+      expect(activityScoreManager.updateScore).toHaveBeenCalledWith(
+        mockRoom.id,
+        mockParticipant.id,
+        'qna_answer',
+      );
+
       expect((gateway as any).server.to).toHaveBeenCalledWith('r1:audience');
       expect((gateway as any).server.to('r1:audience').emit).toHaveBeenCalledWith(
         'update_qna',
@@ -733,6 +792,7 @@ describe('InteractionGateway', () => {
         error: '이미 답변한 질문입니다.',
       });
       expect((gateway as any).server.to).not.toHaveBeenCalled();
+      expect(activityScoreManager.updateScore).not.toHaveBeenCalled();
     });
 
     it('예기치 못한 일반 에러 발생 시 기본 실패 메시지를 반환한다', async () => {
@@ -860,6 +920,156 @@ describe('InteractionGateway', () => {
         expect.stringContaining('[auto_close_qna] 전달 실패:'),
         expect.any(Error),
       );
+    });
+  });
+
+  describe('handleActivityScoreUpdated', () => {
+    beforeEach(() => {
+      (gateway as any).server = {
+        to: jest.fn().mockReturnThis(),
+        emit: jest.fn(),
+      };
+    });
+
+    it('개별 점수 업데이트 이벤트를 수신하면 해당 참가자의 개인 소켓 룸으로 점수를 전송해야 한다', () => {
+      const payload = {
+        roomId: 'room-123',
+        participantId: 'user-456',
+        score: 150,
+        penaltyCount: 0,
+        reason: 'test',
+      };
+
+      gateway.handleActivityScoreUpdated(payload);
+
+      expect((gateway as any).server.to).toHaveBeenCalledWith('user-456');
+      expect((gateway as any).server.emit).toHaveBeenCalledWith('score_update', {
+        score: 150,
+        penaltyCount: 0,
+        reason: 'test',
+      });
+    });
+  });
+
+  describe('handleActivityRankChanged', () => {
+    beforeEach(() => {
+      (gateway as any).server = {
+        to: jest.fn().mockReturnThis(),
+        emit: jest.fn(),
+      };
+    });
+
+    it(`랭킹 변경 이벤트를 수신하면 청중에게는 Top ${RANK_LIMIT}를, 발표자에게는 상세 정보를 전송해야 한다`, () => {
+      const payload = {
+        roomId: 'room-123',
+        top: [
+          { rank: 1, participantId: 'p1', name: 'A', score: 100 },
+          { rank: 2, participantId: 'p2', name: 'B', score: 90 },
+          { rank: 3, participantId: 'p3', name: 'C', score: 80 },
+        ],
+        lowest: { rank: 50, participantId: 'p50', name: 'Z', score: 10 },
+      };
+
+      gateway.handleActivityRankChanged(payload);
+
+      expect((gateway as any).server.to).toHaveBeenCalledWith('room-123:audience');
+      expect((gateway as any).server.emit).toHaveBeenCalledWith('rank_update', {
+        top: payload.top,
+      });
+
+      expect((gateway as any).server.to).toHaveBeenCalledWith('room-123:presenter');
+      expect((gateway as any).server.emit).toHaveBeenCalledWith('presenter_rank_update', {
+        top: payload.top,
+        lowest: payload.lowest,
+      });
+    });
+
+    it('최하위 점수(lowest)가 null인 경우에도 발표자에게 정상적으로 전송해야 한다', () => {
+      const payload = {
+        roomId: 'room-123',
+        top: [],
+        lowest: null,
+      };
+
+      gateway.handleActivityRankChanged(payload);
+
+      expect((gateway as any).server.to).toHaveBeenCalledWith('room-123:presenter');
+      expect((gateway as any).server.emit).toHaveBeenCalledWith('presenter_rank_update', {
+        top: [],
+        lowest: null,
+      });
+    });
+  });
+
+  describe('get_activity_score_rank', () => {
+    const mockTop3 = [
+      { rank: 1, participantId: 'p1', name: '우등생1', score: 100 },
+      { rank: 2, participantId: 'p2', name: '우등생2', score: 90 },
+      { rank: 3, participantId: 'p3', name: '우등생3', score: 80 },
+    ];
+    const mockLowest = { rank: 10, participantId: 'p10', name: '꼴찌', score: 5 };
+
+    it('발표자가 요청할 경우 Top N과 최하위 정보를 모두 반환한다', async () => {
+      const metadata = { participantId: 'presenter-1', roomId: 'r1' };
+      const participant = { id: 'presenter-1', role: 'presenter' };
+      const room = { id: 'r1', presenter: 'presenter-1', status: 'active' };
+
+      jest.spyOn(socketMetadataService, 'get').mockReturnValue(metadata as any);
+      jest.spyOn(participantManagerService, 'findOne').mockResolvedValue(participant as any);
+      jest.spyOn(roomManagerService, 'findOne').mockResolvedValue(room as any);
+
+      jest.spyOn(activityScoreManager, 'getTopRankings').mockResolvedValue(mockTop3 as any);
+      jest.spyOn(activityScoreManager, 'getLowest').mockResolvedValue(mockLowest as any);
+
+      const result = await gateway.getCurrentActivityRank(mockSocket);
+
+      expect(result).toEqual({
+        success: true,
+        top: mockTop3,
+        lowest: mockLowest,
+      });
+      expect(activityScoreManager.getTopRankings).toHaveBeenCalledWith('r1', RANK_LIMIT);
+      expect(activityScoreManager.getLowest).toHaveBeenCalledWith('r1');
+    });
+
+    it('청중이 요청할 경우 Top N 정보와 자신의 점수를 반환한다', async () => {
+      const metadata = { participantId: 'audience-1', roomId: 'r1' };
+      const participant = { id: 'audience-1', role: 'audience' };
+      const room = { id: 'r1', status: 'active' };
+
+      jest.spyOn(socketMetadataService, 'get').mockReturnValue(metadata as any);
+      jest.spyOn(participantManagerService, 'findOne').mockResolvedValue(participant as any);
+      jest.spyOn(roomManagerService, 'findOne').mockResolvedValue(room as any);
+
+      jest.spyOn(activityScoreManager, 'getTopRankings').mockResolvedValue(mockTop3 as any);
+      jest.spyOn(activityScoreManager, 'getParticipantScore').mockResolvedValue(10);
+
+      const result = await gateway.getCurrentActivityRank(mockSocket);
+
+      expect(result).toEqual({
+        success: true,
+        top: mockTop3,
+        score: 10,
+      });
+      expect(result['lowest']).toBeUndefined();
+      expect(activityScoreManager.getLowest).not.toHaveBeenCalled();
+    });
+
+    it('랭킹 정보 조회 중 에러가 발생하면 실패 메시지를 반환한다', async () => {
+      jest.spyOn(socketMetadataService, 'get').mockReturnValue({ roomId: 'r1' } as any);
+      jest
+        .spyOn(participantManagerService, 'findOne')
+        .mockResolvedValue({ role: 'audience' } as any);
+      jest.spyOn(roomManagerService, 'findOne').mockResolvedValue({ status: 'active' } as any);
+
+      jest.spyOn(activityScoreManager, 'getTopRankings').mockRejectedValue(new Error('Redis Down'));
+
+      const result = await gateway.getCurrentActivityRank(mockSocket);
+
+      expect(result).toEqual({
+        success: false,
+        error: '랭킹 정보 조회에 실패했습니다.',
+      });
     });
   });
 });

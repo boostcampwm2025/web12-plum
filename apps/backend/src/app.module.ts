@@ -7,7 +7,6 @@ import { HealthModule } from './health/health.module.js';
 import { winstonConfig } from './config/logger.config.js';
 import { LoggingInterceptor } from './common/interceptors/index.js';
 import { HttpExceptionFilter } from './common/filters/index.js';
-import { MediaModule } from './media/media.module.js';
 import { InteractionModule } from './interaction/interaction.module.js';
 import { RoomModule } from './room/room.module.js';
 import { ChatModule } from './chat/chat.module.js';
@@ -37,7 +36,6 @@ import { SocketMetadataModule } from './common/services/index.js';
     SocketMetadataModule,
 
     // Gateway 모듈들 (Redis에 의존)
-    MediaModule,
     InteractionModule,
     RoomModule,
     ChatModule,

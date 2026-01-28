@@ -30,7 +30,7 @@ export function RoomDialogs() {
   const selectedOptionId = activePoll ? (audienceVotedOptionByPollId[activePoll.id] ?? null) : null;
 
   const handleVote = (pollId: string, optionId: number) => {
-    emit('vote', { pollId, optionId }, (response) => {
+    emit('vote', { pollId, optionId, isGesture: false }, (response) => {
       if (!response.success) {
         logger.socket.warn('투표 참여 실패', response.error);
       }

@@ -23,7 +23,10 @@ import {
   RoomValidationResponse,
 } from '@plum/shared-interfaces';
 import { InteractionService } from '../interaction/interaction.service.js';
-import { RoomManagerService } from '../redis/repository-manager/index.js';
+import {
+  ActivityScoreManagerService,
+  RoomManagerService,
+} from '../redis/repository-manager/index.js';
 import { MediasoupService } from '../mediasoup/mediasoup.service.js';
 import { RoomType } from '../mediasoup/mediasoup.type.js';
 
@@ -37,6 +40,7 @@ export class RoomService {
     private readonly configService: ConfigService,
     private readonly interactionService: InteractionService,
     private readonly roomManagerService: RoomManagerService,
+    private readonly activityScoreManagerService: ActivityScoreManagerService,
     private readonly mediasoupService: MediasoupService,
   ) {
     this.region = configService.get<string>('AWS_S3_REGION') || '';
@@ -98,10 +102,6 @@ export class RoomService {
       currentRoomId: roomId,
       name,
       role,
-      participationScore: 0,
-      gestureCount: 0,
-      chatCount: 0,
-      pollParticipation: 0,
       cameraEnable: false,
       micEnable: false,
       screenEnable: false,
@@ -241,7 +241,10 @@ export class RoomService {
   async createParticipant(roomId: string, name: string): Promise<Participant> {
     const participant = this.generateParticipantObject(ulid(), roomId, name, 'audience');
 
-    await this.roomManagerService.addParticipant(roomId, participant);
+    await Promise.all([
+      this.roomManagerService.addParticipant(roomId, participant),
+      this.activityScoreManagerService.initializeParticipantScore(roomId, participant.id),
+    ]);
     return participant;
   }
 

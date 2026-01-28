@@ -6,6 +6,7 @@ export * from './qna.js';
 export * from './participant.js';
 export * from './file.js';
 export * from './room.js';
+export * from './score.js';
 export * from './socket.js';
 export * from './api.js';
 export * from './chat.js';
