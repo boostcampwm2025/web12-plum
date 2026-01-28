@@ -91,7 +91,6 @@ export interface ParticipantVideoProps {
   participantRole?: ParticipantRole;
   isActive?: boolean;
   isCurrentlyVisible?: boolean;
-  onVideoElementChange?: (element: HTMLVideoElement | null) => void;
 }
 
 function ParticipantVideoComponent({
@@ -106,7 +105,6 @@ function ParticipantVideoComponent({
   participantRole,
   isActive = true,
   isCurrentlyVisible = true,
-  onVideoElementChange,
 }: ParticipantVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const { consumeRemoteProducer, stopConsuming } = useMediaControlContext();
@@ -165,23 +163,18 @@ function ParticipantVideoComponent({
 
     if (mode !== 'minimize' && activeStream && isVideoEnabled) {
       if (videoElement.srcObject !== activeStream) {
-        logger.ui.debug('[ParticipantVideo] 새로 연결');
+        const tracks = activeStream.getTracks();
+        logger.ui.debug(
+          `[ParticipantVideo] 새로 연결. 트랙 수: ${tracks.length}, 상태: ${tracks[0]?.readyState}, Enabled: ${tracks[0]?.enabled}`,
+        );
         videoElement.srcObject = activeStream;
+        videoElement.play().catch((e) => logger.ui.warn('[ParticipantVideo] 재생 실패', e));
       }
     } else {
       // 카메라 꺼지면 srcObject 정리 (마지막 프레임 제거)
       if (videoElement.srcObject !== null) videoElement.srcObject = null;
     }
   }, [activeStream, isVideoEnabled, mode]);
-
-  useEffect(() => {
-    const videoElement = videoRef.current;
-    if (videoElement && mode !== 'minimize' && activeStream && isVideoEnabled) {
-      onVideoElementChange?.(videoElement);
-    } else {
-      onVideoElementChange?.(null);
-    }
-  }, [onVideoElementChange, mode, activeStream, isVideoEnabled]);
 
   return (
     <motion.div
@@ -210,7 +203,7 @@ function ParticipantVideoComponent({
           <video
             ref={videoRef}
             autoPlay
-            muted={isCurrentUser}
+            muted={true} // 자동 재생 정책 준수를 위해 항상 음소거 (비디오 전용)
             playsInline
             className="h-full w-full object-cover"
           />

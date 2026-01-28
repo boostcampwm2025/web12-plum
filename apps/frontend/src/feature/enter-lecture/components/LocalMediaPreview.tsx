@@ -7,6 +7,8 @@ import { cn } from '@/shared/lib/utils';
 import { useStreamStore } from '@/store/useLocalStreamStore';
 
 import { ENTER_LECTURE_KEYS } from '../schema';
+import { useBackgroundEffect } from '@/feature/room/hooks/useBackgroundEffect';
+import { useBackgroundEffectStore } from '@/feature/room/stores/useBackgroundEffectStore';
 
 /**
  * 로컬 스트림(카메라/마이크) 확인 컴포넌트
@@ -16,6 +18,8 @@ export function LocalMediaPreview() {
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const localStream = useStreamStore((state) => state.localStream);
   const { ensureTracks, clearStream, setTracksEnabled } = useStreamStore((state) => state.actions);
+  const processedStream = useBackgroundEffectStore((state) => state.processedStream);
+  const { start: startBackgroundEffect, stop: stopBackgroundEffect } = useBackgroundEffect();
 
   const { setValue } = useFormContext();
   const isAudioOn = useWatch({ name: ENTER_LECTURE_KEYS.isAudioOn });
@@ -52,12 +56,30 @@ export function LocalMediaPreview() {
     syncStream();
   }, [isVideoOn, isAudioOn]);
 
+  useEffect(() => {
+    if (!isVideoOn || !localStream) {
+      stopBackgroundEffect();
+      return;
+    }
+
+    const [videoTrack] = localStream.getVideoTracks();
+    if (!videoTrack) {
+      stopBackgroundEffect();
+      return;
+    }
+
+    startBackgroundEffect(videoTrack).catch((error) => {
+      logger.media.warn('[LocalStreamCheck] 배경 효과 시작 실패', error);
+    });
+  }, [isVideoOn, localStream, startBackgroundEffect, stopBackgroundEffect]);
+
   // 비디오 소스 연결
   useEffect(() => {
-    if (localVideoRef.current && localStream) {
-      localVideoRef.current.srcObject = localStream;
+    const displayStream = processedStream ?? localStream;
+    if (localVideoRef.current && displayStream) {
+      localVideoRef.current.srcObject = displayStream;
     }
-  }, [localStream]);
+  }, [localStream, processedStream]);
 
   return (
     <div className="relative grid aspect-video max-w-130 flex-1 place-items-center rounded-lg bg-gray-400">

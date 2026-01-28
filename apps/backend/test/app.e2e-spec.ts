@@ -14,6 +14,7 @@ const mockManagers = {
   ParticipantManagerService: {},
   PollManagerService: {},
   QnaManagerService: {},
+  ChatManagerService: {},
   ActivityScoreManagerService: {},
 };
 
@@ -34,6 +35,7 @@ describe('AppController (e2e)', () => {
         },
         { provide: Managers.PollManagerService, useValue: mockManagers.PollManagerService },
         { provide: Managers.QnaManagerService, useValue: mockManagers.QnaManagerService },
+        { provide: Managers.ChatManagerService, useValue: mockManagers.ChatManagerService },
         {
           provide: Managers.ActivityScoreManagerService,
           useValue: mockManagers.ActivityScoreManagerService,

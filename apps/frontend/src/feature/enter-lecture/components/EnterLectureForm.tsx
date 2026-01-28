@@ -14,6 +14,10 @@ import { useNicknameValidation } from '../hooks/useNicknameValidation';
 import { useToastStore } from '@/store/useToastStore';
 import { ROUTES } from '@/app/routes/routes';
 import { useNavigate } from 'react-router';
+import {
+  useBackgroundEffectStore,
+  type BackgroundEffectMode,
+} from '@/feature/room/stores/useBackgroundEffectStore';
 
 /**
  * 강의실 이름 입력 섹션
@@ -134,6 +138,8 @@ function MediaDeviceCheckSection() {
   const { register } = useFormContext<EnterLectureRequestBody>();
   const isAudioOn = useWatch({ name: ENTER_LECTURE_KEYS.isAudioOn });
   const isVideoOn = useWatch({ name: ENTER_LECTURE_KEYS.isVideoOn });
+  const backgroundMode = useBackgroundEffectStore((state) => state.mode);
+  const setBackgroundMode = useBackgroundEffectStore((state) => state.actions.setMode);
 
   return (
     <FormField className="gap-3">
@@ -156,6 +162,21 @@ function MediaDeviceCheckSection() {
               {...register(ENTER_LECTURE_KEYS.isVideoOn)}
               checked={isVideoOn}
             />
+          </FormField>
+
+          <FormField className="flex-col gap-2">
+            <FormField.Label>배경 효과</FormField.Label>
+            {/*TODO: 드롭다운 컴포넌트 구현 후 적용 */}
+            <select
+              value={backgroundMode}
+              onChange={(event) => setBackgroundMode(event.target.value as BackgroundEffectMode)}
+              className="text-text w-full rounded-lg bg-gray-300 py-2 text-sm"
+              aria-label="배경 효과 선택"
+            >
+              <option value="blur">블러</option>
+              <option value="image">플럼 배경</option>
+              <option value="off">처리 안함</option>
+            </select>
           </FormField>
         </div>
       </div>

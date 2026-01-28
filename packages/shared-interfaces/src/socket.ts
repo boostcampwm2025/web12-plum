@@ -5,6 +5,7 @@ import { MediaKind, MediasoupProducer, MediaType, RoomInfo, ToggleActionType } f
 import { Poll, pollFormSchema, PollOption, PollPayload } from './poll.js';
 import { Answer, Qna, qnaFormSchema, QnaPayload } from './qna.js';
 import { FileInfo } from './file.js';
+import { ChatMessage, SendChatRequest, SyncChatRequest } from './chat.js';
 import { RankItem } from './score.js';
 
 // 제스처 타입 정의
@@ -45,6 +46,10 @@ export interface ProduceRequest<T = any> {
 export interface GetProducerRequest {
   targetParticipantId: string;
   type: MediaType;
+}
+
+export interface CloseProducerRequest {
+  producerId: string;
 }
 
 export interface ConsumeRequest<T = any> {
@@ -147,6 +152,8 @@ export type GetProducerResponse =
       producerId?: string;
     };
 
+export type CloseProducerResponse = BaseResponse;
+
 export type ConsumeResponse<T = any> =
   | (BaseResponse & { success: false })
   | {
@@ -156,6 +163,7 @@ export type ConsumeResponse<T = any> =
       kind: MediaKind;
       type: MediaType;
       rtpParameters: T;
+      producerPaused: boolean; // 추가된 필드
     };
 
 export type ConsumeResumeResponse = BaseResponse;
@@ -228,6 +236,14 @@ export type GetPresentationResponse =
   | (BaseResponse & { success: false })
   | { success: true; files: FileInfo[] };
 
+export type SendChatResponse =
+  | (BaseResponse & { success: false; retryable?: boolean })
+  | { success: true; messageId: string };
+
+export type SyncChatResponse =
+  | (BaseResponse & { success: false })
+  | { success: true; messages: ChatMessage[] };
+
 export type GetActivityScoreRank =
   | (BaseResponse & { success: false })
   | ({ success: true; score: number } & RankUpdatePayload)
@@ -244,8 +260,18 @@ export interface UserLeftPayload {
 
 export interface NewProducerPayload extends MediasoupProducer {
   participantRole: ParticipantRole;
+}
+
+export interface ProducerClosedPayload {
+  participantId: string;
+  producerId: string;
   kind: MediaKind;
   type: MediaType;
+}
+
+export interface ConsumerClosedPayload {
+  consumerId: string;
+  producerId: string;
 }
 
 export type MediaStateChangedPayload = NewProducerPayload & {
@@ -334,6 +360,10 @@ export interface ServerToClientEvents {
 
   new_producer: (data: NewProducerPayload) => void;
 
+  producer_closed: (data: ProducerClosedPayload) => void;
+
+  consumer_closed: (data: ConsumerClosedPayload) => void;
+
   media_state_changed: (data: MediaStateChangedPayload) => void;
 
   update_gesture_status: (data: UpdateGestureStatusPayload) => void;
@@ -360,6 +390,8 @@ export interface ServerToClientEvents {
 
   qna_end_detail: (data: EndQnaDetailPayload) => void;
 
+  new_chat: (data: ChatMessage) => void;
+
   score_update: (data: ScoreUpdatePayload) => void;
 
   rank_update: (data: RankUpdatePayload) => void;
@@ -384,6 +416,8 @@ export interface ClientToServerEvents {
   ) => void;
 
   produce: (data: ProduceRequest, cb: (res: ProduceResponse) => void) => void;
+
+  close_producer: (data: CloseProducerRequest, cb: (res: CloseProducerResponse) => void) => void;
 
   consume: (data: ConsumeRequest, cb: (res: ConsumeResponse) => void) => void;
 
@@ -426,6 +460,10 @@ export interface ClientToServerEvents {
   break_qna: (data: BreakQnaRequest, cb: (res: BreakQnaResponse) => void) => void;
 
   get_presentation: (cb: (res: GetPresentationResponse) => void) => void;
+
+  send_chat: (data: SendChatRequest, cb: (res: SendChatResponse) => void) => void;
+
+  sync_chat: (data: SyncChatRequest, cb: (res: SyncChatResponse) => void) => void;
 
   get_activity_score_rank: (cb: (res: GetActivityScoreRank) => void) => void;
 }

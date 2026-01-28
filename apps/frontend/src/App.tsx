@@ -7,6 +7,7 @@ import { NotFound } from './pages/NotFound';
 import Room from './pages/Room';
 import { ROUTES } from './app/routes/routes';
 import { ToastStack } from './shared/components/ToastStack';
+import { Summary } from './pages/Summary';
 
 /**
  * TODO: ToastStack를 전역으로 수정하기 전, 임시로 Layout 컴포넌트 생성
@@ -80,7 +81,7 @@ function App() {
             />
             <Route
               path={ROUTES.ROOM_SUMMARY()}
-              element={<div />}
+              element={<Summary />}
             />
             <Route
               path={ROUTES.NOT_FOUND}
