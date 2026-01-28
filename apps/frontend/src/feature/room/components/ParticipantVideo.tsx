@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import { motion } from 'motion/react';
 import { cn } from '@/shared/lib/utils';
 import { Icon } from '@/shared/components/icon/Icon';
@@ -107,6 +107,7 @@ function ParticipantVideoComponent({
   isCurrentlyVisible = true,
 }: ParticipantVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [showOverlay, setShowOverlay] = useState(true);
   const { consumeRemoteProducer, stopConsuming } = useMediaControlContext();
 
   // 원격 스트림인 경우에만 스토어에서 비디오 스트림 구독
@@ -156,6 +157,11 @@ function ParticipantVideoComponent({
     stopConsuming,
   ]);
 
+  // 스트림 바뀌면 오버레이 리셋
+  useEffect(() => {
+    setShowOverlay(true);
+  }, [activeStream]);
+
   // 스트림 연결 처리
   useEffect(() => {
     const videoElement = videoRef.current;
@@ -198,24 +204,32 @@ function ParticipantVideoComponent({
       )}
     >
       {/* 비디오 영역 */}
-      {mode !== 'minimize' &&
-        (activeStream && isVideoEnabled ? (
+      {mode !== 'minimize' && (
+        <div className="relative h-full w-full">
           <video
             ref={videoRef}
             autoPlay
             muted={true} // 자동 재생 정책 준수를 위해 항상 음소거 (비디오 전용)
             playsInline
+            onCanPlay={() => setShowOverlay(false)}
             className="h-full w-full object-cover"
           />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center bg-gray-200">
-            <Icon
-              name="cam-disabled"
-              size={32}
-              className="text-text"
-            />
-          </div>
-        ))}
+
+          {(showOverlay || !isVideoEnabled) && (
+            <div className="absolute inset-0 flex items-center justify-center bg-linear-to-br from-gray-200 to-gray-300 transition-all duration-300">
+              {showOverlay && isVideoEnabled ? (
+                <div className="border-primary h-6 w-6 animate-spin rounded-full border-4 border-t-transparent" />
+              ) : (
+                <Icon
+                  name="cam-disabled"
+                  size={32}
+                  className="text-text"
+                />
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* 제스처 인식 프로그레스바 */}
       {mode !== 'minimize' && isCurrentUser && <GestureProgressOverlay />}
