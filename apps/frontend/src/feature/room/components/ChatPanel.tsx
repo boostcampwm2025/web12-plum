@@ -330,7 +330,9 @@ function ChatInput({ hasNewItems, newItemPreview, onScrollToBottom }: ChatInputP
           >
             {newItemPreview.type === 'chat' && newItemPreview.name ? (
               <div className="inline-flex min-w-0 items-center gap-2">
-                <span className="text-primary text-sm font-bold">{newItemPreview.name}</span>
+                <span className="text-primary shrink-0 text-sm font-bold">
+                  {newItemPreview.name}
+                </span>
                 <span className="truncate text-sm">{newItemPreview.text}</span>
               </div>
             ) : (
