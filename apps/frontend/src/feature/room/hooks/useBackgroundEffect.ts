@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { logger } from '@/shared/lib/logger';
 import camBackground from '@/assets/images/cam-background.png';
+import { useToastStore } from '@/store/useToastStore';
 import {
   useBackgroundEffectStore,
   type BackgroundEffectMode,
@@ -26,7 +27,7 @@ const isVideoReady = (video: HTMLVideoElement) =>
   video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA && video.videoWidth > 0;
 
 export function useBackgroundEffect() {
-  const { setProcessedStream } = useBackgroundEffectStore.getState().actions;
+  const { setProcessedStream, setMode } = useBackgroundEffectStore.getState().actions;
 
   const workerRef = useRef<Worker | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -45,10 +46,15 @@ export function useBackgroundEffect() {
   const processedStreamRef = useRef<MediaStream | null>(null);
   const modeRef = useRef<BackgroundEffectMode>(useBackgroundEffectStore.getState().mode);
   const canvasSizeRef = useRef<{ width: number; height: number } | null>(null);
+  const imageLoadAttemptRef = useRef(0);
+  const toastShownForAttemptRef = useRef(0);
 
   useEffect(() => {
     return useBackgroundEffectStore.subscribe((state) => {
       modeRef.current = state.mode;
+      if (state.mode === 'image') {
+        imageLoadAttemptRef.current += 1;
+      }
     });
   }, []);
 
@@ -63,6 +69,14 @@ export function useBackgroundEffect() {
       // image 모드였다면 blur로 전환
       if (modeRef.current === 'image') {
         logger.media.warn('배경 이미지 로드에 실패하여 blur 모드로 전환합니다.');
+        setMode('blur');
+        if (toastShownForAttemptRef.current !== imageLoadAttemptRef.current) {
+          toastShownForAttemptRef.current = imageLoadAttemptRef.current;
+          useToastStore.getState().actions.addToast({
+            type: 'error',
+            title: '배경 이미지 로드에 실패하여 블러 모드로 전환합니다',
+          });
+        }
       }
     };
     image.src = camBackground;
