@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Router, Worker, Producer } from 'mediasoup/node/lib/types';
+import { Mutex } from 'async-mutex';
 import {
   RoomType,
   RouterStrategy,
@@ -29,6 +30,10 @@ export class MultiRouterManagerService {
 
   // 참가자별 Router 매핑 (participantId -> routerIndex)
   private participantRouterMap: Map<string, Map<string, number>> = new Map();
+
+  // PipeProducer 생성 시 Race Condition 방지를 위한 Mutex Map
+  // Key: "producerId:targetRouterIndex"
+  private pipeProducerMutexes: Map<string, Mutex> = new Map();
 
   // 점진적 활성화 임계값 (5명씩)
   private readonly PARTICIPANTS_PER_ROUTER = 5;
