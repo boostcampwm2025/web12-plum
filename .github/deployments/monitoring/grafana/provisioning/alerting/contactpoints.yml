@@ -29,9 +29,9 @@ contactPoints:
           title: "{{ .CommonLabels.alertname }}"
           text: |
             {{ range .Alerts }}
-            **Status:** {{ .Status }}
-            **Summary:** {{ .Annotations.summary }}
-            **Description:** {{ .Annotations.description }}
+            상태: {{ .Status }}
+            요약: {{ .Annotations.summary }}
+            상세: {{ .Annotations.description }}
             {{ end }}
         disableResolveMessage: false
 
@@ -50,7 +50,10 @@ contactPoints:
           url: ${SLACK_WEBHOOK_URL}
           title: "🚨 {{ .CommonLabels.alertname }}"
           text: |
-            **환경:** {{ .CommonLabels.environment }}
-            **심각도:** {{ .CommonLabels.severity }}
-            **요약:** {{ .Annotations.summary }}
-            **상세:** {{ .Annotations.description }}
+            {{ range .Alerts }}
+            {{ if .Labels.environment }}환경: {{ .Labels.environment }}
+            {{ end }}{{ if .Labels.severity }}심각도: {{ .Labels.severity }}
+            {{ end }}상태: {{ .Status }}
+            요약: {{ .Annotations.summary }}
+            상세: {{ .Annotations.description }}
+            {{ end }}
