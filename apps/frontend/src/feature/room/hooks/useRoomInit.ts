@@ -166,16 +166,9 @@ export function useRoomInit() {
           handleUpdatePoll: pollActions.updatePollOptions,
           handlePollEnd: (data) => {
             pollActions.clearActivePoll(data.pollId);
-            const { activeDialog, setActiveDialog } = useRoomUIStore.getState();
+            const { activeDialog, setActiveDialog, setPollResult } = useRoomUIStore.getState();
             if (activeDialog === 'vote') setActiveDialog('vote');
-            // TODO: 투표 결과 표시 방식 개선
-            addToast({
-              type: 'info',
-              title: data.title,
-              description: data.options
-                .map((option) => `${option.value}: ${option.count}`)
-                .join(' / '),
-            });
+            setPollResult(data);
           },
           handleStartQna: (data) => {
             qnaActions.setActiveQna(data);
