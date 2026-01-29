@@ -171,6 +171,31 @@ export class MultiRouterManagerService {
   }
 
   /**
+   * 각 Router의 Worker CPU 사용률 조회
+   * @param routers Router 배열
+   * @returns Worker CPU 누적 시간 배열 (마이크로초 단위, 상대적 비교용)
+   */
+  private async getWorkerCPUUsage(routers: Router[]): Promise<number[]> {
+    const cpuUsages = await Promise.all(
+      routers.map(async (router) => {
+        const worker = (router as any).appData?.worker;
+        if (!worker) return 0;
+
+        try {
+          const usage = await worker.getResourceUsage();
+          // CPU 누적 시간 (user + system, 마이크로초)
+          // 절대값이 아닌 상대적 비교용으로 사용
+          return usage.ru_utime + usage.ru_stime;
+        } catch (error) {
+          this.logger.warn(`Worker CPU 조회 실패 (PID: ${worker.pid}):`, error);
+          return 0;
+        }
+      }),
+    );
+    return cpuUsages;
+  }
+
+  /**
    * 가장 부하가 적은 Router 선택 (활성화된 Router 중)
    */
   private selectLeastLoadedRouter(roomId: string, roomInfo: MultiRouterRoomInfo): number {
@@ -190,6 +215,29 @@ export class MultiRouterManagerService {
     for (let i = 1; i < routerCounts.length; i++) {
       if (routerCounts[i] < minCount) {
         minCount = routerCounts[i];
+        minIdx = i;
+      }
+    }
+
+    return minIdx;
+  }
+
+  /**
+   * 가장 CPU가 낮은 Router 선택 (CPU 기반 부하 분산)
+   * @param roomInfo Room 정보
+   * @returns 선택된 Router 인덱스
+   */
+  private async selectLeastLoadedRouterByCPU(roomInfo: MultiRouterRoomInfo): Promise<number> {
+    // 모든 Router의 Worker CPU 조회
+    const workerCPUs = await this.getWorkerCPUUsage(roomInfo.routers);
+
+    // 가장 CPU가 낮은 Router 선택
+    let minIdx = 0;
+    let minCPU = workerCPUs[0];
+
+    for (let i = 1; i < workerCPUs.length; i++) {
+      if (workerCPUs[i] < minCPU) {
+        minCPU = workerCPUs[i];
         minIdx = i;
       }
     }
