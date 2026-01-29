@@ -1,5 +1,6 @@
 import { cn } from '@/shared/lib/utils';
 import { RoomButton } from './RoomButton';
+import { GestureButton } from './GestureButton';
 import type { IconName } from '@/shared/components/icon/iconMap';
 import { useMediaStore } from '../stores/useMediaStore';
 import { useRoomUIStore } from '../stores/useRoomUIStore';
@@ -100,6 +101,7 @@ function MainMenu() {
           onClick={button.onClick}
         />
       ))}
+      <GestureButton />
     </>
   );
 }
