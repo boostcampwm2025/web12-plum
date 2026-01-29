@@ -55,6 +55,9 @@ services:
       # Alerting 기본 설정
       - GF_ALERTING_ENABLED=true
       - GF_UNIFIED_ALERTING_ENABLED=true
+      # Contact Points용 환경변수 (provisioning에서 사용)
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
+      - ALERT_EMAIL_ADDRESSES=${ALERT_EMAIL_ADDRESSES}
     volumes:
       - grafana-data:/var/lib/grafana
       - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
