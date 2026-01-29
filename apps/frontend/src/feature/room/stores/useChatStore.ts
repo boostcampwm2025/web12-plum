@@ -1,67 +1,96 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
+import type { ChatMessage, EndQnaPayload } from '@plum/shared-interfaces';
 
-export type ChatItem =
-  | {
-      id: string;
-      type: 'qna-result';
-      title: string;
-      answers: string[];
-      createdAt: number;
-    }
-  | {
-      id: string;
-      type: 'chat';
-      name: string;
-      message: string;
-      createdAt: number;
-    };
+export type ChatMessageItem = ChatMessage & {
+  type: 'chat';
+};
+
+export type QnaResultItem = EndQnaPayload & {
+  type: 'qna-result';
+  timestamp: number;
+};
+
+export type ChatItem = ChatMessageItem | QnaResultItem;
+
+const compareByTimestamp = (a: ChatItem, b: ChatItem) => {
+  if (a.timestamp !== b.timestamp) return a.timestamp - b.timestamp;
+  if (a.type !== b.type) {
+    return a.type === 'qna-result' ? -1 : 1;
+  }
+  if (a.type === 'chat' && b.type === 'chat') {
+    return a.messageId.localeCompare(b.messageId);
+  }
+  if (a.type === 'qna-result' && b.type === 'qna-result') {
+    return a.qnaId.localeCompare(b.qnaId);
+  }
+  return 0;
+};
+
+const getLastChatIdFromSorted = (items: ChatItem[]) =>
+  items.findLast((item) => item.type === 'chat')?.messageId ?? null;
+
+const sortChatItems = (items: ChatItem[]) => {
+  const nextItems = items.slice();
+  nextItems.sort(compareByTimestamp);
+  return nextItems;
+};
 
 interface ChatState {
   items: ChatItem[];
+  lastMessageId: string | null;
   actions: {
-    addQnaResult: (title: string, answers: string[]) => void;
-    addChat: (name: string, message: string) => void;
+    addQnaResult: (payload: EndQnaPayload) => void;
+    addChat: (payload: ChatMessage) => void;
+    getLastMessageId: () => string | null;
     clear: () => void;
   };
 }
 
 export const useChatStore = create<ChatState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       items: [],
+      lastMessageId: null,
       actions: {
-        addQnaResult: (title, answers) => {
-          const id = `qna-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        addQnaResult: (payload) => {
           set((state) => ({
             items: [
               ...state.items,
               {
-                id,
+                ...payload,
                 type: 'qna-result',
-                title,
-                answers,
-                createdAt: Date.now(),
+                timestamp: Date.now(),
               },
             ],
           }));
         },
-        addChat: (name, message) => {
-          const id = `chat-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-          set((state) => ({
-            items: [
+        addChat: (payload) => {
+          set((state) => {
+            // 중복 방지
+            if (
+              state.items.some(
+                (item): item is ChatMessageItem =>
+                  item.type === 'chat' && item.messageId === payload.messageId,
+              )
+            ) {
+              return state;
+            }
+            const nextItems = sortChatItems([
               ...state.items,
               {
-                id,
+                ...payload,
                 type: 'chat',
-                name,
-                message,
-                createdAt: Date.now(),
               },
-            ],
-          }));
+            ]);
+            return {
+              items: nextItems,
+              lastMessageId: getLastChatIdFromSorted(nextItems),
+            };
+          });
         },
-        clear: () => set({ items: [] }),
+        getLastMessageId: () => get().lastMessageId,
+        clear: () => set({ items: [], lastMessageId: null }),
       },
     }),
     {

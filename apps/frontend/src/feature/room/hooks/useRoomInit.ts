@@ -44,6 +44,7 @@ export function useRoomInit() {
 
   // 전역 상태
   const hasHydrated = useMediaStore((state) => state.hasHydrated);
+  const isReconnected = useSocketStore((state) => state.isReconnected);
   const roomActions = useRoomStore((state) => state.actions);
   const mediaActions = useMediaStore((state) => state.actions);
   const streamActions = useStreamStore((state) => state.actions);
@@ -219,13 +220,20 @@ export function useRoomInit() {
               description: 'Q&A 결과를 채팅창에서 확인하세요.',
             });
             if (data.text && data.text.length > 0) {
-              chatActions.addQnaResult(data.title, data.text);
+              chatActions.addQnaResult(data);
             }
           },
           handleScoreUpdate: rankActions.updateMyScore,
           handleRankUpdate: rankActions.updateRank,
         });
       }
+
+      // 채팅 이벤트 설정 (발표자/참여자 공통)
+      InteractionSignaling.setupChatHandlers(socket, {
+        handleNewChat: (data) => {
+          chatActions.addChat(data);
+        },
+      });
 
       // 4. Mediasoup Device 초기화
       await infra.initDevice(routerRtpCapabilities);
@@ -282,6 +290,43 @@ export function useRoomInit() {
     hasStartedInit.current = true;
     runInitPipeline();
   }, [hasHydrated, isSuccess, isLoading, runInitPipeline]);
+
+  /**
+   * 재연결 시 누락 메시지 동기화
+   */
+  useEffect(() => {
+    if (!isReconnected) return;
+
+    const rejoinRoom = async () => {
+      const roomManager = roomManagerRef.current;
+      const myInfo = useRoomStore.getState().myInfo;
+      const socket = useSocketStore.getState().socket;
+
+      if (!roomManager || !roomId || !myInfo || !socket?.connected) return;
+
+      try {
+        await roomManager.join(roomId, myInfo.id);
+        logger.custom.info('[RoomInit] 재연결 후 재입장 완료');
+      } catch (error) {
+        logger.custom.error('[RoomInit] 재연결 후 재입장 실패:', error);
+      }
+    };
+
+    void rejoinRoom();
+
+    const lastMessageId = chatActions.getLastMessageId();
+    if (lastMessageId) {
+      socketActions.emit('sync_chat', { lastMessageId }, (response) => {
+        if (!response.success || !response.messages) return;
+        for (const msg of response.messages) {
+          chatActions.addChat(msg);
+        }
+      });
+    }
+
+    // 플래그 리셋
+    useSocketStore.setState({ isReconnected: false });
+  }, [isReconnected, chatActions, socketActions]);
 
   /**
    * 훅 언마운트 시 자동 정리
