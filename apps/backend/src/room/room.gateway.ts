@@ -595,7 +595,9 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.server.to(room.id).emit('room_end');
       // Multi-Router 정리 (모든 Router + PipeProducer)
       await this.mediasoupService.closeRoutersWithStrategy(room.id);
-      // TODO: 강의록 생성 기능 추가
+
+      this.logger.log(`[beak_room] 강의실 리소스를 정리합니다. ${room.id}`);
+      await this.roomService.finalizeRoom(room.id);
 
       // 강의실 내부에 있는 모든 참가자 퇴장 처리
       this.logger.log(`🚨 [break_room] 발표자 ${participant.name}에 의해 강의실 ${room.id} 종료`);

@@ -23,6 +23,7 @@ import {
   nicknameValidate,
   NicknameValidationRequestQueryParam,
   NicknameValidationResponse,
+  RoomSummary,
   RoomValidationResponse,
 } from '@plum/shared-interfaces';
 
@@ -80,5 +81,11 @@ export class RoomController {
     @Body(new ZodValidationPipe(enterLectureSchema)) body: EnterLectureRequestBody,
   ): Promise<EnterRoomResponse> {
     return await this.roomService.joinRoom(id, body);
+  }
+
+  @Get(':id/summary')
+  @HttpCode(HttpStatus.OK)
+  async getSummary(@Param('id', UlidValidationPipe) id: string): Promise<RoomSummary> {
+    return await this.roomService.getSummary(id);
   }
 }

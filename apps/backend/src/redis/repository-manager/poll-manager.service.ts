@@ -4,6 +4,7 @@ import { Poll, PollOption, UpdatePollStatusSubPayload, Voter } from '@plum/share
 import { RedisService } from '../redis.service.js';
 import { TTL_BOUNDS } from '../redis.constants.js';
 import { BaseRedisRepository } from './base-redis.repository.js';
+import { ChainableCommander } from 'ioredis';
 
 @Injectable()
 export class PollManagerService extends BaseRedisRepository<Poll> {
@@ -423,5 +424,18 @@ export class PollManagerService extends BaseRedisRepository<Poll> {
     } catch (error) {
       this.logger.error(`[AutoClose Error] ${pollId}: ${error.message}`);
     }
+  }
+
+  async addClearToPipeline(pipeline: ChainableCommander, roomId: string): Promise<void> {
+    const pollIds = await this.redisService.getClient().smembers(this.getPollListKey(roomId));
+
+    pollIds.forEach((id) => {
+      pipeline.del(`${this.keyPrefix}${id}`); // 투표 상세 Hash
+      pipeline.del(this.getActiveKey(id)); // 활성화 키
+      pipeline.del(this.getVoteCountKey(id)); // 카운트
+      pipeline.del(this.getVoterKey(id)); // 투표자 셋
+    });
+
+    pipeline.del(this.getPollListKey(roomId));
   }
 }

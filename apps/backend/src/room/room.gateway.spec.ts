@@ -100,6 +100,7 @@ describe('RoomGateway', () => {
           useValue: {
             getRoomInfo: jest.fn(),
             getFiles: jest.fn(),
+            finalizeRoom: jest.fn(),
           },
         },
         {

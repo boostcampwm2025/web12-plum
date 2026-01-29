@@ -20,6 +20,7 @@ import {
   ParticipantRole,
   Room,
   RoomInfo,
+  RoomSummary,
   RoomValidationResponse,
 } from '@plum/shared-interfaces';
 import { InteractionService } from '../interaction/interaction.service.js';
@@ -200,7 +201,6 @@ export class RoomService {
       startedAt: new Date().toISOString(),
       endedAt: '',
       files: uploadFilesUrl,
-      aiSummery: '',
     };
 
     await this.roomManagerService.saveOne(roomId, room);
@@ -266,5 +266,33 @@ export class RoomService {
     if (!room) throw new NotFoundException(`Room with ID ${roomId} not found`);
 
     return room.files;
+  }
+
+  async finalizeRoom(roomId: string): Promise<void> {
+    await Promise.all([
+      this.interactionService.stopAllActivePoll(roomId),
+      this.interactionService.stopAllActiveQna(roomId),
+    ]);
+  }
+
+  async getSummary(roomId: string): Promise<RoomSummary> {
+    const room = await this.roomManagerService.findOne(roomId);
+    if (!room) throw new NotFoundException(`Room with ID ${roomId} not found`);
+
+    const [polls, qnas, activityStatistics] = await Promise.all([
+      this.interactionService.getEndedPolls(roomId),
+      this.interactionService.getEndedQnas(roomId),
+      this.activityScoreManagerService.getActivityStatistics(roomId),
+    ]);
+
+    return {
+      name: room.name,
+      roomId: room.id,
+      summary: '', // TODO: add real summary
+      timelines: '', // TODO: add real timeline
+      polls,
+      qnas,
+      activityStatistics,
+    };
   }
 }

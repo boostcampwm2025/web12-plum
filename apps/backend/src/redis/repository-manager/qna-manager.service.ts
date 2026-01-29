@@ -4,6 +4,7 @@ import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 import { TTL_BOUNDS } from '../redis.constants.js';
 import { RedisService } from '../redis.service.js';
 import { BaseRedisRepository } from './base-redis.repository.js';
+import { ChainableCommander } from 'ioredis';
 
 @Injectable()
 export class QnaManagerService extends BaseRedisRepository<Qna> {
@@ -28,8 +29,8 @@ export class QnaManagerService extends BaseRedisRepository<Qna> {
   /**
    * 활성화된 질문 확인용 키
    */
-  private getActiveKey(roomId: string): string {
-    return `${this.keyPrefix}${roomId}:active`;
+  private getActiveKey(qnaId: string): string {
+    return `${this.keyPrefix}${qnaId}:active`;
   }
 
   /**
@@ -320,5 +321,20 @@ export class QnaManagerService extends BaseRedisRepository<Qna> {
     } catch (error) {
       this.logger.error(`[AutoClose Error] ${qnaId}: ${error.message}`);
     }
+  }
+
+  async addClearToPipeline(pipeline: ChainableCommander, roomId: string): Promise<void> {
+    const qnaIds = await this.redisService.getClient().smembers(this.getPollListKey(roomId));
+
+    // 1. 개별 QnA 데이터 및 답변 관련 키 삭제
+    qnaIds.forEach((id) => {
+      pipeline.del(`${this.keyPrefix}${id}`); // QnA 상세 Hash
+      pipeline.del(this.getAnswerListKey(id)); // 답변 리스트
+      pipeline.del(this.getAnswererSetKey(id)); // 답변자 셋
+    });
+
+    // 2. 방 관련 QnA 그룹 키 삭제
+    pipeline.del(this.getPollListKey(roomId));
+    pipeline.del(this.getActiveKey(roomId));
   }
 }
