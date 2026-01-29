@@ -45,7 +45,12 @@ describe('useSocketStore (전체 동작 검증)', () => {
     };
     vi.mocked(io).mockReturnValue(mockSocketInstance);
 
-    useSocketStore.setState({ socket: null, isConnected: false, reconnectCount: 0 });
+    useSocketStore.setState({
+      socket: null,
+      isConnected: false,
+      isReconnected: false,
+      reconnectCount: 0,
+    });
   });
 
   afterEach(() => {
@@ -163,6 +168,7 @@ describe('useSocketStore (전체 동작 검증)', () => {
       expect(useSocketStore.getState()).toEqual({
         socket: null,
         isConnected: false,
+        isReconnected: false,
         reconnectCount: 0,
         actions: expect.any(Object),
       });
@@ -228,6 +234,25 @@ describe('useSocketStore (전체 동작 검증)', () => {
       reconnectHandlers.forEach((call: any[]) => call[1]?.(3));
 
       expect(useSocketStore.getState().reconnectCount).toBe(3);
+    });
+
+    it('reconnect 이벤트 발생 시 isReconnected true로 설정', async () => {
+      const { actions } = useSocketStore.getState();
+      const connectPromise = actions.connect();
+
+      const connectHandlers = mockSocketInstance.once.mock.calls.filter(
+        (c: string[]) => c[0] === 'connect',
+      );
+      connectHandlers.forEach((call: any[]) => call[1]?.());
+
+      await connectPromise;
+
+      const reconnectHandlers = mockSocketInstance.io.on.mock.calls.filter(
+        (c: string[]) => c[0] === 'reconnect',
+      );
+      reconnectHandlers.forEach((call: any[]) => call[1]?.());
+
+      expect(useSocketStore.getState().isReconnected).toBe(true);
     });
   });
 
