@@ -3,6 +3,10 @@ import { Participant, Room } from '@plum/shared-interfaces';
 import { RedisService } from '../redis.service.js';
 import { BaseRedisRepository } from './base-redis.repository.js';
 import { ParticipantManagerService } from './participant-manager.service.js';
+import { PollManagerService } from './poll-manager.service.js';
+import { QnaManagerService } from './qna-manager.service.js';
+import { ActivityScoreManagerService } from './activity-score-manager.service.js';
+import { OnEvent } from '@nestjs/event-emitter';
 
 /**
  * 강의실 데이터 관리
@@ -14,6 +18,9 @@ export class RoomManagerService extends BaseRedisRepository<Room> {
   constructor(
     redisService: RedisService,
     private readonly participantManager: ParticipantManagerService,
+    private readonly pollManager: PollManagerService,
+    private readonly qnaManager: QnaManagerService,
+    private readonly activityScoreManager: ActivityScoreManagerService,
   ) {
     super(redisService, RoomManagerService.name);
   }
@@ -102,11 +109,52 @@ export class RoomManagerService extends BaseRedisRepository<Room> {
     const pipeline = client.pipeline();
     pipeline.srem(nameKey, participant.name);
     pipeline.srem(listKey, participantId);
-    this.participantManager.addDeleteToPipeline(pipeline, participantId);
 
     await pipeline.exec();
     this.logger.log(
       `[RemoveParticipant] ${participant.name} (${participantId}) left room ${roomId}`,
     );
+  }
+
+  async clearAllRoomData(roomId: string) {
+    const client = this.redisService.getClient();
+    const participantIds = await client.smembers(`room:${roomId}:participants`);
+
+    const pipeline = client.pipeline();
+    participantIds.forEach((id) => pipeline.del(`participant:${id}`));
+
+    await Promise.all([
+      this.pollManager.addClearToPipeline(pipeline, roomId),
+      this.qnaManager.addClearToPipeline(pipeline, roomId),
+      this.activityScoreManager.addClearToPipeline(pipeline, roomId),
+    ]);
+
+    const roomRelatedKeys = await client.keys(`*:${roomId}:*`);
+    if (roomRelatedKeys.length > 0) {
+      pipeline.del(...roomRelatedKeys);
+    }
+
+    await pipeline.exec();
+    this.logger.log(`[Cleanup] Room ${roomId} resources cascadingly cleared.`);
+  }
+
+  @OnEvent('redis.expired.room')
+  async handleRoomExpired(key: string) {
+    const parts = key.split(':');
+    if (parts[parts.length - 1] !== 'stats') return;
+
+    const roomId = parts[1];
+    this.logger.log(`[Room Expired] Room ${roomId} expired. Starting finalization...`);
+
+    try {
+      await this.clearAllRoomData(roomId);
+
+      this.logger.log(`[Room Expired] Room ${roomId} cleanup completed.`);
+    } catch (error) {
+      this.logger.error(
+        `[Room Expired] Cleanup failed for room ${roomId}: ${error.message}`,
+        error.stack,
+      );
+    }
   }
 }

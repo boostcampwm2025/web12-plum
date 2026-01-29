@@ -24,6 +24,12 @@ export interface ParticipantStats {
   penaltyCount: number;
 }
 
+export interface ActivityStatistics {
+  averageScore: number; // 평균 참여도 점수
+  ranks: RankItem[];
+  interactions: ParticipantStats;
+}
+
 export const RANK_LIMIT = 3;
 
 export const PENALTY_LIMIT = 5;

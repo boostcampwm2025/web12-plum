@@ -147,6 +147,11 @@ export class InteractionService {
     return { poll: pollPayload, votedOptionId };
   }
 
+  async getEndedPolls(roomId: string): Promise<Poll[]> {
+    const polls = await this.pollManagerService.getPollsInRoom(roomId);
+    return polls.filter((poll) => poll.status === 'ended');
+  }
+
   async startPoll(pollId: string): Promise<PollPayload> {
     const poll = await this.pollManagerService.findOne(pollId);
     if (!poll) throw new BusinessException('존재하지 않는 투표입니다.');
@@ -201,6 +206,18 @@ export class InteractionService {
       title: poll.title,
       options: await this.pollManagerService.closePoll(pollId),
     };
+  }
+
+  /**
+   * 강의실 종료 시 활성화되어 있는 질문을 종료하는 로직
+   */
+  async stopAllActivePoll(roomId: string): Promise<void> {
+    const poll = await this.pollManagerService.getPollsInRoom(roomId);
+    const activePolls = poll.filter((poll) => poll.status === 'active');
+    if (activePolls.length === 0) return;
+
+    const closePromises = activePolls.map((poll) => this.pollManagerService.closePoll(poll.id));
+    await Promise.all(closePromises);
   }
 
   // --- QnA Methods ---
@@ -289,6 +306,11 @@ export class InteractionService {
     };
   }
 
+  async getEndedQnas(roomId: string): Promise<Qna[]> {
+    const qnas = await this.qnaManagerService.getQnasInRoom(roomId);
+    return qnas.filter((qna) => qna.status === 'ended');
+  }
+
   async answer(
     qnaId: string,
     participantId: string,
@@ -364,5 +386,17 @@ export class InteractionService {
         presenter: payload,
       };
     }
+  }
+
+  /**
+   * 강의실 종료 시 활성화되어 있는 질문을 종료하는 로직
+   */
+  async stopAllActiveQna(roomId: string): Promise<void> {
+    const qnas = await this.qnaManagerService.getQnasInRoom(roomId);
+    const activeQnas = qnas.filter((qna) => qna.status === 'active');
+    if (activeQnas.length === 0) return;
+
+    const closePromises = activeQnas.map((qna) => this.qnaManagerService.closeQna(qna.id));
+    await Promise.all(closePromises);
   }
 }
