@@ -1,12 +1,23 @@
 import { io } from 'socket.io-client';
 import { create } from 'zustand';
-import type { ClientToServerEvents } from '@plum/shared-interfaces';
+import type { BaseResponse, ClientToServerEvents } from '@plum/shared-interfaces';
 
 import { logger } from '@/shared/lib/logger';
-import { SocketDomain, SocketErrorResponse, TypedSocket } from '@/types/socket';
+import {
+  SocketDomain,
+  SocketErrorResponse,
+  SocketEventName,
+  SocketEventPayload,
+  SocketEventResponse,
+  SocketSuccessResponse,
+  TypedSocket,
+} from '@/types/socket';
 
 /**
  * 모든 소켓 도메인 에러를 처리하는 단일 클래스
+ * domain - 소켓 도메인 (room, media 등)
+ * code - 에러 코드
+ * message - 에러 메시지
  */
 export class SocketDomainError extends Error {
   public readonly domain: SocketDomain;
@@ -48,12 +59,17 @@ interface SocketState {
   isConnected: boolean;
   reconnectCount: number;
   actions: {
-    connect: () => Promise<TypedSocket | null>;
+    connect: () => Promise<TypedSocket>;
     disconnect: () => void;
     emit: <K extends keyof ClientToServerEvents>(
       event: K,
       ...args: Parameters<ClientToServerEvents[K]>
     ) => void;
+    emitWithAck: <E extends SocketEventName>(params: {
+      domain: SocketDomain;
+      event: E;
+      payload?: SocketEventPayload<E>;
+    }) => Promise<SocketSuccessResponse<E>>;
   };
 }
 
@@ -239,7 +255,7 @@ export const useSocketStore = create<SocketState>((set, get) => ({
     },
 
     /**
-     * 서버에 이벤트 전송
+     * 서버에 이벤트 전송 (Deprecated)
      */
     emit: (event, ...args) => {
       const { socket, isConnected } = get();
@@ -249,6 +265,98 @@ export const useSocketStore = create<SocketState>((set, get) => ({
       }
 
       socket.emit(event, ...args);
+    },
+
+    /**
+     * 소켓 이벤트를 emit하고 ACK 응답을 기다림
+     * @param params.domain 소켓 도메인
+     * @param params.event 소켓 이벤트 이름
+     * @param params.payload 소켓 이벤트 페이로드
+     * @returns 성공 응답을 포함한 Promise
+     */
+    emitWithAck: async <E extends SocketEventName>(params: {
+      domain: SocketDomain;
+      event: E;
+      payload?: SocketEventPayload<E>;
+    }): Promise<SocketSuccessResponse<E>> => {
+      const { socket } = get();
+
+      /**
+       * 소켓 연결 상태 확인
+       */
+      if (!socket || !socket.connected) {
+        throw new SocketDomainError({
+          domain: params.domain,
+          code: 'SOCKET_NOT_CONNECTED',
+          message: '소켓이 연결되어 있지 않은 상태에서 emitWithAck 호출됨',
+        });
+      }
+
+      /**
+       * ACK 응답 대기 Promise 생성
+       */
+      const promise: Promise<SocketSuccessResponse<E>> = new Promise((resolve, reject) => {
+        /**
+         * ACK 응답 대기 타이머
+         */
+        const timer = setTimeout(() => {
+          const error = new SocketDomainError({
+            domain: params.domain,
+            code: 'ACK_TIMEOUT',
+            message: `ACK 응답 대기 시간 초과`,
+          });
+          reject(error);
+        }, CONNECTION_TIMEOUT);
+
+        /**
+         * ACK 응답 핸들러
+         * @param response ACK 응답 데이터
+         */
+        const handleResponse = (response: SocketEventResponse<E>) => {
+          clearTimeout(timer);
+          const base = response as BaseResponse;
+
+          // 응답이 성공적이지 않은 경우 에러 처리
+          if (!base || !base.success) {
+            const error = new SocketDomainError({
+              domain: params.domain,
+              code: base.error || 'UNKNOWN_ERROR',
+              message: base.error || '알 수 없는 오류가 발생했습니다.',
+            });
+            return reject(error);
+          }
+
+          // 성공 로깅
+          logger.socket.debug('소켓 응답 성공', { event: params.event, domain: params.domain });
+          resolve(response as SocketSuccessResponse<E>);
+        };
+
+        // 이벤트 전송 - payload 유무에 따라 분기
+        if (params.payload === undefined || params.payload === null) {
+          // payload가 없는 경우
+          type EmitWithCallbackNoPayload = (
+            event: E,
+            callback: (response: SocketEventResponse<E>) => void,
+          ) => void;
+
+          (socket.emit as EmitWithCallbackNoPayload)(params.event, handleResponse);
+        } else {
+          // payload가 있는 경우
+          type EmitWithCallbackWithPayload = (
+            event: E,
+            data: SocketEventPayload<E>,
+            callback: (response: SocketEventResponse<E>) => void,
+          ) => void;
+
+          (socket.emit as EmitWithCallbackWithPayload)(
+            params.event,
+            params.payload,
+            handleResponse,
+          );
+        }
+      });
+
+      return promise;
     },
   },
 }));
