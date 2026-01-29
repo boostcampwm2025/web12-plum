@@ -1,0 +1,713 @@
+# Grafana Alert Rules - 서버 크기 무관 + 서비스 연결 감지
+# 비율(%) 기반 + 증가율 감지 + 서비스 간 연결 오류 알림
+
+apiVersion: 1
+
+groups:
+  # 서비스 연결 및 가용성 (최우선)
+  - orgId: 1
+    name: service_availability
+    folder: Critical
+    interval: 30s  # 더 자주 체크
+    rules:
+      # Redis 서버 다운
+      - uid: redis_down
+        title: Redis Server Down
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 60
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: 'up{job="redis"}'
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params: [1]
+                    type: lt
+                  query:
+                    params: [A]
+                  type: query
+              refId: C
+              type: classic_conditions
+        noDataState: Alerting  # 데이터 없으면 알림
+        execErrState: Alerting
+        for: 1m
+        annotations:
+          summary: 'Redis 서버가 다운되었습니다'
+          description: 'Redis 서버가 응답하지 않습니다. 즉시 확인 필요!'
+        labels:
+          severity: critical
+          component: redis
+        isPaused: false
+
+      # Backend 애플리케이션 다운
+      - uid: backend_down
+        title: Backend Application Down
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 60
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: 'up{job="backend-app"}'
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params: [1]
+                    type: lt
+                  query:
+                    params: [A]
+                  type: query
+              refId: C
+              type: classic_conditions
+        noDataState: Alerting
+        execErrState: Alerting
+        for: 1m
+        annotations:
+          summary: 'Backend 애플리케이션이 다운되었습니다'
+          description: 'Backend가 응답하지 않습니다. 즉시 확인 필요!'
+        labels:
+          severity: critical
+          component: backend
+        isPaused: false
+
+      # Prometheus scrape 실패 (서비스 메트릭 수집 실패)
+      - uid: prometheus_scrape_failed
+        title: Prometheus Scrape Failed
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: 'up == 0'
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params: [0]
+                    type: gt
+                  query:
+                    params: [A]
+                  type: query
+              refId: C
+              type: classic_conditions
+        noDataState: NoData
+        execErrState: Error
+        for: 2m
+        annotations:
+          summary: '서비스 메트릭 수집 실패'
+          description: '{{ $labels.job }} 서비스의 메트릭을 수집할 수 없습니다'
+        labels:
+          severity: critical
+          component: monitoring
+        isPaused: false
+
+      # HTTP 5xx 에러 급증 (Redis 연결 오류 등)
+      - uid: http_5xx_error_spike
+        title: HTTP 5xx Error Spike (Connection Errors)
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: 'rate(http_requests_total{job="backend-app",status=~"5.."}[5m]) * 60'
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params: [5]  # 분당 5회 이상
+                    type: gt
+                  query:
+                    params: [A]
+                  type: query
+              refId: C
+              type: classic_conditions
+        noDataState: NoData
+        execErrState: Error
+        for: 2m
+        annotations:
+          summary: 'HTTP 5xx 에러가 급증했습니다'
+          description: '분당 {{ $values.A.Value | printf "%.1f" }}회 발생 (Redis 연결 오류 가능성)'
+        labels:
+          severity: critical
+          component: backend
+        isPaused: false
+
+      # 로그: Redis 연결 오류 감지
+      - uid: redis_connection_error_logs
+        title: Redis Connection Error Detected (Logs)
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: loki
+            model:
+              expr: 'sum(count_over_time({job="nestjs"} |~ "(?i)(redis.*connection.*failed|ECONNREFUSED.*redis|redis.*timeout)" [5m]))'
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params: [10]  # 5분간 10회 이상
+                    type: gt
+                  query:
+                    params: [A]
+                  type: query
+              refId: C
+              type: classic_conditions
+        noDataState: NoData
+        execErrState: Error
+        for: 2m
+        annotations:
+          summary: 'Redis 연결 오류가 로그에 기록되었습니다'
+          description: '5분간 {{ $values.A.Value }}건의 Redis 연결 오류 발생'
+        labels:
+          severity: critical
+          component: redis
+        isPaused: false
+
+  # Backend 리소스 (서버 크기 무관 - 비율 기반)
+  - orgId: 1
+    name: backend_resources
+    folder: Backend
+    interval: 1m
+    rules:
+      # Backend CPU 사용률 80% (서버 크기 무관)
+      - uid: backend_high_cpu
+        title: Backend CPU Usage High
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: 'rate(nodejs_process_cpu_user_seconds_total{job="backend-app"}[1m]) * 100'
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params: [80]
+                    type: gt
+                  query:
+                    params: [A]
+                  type: query
+              refId: C
+              type: classic_conditions
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        annotations:
+          summary: 'Backend CPU 사용률이 높습니다'
+          description: 'CPU {{ $values.A.Value | printf "%.1f" }}% (서버 크기 무관, 비율 기반)'
+        labels:
+          severity: warning
+          component: backend
+        isPaused: false
+
+      # Event Loop Lag (Node.js 성능 지표, 서버 크기 무관)
+      - uid: event_loop_lag_high
+        title: Event Loop Lag High
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: 'nodejs_nodejs_eventloop_lag_seconds{job="backend-app"}'
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params: [0.05]  # 50ms
+                    type: gt
+                  query:
+                    params: [A]
+                  type: query
+              refId: C
+              type: classic_conditions
+        noDataState: NoData
+        execErrState: Error
+        for: 2m
+        annotations:
+          summary: 'Event Loop Lag 발생 (CPU 과부하)'
+          description: 'Lag {{ $values.A.Value | printf "%.3f" }}s (임계치: 0.05s)'
+        labels:
+          severity: critical
+          component: backend
+        isPaused: false
+
+  # HTTP 성능
+  - orgId: 1
+    name: http_performance
+    folder: HTTP
+    interval: 1m
+    rules:
+      # HTTP P95 응답 시간 > 1초
+      - uid: http_response_time_slow
+        title: HTTP Response Time Slow (P95)
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: 'histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job="backend-app"}[1m]))'
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params: [1.0]
+                    type: gt
+                  query:
+                    params: [A]
+                  type: query
+              refId: C
+              type: classic_conditions
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        annotations:
+          summary: 'HTTP 응답 시간이 느립니다 (P95)'
+          description: 'P95: {{ $values.A.Value | printf "%.2f" }}s'
+        labels:
+          severity: warning
+          component: http
+        isPaused: false
+
+  # Socket.IO
+  - orgId: 1
+    name: socketio_alerts
+    folder: SocketIO
+    interval: 1m
+    rules:
+      # Socket.IO 연결 급증 (5분간 2배 증가)
+      - uid: socketio_connections_spike
+        title: Socket.IO Connections Spike
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: 'rate(socketio_connections_active{job="backend-app"}[5m]) * 300'
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params: [50]  # 5분간 50명 증가
+                    type: gt
+                  query:
+                    params: [A]
+                  type: query
+              refId: C
+              type: classic_conditions
+        noDataState: NoData
+        execErrState: Error
+        for: 3m
+        annotations:
+          summary: 'Socket.IO 연결이 급증했습니다'
+          description: '5분간 {{ $values.A.Value | printf "%.0f" }}명 증가'
+        labels:
+          severity: warning
+          component: socketio
+        isPaused: false
+
+  # Mediasoup / WebRTC (증가율 + CPU 기반)
+  - orgId: 1
+    name: mediasoup_alerts
+    folder: Mediasoup
+    interval: 1m
+    rules:
+      # Mediasoup Consumers 급증 (5분간 50% 이상 증가)
+      - uid: mediasoup_consumers_spike
+        title: Mediasoup Consumers Rapid Increase
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 300
+            datasourceUid: prometheus
+            model:
+              expr: 'mediasoup_consumers_active{job="backend-app"}'
+              refId: A
+          - refId: B
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: 'mediasoup_consumers_active{job="backend-app"}'
+              refId: B
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              expression: '($B - $A) / $A * 100'
+              refId: C
+              type: math
+          - refId: D
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params: [50]  # 50% 증가
+                    type: gt
+                  query:
+                    params: [C]
+                  type: query
+              refId: D
+              type: classic_conditions
+        noDataState: NoData
+        execErrState: Error
+        for: 2m
+        annotations:
+          summary: 'Mediasoup Consumers가 급증했습니다'
+          description: '5분간 {{ $values.C.Value | printf "%.1f" }}% 증가 (강의실 급증 가능성)'
+        labels:
+          severity: warning
+          component: mediasoup
+        isPaused: false
+
+      # Worker CPU 불균형
+      - uid: worker_cpu_imbalance
+        title: Worker CPU Imbalance (Load Distribution Failed)
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: 'max(mediasoup_worker_cpu{job="backend-app"}) - min(mediasoup_worker_cpu{job="backend-app"})'
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params: [30]
+                    type: gt
+                  query:
+                    params: [A]
+                  type: query
+              refId: C
+              type: classic_conditions
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        annotations:
+          summary: 'Worker 간 CPU 편차가 큽니다 (라운드 로빈 실패)'
+          description: 'Worker CPU 편차: {{ $values.A.Value | printf "%.1f" }}%p'
+        labels:
+          severity: warning
+          component: mediasoup
+        isPaused: false
+
+      # Worker CPU > 85% (서버 크기 무관)
+      - uid: worker_cpu_critical
+        title: Worker CPU Critical
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: 'mediasoup_worker_cpu{job="backend-app"}'
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params: [85]
+                    type: gt
+                  query:
+                    params: [A]
+                  type: query
+              refId: C
+              type: classic_conditions
+        noDataState: NoData
+        execErrState: Error
+        for: 3m
+        annotations:
+          summary: 'Mediasoup Worker CPU가 매우 높습니다'
+          description: 'Worker {{ $labels.worker_id }} CPU: {{ $values.A.Value | printf "%.1f" }}%'
+        labels:
+          severity: critical
+          component: mediasoup
+        isPaused: false
+
+  # 네트워크 (NIC 속도 비율 기반)
+  - orgId: 1
+    name: network_alerts
+    folder: Network
+    interval: 1m
+    rules:
+      # 네트워크 송신 대역폭 급증 (5분간 50% 증가)
+      - uid: network_transmit_spike
+        title: Network Transmit Bandwidth Spike
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 300
+            datasourceUid: prometheus
+            model:
+              expr: 'rate(node_network_transmit_bytes_total{job="backend-node",device="eth0"}[5m]) * 8 / 1000000'
+              refId: A
+          - refId: B
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: 'rate(node_network_transmit_bytes_total{job="backend-node",device="eth0"}[5m]) * 8 / 1000000'
+              refId: B
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              expression: '($B - $A) / $A * 100'
+              refId: C
+              type: math
+          - refId: D
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params: [50]
+                    type: gt
+                  query:
+                    params: [C]
+                  type: query
+              refId: D
+              type: classic_conditions
+        noDataState: NoData
+        execErrState: Error
+        for: 3m
+        annotations:
+          summary: '네트워크 송신 대역폭이 급증했습니다'
+          description: '5분간 {{ $values.C.Value | printf "%.1f" }}% 증가 (현재: {{ $values.B.Value | printf "%.0f" }}Mbps)'
+        labels:
+          severity: warning
+          component: network
+        isPaused: false
+
+  # 제스처/채팅
+  - orgId: 1
+    name: gesture_alerts
+    folder: Gesture
+    interval: 1m
+    rules:
+      # 제스처 처리 시간 > 300ms
+      - uid: gesture_processing_slow
+        title: Gesture Processing Slow
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: 'histogram_quantile(0.95, rate(gesture_processing_duration_seconds_bucket{job="backend-app"}[1m]))'
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params: [0.3]
+                    type: gt
+                  query:
+                    params: [A]
+                  type: query
+              refId: C
+              type: classic_conditions
+        noDataState: NoData
+        execErrState: Error
+        for: 3m
+        annotations:
+          summary: '제스처 이벤트 처리가 느립니다'
+          description: 'P95 처리 시간: {{ $values.A.Value | printf "%.3f" }}s (Redis 연결 확인 필요)'
+        labels:
+          severity: warning
+          component: gesture
+        isPaused: false
+
+      # 제스처 이벤트 급증
+      - uid: gesture_event_spike
+        title: Gesture Event Spike
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: 'rate(gesture_events_total{job="backend-app"}[1m])'
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params: [100]
+                    type: gt
+                  query:
+                    params: [A]
+                  type: query
+              refId: C
+              type: classic_conditions
+        noDataState: NoData
+        execErrState: Error
+        for: 2m
+        annotations:
+          summary: '제스처 이벤트가 급증했습니다'
+          description: '초당 {{ $values.A.Value | printf "%.1f" }}회'
+        labels:
+          severity: warning
+          component: gesture
+        isPaused: false
+
+  # Redis
+  - orgId: 1
+    name: redis_alerts
+    folder: Redis
+    interval: 1m
+    rules:
+      # Redis 메모리 사용량 급증 (5분간 50% 증가)
+      - uid: redis_memory_spike
+        title: Redis Memory Usage Spike
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 300
+            datasourceUid: prometheus
+            model:
+              expr: 'redis_memory_used_bytes / 1024 / 1024'
+              refId: A
+          - refId: B
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: 'redis_memory_used_bytes / 1024 / 1024'
+              refId: B
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              expression: '($B - $A) / $A * 100'
+              refId: C
+              type: math
+          - refId: D
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params: [50]
+                    type: gt
+                  query:
+                    params: [C]
+                  type: query
+              refId: D
+              type: classic_conditions
+        noDataState: NoData
+        execErrState: Error
+        for: 3m
+        annotations:
+          summary: 'Redis 메모리 사용량이 급증했습니다'
+          description: '5분간 {{ $values.C.Value | printf "%.1f" }}% 증가 (현재: {{ $values.B.Value | printf "%.0f" }}MB)'
+        labels:
+          severity: warning
+          component: redis
+        isPaused: false
+
+  # 로그 기반 알림
+  - orgId: 1
+    name: log_alerts
+    folder: Logs
+    interval: 1m
+    rules:
+      # ERROR 로그 급증
+      - uid: error_log_spike
+        title: Error Log Spike
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: loki
+            model:
+              expr: 'sum(count_over_time({job="nestjs"} |~ "ERROR" [5m]))'
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params: [50]
+                    type: gt
+                  query:
+                    params: [A]
+                  type: query
+              refId: C
+              type: classic_conditions
+        noDataState: NoData
+        execErrState: Error
+        for: 3m
+        annotations:
+          summary: 'ERROR 로그가 급증했습니다'
+          description: '최근 5분간 {{ $values.A.Value }}건의 ERROR 로그'
+        labels:
+          severity: warning
+          component: logs
+        isPaused: false
