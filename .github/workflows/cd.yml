@@ -338,11 +338,14 @@ jobs:
 
             # 설정 파일 복사
             cp .github/deployments/monitoring/docker-compose.yml ./docker-compose.yml
-            mkdir -p prometheus loki promtail grafana/provisioning/datasources
+            mkdir -p prometheus loki promtail grafana/provisioning/datasources grafana/provisioning/alerting
             cp .github/deployments/monitoring/prometheus/prometheus-dev.yml ./prometheus/prometheus.yml
             cp .github/deployments/monitoring/loki/loki-config.yaml ./loki/loki-config.yaml
             cp .github/deployments/monitoring/promtail/promtail-config.yaml ./promtail/promtail-config.yaml
             cp .github/deployments/monitoring/grafana/provisioning/datasources/datasources.yml ./grafana/provisioning/datasources/datasources.yml
+            cp .github/deployments/monitoring/grafana/provisioning/alerting/rules.yml ./grafana/provisioning/alerting/rules.yml
+            cp .github/deployments/monitoring/grafana/provisioning/alerting/contactpoints.yml ./grafana/provisioning/alerting/contactpoints.yml
+            cp .github/deployments/monitoring/grafana/provisioning/alerting/policies.yml ./grafana/provisioning/alerting/policies.yml
 
             # Prometheus 설정 파일의 IP 플레이스홀더 치환
             sed -i "s/BACKEND_HOST_PLACEHOLDER/${{ secrets.NCP_DEV_HOST }}/g" ./prometheus/prometheus.yml
@@ -354,6 +357,16 @@ jobs:
             echo "GRAFANA_ADMIN_USER=admin" >> .env
             echo "GRAFANA_ADMIN_PASSWORD=${{ secrets.GRAFANA_ADMIN_PASSWORD_DEV }}" >> .env
             echo "GRAFANA_URL=http://211.188.50.8:3000" >> .env
+            # SMTP 설정
+            echo "SMTP_HOST=${{ secrets.SMTP_HOST }}" >> .env
+            echo "SMTP_PORT=${{ secrets.SMTP_PORT }}" >> .env
+            echo "SMTP_USER=${{ secrets.SMTP_USER }}" >> .env
+            echo "SMTP_PASSWORD=${{ secrets.SMTP_PASSWORD }}" >> .env
+            echo "SMTP_FROM_ADDRESS=${{ secrets.SMTP_FROM_ADDRESS }}" >> .env
+            echo "SMTP_FROM_NAME=${{ secrets.SMTP_FROM_NAME }}" >> .env
+            # Slack 설정
+            echo "SLACK_WEBHOOK_URL=${{ secrets.SLACK_WEBHOOK_URL }}" >> .env
+            echo "ALERT_EMAIL_ADDRESSES=${{ secrets.ALERT_EMAIL_ADDRESSES }}" >> .env
 
             # 데이터 디렉토리 권한 설정
             mkdir -p prometheus/data loki/data grafana/data
@@ -481,11 +494,14 @@ jobs:
             fi
 
             cp .github/deployments/monitoring/docker-compose.yml ./docker-compose.yml
-            mkdir -p prometheus loki promtail grafana/provisioning/datasources
+            mkdir -p prometheus loki promtail grafana/provisioning/datasources grafana/provisioning/alerting
             cp .github/deployments/monitoring/prometheus/prometheus-prod.yml ./prometheus/prometheus.yml
             cp .github/deployments/monitoring/loki/loki-config.yaml ./loki/loki-config.yaml
             cp .github/deployments/monitoring/promtail/promtail-config.yaml ./promtail/promtail-config.yaml
             cp .github/deployments/monitoring/grafana/provisioning/datasources/datasources.yml ./grafana/provisioning/datasources/datasources.yml
+            cp .github/deployments/monitoring/grafana/provisioning/alerting/rules.yml ./grafana/provisioning/alerting/rules.yml
+            cp .github/deployments/monitoring/grafana/provisioning/alerting/contactpoints.yml ./grafana/provisioning/alerting/contactpoints.yml
+            cp .github/deployments/monitoring/grafana/provisioning/alerting/policies.yml ./grafana/provisioning/alerting/policies.yml
 
             # Prometheus 설정 파일의 IP 플레이스홀더 치환
             sed -i "s/BACKEND_HOST_PLACEHOLDER/${{ secrets.NCP_PROD_HOST }}/g" ./prometheus/prometheus.yml
@@ -497,6 +513,16 @@ jobs:
             echo "GRAFANA_ADMIN_USER=admin" >> .env
             echo "GRAFANA_ADMIN_PASSWORD=${{ secrets.GRAFANA_ADMIN_PASSWORD_PROD }}" >> .env
             echo "GRAFANA_URL=http://101.79.11.160:3000" >> .env
+            # SMTP 설정
+            echo "SMTP_HOST=${{ secrets.SMTP_HOST }}" >> .env
+            echo "SMTP_PORT=${{ secrets.SMTP_PORT }}" >> .env
+            echo "SMTP_USER=${{ secrets.SMTP_USER }}" >> .env
+            echo "SMTP_PASSWORD=${{ secrets.SMTP_PASSWORD }}" >> .env
+            echo "SMTP_FROM_ADDRESS=${{ secrets.SMTP_FROM_ADDRESS }}" >> .env
+            echo "SMTP_FROM_NAME=${{ secrets.SMTP_FROM_NAME }}" >> .env
+            # Slack 설정
+            echo "SLACK_WEBHOOK_URL=${{ secrets.SLACK_WEBHOOK_URL }}" >> .env
+            echo "ALERT_EMAIL_ADDRESSES=${{ secrets.ALERT_EMAIL_ADDRESSES }}" >> .env
 
             # 데이터 디렉토리 권한 설정
             mkdir -p prometheus/data loki/data grafana/data
