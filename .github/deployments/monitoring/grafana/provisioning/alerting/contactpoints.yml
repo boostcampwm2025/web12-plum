@@ -1,0 +1,56 @@
+# Grafana Contact Points - 알림 채널 설정
+# Slack과 Email로 알림 전송
+# 환경변수: SLACK_WEBHOOK_URL, ALERT_EMAIL_ADDRESSES
+
+apiVersion: 1
+
+contactPoints:
+  # Email 알림 설정
+  - orgId: 1  # Grafana 조직 ID (기본값: 1)
+    name: email
+    receivers:
+      - uid: email-receiver
+        type: email
+        settings:
+          # 알림을 받을 이메일 주소 
+          addresses: ${ALERT_EMAIL_ADDRESSES}
+          subject: "[{{ .Status | toUpper }}] {{ .CommonLabels.alertname }}"
+        disableResolveMessage: false
+
+  # Slack 알림 설정
+  - orgId: 1
+    name: slack
+    receivers:
+      - uid: slack-receiver
+        type: slack
+        settings:
+          # Slack Webhook URL
+          url: ${SLACK_WEBHOOK_URL}
+          title: "{{ .CommonLabels.alertname }}"
+          text: |
+            {{ range .Alerts }}
+            **Status:** {{ .Status }}
+            **Summary:** {{ .Annotations.summary }}
+            **Description:** {{ .Annotations.description }}
+            {{ end }}
+        disableResolveMessage: false
+
+  # Slack + Email 동시 전송 (중요 알림용)
+  - orgId: 1
+    name: all-channels
+    receivers:
+      - uid: email-all
+        type: email
+        settings:
+          addresses: ${ALERT_EMAIL_ADDRESSES}
+          subject: "[{{ .Status | toUpper }}] {{ .CommonLabels.alertname }}"
+      - uid: slack-all
+        type: slack
+        settings:
+          url: ${SLACK_WEBHOOK_URL}
+          title: "🚨 {{ .CommonLabels.alertname }}"
+          text: |
+            **환경:** {{ .CommonLabels.environment }}
+            **심각도:** {{ .CommonLabels.severity }}
+            **요약:** {{ .Annotations.summary }}
+            **상세:** {{ .Annotations.description }}

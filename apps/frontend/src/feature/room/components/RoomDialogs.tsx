@@ -4,6 +4,7 @@ import { Dialog as RoomDialog } from './Dialog';
 import { useRoomUIStore } from '../stores/useRoomUIStore';
 import { PollDialog } from './PollDialog';
 import { QnaDialog } from './QnaDialog';
+import { RankingDialog } from './RankingDialog';
 import { usePollStore } from '../stores/usePollStore';
 import { useQnaStore } from '../stores/useQnaStore';
 import { useSocketStore } from '@/store/useSocketStore';
@@ -84,10 +85,10 @@ export function RoomDialogs() {
       )}
       {activeDialog === 'ranking' && (
         <RoomDialog
-          title="랭킹"
+          title="참여도 순위"
           onClose={handleCloseDialog}
         >
-          <div>랭킹 내용</div>
+          <RankingDialog />
         </RoomDialog>
       )}
     </AnimatePresence>
