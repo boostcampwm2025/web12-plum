@@ -268,6 +268,23 @@ export function useRoomInit() {
   useEffect(() => {
     if (!isReconnected) return;
 
+    const rejoinRoom = async () => {
+      const roomManager = roomManagerRef.current;
+      const myInfo = useRoomStore.getState().myInfo;
+      const socket = useSocketStore.getState().socket;
+
+      if (!roomManager || !roomId || !myInfo || !socket?.connected) return;
+
+      try {
+        await roomManager.join(roomId, myInfo.id);
+        logger.custom.info('[RoomInit] 재연결 후 재입장 완료');
+      } catch (error) {
+        logger.custom.error('[RoomInit] 재연결 후 재입장 실패:', error);
+      }
+    };
+
+    void rejoinRoom();
+
     const lastMessageId = chatActions.getLastMessageId();
     if (lastMessageId) {
       socketActions.emit('sync_chat', { lastMessageId }, (response) => {
