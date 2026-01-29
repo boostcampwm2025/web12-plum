@@ -69,6 +69,7 @@ export class MultiRouterManagerService {
       const worker = workers[i % workers.length];
       const router = await worker.createRouter({
         mediaCodecs: mediasoupConfig.router.mediaCodecs,
+        appData: { worker }, // Worker 참조 저장 (CPU 기반 선택을 위해)
       });
       routers.push(router);
       this.logger.log(`  ✅ Router #${i} 생성 (Worker PID: ${worker.pid})`);
