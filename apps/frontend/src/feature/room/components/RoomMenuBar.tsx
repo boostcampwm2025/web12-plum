@@ -4,8 +4,6 @@ import { cn } from '@/shared/lib/utils';
 import { RoomButton } from './RoomButton';
 import { GestureButton } from './GestureButton';
 import type { IconName } from '@/shared/components/icon/iconMap';
-import type { ActivityType, ScoreUpdatePayload } from '@plum/shared-interfaces';
-import { SCORE_RULES } from '@plum/shared-interfaces';
 import { useMediaStore } from '../stores/useMediaStore';
 import { useRoomUIStore } from '../stores/useRoomUIStore';
 import { useMediaControlContext } from '../hooks/useMediaControlContext';
@@ -13,7 +11,6 @@ import { usePollStore } from '../stores/usePollStore';
 import { useQnaStore } from '../stores/useQnaStore';
 import { useRoomStore } from '../stores/useRoomStore';
 import { useRankStore } from '../stores/useRankStore';
-import { useSocketStore } from '@/store/useSocketStore';
 import { ExitButton } from './ExitButton';
 
 interface MenuButton {
@@ -29,40 +26,27 @@ interface MenuButton {
  */
 function ScoreDeltaAnimation() {
   const myScore = useRankStore((state) => state.myScore);
-  const socket = useSocketStore((state) => state.socket);
   const [scoreDelta, setScoreDelta] = useState<number | null>(null);
   const [scoreDeltaId, setScoreDeltaId] = useState(0);
   const [showScoreDelta, setShowScoreDelta] = useState(false);
-  const myScoreRef = useRef(myScore);
+  const prevScoreRef = useRef(myScore);
+  const isInitialMount = useRef(true);
 
   useEffect(() => {
-    myScoreRef.current = myScore;
-  }, [myScore]);
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      prevScoreRef.current = myScore;
+      return;
+    }
 
-  useEffect(() => {
-    if (!socket) return;
+    const delta = myScore - prevScoreRef.current;
+    prevScoreRef.current = myScore;
 
-    const hasScoreRule = (reason: string): reason is ActivityType => reason in SCORE_RULES;
-    const handleScoreUpdate = (data: ScoreUpdatePayload) => {
-      const deltaFromReason = hasScoreRule(data.reason) ? SCORE_RULES[data.reason] : null;
-      const delta = deltaFromReason ?? data.score - myScoreRef.current;
-      myScoreRef.current = data.score;
-
-      if (!Number.isFinite(delta) || delta === 0) return;
-      setScoreDelta(delta);
-      setScoreDeltaId((prev) => prev + 1);
-    };
-
-    socket.on('score_update', handleScoreUpdate);
-    return () => {
-      socket.off('score_update', handleScoreUpdate);
-    };
-  }, [socket]);
-
-  useEffect(() => {
-    if (scoreDelta === null || scoreDelta === 0) return;
+    if (!Number.isFinite(delta) || delta === 0) return;
+    setScoreDelta(delta);
+    setScoreDeltaId((prev) => prev + 1);
     setShowScoreDelta(true);
-  }, [scoreDelta, scoreDeltaId]);
+  }, [myScore]);
 
   if (scoreDelta === null || scoreDelta === 0 || !showScoreDelta) return null;
 
