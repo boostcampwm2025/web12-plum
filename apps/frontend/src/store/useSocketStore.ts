@@ -1,15 +1,46 @@
 import { io } from 'socket.io-client';
 import { create } from 'zustand';
-import { logger } from '@/shared/lib/logger';
-import type { ClientToServerEvents } from '@plum/shared-interfaces';
-import { MediaSocket } from '@/feature/room/types';
+import type { BaseResponse, ClientToServerEvents } from '@plum/shared-interfaces';
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL as string;
+import { logger } from '@/shared/lib/logger';
+import {
+  SocketDomain,
+  SocketErrorResponse,
+  SocketEventName,
+  SocketEventPayload,
+  SocketEventResponse,
+  SocketSuccessResponse,
+  TypedSocket,
+} from '@/types/socket';
+
+/**
+ * 모든 소켓 도메인 에러를 처리하는 단일 클래스
+ * domain - 소켓 도메인 (room, media 등)
+ * code - 에러 코드
+ * message - 에러 메시지
+ */
+export class SocketDomainError extends Error {
+  public readonly domain: SocketDomain;
+  public readonly code: string;
+
+  constructor(payload: SocketErrorResponse) {
+    super(payload.message ?? payload.code);
+
+    this.name = 'SocketDomainError';
+    this.domain = payload.domain;
+    this.code = payload.code;
+  }
+}
 
 /**
  * 소켓 연결 타임아웃 시간 (밀리초)
  */
 const CONNECTION_TIMEOUT = 7000;
+
+/**
+ * 소켓 서버 URL
+ */
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL as string;
 
 /**
  * 소켓 연결 옵션
@@ -24,17 +55,22 @@ const SOCKET_OPTIONS = {
 };
 
 interface SocketState {
-  socket: MediaSocket | null;
+  socket: TypedSocket | null;
   isConnected: boolean;
   isReconnected: boolean;
   reconnectCount: number;
   actions: {
-    connect: () => Promise<MediaSocket | null>;
+    connect: () => Promise<TypedSocket>;
     disconnect: () => void;
     emit: <K extends keyof ClientToServerEvents>(
       event: K,
       ...args: Parameters<ClientToServerEvents[K]>
     ) => void;
+    emitWithAck: <E extends SocketEventName>(params: {
+      domain: SocketDomain;
+      event: E;
+      payload?: SocketEventPayload<E>;
+    }) => Promise<SocketSuccessResponse<E>>;
   };
 }
 
@@ -61,7 +97,7 @@ export const useSocketStore = create<SocketState>((set, get) => ({
 
       // 이미 연결되어 있다면 즉시 현재 소켓 반환
       if (socket?.connected) {
-        logger.socket.info('소켓이 이미 연결되어 있음');
+        logger.socket.debug('소켓이 이미 연결되어 있음');
         return socket;
       }
 
@@ -124,9 +160,9 @@ export const useSocketStore = create<SocketState>((set, get) => ({
           set({ isConnected: false });
 
           if (currentSocket?.active) {
-            logger.socket.info('소켓 일시적 연결 오류, 재시도 중');
+            logger.socket.debug('소켓 일시적 연결 오류, 재시도 중');
           } else {
-            logger.socket.info('소켓 연결 거부 (재시도 중단)', error.message);
+            logger.socket.debug('소켓 연결 거부 (재시도 중단)', error.message);
           }
         });
 
@@ -135,7 +171,7 @@ export const useSocketStore = create<SocketState>((set, get) => ({
          */
         currentSocket.io.on('reconnect_attempt', (attempt) => {
           set({ reconnectCount: attempt });
-          logger.socket.info(`소켓 재연결 시도 중... (${attempt}회)`);
+          logger.socket.debug(`소켓 재연결 시도 중... (${attempt}회)`);
         });
 
         // 재연결 실패
@@ -153,12 +189,17 @@ export const useSocketStore = create<SocketState>((set, get) => ({
       set({ socket: currentSocket });
 
       // 연결 완료를 기다리는 Promise 반환
-      return new Promise((resolve) => {
-        // 강제 타임아웃 설정
+      return new Promise((resolve, reject) => {
+        /**
+         * ACK 응답 대기 타이머
+         */
         const timer = setTimeout(() => {
-          logger.socket.warn('연결 대기 시간 초과');
-          // 타임아웃이 발생하면 실패(null)로 처리하고 약속을 끝냄
-          resolve(null);
+          const error = new SocketDomainError({
+            domain: 'room',
+            code: 'CONNECTION_TIMEOUT',
+            message: `연결 대기 시간 초과`,
+          });
+          reject(error);
         }, CONNECTION_TIMEOUT);
 
         /**
@@ -178,9 +219,13 @@ export const useSocketStore = create<SocketState>((set, get) => ({
          */
         currentSocket.once('connect_error', (error) => {
           if (!currentSocket.active) {
-            logger.socket.error('서버 연결 거부 (인증 실패 등)', error.message);
             clearTimeout(timer);
-            resolve(null);
+            const errorObj = new SocketDomainError({
+              domain: 'room',
+              code: 'CONNECTION_REJECTED',
+              message: error.message || '서버에서 소켓 연결을 거부했습니다.',
+            });
+            reject(errorObj);
           }
           // socket.active가 true라면 일시적 에러이므로 resolve 하지 않고 7초간 계속 재시도함
         });
@@ -188,7 +233,12 @@ export const useSocketStore = create<SocketState>((set, get) => ({
         // 연결 시도 중 disconnect() 호출로 소켓이 닫히는 경우 처리
         currentSocket.once('disconnect', () => {
           clearTimeout(timer);
-          resolve(null);
+          const errorObj = new SocketDomainError({
+            domain: 'room',
+            code: 'DISCONNECTED',
+            message: '소켓 연결이 중단되었습니다.',
+          });
+          reject(errorObj);
         });
 
         // 실제 연결 시작
@@ -205,7 +255,7 @@ export const useSocketStore = create<SocketState>((set, get) => ({
       if (socket) {
         socket.removeAllListeners();
         socket.disconnect();
-        set({ socket: null, isConnected: false, reconnectCount: 0 });
+        set({ socket: null, isConnected: false, isReconnected: false, reconnectCount: 0 });
         logger.socket.info('소켓 연결 해제 요청됨');
       } else {
         logger.socket.debug('소켓이 이미 연결 해제되어 있음');
@@ -213,7 +263,7 @@ export const useSocketStore = create<SocketState>((set, get) => ({
     },
 
     /**
-     * 서버에 이벤트 전송
+     * 서버에 이벤트 전송 (Deprecated)
      */
     emit: (event, ...args) => {
       const { socket, isConnected } = get();
@@ -223,6 +273,98 @@ export const useSocketStore = create<SocketState>((set, get) => ({
       }
 
       socket.emit(event, ...args);
+    },
+
+    /**
+     * 소켓 이벤트를 emit하고 ACK 응답을 기다림
+     * @param params.domain 소켓 도메인
+     * @param params.event 소켓 이벤트 이름
+     * @param params.payload 소켓 이벤트 페이로드
+     * @returns 성공 응답을 포함한 Promise
+     */
+    emitWithAck: async <E extends SocketEventName>(params: {
+      domain: SocketDomain;
+      event: E;
+      payload?: SocketEventPayload<E>;
+    }): Promise<SocketSuccessResponse<E>> => {
+      const { socket } = get();
+
+      /**
+       * 소켓 연결 상태 확인
+       */
+      if (!socket || !socket.connected) {
+        throw new SocketDomainError({
+          domain: params.domain,
+          code: 'SOCKET_NOT_CONNECTED',
+          message: '소켓이 연결되어 있지 않은 상태에서 emitWithAck 호출됨',
+        });
+      }
+
+      /**
+       * ACK 응답 대기 Promise 생성
+       */
+      const promise: Promise<SocketSuccessResponse<E>> = new Promise((resolve, reject) => {
+        /**
+         * ACK 응답 대기 타이머
+         */
+        const timer = setTimeout(() => {
+          const error = new SocketDomainError({
+            domain: params.domain,
+            code: 'ACK_TIMEOUT',
+            message: `ACK 응답 대기 시간 초과`,
+          });
+          reject(error);
+        }, CONNECTION_TIMEOUT);
+
+        /**
+         * ACK 응답 핸들러
+         * @param response ACK 응답 데이터
+         */
+        const handleResponse = (response: SocketEventResponse<E>) => {
+          clearTimeout(timer);
+          const base = response as BaseResponse;
+
+          // 응답이 성공적이지 않은 경우 에러 처리
+          if (!base || !base.success) {
+            const error = new SocketDomainError({
+              domain: params.domain,
+              code: base.error || 'UNKNOWN_ERROR',
+              message: base.error || '알 수 없는 오류가 발생했습니다.',
+            });
+            return reject(error);
+          }
+
+          // 성공 로깅
+          logger.socket.debug('소켓 응답 성공', { event: params.event, domain: params.domain });
+          resolve(response as SocketSuccessResponse<E>);
+        };
+
+        // 이벤트 전송 - payload 유무에 따라 분기
+        if (params.payload === undefined || params.payload === null) {
+          // payload가 없는 경우
+          type EmitWithCallbackNoPayload = (
+            event: E,
+            callback: (response: SocketEventResponse<E>) => void,
+          ) => void;
+
+          (socket.emit as EmitWithCallbackNoPayload)(params.event, handleResponse);
+        } else {
+          // payload가 있는 경우
+          type EmitWithCallbackWithPayload = (
+            event: E,
+            data: SocketEventPayload<E>,
+            callback: (response: SocketEventResponse<E>) => void,
+          ) => void;
+
+          (socket.emit as EmitWithCallbackWithPayload)(
+            params.event,
+            params.payload,
+            handleResponse,
+          );
+        }
+      });
+
+      return promise;
     },
   },
 }));
