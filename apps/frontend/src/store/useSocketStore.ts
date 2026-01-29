@@ -255,7 +255,7 @@ export const useSocketStore = create<SocketState>((set, get) => ({
       if (socket) {
         socket.removeAllListeners();
         socket.disconnect();
-        set({ socket: null, isConnected: false, reconnectCount: 0 });
+        set({ socket: null, isConnected: false, isReconnected: false, reconnectCount: 0 });
         logger.socket.info('소켓 연결 해제 요청됨');
       } else {
         logger.socket.debug('소켓이 이미 연결 해제되어 있음');
