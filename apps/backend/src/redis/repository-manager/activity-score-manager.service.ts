@@ -1,8 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
+  ActivityStatistics,
   ActivityType,
   CHAT_POLICY,
+  ParticipantStats,
   PENALTY_LIMIT,
   RANK_LIMIT,
   RankItem,
@@ -10,6 +12,7 @@ import {
 } from '@plum/shared-interfaces';
 import { RedisService } from '../redis.service.js';
 import { ParticipantManagerService } from './participant-manager.service.js';
+import { ChainableCommander } from 'ioredis';
 
 @Injectable()
 export class ActivityScoreManagerService {
@@ -23,6 +26,17 @@ export class ActivityScoreManagerService {
 
   private getPriorityScore(): number {
     return (2524608000000 - Date.now()) / 1000000000000;
+  }
+
+  private getEmptyInteractions(): ParticipantStats {
+    return {
+      participationScore: 0,
+      gestureCount: 0,
+      chatCount: 0,
+      voteCount: 0,
+      answerCount: 0,
+      penaltyCount: 0,
+    };
   }
 
   /**
@@ -254,14 +268,78 @@ export class ActivityScoreManagerService {
   }
 
   /**
-   * 방 정보 만료 시 점수 데이터 삭제
+   * 강의실 활동 통계 요약 (상위 3명, 최하위 1명 포함)
    * @param roomId 방 ID
    */
-  async clearScores(roomId: string) {
+  async getActivityStatistics(roomId: string): Promise<ActivityStatistics> {
+    const client = this.redisService.getClient();
+    const snapshotKey = `room:${roomId}:stats`;
+
+    const cached = await client.get(snapshotKey);
+    if (cached) return JSON.parse(cached);
+
+    const result = await this.createActivityStatics(roomId);
+    await client.set(snapshotKey, JSON.stringify(result), 'EX', 60 * 60 * 24); // 1일 유지
+    return result;
+  }
+
+  /**
+   * 강의실 활동 통계 요약 (상위 3명, 최하위 1명 포함)
+   * @param roomId 방 ID
+   */
+  async createActivityStatics(roomId: string): Promise<ActivityStatistics> {
+    const client = this.redisService.getClient();
+    const zsetKey = `room:${roomId}:scores`;
+
+    const totalParticipants = await client.zcard(zsetKey);
+    if (totalParticipants === 0) {
+      return {
+        averageScore: 0,
+        ranks: [],
+        interactions: this.getEmptyInteractions(),
+      };
+    }
+    const top3 = await this.getTopRankings(roomId, RANK_LIMIT);
+    const latest = await this.getLowest(roomId);
+    const ranks = [...top3];
+    if (latest && !top3.some((item) => item.participantId === latest.participantId)) {
+      ranks.push(latest);
+    }
+
+    const interactions = this.getEmptyInteractions();
+    const statsKeys = await client.keys(`room:${roomId}:stats:*`);
+    if (statsKeys.length > 0) {
+      const pipeline = client.pipeline();
+      statsKeys.forEach((key) => pipeline.hgetall(key));
+      const results = await pipeline.exec();
+      results?.forEach(([err, stats]: [any, Record<string, string>]) => {
+        if (err || !stats) return;
+
+        interactions.participationScore += parseInt(stats.participationScore || '0', 10);
+        interactions.gestureCount += parseInt(stats.gestureCount || '0', 10);
+        interactions.chatCount += parseInt(stats.chatCount || '0', 10);
+        interactions.voteCount += parseInt(stats.voteCount || '0', 10);
+        interactions.answerCount += parseInt(stats.answerCount || '0', 10);
+        interactions.penaltyCount += parseInt(stats.penaltyCount || '0', 10);
+      });
+    }
+
+    const averageScore =
+      totalParticipants > 0 ? interactions.participationScore / totalParticipants : 0;
+    return {
+      averageScore: Number(averageScore.toFixed(2)),
+      ranks,
+      interactions,
+    };
+  }
+
+  /**
+   * 방 정보 만료 시 점수 데이터 삭제
+   */
+  async addClearToPipeline(pipeline: ChainableCommander, roomId: string) {
     const zsetKey = `room:${roomId}:scores`;
     const statsKeys = await this.redisService.getClient().keys(`room:${roomId}:stats:*`); // 모든 참가자의 stats 키 조회
 
-    const pipeline = this.redisService.getClient().pipeline();
     pipeline.del(zsetKey); // ZSET 삭제
     if (statsKeys.length > 0) {
       pipeline.del(...statsKeys); // 모든 stats Hash 키 삭제

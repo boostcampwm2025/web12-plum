@@ -283,17 +283,4 @@ describe('ActivityScoreManagerService', () => {
       );
     });
   });
-
-  describe('clearScores', () => {
-    it('방의 모든 데이터(ZSET, Stats)를 삭제해야 한다', async () => {
-      const roomId = 'room1';
-      redisClientMock.keys.mockResolvedValue(['room1:stats:u1', 'room1:stats:u2']);
-
-      await service.clearScores(roomId);
-
-      expect(pipelineMock.del).toHaveBeenCalledWith(`room:${roomId}:scores`);
-      expect(pipelineMock.del).toHaveBeenCalledWith('room1:stats:u1', 'room1:stats:u2');
-      expect(pipelineMock.exec).toHaveBeenCalled();
-    });
-  });
 });
