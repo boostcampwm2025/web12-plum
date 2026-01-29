@@ -15,7 +15,7 @@ import { mediasoupConfig } from './mediasoup.config.js';
  *
  * 1. Room Type별 전략: SMALL_MEETING(≤10명) = Single Router, LECTURE(>10명) = Multi-Router
  * 2. Router 수 = Worker 수 = CPU 수 (사전 생성)
- * 3. 점진적 Router 활성화: 5명까지 R0만 → 6~10명 R0,R1 → ...
+ * 3. Round-robin 부하 분산: Room ID 해시 + 참가자 수 기반 (Stateless)
  * 4. 발표자 스트림은 모든 Router로 즉시 파이프 (Eager Loading)
  * 5. 청중 스트림은 필요시 파이프 (Lazy Loading)
  *
@@ -34,16 +34,6 @@ export class MultiRouterManagerService {
   // PipeProducer 생성할때 Race Condition 방지를 위한 Mutex Map
   // Key: "producerId:targetRouterIndex"
   private pipeProducerMutexes: Map<string, Mutex> = new Map();
-
-  // 점진적 활성화 임계값 (5명씩)
-  private readonly PARTICIPANTS_PER_ROUTER = 5;
-
-  // 버스트 감지 설정
-  private readonly BURST_THRESHOLD = 10; // 짧은 시간 내 10명 이상 = 버스트
-  private readonly BURST_WINDOW_MS = 2000; // 2초 이내
-
-  // Room별 첫 참가자 입장 시간 추적 (버스트 감지용)
-  private roomFirstJoinTime: Map<string, number> = new Map();
 
   /**
    * Room 생성 시 Multi-Router 설정
@@ -69,7 +59,6 @@ export class MultiRouterManagerService {
       const worker = workers[i % workers.length];
       const router = await worker.createRouter({
         mediaCodecs: mediasoupConfig.router.mediaCodecs,
-        appData: { worker }, // Worker 참조 저장 (CPU 기반 선택을 위해)
       });
       routers.push(router);
       this.logger.log(`  ✅ Router #${i} 생성 (Worker PID: ${worker.pid})`);
@@ -80,7 +69,6 @@ export class MultiRouterManagerService {
       roomId,
       strategy,
       routers,
-      activeRouterCount: 1, // 초기에는 R0만 활성화
       participantCount: 0,
       pipeProducers: new Map(),
     };
@@ -99,11 +87,26 @@ export class MultiRouterManagerService {
   }
 
   /**
+   * 문자열을 해싱해서 숫자로
+   * @param str 해싱할 문자열 (Room ID)
+   * @returns 해시값 (양수)
+   */
+  private hashString(str: string): number {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      hash = (hash << 5) - hash + str.charCodeAt(i);
+      hash |= 0; //  32bit int
+    }
+    return Math.abs(hash);
+  }
+
+  /**
    * 참가자 입장 시 Router 할당
-   * 점진적 활성화 + 버스트 감지 전략 적용
+   * Round-robin 부하 분산 전략 적용 (Stateless)
    *
-   * 평소: 5명씩 점진적으로 Router 활성화
-   * 버스트: 2초 내 10명 이상 접속 시 즉시 전체 Router 활성화
+   * Room ID 해시 + 참가자 수 = 방마다 다른 시작점, 균등 분배
+   * 빠름 (CPU 조회 없음, 해싱만)
+   * 방마다 다른 시작점으로 Worker 0 집중 방지
    *
    * @param roomId Room ID
    * @param participantId 참가자 ID
@@ -123,126 +126,19 @@ export class MultiRouterManagerService {
     // 참가자 수 증가
     roomInfo.participantCount++;
 
-    // 버스트 감지 1: 첫 참가자 입장 시간 기록
-    if (roomInfo.participantCount === 1) {
-      this.roomFirstJoinTime.set(roomId, Date.now());
-    }
-
-    // 버스트 감지 2: 짧은 시간에 많은 참가자 접속 감지
-    const firstJoinTime = this.roomFirstJoinTime.get(roomId) || Date.now();
-    const elapsed = Date.now() - firstJoinTime;
-
-    if (
-      elapsed < this.BURST_WINDOW_MS &&
-      roomInfo.participantCount >= this.BURST_THRESHOLD &&
-      roomInfo.activeRouterCount < roomInfo.routers.length
-    ) {
-      // 버스트 감지 3: 즉시 전체 Router 활성화
-      roomInfo.activeRouterCount = roomInfo.routers.length;
-      this.logger.log(
-        `🚀 버스트 감지! ${elapsed}ms 내 ${roomInfo.participantCount}명 접속 → 전체 Router ${roomInfo.routers.length}개 활성화`,
-      );
-    } else {
-      // 평소: 점진적 활성화
-      const neededRouters = Math.min(
-        Math.ceil(roomInfo.participantCount / this.PARTICIPANTS_PER_ROUTER),
-        roomInfo.routers.length,
-      );
-
-      if (neededRouters > roomInfo.activeRouterCount) {
-        const prevCount = roomInfo.activeRouterCount;
-        roomInfo.activeRouterCount = neededRouters;
-        this.logger.log(
-          `📈 Room ${roomId}: 활성 Router ${prevCount} → ${neededRouters} (참가자: ${roomInfo.participantCount}명)`,
-        );
-      }
-    }
-
-    // 활성화된 Router 중 가장 적은 참가자가 있는 Router 선택
-    const routerIndex = this.selectLeastLoadedRouter(roomId, roomInfo);
+    // Room ID 해시 + 참가자 수 = 방마다 다른 시작점, 균등 분배
+    const roomHash = this.hashString(roomId);
+    const routerIndex = (roomHash + roomInfo.participantCount - 1) % roomInfo.routers.length;
 
     // 참가자-Router 매핑 저장
     const participantMap = this.participantRouterMap.get(roomId)!;
     participantMap.set(participantId, routerIndex);
 
-    this.logger.log(`👤 참가자 ${participantId} → Router #${routerIndex} 할당 (Room: ${roomId})`);
+    this.logger.log(
+      `👤 참가자 ${participantId} → Router #${routerIndex} 할당 (Round-robin, Room: ${roomId})`,
+    );
 
     return roomInfo.routers[routerIndex];
-  }
-
-  /**
-   * 각 Router의 Worker CPU 사용률 조회
-   * @param routers Router 배열
-   * @returns Worker CPU 누적 시간 배열 (마이크로초 단위, 상대적 비교용)
-   */
-  private async getWorkerCPUUsage(routers: Router[]): Promise<number[]> {
-    const cpuUsages = await Promise.all(
-      routers.map(async (router) => {
-        const worker = (router as any).appData?.worker;
-        if (!worker) return 0;
-
-        try {
-          const usage = await worker.getResourceUsage();
-          // CPU 누적 시간 (user + system, 마이크로초)
-          // 절대값이 아닌 상대적 비교용으로 사용
-          return usage.ru_utime + usage.ru_stime;
-        } catch (error) {
-          this.logger.warn(`Worker CPU 조회 실패 (PID: ${worker.pid}):`, error);
-          return 0;
-        }
-      }),
-    );
-    return cpuUsages;
-  }
-
-  /**
-   * 가장 부하가 적은 Router 선택 (활성화된 Router 중)
-   */
-  private selectLeastLoadedRouter(roomId: string, roomInfo: MultiRouterRoomInfo): number {
-    const participantMap = this.participantRouterMap.get(roomId)!;
-    const routerCounts = new Array(roomInfo.activeRouterCount).fill(0);
-
-    // 각 Router별 참가자 수 계산
-    for (const routerIdx of participantMap.values()) {
-      if (routerIdx < roomInfo.activeRouterCount) {
-        routerCounts[routerIdx]++;
-      }
-    }
-
-    // 가장 적은 참가자가 있는 Router 인덱스 반환
-    let minIdx = 0;
-    let minCount = routerCounts[0];
-    for (let i = 1; i < routerCounts.length; i++) {
-      if (routerCounts[i] < minCount) {
-        minCount = routerCounts[i];
-        minIdx = i;
-      }
-    }
-
-    return minIdx;
-  }
-
-  /**
-   * 가장 CPU가 낮은 Router 선택 (CPU 기반 부하 분산)
-   * @param roomInfo Room 정보
-   * @returns 선택된 Router 인덱스
-   */
-  private async selectLeastLoadedRouterByCPU(roomInfo: MultiRouterRoomInfo): Promise<number> {
-    // 모든 Router의 Worker CPU 조회
-    const workerCPUs = await this.getWorkerCPUUsage(roomInfo.routers);
-
-    // 가장 CPU가 낮은 Router 선택
-    let minIdx = 0;
-    let minCPU = workerCPUs[0];
-
-    for (let i = 1; i < workerCPUs.length; i++) {
-      if (workerCPUs[i] < minCPU) {
-        minCPU = workerCPUs[i];
-        minIdx = i;
-      }
-    }
-
-    return minIdx;
   }
 
   /**
@@ -584,7 +480,6 @@ export class MultiRouterManagerService {
     // Map에서 제거
     this.rooms.delete(roomId);
     this.participantRouterMap.delete(roomId);
-    this.roomFirstJoinTime.delete(roomId); // 버스트 감지용 시간 정보 정리
     this.logger.log(`🗑️  Room ${roomId} 정리 완료`);
   }
 
