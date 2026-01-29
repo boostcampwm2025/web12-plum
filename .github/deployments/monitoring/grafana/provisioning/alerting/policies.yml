@@ -1,0 +1,51 @@
+# Grafana Notification Policies - 알림 라우팅 정책
+# severity(심각도)에 따라 다른 채널로 알림 전송
+
+apiVersion: 1
+
+policies:
+  - orgId: 1
+    receiver: email  # 기본 수신처: Email
+    group_by:
+      - alertname
+      - severity
+      - component
+    group_wait: 30s          # 첫 알림 전까지 대기 시간
+    group_interval: 5m       # 같은 그룹 내 추가 알림 간격
+    repeat_interval: 4h      # 알림 재전송 간격
+    routes:
+      # Critical 알림 → Slack + Email 동시 전송 (즉시)
+      - receiver: all-channels
+        object_matchers:
+          - ['severity', '=', 'critical']
+        group_wait: 10s       # 긴급하므로 즉시 전송
+        group_interval: 3m
+        repeat_interval: 2h   # 2시간마다 재알림
+        continue: false
+
+      # Warning 알림 → Slack만 전송
+      - receiver: slack
+        object_matchers:
+          - ['severity', '=', 'warning']
+        group_wait: 1m
+        group_interval: 10m
+        repeat_interval: 6h
+        continue: false
+
+      # Mediasoup 관련 → Slack + Email (WebRTC 중요도 높음)
+      - receiver: all-channels
+        object_matchers:
+          - ['component', '=', 'mediasoup']
+        group_wait: 30s
+        group_interval: 5m
+        repeat_interval: 3h
+        continue: false
+
+      # Network 관련 → Slack + Email (대역폭 한계 중요)
+      - receiver: all-channels
+        object_matchers:
+          - ['component', '=', 'network']
+        group_wait: 30s
+        group_interval: 5m
+        repeat_interval: 3h
+        continue: false
