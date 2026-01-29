@@ -98,18 +98,19 @@ describe('useSocketStore (전체 동작 검증)', () => {
 
     it('연결 타임아웃(7초) 발생 시 SocketDomainError throw', async () => {
       const { actions } = useSocketStore.getState();
-      const connectPromise = actions.connect();
+      const connectPromise = actions.connect().catch((err) => err);
 
       await vi.advanceTimersByTimeAsync(7000);
 
-      await expect(connectPromise).rejects.toThrow(SocketDomainError);
-      await expect(connectPromise).rejects.toMatchObject({ code: 'CONNECTION_TIMEOUT' });
+      const error = await connectPromise;
+      expect(error).toBeInstanceOf(SocketDomainError);
+      expect(error).toMatchObject({ code: 'CONNECTION_TIMEOUT' });
       expect(useSocketStore.getState().isConnected).toBe(false);
     }, 10000);
 
     it('서버 명시적 거부(active: false) 시 CONNECTION_REJECTED 에러 즉시 throw', async () => {
       const { actions } = useSocketStore.getState();
-      const connectPromise = actions.connect();
+      const connectPromise = actions.connect().catch((err) => err);
 
       mockSocketInstance.active = false;
 
@@ -121,13 +122,14 @@ describe('useSocketStore (전체 동작 검증)', () => {
 
       await vi.advanceTimersByTimeAsync(100);
 
-      await expect(connectPromise).rejects.toThrow(SocketDomainError);
-      await expect(connectPromise).rejects.toMatchObject({ code: 'CONNECTION_REJECTED' });
+      const error = await connectPromise;
+      expect(error).toBeInstanceOf(SocketDomainError);
+      expect(error).toMatchObject({ code: 'CONNECTION_REJECTED' });
     }, 10000);
 
     it('연결 중 disconnect 호출 시 DISCONNECTED 에러 throw', async () => {
       const { actions } = useSocketStore.getState();
-      const connectPromise = actions.connect();
+      const connectPromise = actions.connect().catch((err) => err);
 
       vi.advanceTimersByTime(1000);
       actions.disconnect();
@@ -137,8 +139,9 @@ describe('useSocketStore (전체 동작 검증)', () => {
       );
       disconnectOnceHandlers.forEach((call: any[]) => call[1]?.());
 
-      await expect(connectPromise).rejects.toThrow(SocketDomainError);
-      await expect(connectPromise).rejects.toMatchObject({ code: 'DISCONNECTED' });
+      const error = await connectPromise;
+      expect(error).toBeInstanceOf(SocketDomainError);
+      expect(error).toMatchObject({ code: 'DISCONNECTED' });
       expect(useSocketStore.getState().socket).toBeNull();
     }, 10000);
   });
@@ -249,18 +252,15 @@ describe('useSocketStore (전체 동작 검증)', () => {
 
       const { actions } = useSocketStore.getState();
 
-      await expect(
-        actions.emitWithAck({
+      const error = await actions
+        .emitWithAck({
           domain: 'room',
           event: 'test' as any,
-        }),
-      ).rejects.toThrow(SocketDomainError);
-      await expect(
-        actions.emitWithAck({
-          domain: 'room',
-          event: 'test' as any,
-        }),
-      ).rejects.toMatchObject({ code: 'SOCKET_NOT_CONNECTED' });
+        })
+        .catch((err) => err);
+
+      expect(error).toBeInstanceOf(SocketDomainError);
+      expect(error).toMatchObject({ code: 'SOCKET_NOT_CONNECTED' });
     });
 
     it('ACK 성공 응답 수신 시 Promise resolve', async () => {
@@ -308,13 +308,15 @@ describe('useSocketStore (전체 동작 검증)', () => {
         setTimeout(() => callback({ success: false, error: 'VALIDATION_ERROR' }), 100);
       });
 
-      const promise = actions.emitWithAck({
-        domain: 'room',
-        event: 'test' as any,
-      });
+      const error = await actions
+        .emitWithAck({
+          domain: 'room',
+          event: 'test' as any,
+        })
+        .catch((err) => err);
 
-      await expect(promise).rejects.toThrow(SocketDomainError);
-      await expect(promise).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+      expect(error).toBeInstanceOf(SocketDomainError);
+      expect(error).toMatchObject({ code: 'VALIDATION_ERROR' });
     }, 5000);
 
     it('ACK 타임아웃 시 ACK_TIMEOUT 에러 throw', async () => {
@@ -324,15 +326,18 @@ describe('useSocketStore (전체 동작 검증)', () => {
 
       mockSocketInstance.emit.mockImplementationOnce(() => {});
 
-      const promise = actions.emitWithAck({
-        domain: 'room',
-        event: 'test' as any,
-      });
+      const promise = actions
+        .emitWithAck({
+          domain: 'room',
+          event: 'test' as any,
+        })
+        .catch((err) => err);
 
       await vi.advanceTimersByTimeAsync(7000);
 
-      await expect(promise).rejects.toThrow(SocketDomainError);
-      await expect(promise).rejects.toMatchObject({ code: 'ACK_TIMEOUT' });
+      const error = await promise;
+      expect(error).toBeInstanceOf(SocketDomainError);
+      expect(error).toMatchObject({ code: 'ACK_TIMEOUT' });
 
       vi.useRealTimers();
     }, 10000);
