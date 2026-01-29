@@ -43,7 +43,6 @@ export interface MultiRouterRoomInfo {
   roomId: string;
   strategy: RouterStrategy;
   routers: Router[]; // 여러 Router 배열
-  activeRouterCount: number; // 현재 활성화된 Router 수
   participantCount: number; // 현재 참가자 수
   pipeProducers: Map<string, PipeProducerInfo[]>; // ProducerId -> PipeProducerInfo[]
 }
