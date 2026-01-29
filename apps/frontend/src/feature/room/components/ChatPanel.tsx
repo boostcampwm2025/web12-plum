@@ -315,6 +315,7 @@ function ChatInput({ hasNewItems, newItemPreview, onScrollToBottom }: ChatInputP
         <Button
           onClick={handleSendChat}
           className="bg-primary p-2"
+          disabled={isRateLimited}
         >
           <Icon
             name="send"
