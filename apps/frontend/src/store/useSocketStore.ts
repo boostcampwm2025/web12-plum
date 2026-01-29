@@ -57,6 +57,7 @@ const SOCKET_OPTIONS = {
 interface SocketState {
   socket: TypedSocket | null;
   isConnected: boolean;
+  isReconnected: boolean;
   reconnectCount: number;
   actions: {
     connect: () => Promise<TypedSocket>;
@@ -83,6 +84,7 @@ interface SocketState {
 export const useSocketStore = create<SocketState>((set, get) => ({
   socket: null,
   isConnected: false,
+  isReconnected: false,
   reconnectCount: 0,
 
   actions: {
@@ -175,6 +177,12 @@ export const useSocketStore = create<SocketState>((set, get) => ({
         // 재연결 실패
         currentSocket.io.on('reconnect_error', (error) => {
           logger.socket.error('재연결 시도 실패', error.message);
+        });
+
+        // 재연결 성공
+        currentSocket.io.on('reconnect', () => {
+          logger.socket.info('소켓 재연결 성공');
+          set({ isReconnected: true });
         });
       }
 
