@@ -10,13 +10,14 @@ import type {
   UpdateQnaSubPayload,
   EndQnaPayload,
   EndQnaDetailPayload,
+  ChatMessage,
 } from '@plum/shared-interfaces';
 
 import { logger } from '@/shared/lib/logger';
 import type { MediaSocket } from '../types';
 
 /**
- * 인터랙션 관련 소켓 리스너(투표/제스처) 설정 모듈
+ * 인터랙션 관련 소켓 리스너(투표/제스처/채팅) 설정 모듈
  */
 export const InteractionSignaling = {
   /**
@@ -110,6 +111,21 @@ export const InteractionSignaling = {
   },
 
   /**
+   * 채팅 이벤트 리스너 설정 (발표자/참여자 공통)
+   */
+  setupChatHandlers: (
+    socket: MediaSocket,
+    actions: {
+      handleNewChat: (data: ChatMessage) => void;
+    },
+  ) => {
+    socket.on('new_chat', (data) => {
+      logger.socket.info('새 채팅 메시지 수신', data);
+      actions.handleNewChat(data);
+    });
+  },
+
+  /**
    * 인터랙션 이벤트 리스너 해제
    */
   removeAllHandlers: (socket: MediaSocket) => {
@@ -124,6 +140,7 @@ export const InteractionSignaling = {
     socket.off('update_qna_detail');
     socket.off('qna_end');
     socket.off('qna_end_detail');
+    socket.off('new_chat');
     logger.socket.info('[Interaction] 모든 인터랙션 리스너 해제 완료');
   },
 };
