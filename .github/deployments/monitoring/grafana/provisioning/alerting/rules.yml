@@ -30,8 +30,12 @@ groups:
                 - evaluator:
                     params: [1]
                     type: lt
+                  operator:
+                    type: and
                   query:
                     params: [A]
+                  reducer:
+                    type: last
                   type: query
               refId: C
               type: classic_conditions
@@ -66,8 +70,12 @@ groups:
                 - evaluator:
                     params: [1]
                     type: lt
+                  operator:
+                    type: and
                   query:
                     params: [A]
+                  reducer:
+                    type: last
                   type: query
               refId: C
               type: classic_conditions
@@ -102,8 +110,12 @@ groups:
                 - evaluator:
                     params: [0]
                     type: gt
+                  operator:
+                    type: and
                   query:
                     params: [A]
+                  reducer:
+                    type: last
                   type: query
               refId: C
               type: classic_conditions
@@ -138,8 +150,12 @@ groups:
                 - evaluator:
                     params: [5]  # 분당 5회 이상
                     type: gt
+                  operator:
+                    type: and
                   query:
                     params: [A]
+                  reducer:
+                    type: last
                   type: query
               refId: C
               type: classic_conditions
@@ -174,8 +190,12 @@ groups:
                 - evaluator:
                     params: [10]  # 5분간 10회 이상
                     type: gt
+                  operator:
+                    type: and
                   query:
                     params: [A]
+                  reducer:
+                    type: last
                   type: query
               refId: C
               type: classic_conditions
@@ -216,8 +236,12 @@ groups:
                 - evaluator:
                     params: [80]
                     type: gt
+                  operator:
+                    type: and
                   query:
                     params: [A]
+                  reducer:
+                    type: last
                   type: query
               refId: C
               type: classic_conditions
@@ -252,8 +276,12 @@ groups:
                 - evaluator:
                     params: [0.05]  # 50ms
                     type: gt
+                  operator:
+                    type: and
                   query:
                     params: [A]
+                  reducer:
+                    type: last
                   type: query
               refId: C
               type: classic_conditions
@@ -294,8 +322,12 @@ groups:
                 - evaluator:
                     params: [1.0]
                     type: gt
+                  operator:
+                    type: and
                   query:
                     params: [A]
+                  reducer:
+                    type: last
                   type: query
               refId: C
               type: classic_conditions
@@ -336,8 +368,12 @@ groups:
                 - evaluator:
                     params: [50]  # 5분간 50명 증가
                     type: gt
+                  operator:
+                    type: and
                   query:
                     params: [A]
+                  reducer:
+                    type: last
                   type: query
               refId: C
               type: classic_conditions
@@ -361,7 +397,7 @@ groups:
       # Mediasoup Consumers 급증 (5분간 50% 이상 증가)
       - uid: mediasoup_consumers_spike
         title: Mediasoup Consumers Rapid Increase
-        condition: C
+        condition: D
         data:
           - refId: A
             relativeTimeRange:
@@ -392,8 +428,12 @@ groups:
                 - evaluator:
                     params: [50]  # 50% 증가
                     type: gt
+                  operator:
+                    type: and
                   query:
                     params: [C]
+                  reducer:
+                    type: last
                   type: query
               refId: D
               type: classic_conditions
@@ -428,8 +468,12 @@ groups:
                 - evaluator:
                     params: [30]
                     type: gt
+                  operator:
+                    type: and
                   query:
                     params: [A]
+                  reducer:
+                    type: last
                   type: query
               refId: C
               type: classic_conditions
@@ -464,8 +508,12 @@ groups:
                 - evaluator:
                     params: [85]
                     type: gt
+                  operator:
+                    type: and
                   query:
                     params: [A]
+                  reducer:
+                    type: last
                   type: query
               refId: C
               type: classic_conditions
@@ -489,7 +537,7 @@ groups:
       # 네트워크 송신 대역폭 급증 (5분간 50% 증가)
       - uid: network_transmit_spike
         title: Network Transmit Bandwidth Spike
-        condition: C
+        condition: D
         data:
           - refId: A
             relativeTimeRange:
@@ -520,8 +568,12 @@ groups:
                 - evaluator:
                     params: [50]
                     type: gt
+                  operator:
+                    type: and
                   query:
                     params: [C]
+                  reducer:
+                    type: last
                   type: query
               refId: D
               type: classic_conditions
@@ -562,8 +614,12 @@ groups:
                 - evaluator:
                     params: [0.3]
                     type: gt
+                  operator:
+                    type: and
                   query:
                     params: [A]
+                  reducer:
+                    type: last
                   type: query
               refId: C
               type: classic_conditions
@@ -598,8 +654,12 @@ groups:
                 - evaluator:
                     params: [100]
                     type: gt
+                  operator:
+                    type: and
                   query:
                     params: [A]
+                  reducer:
+                    type: last
                   type: query
               refId: C
               type: classic_conditions
@@ -623,7 +683,7 @@ groups:
       # Redis 메모리 사용량 급증 (5분간 50% 증가)
       - uid: redis_memory_spike
         title: Redis Memory Usage Spike
-        condition: C
+        condition: D
         data:
           - refId: A
             relativeTimeRange:
@@ -654,8 +714,12 @@ groups:
                 - evaluator:
                     params: [50]
                     type: gt
+                  operator:
+                    type: and
                   query:
                     params: [C]
+                  reducer:
+                    type: last
                   type: query
               refId: D
               type: classic_conditions
@@ -696,8 +760,12 @@ groups:
                 - evaluator:
                     params: [50]
                     type: gt
+                  operator:
+                    type: and
                   query:
                     params: [A]
+                  reducer:
+                    type: last
                   type: query
               refId: C
               type: classic_conditions
