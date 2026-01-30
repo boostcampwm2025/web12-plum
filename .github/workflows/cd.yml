@@ -55,12 +55,13 @@ jobs:
           AWS_KEY: ${{ secrets.AWS_S3_ACCESS_KEY }}
           AWS_SECRET: ${{ secrets.AWS_S3_SECRET_KEY }}
           AWS_BUCKET: ${{ secrets.AWS_S3_BUCKET_NAME }}
+          REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD_DEV }}
         with:
           host: ${{ secrets.NCP_DEV_HOST }}
           username: ${{ secrets.NCP_DEV_USERNAME }}
           key: ${{ secrets.NCP_DEV_SSH_KEY }}
           port: ${{ secrets.NCP_DEV_PORT || 22 }}
-          envs: DOCKER_USERNAME,TAG,FE_URL,AWS_REGION,AWS_KEY,AWS_SECRET,AWS_BUCKET
+          envs: DOCKER_USERNAME,TAG,FE_URL,AWS_REGION,AWS_KEY,AWS_SECRET,AWS_BUCKET,REDIS_PASSWORD
           script: |
             DEPLOY_BRANCH="${{ needs.prepare.outputs.branch }}"
             echo "배포 브랜치: ${DEPLOY_BRANCH}"
@@ -78,8 +79,8 @@ jobs:
             GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy_key -o StrictHostKeyChecking=no" \
               git fetch origin
             git checkout ${DEPLOY_BRANCH}
-            GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy_key -o StrictHostKeyChecking=no" \
-              git pull origin ${DEPLOY_BRANCH}
+            # 로컬 변경사항 무시하고 원격 상태로 강제 동기화
+            git reset --hard origin/${DEPLOY_BRANCH}
 
             # .env 파일에 값 업데이트
             update_env() {
@@ -104,6 +105,7 @@ jobs:
             update_env "REDIS_HOST" "${{ secrets.NCP_DEV_REDIS_HOST }}"
             update_env "REDIS_PORT" "${{ secrets.NCP_DEV_REDIS_PORT }}"
             update_env "ANNOUNCED_IP" "${{ secrets.NCP_DEV_HOST }}"
+            update_env "REDIS_PASSWORD" "${REDIS_PASSWORD}"
 
             # 기존 컨테이너 중지 및 제거 (포트 충돌 방지)
             docker compose -f docker-compose.yml -f docker-compose.develop.yml down || true
@@ -145,12 +147,13 @@ jobs:
           AWS_KEY: ${{ secrets.AWS_S3_ACCESS_KEY }}
           AWS_SECRET: ${{ secrets.AWS_S3_SECRET_KEY }}
           AWS_BUCKET: ${{ secrets.AWS_S3_BUCKET_NAME }}
+          REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD_PROD }}
         with:
           host: ${{ secrets.NCP_PROD_HOST }}
           username: ${{ secrets.NCP_PROD_USERNAME }}
           key: ${{ secrets.NCP_PROD_SSH_KEY }}
           port: ${{ secrets.NCP_PROD_PORT || 22 }}
-          envs: DOCKER_USERNAME,TAG,FE_URL,AWS_REGION,AWS_KEY,AWS_SECRET,AWS_BUCKET
+          envs: DOCKER_USERNAME,TAG,FE_URL,AWS_REGION,AWS_KEY,AWS_SECRET,AWS_BUCKET,REDIS_PASSWORD
           script: |
             DEPLOY_BRANCH="${{ needs.prepare.outputs.branch }}"
             echo "배포 브랜치: ${DEPLOY_BRANCH}"
@@ -168,8 +171,8 @@ jobs:
             GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy_key -o StrictHostKeyChecking=no" \
               git fetch origin
             git checkout ${DEPLOY_BRANCH}
-            GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy_key -o StrictHostKeyChecking=no" \
-              git pull origin ${DEPLOY_BRANCH}
+            # 로컬 변경사항 무시하고 원격 상태로 강제 동기화
+            git reset --hard origin/${DEPLOY_BRANCH}
             
             update_env() {
               local key=$1
@@ -193,6 +196,7 @@ jobs:
             update_env "REDIS_HOST" "${{ secrets.NCP_PROD_REDIS_HOST }}"
             update_env "REDIS_PORT" "${{ secrets.NCP_PROD_REDIS_PORT }}"
             update_env "ANNOUNCED_IP" "${{ secrets.NCP_PROD_HOST }}"
+            update_env "REDIS_PASSWORD" "${REDIS_PASSWORD}"
 
             # 기존 컨테이너 중지 및 제거 (포트 충돌 방지)
             docker compose -f docker-compose.yml -f docker-compose.prod.yml down || true
@@ -273,14 +277,15 @@ jobs:
             # 환경 변수 설정
             echo "CONTAINER_PREFIX=plum-dev" > .env
             echo "REDIS_MAXMEMORY=1gb" >> .env
-
+            echo "REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD_DEV }}" >> .env
+            
             # 컨테이너 재시작
             docker compose pull
             docker compose up -d
 
             # 헬스체크
             sleep 5
-            docker exec plum-dev-redis redis-cli ping || echo "Redis health check failed"
+            docker exec plum-dev-redis redis-cli -a "${{ secrets.REDIS_PASSWORD_DEV }}" ping || echo "Redis health check failed"
 
             # 상태 확인
             docker compose ps
@@ -333,10 +338,14 @@ jobs:
 
             # 설정 파일 복사
             cp .github/deployments/monitoring/docker-compose.yml ./docker-compose.yml
-            mkdir -p prometheus loki promtail
+            mkdir -p prometheus loki promtail grafana/provisioning/datasources grafana/provisioning/alerting
             cp .github/deployments/monitoring/prometheus/prometheus-dev.yml ./prometheus/prometheus.yml
             cp .github/deployments/monitoring/loki/loki-config.yaml ./loki/loki-config.yaml
             cp .github/deployments/monitoring/promtail/promtail-config.yaml ./promtail/promtail-config.yaml
+            cp .github/deployments/monitoring/grafana/provisioning/datasources/datasources.yml ./grafana/provisioning/datasources/datasources.yml
+            cp .github/deployments/monitoring/grafana/provisioning/alerting/rules.yml ./grafana/provisioning/alerting/rules.yml
+            cp .github/deployments/monitoring/grafana/provisioning/alerting/contactpoints.yml ./grafana/provisioning/alerting/contactpoints.yml
+            cp .github/deployments/monitoring/grafana/provisioning/alerting/policies.yml ./grafana/provisioning/alerting/policies.yml
 
             # Prometheus 설정 파일의 IP 플레이스홀더 치환
             sed -i "s/BACKEND_HOST_PLACEHOLDER/${{ secrets.NCP_DEV_HOST }}/g" ./prometheus/prometheus.yml
@@ -348,6 +357,16 @@ jobs:
             echo "GRAFANA_ADMIN_USER=admin" >> .env
             echo "GRAFANA_ADMIN_PASSWORD=${{ secrets.GRAFANA_ADMIN_PASSWORD_DEV }}" >> .env
             echo "GRAFANA_URL=http://211.188.50.8:3000" >> .env
+            # SMTP 설정
+            echo "SMTP_HOST=${{ secrets.SMTP_HOST }}" >> .env
+            echo "SMTP_PORT=${{ secrets.SMTP_PORT }}" >> .env
+            echo "SMTP_USER=${{ secrets.SMTP_USER }}" >> .env
+            echo "SMTP_PASSWORD=${{ secrets.SMTP_PASSWORD }}" >> .env
+            echo "SMTP_FROM_ADDRESS=${{ secrets.SMTP_FROM_ADDRESS }}" >> .env
+            echo "SMTP_FROM_NAME=${{ secrets.SMTP_FROM_NAME }}" >> .env
+            # Slack 설정
+            echo "SLACK_WEBHOOK_URL=${{ secrets.SLACK_WEBHOOK_URL }}" >> .env
+            echo "ALERT_EMAIL_ADDRESSES=${{ secrets.ALERT_EMAIL_ADDRESSES }}" >> .env
 
             # 데이터 디렉토리 권한 설정
             mkdir -p prometheus/data loki/data grafana/data
@@ -417,12 +436,14 @@ jobs:
             # 환경 변수 설정 (Prod는 메모리 2GB)
             echo "CONTAINER_PREFIX=plum-prod" > .env
             echo "REDIS_MAXMEMORY=2gb" >> .env
+            echo "REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD_PROD }}" >> .env
+
 
             docker compose pull
             docker compose up -d
 
             sleep 5
-            docker exec plum-prod-redis redis-cli ping || echo "Redis health check failed"
+            docker exec plum-prod-redis redis-cli -a "${{ secrets.REDIS_PASSWORD_PROD }}" ping || echo "Redis health check failed"
 
             docker compose ps
 
@@ -473,10 +494,14 @@ jobs:
             fi
 
             cp .github/deployments/monitoring/docker-compose.yml ./docker-compose.yml
-            mkdir -p prometheus loki promtail
+            mkdir -p prometheus loki promtail grafana/provisioning/datasources grafana/provisioning/alerting
             cp .github/deployments/monitoring/prometheus/prometheus-prod.yml ./prometheus/prometheus.yml
             cp .github/deployments/monitoring/loki/loki-config.yaml ./loki/loki-config.yaml
             cp .github/deployments/monitoring/promtail/promtail-config.yaml ./promtail/promtail-config.yaml
+            cp .github/deployments/monitoring/grafana/provisioning/datasources/datasources.yml ./grafana/provisioning/datasources/datasources.yml
+            cp .github/deployments/monitoring/grafana/provisioning/alerting/rules.yml ./grafana/provisioning/alerting/rules.yml
+            cp .github/deployments/monitoring/grafana/provisioning/alerting/contactpoints.yml ./grafana/provisioning/alerting/contactpoints.yml
+            cp .github/deployments/monitoring/grafana/provisioning/alerting/policies.yml ./grafana/provisioning/alerting/policies.yml
 
             # Prometheus 설정 파일의 IP 플레이스홀더 치환
             sed -i "s/BACKEND_HOST_PLACEHOLDER/${{ secrets.NCP_PROD_HOST }}/g" ./prometheus/prometheus.yml
@@ -488,6 +513,16 @@ jobs:
             echo "GRAFANA_ADMIN_USER=admin" >> .env
             echo "GRAFANA_ADMIN_PASSWORD=${{ secrets.GRAFANA_ADMIN_PASSWORD_PROD }}" >> .env
             echo "GRAFANA_URL=http://101.79.11.160:3000" >> .env
+            # SMTP 설정
+            echo "SMTP_HOST=${{ secrets.SMTP_HOST }}" >> .env
+            echo "SMTP_PORT=${{ secrets.SMTP_PORT }}" >> .env
+            echo "SMTP_USER=${{ secrets.SMTP_USER }}" >> .env
+            echo "SMTP_PASSWORD=${{ secrets.SMTP_PASSWORD }}" >> .env
+            echo "SMTP_FROM_ADDRESS=${{ secrets.SMTP_FROM_ADDRESS }}" >> .env
+            echo "SMTP_FROM_NAME=${{ secrets.SMTP_FROM_NAME }}" >> .env
+            # Slack 설정
+            echo "SLACK_WEBHOOK_URL=${{ secrets.SLACK_WEBHOOK_URL }}" >> .env
+            echo "ALERT_EMAIL_ADDRESSES=${{ secrets.ALERT_EMAIL_ADDRESSES }}" >> .env
 
             # 데이터 디렉토리 권한 설정
             mkdir -p prometheus/data loki/data grafana/data

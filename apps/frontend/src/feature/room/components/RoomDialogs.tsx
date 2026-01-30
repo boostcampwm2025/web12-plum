@@ -1,9 +1,10 @@
 import { AnimatePresence } from 'motion/react';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Dialog as RoomDialog } from './Dialog';
 import { useRoomUIStore } from '../stores/useRoomUIStore';
 import { PollDialog } from './PollDialog';
 import { QnaDialog } from './QnaDialog';
+import { RankingDialog } from './RankingDialog';
 import { usePollStore } from '../stores/usePollStore';
 import { useQnaStore } from '../stores/useQnaStore';
 import { useSocketStore } from '@/store/useSocketStore';
@@ -14,23 +15,23 @@ export function RoomDialogs() {
   const activeDialog = useRoomUIStore((state) => state.activeDialog);
   const setActiveDialog = useRoomUIStore((state) => state.setActiveDialog);
   const polls = usePollStore((state) => state.polls);
+  const audienceVotedOptionByPollId = usePollStore((state) => state.audienceVotedOptionByPollId);
+  const pollActions = usePollStore((state) => state.actions);
   const qnas = useQnaStore((state) => state.qnas);
+  const answeredByQnaId = useQnaStore((state) => state.answeredByQnaId);
+  const qnaActions = useQnaStore((state) => state.actions);
   const emit = useSocketStore((state) => state.actions.emit);
   const addToast = useToastStore((state) => state.actions.addToast);
-  const [selectedOptionByPollId, setSelectedOptionByPollId] = useState<
-    Record<string, number | null>
-  >({});
-  const [submittedQnaById, setSubmittedQnaById] = useState<Record<string, boolean>>({});
 
   const activePoll = useMemo(() => polls.find((poll) => poll.status === 'active'), [polls]);
   const activeQna = useMemo(() => qnas.find((qna) => qna.status === 'active'), [qnas]);
   const handleCloseDialog = () => setActiveDialog(activeDialog!);
   const pollStartedAt = getStartedAt(activePoll?.startedAt);
   const qnaStartedAt = getStartedAt(activeQna?.startedAt);
-  const selectedOptionId = activePoll ? (selectedOptionByPollId[activePoll.id] ?? null) : null;
+  const selectedOptionId = activePoll ? (audienceVotedOptionByPollId[activePoll.id] ?? null) : null;
 
   const handleVote = (pollId: string, optionId: number) => {
-    emit('vote', { pollId, optionId }, (response) => {
+    emit('vote', { pollId, optionId, isGesture: false }, (response) => {
       if (!response.success) {
         logger.socket.warn('투표 참여 실패', response.error);
       }
@@ -47,19 +48,9 @@ export function RoomDialogs() {
         });
         return;
       }
-      setSubmittedQnaById((state) => ({ ...state, [qnaId]: true }));
+      qnaActions.setAnswered(qnaId, true);
     });
   };
-
-  useEffect(() => {
-    if (activePoll) return;
-    setSelectedOptionByPollId({});
-  }, [activePoll]);
-
-  useEffect(() => {
-    if (activeQna) return;
-    setSubmittedQnaById({});
-  }, [activeQna]);
 
   return (
     <AnimatePresence>
@@ -74,10 +65,7 @@ export function RoomDialogs() {
             onVote={handleVote}
             selectedOptionId={selectedOptionId}
             onSelectOption={(pollId, optionId) =>
-              setSelectedOptionByPollId((state) => ({
-                ...state,
-                [pollId]: optionId,
-              }))
+              pollActions.setAudienceVotedOption(pollId, optionId)
             }
           />
         </RoomDialog>
@@ -91,16 +79,16 @@ export function RoomDialogs() {
             qna={activeQna}
             startedAt={qnaStartedAt}
             onSubmit={handleAnswer}
-            isSubmitted={activeQna ? (submittedQnaById[activeQna.id] ?? false) : false}
+            isSubmitted={activeQna ? (answeredByQnaId[activeQna.id] ?? false) : false}
           />
         </RoomDialog>
       )}
       {activeDialog === 'ranking' && (
         <RoomDialog
-          title="랭킹"
+          title="참여도 순위"
           onClose={handleCloseDialog}
         >
-          <div>랭킹 내용</div>
+          <RankingDialog />
         </RoomDialog>
       )}
     </AnimatePresence>

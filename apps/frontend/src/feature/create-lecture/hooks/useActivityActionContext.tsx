@@ -25,8 +25,7 @@ const ActivityContext = createContext<ActivityContextValue | null>(null);
 
 /**
  * 활동(투표/Q&A) 상태 및 제어 함수들 관리 Provider 컴포넌트
- * @param children 자식 컴포넌트들
- * @returns 활동 상태 및 제어 함수들 관리 Provider JSX 요소
+ * @param children 자식 컴포넌트들\
  */
 export function ActivityProvider({ children }: { children: ReactNode }) {
   const { control } = useFormContext<CreateRoomRequest>();

@@ -4,6 +4,9 @@ import { ParticipantPayload, ParticipantRole } from './participant.js';
 import { MediaKind, MediasoupProducer, MediaType, RoomInfo, ToggleActionType } from './shared.js';
 import { Poll, pollFormSchema, PollOption, PollPayload } from './poll.js';
 import { Answer, Qna, qnaFormSchema, QnaPayload } from './qna.js';
+import { FileInfo } from './file.js';
+import { ChatMessage, SendChatRequest, SyncChatRequest } from './chat.js';
+import { RankItem } from './score.js';
 
 // 제스처 타입 정의
 export type GestureType =
@@ -45,6 +48,10 @@ export interface GetProducerRequest {
   type: MediaType;
 }
 
+export interface CloseProducerRequest {
+  producerId: string;
+}
+
 export interface ConsumeRequest<T = any> {
   transportId: string;
   producerId: string;
@@ -52,6 +59,10 @@ export interface ConsumeRequest<T = any> {
 }
 
 export interface ConsumeResumeRequest {
+  consumerId: string;
+}
+
+export interface CloseConsumerRequest {
   consumerId: string;
 }
 
@@ -81,6 +92,7 @@ export interface EmitQnaRequest {
 export interface VoteRequest {
   pollId: string;
   optionId: number;
+  isGesture: boolean;
 }
 
 export type AnswerRequest = {
@@ -140,6 +152,8 @@ export type GetProducerResponse =
       producerId?: string;
     };
 
+export type CloseProducerResponse = BaseResponse;
+
 export type ConsumeResponse<T = any> =
   | (BaseResponse & { success: false })
   | {
@@ -149,9 +163,12 @@ export type ConsumeResponse<T = any> =
       kind: MediaKind;
       type: MediaType;
       rtpParameters: T;
+      producerPaused: boolean; // 추가된 필드
     };
 
 export type ConsumeResumeResponse = BaseResponse;
+
+export type CloseConsumerResponse = BaseResponse;
 
 export type ToggleMediaResponse = BaseResponse;
 
@@ -172,11 +189,27 @@ export type GetPollResponse =
       polls: Poll[];
     };
 
+export type GetActivePollResponse =
+  | (BaseResponse & { success: false })
+  | {
+      success: true;
+      poll: PollPayload | null;
+      votedOptionId: number | null;
+    };
+
 export type GetQnaResponse =
   | (BaseResponse & { success: false })
   | {
       success: true;
       qnas: Qna[];
+    };
+
+export type GetActiveQnaResponse =
+  | (BaseResponse & { success: false })
+  | {
+      success: true;
+      qna: QnaPayload | null;
+      answered?: boolean;
     };
 
 export type EmitPollResponse =
@@ -199,6 +232,23 @@ export type BreakQnaResponse =
   | (BaseResponse & { success: false })
   | { success: true; answers: Answer[]; count: number };
 
+export type GetPresentationResponse =
+  | (BaseResponse & { success: false })
+  | { success: true; files: FileInfo[] };
+
+export type SendChatResponse =
+  | (BaseResponse & { success: false; retryable?: boolean })
+  | { success: true; messageId: string };
+
+export type SyncChatResponse =
+  | (BaseResponse & { success: false })
+  | { success: true; messages: ChatMessage[] };
+
+export type GetActivityScoreRank =
+  | (BaseResponse & { success: false })
+  | ({ success: true; score: number } & RankUpdatePayload)
+  | ({ success: true } & PresenterScoreInfoPayload);
+
 // 서버에서 보내는 브로드캐스트 페이로드
 export type UserJoinedPayload = ParticipantPayload;
 
@@ -210,8 +260,18 @@ export interface UserLeftPayload {
 
 export interface NewProducerPayload extends MediasoupProducer {
   participantRole: ParticipantRole;
+}
+
+export interface ProducerClosedPayload {
+  participantId: string;
+  producerId: string;
   kind: MediaKind;
   type: MediaType;
+}
+
+export interface ConsumerClosedPayload {
+  consumerId: string;
+  producerId: string;
 }
 
 export type MediaStateChangedPayload = NewProducerPayload & {
@@ -277,6 +337,21 @@ export type EndQnaPayload = {
   text?: string[];
 };
 
+export interface ScoreUpdatePayload {
+  score: number;
+  penaltyCount: number;
+  reason: string;
+}
+
+export interface RankUpdatePayload {
+  top: RankItem[];
+}
+
+export interface PresenterScoreInfoPayload {
+  top: RankItem[];
+  lowest: RankItem | null;
+}
+
 /**
  * 서버 -> 클라이언트 이벤트
  */
@@ -286,6 +361,10 @@ export interface ServerToClientEvents {
   user_left: (data: UserLeftPayload) => void;
 
   new_producer: (data: NewProducerPayload) => void;
+
+  producer_closed: (data: ProducerClosedPayload) => void;
+
+  consumer_closed: (data: ConsumerClosedPayload) => void;
 
   media_state_changed: (data: MediaStateChangedPayload) => void;
 
@@ -312,6 +391,14 @@ export interface ServerToClientEvents {
   qna_end: (data: EndQnaPayload) => void;
 
   qna_end_detail: (data: EndQnaDetailPayload) => void;
+
+  new_chat: (data: ChatMessage) => void;
+
+  score_update: (data: ScoreUpdatePayload) => void;
+
+  rank_update: (data: RankUpdatePayload) => void;
+
+  presenter_rank_update: (data: PresenterScoreInfoPayload) => void;
 }
 
 /**
@@ -332,9 +419,13 @@ export interface ClientToServerEvents {
 
   produce: (data: ProduceRequest, cb: (res: ProduceResponse) => void) => void;
 
+  close_producer: (data: CloseProducerRequest, cb: (res: CloseProducerResponse) => void) => void;
+
   consume: (data: ConsumeRequest, cb: (res: ConsumeResponse) => void) => void;
 
   consume_resume: (data: ConsumeResumeRequest, cb: (res: ConsumeResumeResponse) => void) => void;
+
+  close_consumer: (data: CloseConsumerRequest, cb: (res: CloseConsumerResponse) => void) => void;
 
   toggle_media: (data: ToggleMediaRequest, cb: (res: ToggleMediaResponse) => void) => void;
 
@@ -352,7 +443,11 @@ export interface ClientToServerEvents {
 
   get_poll: (cb: (res: GetPollResponse) => void) => void;
 
+  get_active_poll: (cb: (res: GetActivePollResponse) => void) => void;
+
   get_qna: (cb: (res: GetQnaResponse) => void) => void;
+
+  get_active_qna: (cb: (res: GetActiveQnaResponse) => void) => void;
 
   emit_poll: (data: EmitPollRequest, cb: (res: EmitPollResponse) => void) => void;
 
@@ -365,4 +460,12 @@ export interface ClientToServerEvents {
   break_poll: (data: BreakPollRequest, cb: (res: BreakPollResponse) => void) => void;
 
   break_qna: (data: BreakQnaRequest, cb: (res: BreakQnaResponse) => void) => void;
+
+  get_presentation: (cb: (res: GetPresentationResponse) => void) => void;
+
+  send_chat: (data: SendChatRequest, cb: (res: SendChatResponse) => void) => void;
+
+  sync_chat: (data: SyncChatRequest, cb: (res: SyncChatResponse) => void) => void;
+
+  get_activity_score_rank: (cb: (res: GetActivityScoreRank) => void) => void;
 }

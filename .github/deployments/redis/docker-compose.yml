@@ -16,10 +16,15 @@ services:
       - redis-data:/data
     command: >
       redis-server
+      --requirepass "${REDIS_PASSWORD}"
       --appendonly yes
       --appendfsync everysec
       --maxmemory ${REDIS_MAXMEMORY:-256mb}
       --maxmemory-policy volatile-lru
+      --notify-keyspace-events Ex
+      --rename-command FLUSHALL ""
+      --rename-command FLUSHDB ""
+      --rename-command CONFIG ""
     networks:
       - redis-network
     healthcheck:
@@ -38,6 +43,7 @@ services:
       - "${REDIS_EXPORTER_PORT:-9121}:9121"
     environment:
       - REDIS_ADDR=redis:6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
     depends_on:
       - redis # Redis 컨테이너가 먼저 시작되어야 함
     networks:

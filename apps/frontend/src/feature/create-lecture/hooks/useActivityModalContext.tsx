@@ -24,7 +24,6 @@ const ActivityModalContext = createContext<ActivityModalContextValue | null>(nul
 /**
  * 활동 모달 상태 관리 Provider 컴포넌트
  * @param children 자식 컴포넌트들
- * @returns 활동 모달 상태 관리 Provider JSX 요소
  */
 export function ActivityModalProvider({ children }: { children: ReactNode }) {
   const [modalState, setModalState] = useState<ActivityModalState>({ type: 'none' });

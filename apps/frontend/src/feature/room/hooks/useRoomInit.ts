@@ -1,20 +1,22 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useParams } from 'react-router';
 
 import { logger } from '@/shared/lib/logger';
-import { useMediaDeviceStore } from '@/store/useMediaDeviceStore';
 import { useStreamStore } from '@/store/useLocalStreamStore';
 import { useSocketStore } from '@/store/useSocketStore';
 import { useToastStore } from '@/store/useToastStore';
+import { useMediaInfra } from '@/mediasoup/useMediaInfra';
+import { useSafeRoomId } from '@/shared/hooks/useSafeRoomId';
 
-import { useRoomStore } from '../stores/useRoomStore';
-import { useMediaStore } from '../stores/useMediaStore';
-import { useMediaConnectionContext } from './useMediaConnectionContext';
-import { RoomSignaling } from '../mediasoup/RoomSignaling';
 import { InteractionSignaling } from '../mediasoup/InteractionSignaling';
-import { usePollStore } from '../stores/usePollStore';
+import { useMediaStore } from '../stores/useMediaStore';
+import { useRoomStore } from '../stores/useRoomStore';
 import { useRoomUIStore } from '../stores/useRoomUIStore';
+import { usePollStore } from '../stores/usePollStore';
 import { useQnaStore } from '../stores/useQnaStore';
+import { useChatStore } from '../stores/useChatStore';
+import { useRankStore } from '../stores/useRankStore';
+import { MediaRoomManager } from '../mediasoup/MediaRoomManager';
+import { useMediaControlContext } from './useMediaControlContext';
 
 /**
  * Room 초기화 통합 훅
@@ -31,33 +33,50 @@ export function useRoomInit() {
    */
   const hasStartedInit = useRef(false);
 
-  // URL 파라미터
-  const { roomId } = useParams<{ roomId: string }>();
+  /**
+   * MediaRoomManager 인스턴스 참조
+   */
+  const roomManagerRef = useRef<MediaRoomManager | null>(null);
 
-  // 스토어 상태
-  const isMicOn = useMediaStore((state) => state.isMicOn);
-  const isCameraOn = useMediaStore((state) => state.isCameraOn);
+  const roomId = useSafeRoomId();
+  const infra = useMediaInfra();
+  const controls = useMediaControlContext();
+
+  // 전역 상태
   const hasHydrated = useMediaStore((state) => state.hasHydrated);
-  const myInfo = useRoomStore((state) => state.myInfo);
-
-  // 스토어 액션
-  const { initDevice } = useMediaDeviceStore((state) => state.actions);
-  const { ensureTracks } = useStreamStore((state) => state.actions);
-  const { initParticipants, addParticipant, removeParticipant, addProducer, setMyInfo } =
-    useRoomStore((state) => state.actions);
-  const { removeRemoteStreamByParticipant } = useMediaStore((state) => state.actions);
-  const { connect: connectSocket } = useSocketStore((state) => state.actions);
-  const { addToast } = useToastStore((state) => state.actions);
+  const isReconnected = useSocketStore((state) => state.isReconnected);
+  const roomActions = useRoomStore((state) => state.actions);
+  const mediaActions = useMediaStore((state) => state.actions);
+  const streamActions = useStreamStore((state) => state.actions);
+  const socketActions = useSocketStore((state) => state.actions);
   const pollActions = usePollStore((state) => state.actions);
   const qnaActions = useQnaStore((state) => state.actions);
+  const chatActions = useChatStore((state) => state.actions);
+  const rankActions = useRankStore((state) => state.actions);
+  const { addToast } = useToastStore((state) => state.actions);
 
-  // 미디어 컨트롤러
-  const {
-    startProducing,
-    consumeRemoteProducer,
-    consumeExistingProducers,
-    cleanup: cleanupMedia,
-  } = useMediaConnectionContext();
+  /**
+   * 초기 미디어 장치 설정 및 송출 시작
+   */
+  const handleInitialMedia = async () => {
+    const isMicOn = useMediaStore.getState().isMicOn;
+    const isCameraOn = useMediaStore.getState().isCameraOn;
+    if (!isCameraOn && !isMicOn) return;
+
+    try {
+      // 1. 하드웨어 트랙 확보
+      await streamActions.ensureTracks({ video: isCameraOn, audio: isMicOn });
+
+      // 2. 애플리케이션 서비스를 통해 송출 시작
+      const tasks = [];
+      if (isMicOn) tasks.push(controls.enableMic());
+      if (isCameraOn) tasks.push(controls.enableCamera());
+
+      await Promise.all(tasks);
+    } catch (error) {
+      logger.custom.warn('[RoomInit] 초기 미디어 장치 연결 실패:', error);
+    }
+  };
 
   /**
    * 메인 초기화 파이프라인
@@ -65,6 +84,8 @@ export function useRoomInit() {
   const runInitPipeline = useCallback(async () => {
     try {
       if (!roomId) throw new Error('유효하지 않은 방 ID 입니다.');
+
+      const myInfo = useRoomStore.getState().myInfo;
       if (!myInfo) throw new Error('내 참가자 정보가 존재하지 않습니다.');
 
       // 로딩 시작
@@ -72,24 +93,75 @@ export function useRoomInit() {
       setError(null);
 
       // 1. 소켓 연결 및 이벤트 핸들러 등록
-      const connectedSocket = await connectSocket();
-      if (!connectedSocket) throw new Error('서버 소켓 연결에 실패했습니다.');
+      const socket = await socketActions.connect();
+      if (!socket) throw new Error('네트워크 연결에 실패했습니다.');
 
-      // 2. 실시간 이벤트 핸들러 설정
-      RoomSignaling.setupAllHandlers(connectedSocket, {
-        addParticipant,
-        removeParticipant,
-        addProducer,
-        consumeRemoteProducer,
-        handleMediaStateChanged: (data) => {
-          if (data.action === 'pause') {
-            removeRemoteStreamByParticipant(data.participantId, data.type);
-          }
+      const roomManager = new MediaRoomManager(socket, {
+        room: roomActions,
+        media: mediaActions,
+        controls: {
+          consumeRemoteProducer: controls.consumeRemoteProducer,
+          removeConsumer: infra.removeConsumer,
         },
       });
+      roomManagerRef.current = roomManager;
 
-      if (myInfo.role === 'presenter') {
-        InteractionSignaling.setupPresenterHandlers(connectedSocket, {
+      // 2. 실시간 이벤트 핸들러 설정
+      roomManager.setupSystemHandlers();
+
+      // 3. 방 입장 요청
+      const routerRtpCapabilities = await roomManager.join(roomId, myInfo.id);
+      const role = useRoomStore.getState().myInfo?.role ?? myInfo.role;
+      if (role === 'audience') {
+        socketActions.emit('get_active_poll', (response) => {
+          if (!response.success || !response.poll) return;
+
+          pollActions.setActivePoll(response.poll);
+          if (response.votedOptionId !== null) {
+            pollActions.setAudienceVotedOption(response.poll.id, response.votedOptionId);
+          }
+
+          const { activeDialog, setActiveDialog } = useRoomUIStore.getState();
+          if (activeDialog !== 'vote') setActiveDialog('vote');
+        });
+
+        socketActions.emit('get_active_qna', (response) => {
+          if (!response.success || !response.qna) return;
+
+          qnaActions.setActiveQna(response.qna);
+          if (response.answered) {
+            qnaActions.setAnswered(response.qna.id, true);
+          }
+          const { activeDialog, setActiveDialog } = useRoomUIStore.getState();
+          if (!activeDialog) setActiveDialog('qna');
+        });
+      }
+
+      socketActions.emit('get_activity_score_rank', (response) => {
+        if (!response.success) {
+          logger.socket.warn('[RoomInit] 랭킹 정보 조회 실패', response.error);
+          return;
+        }
+
+        logger.socket.info('[RoomInit] 랭킹 정보 수신', { role, response });
+
+        if (role === 'presenter') {
+          // 발표자: top + lowest
+          rankActions.initializeRank({
+            top: response.top,
+            lowest: 'lowest' in response ? response.lowest : null,
+          });
+        } else {
+          // 청중: top + 자신의 점수
+          rankActions.initializeRank({
+            top: response.top,
+            score: 'score' in response ? response.score : 0,
+          });
+        }
+      });
+
+      if (role === 'presenter') {
+        InteractionSignaling.setupPresenterHandlers(socket, {
           handleUpdateGestureStatus: (data) => {
             addToast({ type: 'gesture', title: data.participantName, gesture: data.gesture });
           },
@@ -105,9 +177,10 @@ export function useRoomInit() {
           handlePollEndDetail: pollActions.setCompletedFromEndDetail,
           handleUpdateQnaDetail: qnaActions.updateQnaDetail,
           handleQnaEndDetail: qnaActions.setCompletedFromEndDetail,
+          handlePresenterRankUpdate: rankActions.updatePresenterRank,
         });
       } else {
-        InteractionSignaling.setupAudienceHandlers(connectedSocket, {
+        InteractionSignaling.setupAudienceHandlers(socket, {
           handleUpdateGestureStatus: (data) => {
             addToast({ type: 'gesture', title: data.participantName, gesture: data.gesture });
           },
@@ -120,16 +193,9 @@ export function useRoomInit() {
           handleUpdatePoll: pollActions.updatePollOptions,
           handlePollEnd: (data) => {
             pollActions.clearActivePoll(data.pollId);
-            const { activeDialog, setActiveDialog } = useRoomUIStore.getState();
+            const { activeDialog, setActiveDialog, setPollResult } = useRoomUIStore.getState();
             if (activeDialog === 'vote') setActiveDialog('vote');
-            // TODO: 투표 결과 표시 방식 개선
-            addToast({
-              type: 'info',
-              title: data.title,
-              description: data.options
-                .map((option) => `${option.value}: ${option.count}`)
-                .join(' / '),
-            });
+            setPollResult(data);
           },
           handleStartQna: (data) => {
             qnaActions.setActiveQna(data);
@@ -144,62 +210,58 @@ export function useRoomInit() {
             addToast({
               type: 'info',
               title: 'Q&A가 종료되었습니다.',
+              description: 'Q&A 결과를 채팅창에서 확인하세요.',
             });
-            // TODO: 익명으로 답변 공개인 경우에 채팅창에 표시
+            if (data.text && data.text.length > 0) {
+              chatActions.addQnaResult(data);
+            }
           },
+          handleScoreUpdate: rankActions.updateMyScore,
+          handleRankUpdate: rankActions.updateRank,
         });
       }
 
-      // 3. 방 입장 요청
-      const routerRtpCapabilities = await RoomSignaling.joinRoom(
-        connectedSocket,
-        roomId,
-        myInfo.id,
-        initParticipants,
-        setMyInfo,
-      );
+      // 채팅 이벤트 설정 (발표자/참여자 공통)
+      InteractionSignaling.setupChatHandlers(socket, {
+        handleNewChat: (data) => {
+          chatActions.addChat(data);
+        },
+      });
 
       // 4. Mediasoup Device 초기화
-      await initDevice(routerRtpCapabilities);
+      await infra.initDevice(routerRtpCapabilities);
 
       // 5. 기존 참가자들의 오디오와 화면공유 즉시 수신
-      await consumeExistingProducers();
+      await controls.consumeExistingProducers();
 
       // 6. 미디어 스트림 획득 및 송출 시작
-      try {
-        // 초기 입장 시 사용자가 설정한 값에 따라 트랙 확보
-        if (isCameraOn || isMicOn) {
-          logger.custom.info('[RoomInit] 초기 미디어 스트림 확보 시작', { isCameraOn, isMicOn });
+      await handleInitialMedia();
 
-          // 사용자의 초기 설정(isCameraOn, isMicOn)에 따라 필요한 트랙 요청
-          const stream = await ensureTracks({ video: isCameraOn, audio: isMicOn });
-
-          if (stream) {
-            const videoTrack = stream.getVideoTracks()[0];
-            const audioTrack = stream.getAudioTracks()[0];
-
-            // 실제 트랙이 존재하고 사용자가 켰을 때만 Producing 시작
-            if (isCameraOn && videoTrack) await startProducing(videoTrack, 'video');
-            if (isMicOn && audioTrack) await startProducing(audioTrack, 'audio');
-          }
-        } else {
-          logger.custom.info('[RoomInit] 카메라와 마이크가 모두 꺼져 있어 스트림 획득을 건너뜀');
-        }
-      } catch (streamErr) {
-        logger.custom.warn('[RoomInit] 미디어 획득 실패(입장은 유지):', streamErr);
-      }
-
-      // 완료
       setIsSuccess(true);
-      setIsLoading(false);
       logger.custom.info('[RoomInit] 모든 초기화 시퀀스 완료');
-    } catch (err) {
-      const errorObj = err instanceof Error ? err : new Error('알 수 없는 초기화 실패');
+    } catch (error) {
+      const errorObj = error instanceof Error ? error : new Error('알 수 없는 초기화 실패');
       logger.custom.error('[RoomInit] 에러 발생:', errorObj);
       setError(errorObj);
+
+      roomManagerRef.current = null;
       hasStartedInit.current = false;
+    } finally {
+      setIsLoading(false);
     }
-  }, [isCameraOn, isMicOn]);
+  }, [
+    roomId,
+    roomActions,
+    mediaActions,
+    socketActions,
+    pollActions,
+    qnaActions,
+    rankActions,
+    chatActions,
+    controls,
+    infra,
+    addToast,
+  ]);
 
   /**
    * 재시도 핸들러
@@ -223,19 +285,66 @@ export function useRoomInit() {
   }, [hasHydrated, isSuccess, isLoading, runInitPipeline]);
 
   /**
+   * 재연결 시 누락 메시지 동기화
+   */
+  useEffect(() => {
+    if (!isReconnected) return;
+
+    const rejoinRoom = async () => {
+      const roomManager = roomManagerRef.current;
+      const myInfo = useRoomStore.getState().myInfo;
+      const socket = useSocketStore.getState().socket;
+
+      if (!roomManager || !roomId || !myInfo || !socket?.connected) return;
+
+      try {
+        await roomManager.join(roomId, myInfo.id);
+        logger.custom.info('[RoomInit] 재연결 후 재입장 완료');
+      } catch (error) {
+        logger.custom.error('[RoomInit] 재연결 후 재입장 실패:', error);
+      }
+    };
+
+    void rejoinRoom();
+
+    const lastMessageId = chatActions.getLastMessageId();
+    if (lastMessageId) {
+      socketActions.emit('sync_chat', { lastMessageId }, (response) => {
+        if (!response.success || !response.messages) return;
+        for (const msg of response.messages) {
+          chatActions.addChat(msg);
+        }
+      });
+    }
+
+    // 플래그 리셋
+    useSocketStore.setState({ isReconnected: false });
+  }, [isReconnected, chatActions, socketActions]);
+
+  /**
    * 훅 언마운트 시 자동 정리
    */
   useEffect(() => {
     return () => {
       // 소켓 이벤트 핸들러 해제
       const socket = useSocketStore.getState().socket;
-      if (socket) {
-        RoomSignaling.removeAllHandlers(socket);
+      if (socket?.connected) {
         InteractionSignaling.removeAllHandlers(socket);
       }
 
+      // MediaRoomManager 정리
+      if (roomManagerRef.current) {
+        roomManagerRef.current.cleanup();
+        roomManagerRef.current = null;
+      }
+
       // 미디어 자원 정리
-      cleanupMedia();
+      controls.cleanup();
+      roomActions.setRoomEnded(false);
+
+      if (socket?.connected) socketActions.disconnect();
+
+      hasStartedInit.current = false;
       logger.custom.info('[RoomInit] 미디어 연결 자원 정리 완료');
     };
   }, []);

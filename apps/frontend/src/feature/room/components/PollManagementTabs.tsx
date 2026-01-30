@@ -322,7 +322,7 @@ function ActiveVoteSection({ poll, onBreakPoll }: ActiveVoteSectionProps) {
                 </div>
                 <div className="h-3 w-full rounded-full bg-gray-500">
                   <div
-                    className="bg-primary/90 h-full rounded-full"
+                    className="bg-primary/90 h-full rounded-full transition-[width] duration-500 ease-out"
                     style={{ width: `${percentage}%` }}
                   />
                 </div>
@@ -406,7 +406,7 @@ function CompletedVoteSection({ polls }: CompletedVoteSectionProps) {
                       </div>
                       <div className="h-3 w-full rounded-full bg-gray-500">
                         <div
-                          className="bg-primary/90 h-full rounded-full"
+                          className="bg-primary/90 h-full rounded-full transition-[width] duration-500 ease-out"
                           style={{ width: `${percentage}%` }}
                         />
                       </div>

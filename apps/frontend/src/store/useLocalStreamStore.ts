@@ -69,7 +69,7 @@ export const useStreamStore = create<StreamState>((set, get) => ({
         set({ localStream: new MediaStream(localStream.getTracks()) });
         return get().localStream!;
       } catch (err) {
-        logger.media.error('[StreamStore] ensureTracks 에러', err);
+        logger.media.warn('[StreamStore] ensureTracks 에러', err);
         throw err;
       }
     },

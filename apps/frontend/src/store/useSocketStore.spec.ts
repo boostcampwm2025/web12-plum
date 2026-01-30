@@ -1,8 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { useSocketStore } from './useSocketStore';
+import { SocketDomainError, useSocketStore } from './useSocketStore';
 import { io } from 'socket.io-client';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let mockSocketInstance: any;
 
 vi.mock('socket.io-client', () => ({
@@ -15,128 +14,376 @@ vi.mock('socket.io-client', () => ({
       once: vi.fn(),
       off: vi.fn(),
       emit: vi.fn(),
-      io: { on: vi.fn() },
+      io: {
+        on: vi.fn(),
+        off: vi.fn(),
+      },
       connected: false,
       active: true,
+      id: null,
     };
     return mockSocketInstance;
   }),
 }));
 
-describe('useSocketStore (Edge Cases 포함)', () => {
+describe('useSocketStore (전체 동작 검증)', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.clearAllMocks();
-    useSocketStore.setState({ socket: null, isConnected: false, reconnectCount: 0 });
+    mockSocketInstance = {
+      connect: vi.fn(),
+      disconnect: vi.fn(),
+      removeAllListeners: vi.fn(),
+      on: vi.fn(),
+      once: vi.fn(),
+      off: vi.fn(),
+      emit: vi.fn(),
+      io: { on: vi.fn(), off: vi.fn() },
+      connected: false,
+      active: true,
+      id: null,
+    };
+    vi.mocked(io).mockReturnValue(mockSocketInstance);
+
+    useSocketStore.setState({
+      socket: null,
+      isConnected: false,
+      isReconnected: false,
+      reconnectCount: 0,
+    });
   });
 
   afterEach(() => {
     vi.useRealTimers();
+    vi.clearAllMocks();
   });
 
-  describe('연결 및 타임아웃 기본 흐름', () => {
-    it('7초 이내 에러 발생 시 대기 후 타임아웃 처리', async () => {
+  describe('connect() 동작 검증', () => {
+    it('이미 연결된 소켓이 있으면 즉시 반환', async () => {
+      mockSocketInstance.connected = true;
+      mockSocketInstance.id = 'existing-socket';
+
+      useSocketStore.setState({
+        socket: mockSocketInstance as any,
+        isConnected: true,
+      });
+
+      const { actions } = useSocketStore.getState();
+      const result = await actions.connect();
+
+      expect(result).toBe(mockSocketInstance);
+      expect(vi.mocked(io)).not.toHaveBeenCalled();
+    }, 10000);
+
+    it('신규 연결 성공 시 소켓 반환 및 상태 업데이트', async () => {
       const { actions } = useSocketStore.getState();
       const connectPromise = actions.connect();
 
-      const connectErrorCall = mockSocketInstance.once.mock.calls.find(
-        (c: string[]) => c[0] === 'connect_error',
+      expect(mockSocketInstance.connect).toHaveBeenCalledTimes(1);
+
+      const connectOnceHandlers = mockSocketInstance.once.mock.calls.filter(
+        (c: string[]) => c[0] === 'connect',
       );
-      if (connectErrorCall) connectErrorCall[1](new Error('Transient Error'));
+      const connectOnHandlers = mockSocketInstance.on.mock.calls.filter(
+        (c: string[]) => c[0] === 'connect',
+      );
 
-      vi.advanceTimersByTime(3000);
-      let isResolved = false;
-      connectPromise.then(() => {
-        isResolved = true;
-      });
-      await vi.advanceTimersByTimeAsync(0);
-      expect(isResolved).toBe(false);
+      connectOnceHandlers.forEach((call: any[]) => call[1]?.());
+      connectOnHandlers.forEach((call: any[]) => call[1]?.());
 
-      vi.advanceTimersByTime(4000);
-      await vi.advanceTimersByTimeAsync(0);
+      mockSocketInstance.id = 'test-socket-id';
+
+      await vi.runAllTimersAsync();
 
       const result = await connectPromise;
-      expect(result).toBeNull();
+      expect(result).toBe(mockSocketInstance);
+      expect(useSocketStore.getState().isConnected).toBe(true);
+      expect(useSocketStore.getState().socket).toBe(mockSocketInstance);
+    }, 10000);
+
+    it('연결 타임아웃(7초) 발생 시 SocketDomainError throw', async () => {
+      const { actions } = useSocketStore.getState();
+      const connectPromise = actions.connect().catch((err) => err);
+
+      await vi.advanceTimersByTimeAsync(7000);
+
+      const error = await connectPromise;
+      expect(error).toBeInstanceOf(SocketDomainError);
+      expect(error).toMatchObject({ code: 'CONNECTION_TIMEOUT' });
       expect(useSocketStore.getState().isConnected).toBe(false);
     }, 10000);
 
-    it('7초 이내 연결 성공 시 소켓 반환', async () => {
+    it('서버 명시적 거부(active: false) 시 CONNECTION_REJECTED 에러 즉시 throw', async () => {
       const { actions } = useSocketStore.getState();
-      const connectPromise = actions.connect();
-
-      vi.advanceTimersByTime(2000);
-      const connectOnceCall = mockSocketInstance.once.mock.calls.find(
-        (c: string[]) => c[0] === 'connect',
-      );
-      const connectOnCall = mockSocketInstance.on.mock.calls.find(
-        (c: string[]) => c[0] === 'connect',
-      );
-
-      if (connectOnCall) connectOnCall[1]();
-      if (connectOnceCall) connectOnceCall[1]();
-      await vi.advanceTimersByTimeAsync(0);
-
-      const result = await connectPromise;
-      expect(result).not.toBeNull();
-      expect(useSocketStore.getState().isConnected).toBe(true);
-    });
-  });
-
-  describe('엣지 케이스 테스트', () => {
-    it('서버가 명시적으로 연결을 거부(active: false)하면 즉시 종료', async () => {
-      const { actions } = useSocketStore.getState();
-      const connectPromise = actions.connect();
+      const connectPromise = actions.connect().catch((err) => err);
 
       mockSocketInstance.active = false;
-      const connectErrorCall = mockSocketInstance.once.mock.calls.find(
+
+      const connectErrorOnceHandlers = mockSocketInstance.once.mock.calls.filter(
         (c: string[]) => c[0] === 'connect_error',
       );
 
-      await vi.advanceTimersByTimeAsync(500);
-      if (connectErrorCall) connectErrorCall[1](new Error('Unauthorized'));
+      connectErrorOnceHandlers.forEach((call: any[]) => call[1]?.(new Error('Unauthorized')));
 
-      const result = await connectPromise;
-      expect(result).toBeNull();
-    });
+      await vi.advanceTimersByTimeAsync(100);
 
-    it('중복 connect 호출 시 인스턴스 단일 생성 보장', async () => {
+      const error = await connectPromise;
+      expect(error).toBeInstanceOf(SocketDomainError);
+      expect(error).toMatchObject({ code: 'CONNECTION_REJECTED' });
+    }, 10000);
+
+    it('연결 중 disconnect 호출 시 DISCONNECTED 에러 throw', async () => {
       const { actions } = useSocketStore.getState();
-      actions.connect();
-      actions.connect();
-      actions.connect();
+      const connectPromise = actions.connect().catch((err) => err);
 
-      expect(vi.mocked(io)).toHaveBeenCalledTimes(1);
+      vi.advanceTimersByTime(1000);
+      actions.disconnect();
+
+      const disconnectOnceHandlers = mockSocketInstance.once.mock.calls.filter(
+        (c: string[]) => c[0] === 'disconnect',
+      );
+      disconnectOnceHandlers.forEach((call: any[]) => call[1]?.());
+
+      const error = await connectPromise;
+      expect(error).toBeInstanceOf(SocketDomainError);
+      expect(error).toMatchObject({ code: 'DISCONNECTED' });
+      expect(useSocketStore.getState().socket).toBeNull();
+    }, 10000);
+  });
+
+  describe('disconnect() 동작 검증', () => {
+    it('연결된 소켓 정리 및 상태 초기화', () => {
+      mockSocketInstance.connected = true;
+      useSocketStore.setState({
+        socket: mockSocketInstance as any,
+        isConnected: true,
+        reconnectCount: 5,
+      });
+
+      const { actions } = useSocketStore.getState();
+      actions.disconnect();
+
+      expect(mockSocketInstance.removeAllListeners).toHaveBeenCalled();
+      expect(mockSocketInstance.disconnect).toHaveBeenCalled();
+      expect(useSocketStore.getState()).toEqual({
+        socket: null,
+        isConnected: false,
+        isReconnected: false,
+        reconnectCount: 0,
+        actions: expect.any(Object),
+      });
     });
+  });
 
-    it('연결 시도 중 disconnect 호출 시 정리(Cleanup)', async () => {
+  describe('상태 이벤트 리스너 검증', () => {
+    it('disconnect 이벤트 발생 시 isConnected false로 설정', async () => {
       const { actions } = useSocketStore.getState();
       const connectPromise = actions.connect();
 
-      vi.advanceTimersByTime(2000);
-      actions.disconnect();
+      // 연결 성공 시뮬레이션
+      const connectHandlers = mockSocketInstance.once.mock.calls.filter(
+        (c: string[]) => c[0] === 'connect',
+      );
+      connectHandlers.forEach((call: any[]) => call[1]?.());
+      mockSocketInstance.connected = true;
 
-      const disconnectOnceCall = mockSocketInstance.once.mock.calls.find(
+      await connectPromise;
+
+      const disconnectHandlers = mockSocketInstance.on.mock.calls.filter(
         (c: string[]) => c[0] === 'disconnect',
       );
-      if (disconnectOnceCall) disconnectOnceCall[1]();
+      disconnectHandlers.forEach((call: any[]) => call[1]?.('manual disconnect'));
 
-      await vi.advanceTimersByTimeAsync(0);
+      expect(useSocketStore.getState().isConnected).toBe(false);
+    });
 
-      const result = await connectPromise;
-      expect(result).toBeNull();
-      expect(useSocketStore.getState().socket).toBeNull();
-    }, 10000);
-
-    it('재연결 시도 횟수 상태 반영 확인', async () => {
+    it('connect_error (active: true) 발생 시 isConnected false 설정', async () => {
       const { actions } = useSocketStore.getState();
-      actions.connect();
+      const connectPromise = actions.connect();
 
-      const reconnectCall = mockSocketInstance.io.on.mock.calls.find(
+      const connectHandlers = mockSocketInstance.once.mock.calls.filter(
+        (c: string[]) => c[0] === 'connect',
+      );
+      connectHandlers.forEach((call: any[]) => call[1]?.());
+      mockSocketInstance.connected = true;
+
+      await connectPromise;
+
+      const connectErrorHandlers = mockSocketInstance.on.mock.calls.filter(
+        (c: string[]) => c[0] === 'connect_error',
+      );
+      connectErrorHandlers.forEach((call: any[]) => call[1]?.(new Error('Network error')));
+
+      expect(useSocketStore.getState().isConnected).toBe(false);
+    });
+
+    it('reconnect_attempt 이벤트 발생 시 reconnectCount 업데이트', async () => {
+      const { actions } = useSocketStore.getState();
+      const connectPromise = actions.connect();
+
+      const connectHandlers = mockSocketInstance.once.mock.calls.filter(
+        (c: string[]) => c[0] === 'connect',
+      );
+      connectHandlers.forEach((call: any[]) => call[1]?.());
+
+      await connectPromise;
+
+      const reconnectHandlers = mockSocketInstance.io.on.mock.calls.filter(
         (c: string[]) => c[0] === 'reconnect_attempt',
       );
-      if (reconnectCall) reconnectCall[1](3);
+      reconnectHandlers.forEach((call: any[]) => call[1]?.(3));
 
       expect(useSocketStore.getState().reconnectCount).toBe(3);
     });
+
+    it('reconnect 이벤트 발생 시 isReconnected true로 설정', async () => {
+      const { actions } = useSocketStore.getState();
+      const connectPromise = actions.connect();
+
+      const connectHandlers = mockSocketInstance.once.mock.calls.filter(
+        (c: string[]) => c[0] === 'connect',
+      );
+      connectHandlers.forEach((call: any[]) => call[1]?.());
+
+      await connectPromise;
+
+      const reconnectHandlers = mockSocketInstance.io.on.mock.calls.filter(
+        (c: string[]) => c[0] === 'reconnect',
+      );
+      reconnectHandlers.forEach((call: any[]) => call[1]?.());
+
+      expect(useSocketStore.getState().isReconnected).toBe(true);
+    });
+  });
+
+  describe('emitWithAck() 동작 검증', () => {
+    beforeEach(() => {
+      vi.useRealTimers();
+      mockSocketInstance.connected = true;
+      mockSocketInstance.emit.mockReset();
+      useSocketStore.setState({
+        socket: mockSocketInstance as any,
+        isConnected: true,
+      });
+    });
+
+    afterEach(() => {
+      vi.useFakeTimers();
+    });
+
+    it('소켓 미연결 시 SOCKET_NOT_CONNECTED 에러 throw', async () => {
+      useSocketStore.setState({ socket: mockSocketInstance as any, isConnected: false });
+      mockSocketInstance.connected = false;
+
+      const { actions } = useSocketStore.getState();
+
+      const error = await actions
+        .emitWithAck({
+          domain: 'room',
+          event: 'test' as any,
+        })
+        .catch((err) => err);
+
+      expect(error).toBeInstanceOf(SocketDomainError);
+      expect(error).toMatchObject({ code: 'SOCKET_NOT_CONNECTED' });
+    });
+
+    it('ACK 성공 응답 수신 시 Promise resolve', async () => {
+      const { actions } = useSocketStore.getState();
+      mockSocketInstance.emit.mockImplementationOnce((event: string, callback: any) => {
+        setTimeout(() => callback({ success: true, data: 'success' }), 100);
+      });
+
+      const result = await actions.emitWithAck({
+        domain: 'room',
+        event: 'test' as any,
+      });
+
+      expect(result).toEqual({ success: true, data: 'success' });
+      expect(mockSocketInstance.emit).toHaveBeenCalledTimes(1);
+    });
+
+    it('payload 포함 ACK 성공 응답 수신', async () => {
+      const { actions } = useSocketStore.getState();
+
+      mockSocketInstance.emit.mockImplementationOnce(
+        (event: string, payload: any, callback: any) => {
+          setTimeout(() => callback({ success: true, data: 'success' }), 100);
+        },
+      );
+
+      const result = await actions.emitWithAck({
+        domain: 'room',
+        event: 'test' as any,
+        payload: { test: 'data' } as any,
+      });
+
+      expect(mockSocketInstance.emit).toHaveBeenCalledWith(
+        'test',
+        { test: 'data' },
+        expect.any(Function),
+      );
+      expect(result).toEqual({ success: true, data: 'success' });
+    });
+
+    it('ACK 에러 응답 수신 시 SocketDomainError throw', async () => {
+      const { actions } = useSocketStore.getState();
+
+      mockSocketInstance.emit.mockImplementationOnce((event: string, callback: any) => {
+        setTimeout(() => callback({ success: false, error: 'VALIDATION_ERROR' }), 100);
+      });
+
+      const error = await actions
+        .emitWithAck({
+          domain: 'room',
+          event: 'test' as any,
+        })
+        .catch((err) => err);
+
+      expect(error).toBeInstanceOf(SocketDomainError);
+      expect(error).toMatchObject({ code: 'VALIDATION_ERROR' });
+    }, 5000);
+
+    it('ACK 타임아웃 시 ACK_TIMEOUT 에러 throw', async () => {
+      vi.useFakeTimers();
+
+      const { actions } = useSocketStore.getState();
+
+      mockSocketInstance.emit.mockImplementationOnce(() => {});
+
+      const promise = actions
+        .emitWithAck({
+          domain: 'room',
+          event: 'test' as any,
+        })
+        .catch((err) => err);
+
+      await vi.advanceTimersByTimeAsync(7000);
+
+      const error = await promise;
+      expect(error).toBeInstanceOf(SocketDomainError);
+      expect(error).toMatchObject({ code: 'ACK_TIMEOUT' });
+
+      vi.useRealTimers();
+    }, 10000);
+  });
+
+  describe('중복 및 경쟁 조건 테스트', () => {
+    it('중복 connect 호출 시 단일 인스턴스 보장', async () => {
+      const { actions } = useSocketStore.getState();
+
+      const promises = [actions.connect(), actions.connect(), actions.connect()];
+
+      expect(vi.mocked(io)).toHaveBeenCalledTimes(1);
+
+      const connectHandlers = mockSocketInstance.once.mock.calls.filter(
+        (c: string[]) => c[0] === 'connect',
+      );
+      connectHandlers.forEach((call: any[]) => call[1]?.());
+
+      await Promise.allSettled(promises);
+
+      expect(useSocketStore.getState().socket).toBe(mockSocketInstance);
+    }, 10000);
   });
 });

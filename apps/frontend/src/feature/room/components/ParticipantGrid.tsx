@@ -7,24 +7,20 @@ import { useParticipantPagination } from '../hooks/useParticipantPagination';
 import { useMediaStore } from '../stores/useMediaStore';
 import { useStreamStore } from '@/store/useLocalStreamStore';
 import { MyInfo } from '../stores/useRoomStore';
+import { useBackgroundEffectStore } from '../stores/useBackgroundEffectStore';
 
 interface ParticipantGridProps {
   videoMode: VideoDisplayMode;
   currentUser: MyInfo;
   onModeChange?: (mode: VideoDisplayMode) => void;
-  onCurrentUserVideoElementChange?: (element: HTMLVideoElement | null) => void;
 }
 
-export function ParticipantGrid({
-  videoMode,
-  currentUser,
-  onModeChange,
-  onCurrentUserVideoElementChange,
-}: ParticipantGridProps) {
+export function ParticipantGrid({ videoMode, currentUser, onModeChange }: ParticipantGridProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   const isCameraOn = useMediaStore((state) => state.isCameraOn);
   const localStream = useStreamStore((state) => state.localStream);
+  const processedStream = useBackgroundEffectStore((state) => state.processedStream);
 
   const dynamicItemsPerPage = useItemsPerPage(containerRef, {
     buttonHeight: 24,
@@ -40,7 +36,7 @@ export function ParticipantGrid({
     goToNextPage,
     hasPrevPage,
     hasNextPage,
-    sortedParticipants,
+    participants,
     visibleWindowParticipants,
   } = useParticipantPagination(dynamicItemsPerPage);
 
@@ -58,9 +54,8 @@ export function ParticipantGrid({
           mode="side"
           isCurrentUser={true}
           onModeChange={onModeChange}
-          stream={localStream}
+          stream={processedStream ?? localStream}
           isCameraOn={isCameraOn}
-          onVideoElementChange={onCurrentUserVideoElementChange}
         />
 
         {/* 이전 페이지 버튼 */}
@@ -79,7 +74,7 @@ export function ParticipantGrid({
 
         <div className="flex flex-1 flex-col justify-center gap-3 overflow-hidden">
           {visibleWindowParticipants.map((participant) => {
-            const participantIdx = sortedParticipants.findIndex((p) => participant.id === p.id);
+            const participantIdx = participants.findIndex((p) => participant.id === p.id);
             const isCurrentlyVisible =
               participantIdx >= currentPage * itemsPerPage &&
               participantIdx < (currentPage + 1) * itemsPerPage;

@@ -10,6 +10,7 @@ import type {
 
 interface PollState {
   polls: Poll[];
+  audienceVotedOptionByPollId: Record<string, number | null>;
   actions: {
     hydrateFromPolls: (polls: Poll[]) => void;
     setActivePoll: (poll: PollPayload) => void;
@@ -17,6 +18,7 @@ interface PollState {
     updatePollOptions: (data: UpdatePollStatusSubPayload) => void;
     updatePollDetail: (data: UpdatePollStatusFullPayload) => void;
     setCompletedFromEndDetail: (data: EndPollDetailPayload) => void;
+    setAudienceVotedOption: (pollId: string, optionId: number | null) => void;
   };
 }
 
@@ -28,6 +30,7 @@ const ensureVoters = (options: PollOption[]) =>
 
 export const usePollStore = create<PollState>((set) => ({
   polls: [],
+  audienceVotedOptionByPollId: {},
   actions: {
     hydrateFromPolls: (polls) => {
       set({
@@ -75,6 +78,7 @@ export const usePollStore = create<PollState>((set) => ({
         polls: state.polls.map((item) =>
           item.id === pollId ? { ...item, status: 'ended' } : item,
         ),
+        audienceVotedOptionByPollId: {},
       }));
     },
     updatePollOptions: (data) => {
@@ -150,6 +154,14 @@ export const usePollStore = create<PollState>((set) => ({
           ),
         };
       });
+    },
+    setAudienceVotedOption: (pollId, optionId) => {
+      set((state) => ({
+        audienceVotedOptionByPollId: {
+          ...state.audienceVotedOptionByPollId,
+          [pollId]: optionId,
+        },
+      }));
     },
   },
 }));

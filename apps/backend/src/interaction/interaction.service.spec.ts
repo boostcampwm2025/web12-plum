@@ -15,6 +15,9 @@ describe('InteractionService (투표 및 Q&A 생성 테스트)', () => {
     submitVote: jest.fn(),
     closePoll: jest.fn(),
     getFinalResults: jest.fn(),
+    getVoteCounts: jest.fn(),
+    getMultiVoteCounts: jest.fn(),
+    getVotedOptionId: jest.fn(),
   };
 
   // 2. QnaManagerService 모킹
@@ -26,6 +29,8 @@ describe('InteractionService (투표 및 Q&A 생성 테스트)', () => {
     submitAnswer: jest.fn(),
     closeQna: jest.fn(),
     getFinalResults: jest.fn(),
+    getActiveAnswers: jest.fn(),
+    hasAnswered: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -133,6 +138,125 @@ describe('InteractionService (투표 및 Q&A 생성 테스트)', () => {
 
       expect(result).toEqual([]);
       expect(mockPollManager.getPollsInRoom).toHaveBeenCalledWith('empty-room');
+    });
+
+    it('진행 중인 투표가 있으면 카운트를 합쳐서 반환해야 한다', async () => {
+      const roomId = 'room-active';
+      const mockPolls = [
+        {
+          id: 'poll-active',
+          status: 'active',
+          options: [
+            { id: 0, value: 'A', count: 0 },
+            { id: 1, value: 'B', count: 0 },
+          ],
+        },
+      ];
+
+      mockPollManager.getPollsInRoom.mockResolvedValue(mockPolls);
+      mockPollManager.getMultiVoteCounts.mockResolvedValue({
+        'poll-active': { 0: 3, 1: 5 },
+      });
+
+      const result = await service.getPolls(roomId);
+
+      expect(result[0].options).toEqual([
+        { id: 0, value: 'A', count: 3 },
+        { id: 1, value: 'B', count: 5 },
+      ]);
+      expect(mockPollManager.getMultiVoteCounts).toHaveBeenCalledWith(['poll-active']);
+    });
+
+    it('진행 중인 투표가 여러 개면 각각의 카운트를 합쳐서 반환해야 한다', async () => {
+      const roomId = 'room-multi-active';
+      const mockPolls = [
+        {
+          id: 'poll-1',
+          status: 'active',
+          options: [
+            { id: 0, value: 'A', count: 0 },
+            { id: 1, value: 'B', count: 0 },
+          ],
+        },
+        {
+          id: 'poll-2',
+          status: 'active',
+          options: [
+            { id: 0, value: 'C', count: 0 },
+            { id: 1, value: 'D', count: 0 },
+          ],
+        },
+        {
+          id: 'poll-3',
+          status: 'closed',
+          options: [{ id: 0, value: 'E', count: 1 }],
+        },
+      ];
+
+      mockPollManager.getPollsInRoom.mockResolvedValue(mockPolls);
+      mockPollManager.getMultiVoteCounts.mockResolvedValue({
+        'poll-1': { 0: 2, 1: 4 },
+        'poll-2': { 0: 1, 1: 3 },
+      });
+
+      const result = await service.getPolls(roomId);
+
+      expect(result[0].options).toEqual([
+        { id: 0, value: 'A', count: 2 },
+        { id: 1, value: 'B', count: 4 },
+      ]);
+      expect(result[1].options).toEqual([
+        { id: 0, value: 'C', count: 1 },
+        { id: 1, value: 'D', count: 3 },
+      ]);
+      expect(result[2]).toEqual(mockPolls[2]);
+      expect(mockPollManager.getMultiVoteCounts).toHaveBeenCalledWith(['poll-1', 'poll-2']);
+    });
+  });
+
+  describe('getActivePoll (진행 중 투표 조회)', () => {
+    it('진행 중인 투표가 없으면 null을 반환해야 한다', async () => {
+      mockPollManager.getPollsInRoom.mockResolvedValue([]);
+
+      const result = await service.getActivePoll('room-1', 'participant-1');
+
+      expect(result).toEqual({ poll: null, votedOptionId: null });
+    });
+
+    it('진행 중인 투표가 있으면 카운트와 선택 정보를 포함해 반환해야 한다', async () => {
+      const activePoll = {
+        id: 'poll-1',
+        title: '테스트',
+        status: 'active',
+        timeLimit: 60,
+        startedAt: 'start',
+        endedAt: 'end',
+        options: [
+          { id: 0, value: 'A', count: 0, voters: [] },
+          { id: 1, value: 'B', count: 0, voters: [] },
+        ],
+      };
+
+      mockPollManager.getPollsInRoom.mockResolvedValue([activePoll]);
+      mockPollManager.getVoteCounts.mockResolvedValue({ 0: 2, 1: 4 });
+      mockPollManager.getVotedOptionId.mockResolvedValue(1);
+
+      const result = await service.getActivePoll('room-1', 'participant-1');
+
+      expect(result.poll).toEqual({
+        id: 'poll-1',
+        title: '테스트',
+        options: [
+          { id: 0, value: 'A', count: 2, voters: [] },
+          { id: 1, value: 'B', count: 4, voters: [] },
+        ],
+        timeLimit: 60,
+        startedAt: 'start',
+        endedAt: 'end',
+      });
+      expect(result.votedOptionId).toBe(1);
+      expect(mockPollManager.getVoteCounts).toHaveBeenCalledWith('poll-1');
+      expect(mockPollManager.getVotedOptionId).toHaveBeenCalledWith('poll-1', 'participant-1');
     });
   });
 
@@ -390,6 +514,61 @@ describe('InteractionService (투표 및 Q&A 생성 테스트)', () => {
 
       expect(result).toEqual([]);
       expect(mockQnaManager.getQnasInRoom).toHaveBeenCalledWith('empty-room');
+    });
+
+    it('진행 중 질문에 대해서는 응답 목록이 함께 포함되어야 한다', async () => {
+      const roomId = 'room-123';
+      const activeQna = { id: 'qna-1', title: '질문 1', status: 'active' };
+      const pendingQna = { id: 'qna-2', title: '질문 2', status: 'pending' };
+      const mockAnswers = [{ participantId: 'u1', participantName: 'A', text: '답변1' }];
+
+      mockQnaManager.getQnasInRoom.mockResolvedValue([activeQna, pendingQna]);
+      mockQnaManager.getActiveAnswers.mockResolvedValue(mockAnswers);
+
+      const result = await service.getQnas(roomId);
+
+      expect(mockQnaManager.getActiveAnswers).toHaveBeenCalledWith('qna-1');
+      expect(result).toEqual([{ ...activeQna, answers: mockAnswers }, pendingQna]);
+    });
+  });
+
+  describe('getActiveQna (진행 중 질문 조회)', () => {
+    it('진행 중 질문이 없으면 null과 answered=false를 반환해야 한다', async () => {
+      mockQnaManager.getQnasInRoom.mockResolvedValue([]);
+
+      const result = await service.getActiveQna('room-1', 'participant-1');
+
+      expect(result).toEqual({ qna: null, answered: false });
+      expect(mockQnaManager.getQnasInRoom).toHaveBeenCalledWith('room-1');
+      expect(mockQnaManager.hasAnswered).not.toHaveBeenCalled();
+    });
+
+    it('진행 중 질문이 있으면 payload와 answered 여부를 반환해야 한다', async () => {
+      const activeQna = {
+        id: 'qna-1',
+        title: '질문 1',
+        status: 'active',
+        timeLimit: 60,
+        startedAt: '2024-01-01T00:00:00Z',
+        endedAt: '2024-01-01T00:01:00Z',
+      };
+
+      mockQnaManager.getQnasInRoom.mockResolvedValue([activeQna]);
+      mockQnaManager.hasAnswered.mockResolvedValue(true);
+
+      const result = await service.getActiveQna('room-1', 'participant-1');
+
+      expect(result).toEqual({
+        qna: {
+          id: activeQna.id,
+          title: activeQna.title,
+          timeLimit: activeQna.timeLimit,
+          startedAt: activeQna.startedAt,
+          endedAt: activeQna.endedAt,
+        },
+        answered: true,
+      });
+      expect(mockQnaManager.hasAnswered).toHaveBeenCalledWith('qna-1', 'participant-1');
     });
   });
 

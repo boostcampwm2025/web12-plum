@@ -6,6 +6,7 @@ import { Participant, useRoomStore } from '@/feature/room/stores/useRoomStore';
 import { roomApi } from '@/shared/api';
 import { logger } from '@/shared/lib/logger';
 import { useSafeRoomId } from '@/shared/hooks/useSafeRoomId';
+import { useMediaStore } from '@/feature/room/stores/useMediaStore';
 
 /**
  * 강의실 입장 훅
@@ -18,7 +19,8 @@ export function useEnterRoom() {
   const roomId = useSafeRoomId();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { setMyInfo, setRouterRtpCapabilities, initParticipants } = useRoomStore(
+  const { initialize: initializeMedia } = useMediaStore((state) => state.actions);
+  const { setMyInfo, setRoomTitle, setRouterRtpCapabilities, initParticipants } = useRoomStore(
     (state) => state.actions,
   );
 
@@ -63,6 +65,8 @@ export function useEnterRoom() {
 
       // 상태 업데이트
       setMyInfo({ id: participantId, name, role });
+      setRoomTitle(data.name);
+      initializeMedia(data.isAudioOn, data.isVideoOn);
       setRouterRtpCapabilities(routerRtpCapabilities as RtpCapabilities);
       initParticipants(participantMap as Map<string, Participant>);
 

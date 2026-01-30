@@ -8,9 +8,6 @@ import { useRoomUIStore } from '../stores/useRoomUIStore';
 import { cn } from '@/shared/lib/utils';
 import { buildJoinLink } from '@/shared/lib/roomLinks';
 
-// mock 데이터
-const mockFileList = Array.from({ length: 5 }, (_, i) => ({ name: `파일_${i + 1}.pdf`, url: '#' }));
-
 export function RoomSideSection() {
   const location = useLocation();
   const joinLink = buildJoinLink(location.pathname, window.location.origin);
@@ -32,7 +29,6 @@ export function RoomSideSection() {
             {activeSidePanel === 'info' && (
               <InfoPanel
                 joinLink={joinLink}
-                files={mockFileList}
                 onClose={() => setActiveSidePanel('info')}
               />
             )}

@@ -5,6 +5,9 @@ import { Participant } from '@plum/shared-interfaces';
 import { RoomManagerService } from './room-manager.service';
 import { RedisService } from '../redis.service';
 import { ParticipantManagerService } from './participant-manager.service';
+import { QnaManagerService } from './qna-manager.service';
+import { PollManagerService } from './poll-manager.service';
+import { ActivityScoreManagerService } from './activity-score-manager.service';
 
 describe('RoomManagerService', () => {
   let service: RoomManagerService;
@@ -38,6 +41,24 @@ describe('RoomManagerService', () => {
             addDeleteToPipeline: jest.fn(),
             findOne: jest.fn(),
             findMany: jest.fn(),
+          },
+        },
+        {
+          provide: QnaManagerService,
+          useValue: {
+            clearToPipeline: jest.fn(),
+          },
+        },
+        {
+          provide: PollManagerService,
+          useValue: {
+            clearToPipeline: jest.fn(),
+          },
+        },
+        {
+          provide: ActivityScoreManagerService,
+          useValue: {
+            clearToPipeline: jest.fn(),
           },
         },
       ],

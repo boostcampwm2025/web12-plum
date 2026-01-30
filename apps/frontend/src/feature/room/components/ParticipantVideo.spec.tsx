@@ -4,29 +4,37 @@ import '@testing-library/jest-dom';
 
 import { ParticipantVideo } from './ParticipantVideo';
 import { useMediaStore, RemoteStream } from '../stores/useMediaStore';
-import { useMediaConnectionContext } from '../hooks/useMediaConnectionContext';
 import type { ParticipantRole } from '@plum/shared-interfaces';
+import { useMediaControlContext } from '../hooks/useMediaControlContext';
 
 // 1. 외부 의존성 모킹
 vi.mock('../stores/useMediaStore', () => ({
   useMediaStore: vi.fn(),
 }));
 
-vi.mock('../hooks/useMediaConnectionContext', () => ({
-  useMediaConnectionContext: vi.fn(),
+vi.mock('../stores/useGestureStore', () => ({
+  useGestureStore: vi.fn(() => ({ gesture: null, progress: 0 })),
+}));
+
+vi.mock('../hooks/useMediaControlContext', () => ({
+  useMediaControlContext: vi.fn(),
 }));
 
 vi.mock('@/shared/lib/logger', () => ({
-  logger: { ui: { debug: vi.fn() } },
+  logger: { ui: { debug: vi.fn(), warn: vi.fn() } },
 }));
 
 const mockUseMediaStore = vi.mocked(useMediaStore);
-const mockUseMediaConnectionContext = vi.mocked(useMediaConnectionContext);
+const mockUseMediaControlContext = vi.mocked(useMediaControlContext);
 
 describe('ParticipantVideo', () => {
   const mockConsume = vi.fn();
   const mockStopConsuming = vi.fn();
-  const mockStream = { id: 'stream-123', getTracks: () => [] } as unknown as MediaStream;
+  const mockStream = {
+    id: 'stream-123',
+    getTracks: () => [],
+    getVideoTracks: () => [{ readyState: 'live' }],
+  } as unknown as MediaStream;
 
   const defaultProps = {
     id: 'participant-1',
@@ -40,10 +48,10 @@ describe('ParticipantVideo', () => {
     vi.clearAllMocks();
 
     // 기본적으로 수신 컨텍스트 모킹
-    mockUseMediaConnectionContext.mockReturnValue({
+    mockUseMediaControlContext.mockReturnValue({
       consumeRemoteProducer: mockConsume,
       stopConsuming: mockStopConsuming,
-    } as unknown as ReturnType<typeof useMediaConnectionContext>);
+    } as unknown as ReturnType<typeof useMediaControlContext>);
 
     // 기본적으로 스토어에서 스트림이 없는 상태로 시작
     mockUseMediaStore.mockImplementation((selector) =>
@@ -78,7 +86,7 @@ describe('ParticipantVideo', () => {
         />,
       );
 
-      expect(mockStopConsuming).toHaveBeenCalledWith(defaultProps.videoProducerId, 'video');
+      expect(mockStopConsuming).toHaveBeenCalledWith(defaultProps.id, 'video');
     });
 
     it('컴포넌트가 언마운트될 때 반드시 stopConsuming이 호출되어 리소스를 정리한다', () => {
@@ -91,7 +99,7 @@ describe('ParticipantVideo', () => {
 
       unmount();
 
-      expect(mockStopConsuming).toHaveBeenCalledWith(defaultProps.videoProducerId, 'video');
+      expect(mockStopConsuming).toHaveBeenCalledWith(defaultProps.id, 'video');
     });
   });
 
@@ -120,11 +128,14 @@ describe('ParticipantVideo', () => {
       expect(videoElement).toBeInTheDocument();
     });
 
-    it('카메라가 꺼져 있거나 스트림이 없으면 cam-disabled 아이콘을 보여준다', () => {
+    it('카메라가 꺼져 있거나 스트림이 없으면 cam-disabled 아이콘 오버레이가 표시된다', () => {
       render(<ParticipantVideo {...defaultProps} />);
 
       expect(screen.getByRole('img', { name: 'cam-disabled' })).toBeInTheDocument();
-      expect(document.querySelector('video')).not.toBeInTheDocument();
+
+      const videoElement = document.querySelector('video') as HTMLVideoElement | null;
+      expect(videoElement).toBeInTheDocument();
+      expect(videoElement?.srcObject).toBeFalsy();
     });
   });
 

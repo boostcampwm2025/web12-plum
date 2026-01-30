@@ -90,7 +90,66 @@ export class InteractionService {
   }
 
   async getPolls(roomId: string): Promise<Poll[]> {
-    return await this.pollManagerService.getPollsInRoom(roomId);
+    const polls = await this.pollManagerService.getPollsInRoom(roomId);
+    const activePollIds = polls.filter((poll) => poll.status === 'active').map((poll) => poll.id);
+
+    if (activePollIds.length === 0) return polls;
+
+    const countsByPoll = await this.pollManagerService.getMultiVoteCounts(activePollIds);
+    return polls.map((poll) => {
+      if (poll.status !== 'active') return poll;
+
+      const counts = countsByPoll[poll.id];
+      if (!counts) return poll;
+
+      return {
+        ...poll,
+        options: poll.options.map((option) => ({
+          ...option,
+          count: counts[option.id] ?? option.count,
+        })),
+      };
+    });
+  }
+
+  async getActivePoll(
+    roomId: string,
+    participantId: string,
+  ): Promise<{ poll: PollPayload | null; votedOptionId: number | null }> {
+    const polls = await this.pollManagerService.getPollsInRoom(roomId);
+    const activePoll = polls.find((poll) => poll.status === 'active');
+
+    if (!activePoll) {
+      return { poll: null, votedOptionId: null };
+    }
+
+    const counts = await this.pollManagerService.getVoteCounts(activePoll.id);
+    const options = activePoll.options.map((option) => ({
+      ...option,
+      count: counts[option.id] ?? option.count,
+      voters: [],
+    }));
+
+    const pollPayload: PollPayload = {
+      id: activePoll.id,
+      title: activePoll.title,
+      options,
+      timeLimit: activePoll.timeLimit,
+      startedAt: activePoll.startedAt,
+      endedAt: activePoll.endedAt,
+    };
+
+    const votedOptionId = await this.pollManagerService.getVotedOptionId(
+      activePoll.id,
+      participantId,
+    );
+
+    return { poll: pollPayload, votedOptionId };
+  }
+
+  async getEndedPolls(roomId: string): Promise<Poll[]> {
+    const polls = await this.pollManagerService.getPollsInRoom(roomId);
+    return polls.filter((poll) => poll.status === 'ended');
   }
 
   async startPoll(pollId: string): Promise<PollPayload> {
@@ -149,6 +208,18 @@ export class InteractionService {
     };
   }
 
+  /**
+   * 강의실 종료 시 활성화되어 있는 질문을 종료하는 로직
+   */
+  async stopAllActivePoll(roomId: string): Promise<void> {
+    const poll = await this.pollManagerService.getPollsInRoom(roomId);
+    const activePolls = poll.filter((poll) => poll.status === 'active');
+    if (activePolls.length === 0) return;
+
+    const closePromises = activePolls.map((poll) => this.pollManagerService.closePoll(poll.id));
+    await Promise.all(closePromises);
+  }
+
   // --- QnA Methods ---
   async createQna(roomId: string, dto: CreateQnaDto): Promise<Qna> {
     const qna = this.prepareQna(roomId, dto);
@@ -172,7 +243,52 @@ export class InteractionService {
   }
 
   async getQnas(roomId: string): Promise<Qna[]> {
-    return await this.qnaManagerService.getQnasInRoom(roomId);
+    const qnas = await this.qnaManagerService.getQnasInRoom(roomId);
+
+    const activeQnas = qnas.filter((qna) => qna.status === 'active');
+    if (activeQnas.length === 0) return qnas;
+
+    const answersByQnaId = await Promise.all(
+      activeQnas.map(async (qna) => ({
+        id: qna.id,
+        answers: await this.qnaManagerService.getActiveAnswers(qna.id),
+      })),
+    );
+    const answersMap = new Map(answersByQnaId.map((entry) => [entry.id, entry.answers]));
+
+    return qnas.map((qna) => {
+      if (qna.status !== 'active') return qna;
+
+      const answers = answersMap.get(qna.id);
+      if (!answers) return qna;
+
+      return {
+        ...qna,
+        answers,
+      };
+    });
+  }
+
+  async getActiveQna(
+    roomId: string,
+    participantId: string,
+  ): Promise<{ qna: QnaPayload | null; answered: boolean }> {
+    const qnas = await this.qnaManagerService.getQnasInRoom(roomId);
+    const activeQna = qnas.find((qna) => qna.status === 'active');
+
+    if (!activeQna) return { qna: null, answered: false };
+
+    const qnaPayload: QnaPayload = {
+      id: activeQna.id,
+      title: activeQna.title,
+      timeLimit: activeQna.timeLimit,
+      startedAt: activeQna.startedAt,
+      endedAt: activeQna.endedAt,
+    };
+
+    const answered = await this.qnaManagerService.hasAnswered(activeQna.id, participantId);
+
+    return { qna: qnaPayload, answered };
   }
 
   async startQna(qnaId: string): Promise<QnaPayload> {
@@ -188,6 +304,11 @@ export class InteractionService {
       startedAt,
       endedAt,
     };
+  }
+
+  async getEndedQnas(roomId: string): Promise<Qna[]> {
+    const qnas = await this.qnaManagerService.getQnasInRoom(roomId);
+    return qnas.filter((qna) => qna.status === 'ended');
   }
 
   async answer(
@@ -265,5 +386,17 @@ export class InteractionService {
         presenter: payload,
       };
     }
+  }
+
+  /**
+   * 강의실 종료 시 활성화되어 있는 질문을 종료하는 로직
+   */
+  async stopAllActiveQna(roomId: string): Promise<void> {
+    const qnas = await this.qnaManagerService.getQnasInRoom(roomId);
+    const activeQnas = qnas.filter((qna) => qna.status === 'active');
+    if (activeQnas.length === 0) return;
+
+    const closePromises = activeQnas.map((qna) => this.qnaManagerService.closeQna(qna.id));
+    await Promise.all(closePromises);
   }
 }

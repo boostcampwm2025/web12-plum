@@ -44,35 +44,32 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       this.logger.error('Redis client error:', error);
     });
 
-    // Redis 연결 완료 대기
-    await this.client.ping();
-    await this.client.config('SET', 'notify-keyspace-events', 'Ex');
-    this.logger.log('✅ Redis client 연결 완료');
-
     // 2. subscriber 클라이언트 초기화/생성
     this.subscriber = this.client.duplicate();
-
-    const expiredChannel = '__keyevent@0__:expired';
-    await this.subscriber.subscribe(expiredChannel);
-
-    this.subscriber.on('message', (channel, key) => {
-      if (channel === expiredChannel) {
-        const parts = key.split(':');
-        const prefix = parts[0];
-
-        this.logger.debug(`[Redis Expired] Prefix: ${prefix}, Key: ${key}`);
-
-        this.eventEmitter.emit(`redis.expired.${prefix}`, key);
-      }
-    });
-
     this.subscriber.on('error', (error) => {
       this.logger.error('Redis subscriber error:', error);
     });
 
-    // Subscriber 연결 완료 대기
-    await this.subscriber.ping();
-    this.logger.log('✅ Redis subscriber 연결 완료');
+    try {
+      await Promise.all([this.client.ping(), this.subscriber.ping()]);
+
+      this.logger.log('✅ Redis client 연결 완료');
+
+      // 만료 이벤트 구독
+      const expiredChannel = '__keyevent@0__:expired';
+      await this.subscriber.subscribe(expiredChannel);
+      this.subscriber.on('message', (channel, key) => {
+        if (channel === expiredChannel) {
+          const parts = key.split(':');
+          const prefix = parts[0];
+
+          this.logger.debug(`[Redis Expired] Prefix: ${prefix}, Key: ${key}`);
+          this.eventEmitter.emit(`redis.expired.${prefix}`, key);
+        }
+      });
+    } catch (error) {
+      this.logger.error('❌ Redis 초기 연결 실패:', error.message);
+    }
   }
 
   // Redis 연결 종료

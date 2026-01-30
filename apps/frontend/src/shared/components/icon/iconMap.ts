@@ -1,4 +1,7 @@
 import iconsBreakdownRoom from '@/assets/icons/breakdown-room.svg?react';
+import iconsClap from '@/assets/icons/clap.svg?react';
+import iconsGraph from '@/assets/icons/graph.svg?react';
+import iconsQuestion from '@/assets/icons/question.svg?react';
 import iconsCamDisabled from '@/assets/icons/cam-disabled.svg?react';
 import iconsCam from '@/assets/icons/cam.svg?react';
 import iconsChat from '@/assets/icons/chat.svg?react';
@@ -56,6 +59,9 @@ import type { ComponentType, SVGProps } from 'react';
 
 export const iconMap = {
   'breakdown-room': iconsBreakdownRoom,
+  clap: iconsClap,
+  graph: iconsGraph,
+  question: iconsQuestion,
   'cam-disabled': iconsCamDisabled,
   cam: iconsCam,
   chat: iconsChat,

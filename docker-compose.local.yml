@@ -10,7 +10,12 @@ services:
     container_name: redis-local
     ports:
       - "6379:6379"
-    command: redis-server --appendonly yes
+    command: redis-server
+      --appendonly yes
+      --appendfsync everysec
+      --maxmemory ${REDIS_MAXMEMORY:-256mb}
+      --maxmemory-policy volatile-lru
+      --notify-keyspace-events Ex
     volumes:
       - redis-data:/data
     networks:

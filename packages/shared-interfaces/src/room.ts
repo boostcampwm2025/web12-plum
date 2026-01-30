@@ -1,9 +1,10 @@
 import { z } from 'zod';
-import { pollFormSchema } from './poll.js';
-import { qnaFormSchema } from './qna.js';
+import { Poll, pollFormSchema } from './poll.js';
+import { Qna, qnaFormSchema } from './qna.js';
 import { type Status } from './shared.js';
-import { fileSchema } from './file.js';
+import { FileInfo, fileSchema } from './file.js';
 import { NICKNAME_CONSTRAINT } from './participant.js';
+import { ActivityStatistics } from './score.js';
 
 /**
  * 강의 생성 폼의 제약 조건
@@ -77,6 +78,15 @@ export interface Room {
   createdAt: string;
   startedAt: string;
   endedAt: string;
-  files: string[];
-  aiSummery: string;
+  files: FileInfo[];
+}
+
+export interface RoomSummary {
+  name: string;
+  roomId: string;
+  summary: string; // ai 요약
+  timelines: string; // ai 요약 - 타임라인
+  polls: Poll[];
+  qnas: Qna[];
+  activityStatistics: ActivityStatistics;
 }

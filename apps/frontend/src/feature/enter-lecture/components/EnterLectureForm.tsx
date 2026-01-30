@@ -6,7 +6,6 @@ import { FormField } from '@/shared/components/FormField';
 import { logger } from '@/shared/lib/logger';
 import { Button } from '@/shared/components/Button';
 import { cn } from '@/shared/lib/utils';
-import { useMediaStore } from '@/feature/room/stores/useMediaStore';
 
 import { enterLectureDefaultValues, ENTER_LECTURE_KEYS } from '../schema';
 import { LocalMediaPreview } from './LocalMediaPreview';
@@ -15,6 +14,10 @@ import { useNicknameValidation } from '../hooks/useNicknameValidation';
 import { useToastStore } from '@/store/useToastStore';
 import { ROUTES } from '@/app/routes/routes';
 import { useNavigate } from 'react-router';
+import {
+  useBackgroundEffectStore,
+  type BackgroundEffectMode,
+} from '@/feature/room/stores/useBackgroundEffectStore';
 
 /**
  * 강의실 이름 입력 섹션
@@ -50,6 +53,7 @@ interface NicknameSectionProps {
   checkMessage?: string;
   checkVariant?: 'default' | 'success' | 'error';
   isCheckDisabled: boolean;
+  hasCheckedNickname: boolean;
   onCheckNickname: () => void;
 }
 
@@ -58,6 +62,7 @@ function NicknameSection({
   checkMessage,
   checkVariant = 'default',
   isCheckDisabled,
+  hasCheckedNickname,
   onCheckNickname,
 }: NicknameSectionProps) {
   const { register } = useFormContext<EnterLectureRequestBody>();
@@ -82,7 +87,7 @@ function NicknameSection({
           type="button"
           className="text-base font-extrabold"
           onClick={onCheckNickname}
-          disabled={isCheckDisabled}
+          disabled={isCheckDisabled || hasCheckedNickname}
         >
           중복 확인
         </Button>
@@ -133,6 +138,8 @@ function MediaDeviceCheckSection() {
   const { register } = useFormContext<EnterLectureRequestBody>();
   const isAudioOn = useWatch({ name: ENTER_LECTURE_KEYS.isAudioOn });
   const isVideoOn = useWatch({ name: ENTER_LECTURE_KEYS.isVideoOn });
+  const backgroundMode = useBackgroundEffectStore((state) => state.mode);
+  const setBackgroundMode = useBackgroundEffectStore((state) => state.actions.setMode);
 
   return (
     <FormField className="gap-3">
@@ -156,6 +163,21 @@ function MediaDeviceCheckSection() {
               checked={isVideoOn}
             />
           </FormField>
+
+          <FormField className="flex-col gap-2">
+            <FormField.Label>배경 효과</FormField.Label>
+            {/*TODO: 드롭다운 컴포넌트 구현 후 적용 */}
+            <select
+              value={backgroundMode}
+              onChange={(event) => setBackgroundMode(event.target.value as BackgroundEffectMode)}
+              className="text-text w-full rounded-lg bg-gray-300 py-2 text-sm"
+              aria-label="배경 효과 선택"
+            >
+              <option value="blur">블러</option>
+              <option value="image">플럼 배경</option>
+              <option value="off">처리 안함</option>
+            </select>
+          </FormField>
         </div>
       </div>
     </FormField>
@@ -176,7 +198,6 @@ export function EnterLectureForm({ roomId, lectureName = '예시 강의실' }: E
 
   const { enterRoom, isSubmitting } = useEnterRoom();
   const { addToast } = useToastStore((state) => state.actions);
-  const { initialize } = useMediaStore((state) => state.actions);
 
   const formMethods = useForm<EnterLectureRequestBody>({
     resolver: zodResolver(enterLectureSchema),
@@ -210,15 +231,11 @@ export function EnterLectureForm({ roomId, lectureName = '예시 강의실' }: E
     }
 
     try {
-      initialize(data.isAudioOn, data.isVideoOn);
       await enterRoom(data);
-
       logger.ui.info('강의실 입장 폼 제출 성공');
       navigate(ROUTES.ROOM(roomId));
     } catch (error) {
       logger.ui.error('강의실 입장 실패:', error);
-      // TODO: API 에러별 메시지 추가
-      // if (error instanceof ApiError) {}
       addToast({ type: 'error', title: '강의실 입장에 실패했습니다. 잠시 후 다시 시도해주세요.' });
     }
     logger.ui.info('강의실 입장 폼 제출 완료');
@@ -238,6 +255,7 @@ export function EnterLectureForm({ roomId, lectureName = '예시 강의실' }: E
           checkMessage={checkMessage}
           checkVariant={checkVariant}
           isCheckDisabled={!nicknameValue?.trim()}
+          hasCheckedNickname={hasCheckedNickname}
           onCheckNickname={handleCheckNickname}
         />
         <AgreementSection />

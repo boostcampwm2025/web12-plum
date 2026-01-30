@@ -9,7 +9,9 @@ import { useMediaStore } from '../stores/useMediaStore';
 import { MyInfo, useRoomStore } from '../stores/useRoomStore';
 import { useEffect, useRef, useState } from 'react';
 import { useGestureRecognition } from '../hooks/useGestureRecognition';
+import { useGestureHandlers } from '../hooks/useGestureHandlers';
 import DodoReady from '@/assets/logo/dodo-ready.svg';
+import { useBackgroundEffectStore } from '../stores/useBackgroundEffectStore';
 
 /**
  * 화면공유 영상을 표시하는 컴포넌트
@@ -47,7 +49,7 @@ function ScreenShareVideo() {
             className="h-full w-full rounded-2xl bg-black object-contain"
           />
         ) : (
-          <div className="flex h-full w-full flex-col items-center justify-center rounded-2xl bg-gray-500">
+          <div className="flex h-full w-full flex-col items-center justify-center overflow-hidden rounded-2xl bg-gray-500">
             <img
               src={DodoReady}
               alt="화면공유 대기중"
@@ -65,16 +67,15 @@ interface MyVideoProps {
   currentUser: MyInfo;
   videoMode: VideoDisplayMode;
   onModeChange: (mode: VideoDisplayMode) => void;
-  onVideoElementChange?: (element: HTMLVideoElement | null) => void;
+  stream: MediaStream | null;
 }
 
 /**
  * 내 비디오 컴포넌트
  * 비디오 모드가 'pip' 또는 'minimize'일 때만 렌더링
  */
-function MyVideo({ currentUser, videoMode, onModeChange, onVideoElementChange }: MyVideoProps) {
+function MyVideo({ currentUser, videoMode, onModeChange, stream }: MyVideoProps) {
   const isCameraOn = useMediaStore((state) => state.isCameraOn);
-  const localStream = useStreamStore((state) => state.localStream);
 
   if (videoMode !== 'pip' && videoMode !== 'minimize') return null;
 
@@ -86,9 +87,8 @@ function MyVideo({ currentUser, videoMode, onModeChange, onVideoElementChange }:
         mode={videoMode}
         isCurrentUser={true}
         onModeChange={onModeChange}
-        stream={localStream}
+        stream={stream}
         isCameraOn={isCameraOn}
-        onVideoElementChange={onVideoElementChange}
       />
     </Draggable>
   );
@@ -99,17 +99,40 @@ function MyVideo({ currentUser, videoMode, onModeChange, onVideoElementChange }:
  * 강의 화면과 참가자 비디오를 포함
  */
 export function RoomMainSection() {
-  const [userVideoMode, setUserVideoMode] = useState<VideoDisplayMode>('pip');
+  const [userVideoMode, setUserVideoMode] = useState<VideoDisplayMode>('side');
   const [gestureVideoElement, setGestureVideoElement] = useState<HTMLVideoElement | null>(null);
   const isCameraOn = useMediaStore((state) => state.isCameraOn);
+  const localStream = useStreamStore((state) => state.localStream);
+  const processedStream = useBackgroundEffectStore((state) => state.processedStream);
 
   const myInfo = useRoomStore((state) => state.myInfo);
   const currentUser = myInfo ?? { id: '', name: '', role: 'audience' };
+  const { handleGesture, shouldAllowGesture } = useGestureHandlers();
+
+  useEffect(() => {
+    const video = gestureVideoElement;
+    if (!video) return;
+    if (!localStream) {
+      video.srcObject = null;
+      return;
+    }
+    if (video.srcObject !== localStream) {
+      video.srcObject = localStream;
+      video.muted = true;
+      video.playsInline = true;
+      video.autoplay = true;
+      video.play().catch(() => {});
+    }
+  }, [localStream, gestureVideoElement]);
 
   useGestureRecognition({
     enabled: isCameraOn && userVideoMode !== 'minimize',
     videoElement: gestureVideoElement,
+    shouldAllowGesture,
+    onConfirmedGesture: handleGesture,
   });
+
+  const displayStream = processedStream ?? localStream;
 
   return (
     <>
@@ -129,16 +152,20 @@ export function RoomMainSection() {
             currentUser={currentUser}
             videoMode={userVideoMode}
             onModeChange={setUserVideoMode}
-            onVideoElementChange={setGestureVideoElement}
+            stream={displayStream}
           />
         </motion.div>
+
+        <video
+          ref={setGestureVideoElement}
+          className="hidden"
+        />
       </main>
 
       <ParticipantGrid
         currentUser={currentUser}
         videoMode={userVideoMode}
         onModeChange={setUserVideoMode}
-        onCurrentUserVideoElementChange={setGestureVideoElement}
       />
     </>
   );

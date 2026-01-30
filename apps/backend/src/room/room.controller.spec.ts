@@ -24,6 +24,7 @@ describe('RoomController', () => {
     getRoomValidation: jest.fn(),
     validateNickname: jest.fn(),
     joinRoom: jest.fn(),
+    getSummary: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -236,6 +237,61 @@ describe('RoomController', () => {
         .mockRejectedValue(new NotFoundException(`Room with ID ${mockRoomId} not found`));
 
       await expect(controller.joinRoom(mockRoomId, mockJoinDto)).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('getSummary', () => {
+    const mockRoomId = '01HJZ92956N9Y68SS7B9D95H01';
+
+    // RoomSummary 인터페이스 구조에 맞춘 가짜 데이터
+    const mockSummary = {
+      id: mockRoomId,
+      name: 'NestJS 강의실',
+      hostName: '김코딩',
+      createdAt: new Date().toISOString(),
+      activityStatistics: {
+        averageScore: 75.5,
+        ranks: [
+          { rank: 1, participantId: 'p1', name: '우등생', score: 100 },
+          { rank: 2, participantId: 'p2', name: '열공이', score: 90 },
+          { rank: 3, participantId: 'p3', name: '나루토', score: 85 },
+          { rank: 200, participantId: 'p200', name: '꼴찌', score: 10 },
+        ],
+        interactions: {
+          gestureCount: 150,
+          chatCount: 420,
+          voteCount: 85,
+          answerCount: 12,
+          penaltyCount: 2,
+        },
+      },
+    };
+
+    it('성공적으로 요약 정보를 요청하면 RoomService의 getSummary를 호출하고 결과를 반환해야 한다', async () => {
+      mockRoomService.getSummary.mockResolvedValue(mockSummary);
+
+      const result = await controller.getSummary(mockRoomId);
+
+      expect(service.getSummary).toHaveBeenCalledWith(mockRoomId);
+      expect(result).toEqual(mockSummary);
+      expect(result.activityStatistics.averageScore).toBe(75.5);
+    });
+
+    it('존재하지 않는 방 ID인 경우 NotFoundException을 던져야 한다', async () => {
+      mockRoomService.getSummary.mockRejectedValue(
+        new NotFoundException(`Room with ID ${mockRoomId} not found`),
+      );
+
+      await expect(controller.getSummary(mockRoomId)).rejects.toThrow(NotFoundException);
+      expect(service.getSummary).toHaveBeenCalledWith(mockRoomId);
+    });
+
+    it('데이터 집계 중 서버 에러가 발생하면 InternalServerErrorException을 던져야 한다', async () => {
+      mockRoomService.getSummary.mockRejectedValue(
+        new InternalServerErrorException('데이터 집계 중 오류가 발생했습니다.'),
+      );
+
+      await expect(controller.getSummary(mockRoomId)).rejects.toThrow(InternalServerErrorException);
     });
   });
 });

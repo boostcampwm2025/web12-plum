@@ -1,16 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
-import {
-  BadRequestException,
-  InternalServerErrorException,
-  NotFoundException,
-} from '@nestjs/common';
-import { Upload } from '@aws-sdk/lib-storage';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { CreateRoomRequest, EnterLectureRequestBody, Room } from '@plum/shared-interfaces';
 
 import { RoomService } from './room.service.js';
 import { InteractionService } from '../interaction/interaction.service.js';
 import {
+  ActivityScoreManagerService,
   ParticipantManagerService,
   RoomManagerService,
 } from '../redis/repository-manager/index.js'; // 경로 수정
@@ -28,12 +24,11 @@ describe('RoomService', () => {
   let roomManagerService: RoomManagerService;
   let mediasoupService: MediasoupService;
 
-  const MockedUpload = Upload as jest.MockedClass<typeof Upload>;
-
   const mockFile = {
     originalname: 'test.pdf',
     buffer: Buffer.from('test data'),
     mimetype: 'application/pdf',
+    size: 1024,
   } as Express.Multer.File;
 
   const mockCreateRoomDto: CreateRoomRequest = {
@@ -80,6 +75,12 @@ describe('RoomService', () => {
           },
         },
         {
+          provide: ActivityScoreManagerService,
+          useValue: {
+            initializeParticipantScore: jest.fn(),
+          },
+        },
+        {
           provide: ParticipantManagerService,
           useValue: {
             findOne: jest.fn(),
@@ -91,6 +92,7 @@ describe('RoomService', () => {
             createRouter: jest.fn().mockResolvedValue({
               rtpCapabilities: { codecs: [{ mimeType: 'audio/opus' }] },
             }),
+            createRoutersWithStrategy: jest.fn().mockResolvedValue(undefined),
             getRouterRtpCapabilities: jest.fn().mockReturnValue({
               codecs: [{ mimeType: 'audio/opus' }],
             }),
@@ -130,13 +132,18 @@ describe('RoomService', () => {
         result.roomId,
         expect.objectContaining({
           files: [
-            expect.stringContaining(`https://test-bucket.s3.ap-northeast-2.amazonaws.com/`) ||
-              expect.stringContaining('test.pdf'),
+            expect.objectContaining({
+              url: expect.stringContaining(`https://test-bucket.s3.ap-northeast-2.amazonaws.com/`),
+              size: expect.any(Number),
+            }),
           ],
         }),
       );
 
-      expect(mediasoupService.createRouter).toHaveBeenCalledWith(result.roomId);
+      expect(mediasoupService.createRoutersWithStrategy).toHaveBeenCalledWith(
+        result.roomId,
+        'LECTURE',
+      );
 
       expect(roomManagerService.addParticipant).toHaveBeenCalledWith(
         result.roomId,
@@ -156,24 +163,15 @@ describe('RoomService', () => {
       );
     });
 
-    it('파일 업로드 중 오류가 발생하면 InternalServerErrorException을 던져야 한다', async () => {
-      // Mock을 강제로 에러 발생 상태로 설정
-      MockedUpload.mockImplementationOnce(
-        () =>
-          ({
-            done: jest.fn().mockRejectedValue(new Error('S3 Error')),
-          }) as any,
-      );
-
-      await expect(service.createRoom(mockCreateRoomDto, [mockFile])).rejects.toThrow(
-        InternalServerErrorException,
-      );
-    });
-
     it('여러 개의 파일을 업로드할 때 모든 URL이 순서대로 저장되어야 한다', async () => {
       const mockFiles = [
-        { originalname: 'file1.png', buffer: Buffer.from('1'), mimetype: 'image/png' },
-        { originalname: 'file2.pdf', buffer: Buffer.from('2'), mimetype: 'application/pdf' },
+        { originalname: 'file1.png', buffer: Buffer.from('1'), mimetype: 'image/png', size: 500 },
+        {
+          originalname: 'file2.pdf',
+          buffer: Buffer.from('2'),
+          mimetype: 'application/pdf',
+          size: 1200,
+        },
       ] as Express.Multer.File[];
 
       const result = await service.createRoom(mockCreateRoomDto, mockFiles);
@@ -183,13 +181,19 @@ describe('RoomService', () => {
       expect(result.roomId).toBeDefined();
       const savedRoom = (roomManagerService.saveOne as jest.Mock).mock.calls[0][1];
       expect(savedRoom.files).toHaveLength(2);
-      expect(savedRoom.files[0]).toContain('file1.png');
-      expect(savedRoom.files[1]).toContain('file2.pdf');
+      expect(savedRoom.files[0]).toMatchObject({
+        url: expect.stringContaining(`file1.png`),
+        size: 500,
+      });
+      expect(savedRoom.files[1]).toMatchObject({
+        url: expect.stringContaining(`file2.pdf`),
+        size: 1200,
+      });
     });
 
     it('Mediasoup 라우터 생성 실패 시 예외를 던져야 한다', async () => {
       jest
-        .spyOn(mediasoupService, 'createRouter')
+        .spyOn(mediasoupService, 'createRoutersWithStrategy')
         .mockRejectedValueOnce(new Error('Mediasoup Error'));
 
       await expect(service.createRoom(mockCreateRoomDto, [])).rejects.toThrow();
@@ -387,7 +391,6 @@ describe('RoomService', () => {
         type: 'screen',
       });
 
-      // [오디오 검증] 모든 유저의 오디오가 포함되어야 함 (5번 유저 포함)
       expect(producers.filter((p) => p.kind === 'audio')).toHaveLength(6);
       expect(producers).toContainEqual({
         producerId: 'a-5',
@@ -395,20 +398,7 @@ describe('RoomService', () => {
         kind: 'audio',
         type: 'audio',
       });
-
-      // [비디오 슬롯 검증] 선착순 4명만 포함되어야 함 (1~4번)
-      const audienceVideos = producers.filter(
-        (p) => p.kind === 'video' && p.participantId.startsWith('early'),
-      );
-      expect(audienceVideos).toHaveLength(4);
-
-      // 5번 유저(late-5)는 오디오는 있지만 비디오는 슬롯 제한으로 제외되어야 함
-      expect(producers).not.toContainEqual({
-        producerId: 'v-5',
-        participantId: 'late-5',
-        kind: 'video',
-        type: 'video',
-      });
+      expect(producers).toHaveLength(13);
     });
 
     it('본인이 발표자인 경우 본인 정보는 existingProducers에서 제외되어야 한다', async () => {
@@ -428,6 +418,44 @@ describe('RoomService', () => {
       const hasSelf = result.mediasoup.existingProducers.some((p) => p.participantId === 'host-id');
       expect(hasSelf).toBe(false);
       expect(result.mediasoup.existingProducers).toHaveLength(1); // p1의 오디오만 남음
+    });
+  });
+
+  describe('getFiles', () => {
+    const mockRoomId = 'test-room-id';
+
+    it('방이 존재하면 파일 리스트를 반환해야 한다', async () => {
+      const mockFiles = [
+        { url: 'url1.pdf', size: 14123 },
+        { url: 'url2.png', size: 13213 },
+      ];
+      const mockRoom: Partial<Room> = { id: mockRoomId, files: mockFiles };
+
+      jest.spyOn(roomManagerService, 'findOne').mockResolvedValue(mockRoom as Room);
+
+      const result = await service.getFiles(mockRoomId);
+
+      expect(roomManagerService.findOne).toHaveBeenCalledWith(mockRoomId);
+      expect(result).toEqual(mockFiles);
+      expect(result).toHaveLength(2);
+    });
+
+    it('방이 존재하지 않으면 NotFoundException을 던져야 한다', async () => {
+      jest.spyOn(roomManagerService, 'findOne').mockResolvedValue(null);
+
+      await expect(service.getFiles(mockRoomId)).rejects.toThrow(
+        new NotFoundException(`Room with ID ${mockRoomId} not found`),
+      );
+    });
+
+    it('방은 존재하지만 파일 배열이 비어있는 경우 빈 배열을 반환해야 한다', async () => {
+      const mockRoom: Partial<Room> = { id: mockRoomId, files: [] };
+      jest.spyOn(roomManagerService, 'findOne').mockResolvedValue(mockRoom as Room);
+
+      const result = await service.getFiles(mockRoomId);
+
+      expect(result).toEqual([]);
+      expect(result).toHaveLength(0);
     });
   });
 });

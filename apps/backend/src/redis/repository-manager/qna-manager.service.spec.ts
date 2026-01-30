@@ -27,6 +27,7 @@ describe('QnaManagerService', () => {
     redisClient = {
       pipeline: jest.fn().mockReturnValue(pipeline),
       lrange: jest.fn(),
+      sismember: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -367,6 +368,54 @@ describe('QnaManagerService', () => {
 
       const result = await service.getFinalResults('q1');
       expect(result).toEqual([]);
+    });
+  });
+
+  describe('getActiveAnswers', () => {
+    it('진행 중 질문의 답변 목록을 반환해야 한다', async () => {
+      const qnaId = 'qna-1';
+      const rawAnswers = [
+        JSON.stringify({ participantId: 'u1', participantName: 'A', text: '답변1' }),
+        JSON.stringify({ participantId: 'u2', participantName: 'B', text: '답변2' }),
+      ];
+
+      jest.spyOn(service as any, 'getAnswerListKey').mockReturnValue('qna:qna-1:answers');
+      redisClient.lrange.mockResolvedValue(rawAnswers);
+
+      const result = await service.getActiveAnswers(qnaId);
+
+      expect(redisClient.lrange).toHaveBeenCalledWith('qna:qna-1:answers', 0, -1);
+      expect(result).toEqual([
+        { participantId: 'u1', participantName: 'A', text: '답변1' },
+        { participantId: 'u2', participantName: 'B', text: '답변2' },
+      ]);
+    });
+  });
+
+  describe('hasAnswered', () => {
+    it('답변한 참가자라면 true를 반환해야 한다', async () => {
+      const qnaId = 'qna-1';
+      const participantId = 'u1';
+
+      jest.spyOn(service as any, 'getAnswererSetKey').mockReturnValue('qna:qna-1:answerers');
+      redisClient.sismember.mockResolvedValue(1);
+
+      const result = await service.hasAnswered(qnaId, participantId);
+
+      expect(redisClient.sismember).toHaveBeenCalledWith('qna:qna-1:answerers', participantId);
+      expect(result).toBe(true);
+    });
+
+    it('아직 답변하지 않았으면 false를 반환해야 한다', async () => {
+      const qnaId = 'qna-1';
+      const participantId = 'u2';
+
+      jest.spyOn(service as any, 'getAnswererSetKey').mockReturnValue('qna:qna-1:answerers');
+      redisClient.sismember.mockResolvedValue(0);
+
+      const result = await service.hasAnswered(qnaId, participantId);
+
+      expect(result).toBe(false);
     });
   });
 

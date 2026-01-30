@@ -1,4 +1,4 @@
-import { ClientToServerEvents, ServerToClientEvents } from '@plum/shared-interfaces';
+import { ClientToServerEvents, FileInfo, ServerToClientEvents } from '@plum/shared-interfaces';
 import { Socket } from 'socket.io-client';
 
 export interface Participant {
@@ -7,3 +7,7 @@ export interface Participant {
 }
 
 export type MediaSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
+
+export interface PresentationFile extends FileInfo {
+  name: string;
+}

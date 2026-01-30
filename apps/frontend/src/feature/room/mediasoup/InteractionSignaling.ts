@@ -10,13 +10,17 @@ import type {
   UpdateQnaSubPayload,
   EndQnaPayload,
   EndQnaDetailPayload,
+  ScoreUpdatePayload,
+  RankUpdatePayload,
+  PresenterScoreInfoPayload,
+  ChatMessage,
 } from '@plum/shared-interfaces';
 
 import { logger } from '@/shared/lib/logger';
 import type { MediaSocket } from '../types';
 
 /**
- * 인터랙션 관련 소켓 리스너(투표/제스처) 설정 모듈
+ * 인터랙션 관련 소켓 리스너(투표/제스처/채팅) 설정 모듈
  */
 export const InteractionSignaling = {
   /**
@@ -30,6 +34,7 @@ export const InteractionSignaling = {
       handlePollEndDetail: (data: EndPollDetailPayload) => void;
       handleUpdateQnaDetail: (data: UpdateQnaFullPayload) => void;
       handleQnaEndDetail: (data: EndQnaDetailPayload) => void;
+      handlePresenterRankUpdate: (data: PresenterScoreInfoPayload) => void;
     },
   ) => {
     socket.on('update_gesture_status', (data) => {
@@ -56,6 +61,11 @@ export const InteractionSignaling = {
       logger.socket.info('QnA 종료 상세 이벤트 수신', data);
       actions.handleQnaEndDetail(data);
     });
+
+    socket.on('presenter_rank_update', (data) => {
+      logger.socket.info('발표자 랭킹 업데이트 수신', data);
+      actions.handlePresenterRankUpdate(data);
+    });
   },
 
   /**
@@ -71,6 +81,8 @@ export const InteractionSignaling = {
       handleStartQna: (data: StartQnaPayload) => void;
       handleUpdateQna: (data: UpdateQnaSubPayload) => void;
       handleQnaEnd: (data: EndQnaPayload) => void;
+      handleScoreUpdate: (data: ScoreUpdatePayload) => void;
+      handleRankUpdate: (data: RankUpdatePayload) => void;
     },
   ) => {
     socket.on('update_gesture_status', (data) => {
@@ -107,6 +119,31 @@ export const InteractionSignaling = {
       logger.socket.info('QnA 종료 이벤트 수신', data);
       actions.handleQnaEnd(data);
     });
+
+    socket.on('score_update', (data) => {
+      logger.socket.info('점수 업데이트 수신', data);
+      actions.handleScoreUpdate(data);
+    });
+
+    socket.on('rank_update', (data) => {
+      logger.socket.info('랭킹 업데이트 수신', data);
+      actions.handleRankUpdate(data);
+    });
+  },
+
+  /**
+   * 채팅 이벤트 리스너 설정 (발표자/참여자 공통)
+   */
+  setupChatHandlers: (
+    socket: MediaSocket,
+    actions: {
+      handleNewChat: (data: ChatMessage) => void;
+    },
+  ) => {
+    socket.on('new_chat', (data) => {
+      logger.socket.info('새 채팅 메시지 수신', data);
+      actions.handleNewChat(data);
+    });
   },
 
   /**
@@ -124,6 +161,10 @@ export const InteractionSignaling = {
     socket.off('update_qna_detail');
     socket.off('qna_end');
     socket.off('qna_end_detail');
+    socket.off('score_update');
+    socket.off('rank_update');
+    socket.off('presenter_rank_update');
+    socket.off('new_chat');
     logger.socket.info('[Interaction] 모든 인터랙션 리스너 해제 완료');
   },
 };

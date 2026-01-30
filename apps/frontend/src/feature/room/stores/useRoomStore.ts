@@ -6,7 +6,7 @@ import { RtpCapabilities } from 'mediasoup-client/types';
 export interface MyInfo {
   id: string;
   name: string;
-  role: ParticipantRole;
+  role?: ParticipantRole;
 }
 
 export interface Participant {
@@ -17,9 +17,11 @@ export interface Participant {
   producers: Map<MediaType, string>; // type -> producerId
 }
 
-interface RoomActions {
+export interface RoomActions {
   setMyInfo: (info: MyInfo) => void;
+  setRoomTitle: (title: string) => void;
   setRouterRtpCapabilities: (capabilities: RtpCapabilities) => void;
+  setRoomEnded: (isEnded: boolean) => void;
 
   initParticipants: (participantMap: Map<string, Participant>) => void;
   addParticipant: (data: UserJoinedPayload) => void;
@@ -28,6 +30,10 @@ interface RoomActions {
   removeProducer: (participantId: string, type: MediaType) => void;
   getParticipantList: () => Participant[];
   getParticipant: (id: string) => Participant | undefined;
+  findProducerInfo: (producerId: string) => {
+    participantId: string | null;
+    type: MediaType | null;
+  };
 
   reset: () => void;
 }
@@ -35,7 +41,9 @@ interface RoomActions {
 interface RoomState {
   // 내 정보
   myInfo: MyInfo | null;
+  roomTitle: string | null;
   routerRtpCapabilities: RtpCapabilities | null;
+  isRoomEnded: boolean;
   actions: RoomActions;
 
   // 참가자 목록
@@ -44,7 +52,9 @@ interface RoomState {
 
 const initialState: Omit<RoomState, 'actions'> = {
   myInfo: null,
+  roomTitle: null,
   routerRtpCapabilities: null,
+  isRoomEnded: false,
   participants: new Map(),
 };
 
@@ -54,7 +64,9 @@ export const useRoomStore = create<RoomState>()(
       ...initialState,
       actions: {
         setMyInfo: (info) => set({ myInfo: info }),
+        setRoomTitle: (title) => set({ roomTitle: title }),
         setRouterRtpCapabilities: (capabilities) => set({ routerRtpCapabilities: capabilities }),
+        setRoomEnded: (isEnded) => set({ isRoomEnded: isEnded }),
 
         /** 참가자 목록 초기화 */
         initParticipants: (participantMap: Map<string, Participant>) => {
@@ -141,6 +153,19 @@ export const useRoomStore = create<RoomState>()(
           return participants.get(id);
         },
 
+        /** Producer ID로 정보 찾기 */
+        findProducerInfo: (producerId: string) => {
+          const participants = get().participants;
+          for (const [participantId, participant] of participants) {
+            for (const [type, pId] of participant.producers) {
+              if (pId === producerId) {
+                return { participantId, type };
+              }
+            }
+          }
+          return { participantId: null, type: null };
+        },
+
         /** 스토어 초기화 */
         reset: () => set({ ...initialState, participants: new Map() }),
       },
@@ -150,6 +175,7 @@ export const useRoomStore = create<RoomState>()(
       storage: createJSONStorage(() => sessionStorage),
       partialize: (state) => ({
         myInfo: { id: state.myInfo?.id, name: state.myInfo?.name },
+        roomTitle: state.roomTitle,
       }),
     },
   ),

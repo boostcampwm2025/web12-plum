@@ -1,4 +1,5 @@
 import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import * as mediasoup from 'mediasoup';
 import {
   Worker,
@@ -12,8 +13,9 @@ import {
 } from 'mediasoup/node/lib/types';
 import { MediaType } from '@plum/shared-interfaces';
 import { mediasoupConfig } from './mediasoup.config.js';
-import { ConsumerAppData, ProducerAppData } from './mediasoup.type.js';
+import { ConsumerAppData, ProducerAppData, RoomType } from './mediasoup.type.js';
 import { PrometheusService } from '../prometheus/prometheus.service.js';
+import { MultiRouterManagerService } from './multi-router-manager.service.js';
 
 /**
  * Mediasoup Worker 및 Router 관리 서비스
@@ -35,7 +37,11 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
   private consumers: Map<string, Consumer<ConsumerAppData>> = new Map();
   private nextWorkerIdx = 0; // Round-robin Worker 선택 인덱스
 
-  constructor(private readonly prometheusService: PrometheusService) {}
+  constructor(
+    private readonly prometheusService: PrometheusService,
+    private readonly multiRouterManager: MultiRouterManagerService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
 
   /**
    * 앱 시작 시 Mediasoup Worker 생성
@@ -113,7 +119,7 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * 새로운 강의실을 위한 Router 생성
+   * 새로운 강의실을 위한 Router 생성 (Legacy - Single Router)
    * @param roomId 강의실 고유 ID
    * @returns Router 인스턴스
    */
@@ -143,6 +149,59 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
+   * Multi-Router 아키텍처로 강의실 Router 생성
+   * Room Type에 따라 Single/Multi-Router 전략 자동 선택
+   * TODO: 지금은 소회의실이 없지만 분산 아키텍처 차이로 우선 type별 분기 유지
+   *
+   * @param roomId 강의실 고유 ID
+   * @param roomType Room 타입 (SMALL_MEETING or LECTURE)
+   * @returns Router 배열 (첫 번째가 Primary Router)
+   */
+  async createRoutersWithStrategy(roomId: string, roomType: RoomType): Promise<Router[]> {
+    try {
+      const routers = await this.multiRouterManager.createRoutersForRoom(
+        roomId,
+        roomType,
+        this.workers,
+      );
+
+      // 첫 번째 Router를 legacy Map에도 저장 (하위 호환성)
+      if (routers.length > 0) {
+        this.routers.set(roomId, routers[0]);
+      }
+
+      // Prometheus 메트릭 업데이트 - 실제 전체 Router 수 반영
+      this.prometheusService.setMediasoupRouters(this.getTotalRouterCount());
+
+      return routers;
+    } catch (error) {
+      this.logger.error(`❌ Multi-Router 생성 실패: room ${roomId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * 참가자에게 Router 할당 (Multi-Router 전략)
+   */
+  assignRouterForParticipant(roomId: string, participantId: string): Router {
+    return this.multiRouterManager.assignRouterForParticipant(roomId, participantId);
+  }
+
+  /**
+   * 참가자의 Router 조회
+   */
+  getParticipantRouter(roomId: string, participantId: string): Router {
+    return this.multiRouterManager.getParticipantRouter(roomId, participantId);
+  }
+
+  /**
+   * 참가자의 Router 인덱스 조회
+   */
+  getParticipantRouterIndex(roomId: string, participantId: string): number {
+    return this.multiRouterManager.getParticipantRouterIndex(roomId, participantId);
+  }
+
+  /**
    * 강의실의 Router 조회
    * @param roomId 강의실 고유 ID
    * @returns Router 인스턴스 (없으면 undefined)
@@ -165,6 +224,81 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
       // Prometheus 메트릭 업데이트
       this.prometheusService.setMediasoupRouters(this.routers.size);
     }
+  }
+
+  /**
+   * Multi-Router Room 정리 (강의 종료 시)
+   * 모든 Router와 PipeProducer 정리
+   */
+  async closeRoutersWithStrategy(roomId: string): Promise<void> {
+    await this.multiRouterManager.cleanupRoom(roomId);
+    this.routers.delete(roomId);
+
+    // Prometheus 메트릭 업데이트 - 실제 전체 Router 수 반영
+    this.prometheusService.setMediasoupRouters(this.getTotalRouterCount());
+  }
+
+  /**
+   * Producer를 모든 Router로 즉시 파이프 (Eager Loading)
+   *
+   * 사용 대상:
+   * - 발표자의 모든 스트림 (video, audio, screen)
+   * - 청중의 마이크 (audio) - 마이크 켜면 전원 청취
+   */
+  async pipeProducerToAllRouters(
+    roomId: string,
+    producer: Producer<ProducerAppData>,
+    sourceRouterIndex: number,
+  ): Promise<void> {
+    await this.multiRouterManager.pipeProducerToAllRouters(roomId, producer, sourceRouterIndex);
+  }
+
+  /**
+   * Producer를 특정 Router로 On-Demand 파이프 (Lazy Loading)
+   *
+   * 사용 대상:
+   * - 청중의 카메라 (video) - 최대 5명만 선택적 시청
+   */
+  async pipeProducerOnDemand(
+    roomId: string,
+    producer: Producer<ProducerAppData>,
+    sourceRouterIndex: number,
+    targetRouterIndex: number,
+  ): Promise<Producer<ProducerAppData>> {
+    return this.multiRouterManager.pipeProducerOnDemand(
+      roomId,
+      producer,
+      sourceRouterIndex,
+      targetRouterIndex,
+    );
+  }
+
+  /**
+   * Producer 종료 시 PipeProducer 능동적 정리
+   */
+  async cleanupPipeProducers(roomId: string, producerId: string): Promise<void> {
+    await this.multiRouterManager.cleanupPipeProducers(roomId, producerId);
+  }
+
+  /**
+   * 참가자 퇴장 처리
+   */
+  removeParticipantFromRouter(roomId: string, participantId: string): void {
+    this.multiRouterManager.removeParticipant(roomId, participantId);
+  }
+
+  /**
+   * Multi-Router Room 정보 조회
+   */
+  getMultiRouterRoomInfo(roomId: string) {
+    return this.multiRouterManager.getRoomInfo(roomId);
+  }
+
+  /**
+   * 디버깅용: PipeProducer 상태 조회
+   */
+  getPipeProducerStatus(roomId: string) {
+    return this.multiRouterManager.getPipeProducerStatus(roomId);
   }
 
   /**
@@ -192,6 +326,27 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
+   * 전체 Router 수 계산 (Multi-Router 포함)
+   * Prometheus 메트릭용
+   */
+  private getTotalRouterCount(): number {
+    let totalCount = 0;
+
+    // MultiRouterManager에서 관리하는 모든 Room의 Router 수 합산
+    for (const roomId of this.routers.keys()) {
+      const roomRouters = this.multiRouterManager.getRoomRouters(roomId);
+      if (roomRouters) {
+        totalCount += roomRouters.length;
+      } else {
+        // 단일 router
+        totalCount += 1;
+      }
+    }
+
+    return totalCount;
+  }
+
+  /**
    * Worker 상태 조회 (헬스체크용)
    * @returns Worker 상태 배열
    */
@@ -209,11 +364,38 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
    * 클라이언트와 서버 간 미디어 송수신 통로 생성
    *
    * @param roomId 강의실 고유 ID
+   * @param participantId 참가자 ID (Multi-Router)
    * @returns Transport 정보 (id, iceParameters, iceCandidates, dtlsParameters)
    * 공식문서: https://mediasoup.org/documentation/v3/mediasoup/api/#WebRtcTransportOptions
    */
-  async createWebRtcTransport(roomId: string) {
-    const router = this.routers.get(roomId);
+  async createWebRtcTransport(roomId: string, participantId?: string) {
+    // Multi-Router 전략: 참가자에게 할당된 Router 사용
+    // Single Router 전략: 기존 방식 (roomId로 Router 조회)
+    let router: Router;
+
+    if (participantId) {
+      // 참가자에게 할당된 Router 인덱스 조회
+      const routerIndex = this.multiRouterManager.getParticipantRouterIndex(roomId, participantId);
+      if (routerIndex !== undefined) {
+        const routers = this.multiRouterManager.getRoomRouters(roomId);
+        if (routers && routers[routerIndex]) {
+          router = routers[routerIndex];
+          this.logger.log(
+            `🔀 Transport 생성: Router #${routerIndex} 사용 (participant: ${participantId})`,
+          );
+        } else {
+          // fallback: 기존 방식
+          router = this.routers.get(roomId)!;
+        }
+      } else {
+        // fallback: 기존 방식
+        router = this.routers.get(roomId)!;
+      }
+    } else {
+      // participantId가 없으면 기존 방식 (Single Router)
+      router = this.routers.get(roomId)!;
+    }
+
     if (!router) {
       throw new Error(`${roomId} 강의실의 Router를 찾을 수 없습니다.`);
     }
@@ -296,7 +478,10 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
    */
   closeTransport(transportId: string) {
     const transport = this.transports.get(transportId);
-    if (transport) transport.close();
+    if (!transport || transport.closed) {
+      return;
+    }
+    transport.close();
   }
 
   async createProducer(
@@ -357,8 +542,9 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
 
   closeProducer(producerId: string) {
     const producer = this.getProducer(producerId);
-    if (!producer) throw new Error(`${producerId} Producer를 찾을 수 없습니다.`);
-
+    if (!producer || producer.closed) {
+      return;
+    }
     producer.close();
   }
 
@@ -397,6 +583,15 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
       this.prometheusService.setMediasoupConsumers(this.consumers.size);
       this.prometheusService.decrementConsumerByKind(consumerKind);
     });
+    consumer.on('producerclose', () => {
+      if (!consumer.closed) consumer.close();
+
+      this.eventEmitter.emit('consumer.closed', {
+        consumerId: consumer.id,
+        participantId: participantId,
+        producerId: producerId,
+      });
+    });
 
     // Prometheus 메트릭 업데이트
     this.prometheusService.setMediasoupConsumers(this.consumers.size);
@@ -411,22 +606,32 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
 
   async resumeConsumer(consumerId: string) {
     const consumer = this.getConsumer(consumerId);
-    if (!consumer) throw new Error(`${consumerId} Consumer를 찾을 수 없습니다.`);
+    if (!consumer) {
+      throw new Error(`${consumerId} Consumer를 찾을 수 없습니다.`);
+    }
+
+    const producer = this.getProducer(consumer.producerId);
+    if (producer?.paused) {
+      throw new Error(
+        `Producer ${producer.id}가 일시정지 상태이므로 Consumer를 재개할 수 없습니다.`,
+      );
+    }
+
     await consumer.resume();
   }
 
   closeConsumer(consumerId: string) {
     const consumer = this.getConsumer(consumerId);
-    if (!consumer) throw new Error(`${consumerId} Consumer를 찾을 수 없습니다.`);
+    if (!consumer || consumer.closed) {
+      return;
+    }
     consumer.close();
   }
 
   cleanupParticipantFromMaps(producers: string[] = [], consumers: string[] = []) {
     producers.forEach((producerId) => {
       try {
-        if (this.producers.has(producerId)) {
-          this.closeProducer(producerId);
-        }
+        this.closeProducer(producerId);
       } catch (error) {
         this.logger.warn(`Producer ${producerId} 정리 중 오류: ${error.message}`);
       }
@@ -434,9 +639,7 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
 
     consumers.forEach((consumerId) => {
       try {
-        if (this.consumers.has(consumerId)) {
-          this.closeConsumer(consumerId);
-        }
+        this.closeConsumer(consumerId);
       } catch (error) {
         this.logger.warn(`Consumer ${consumerId} 정리 중 오류: ${error.message}`);
       }

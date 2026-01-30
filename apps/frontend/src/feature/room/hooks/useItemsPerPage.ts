@@ -1,4 +1,4 @@
-import { useState, useEffect, RefObject } from 'react';
+import { useState, useLayoutEffect, RefObject } from 'react';
 
 interface UseItemsPerPageConfig {
   buttonHeight: number;
@@ -12,9 +12,9 @@ export function useItemsPerPage(
   containerRef: RefObject<HTMLDivElement>,
   config: UseItemsPerPageConfig,
 ) {
-  const [itemsPerPage, setItemsPerPage] = useState(4);
+  const [itemsPerPage, setItemsPerPage] = useState<number | null>(null);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const calculateItemsPerPage = () => {
       if (!containerRef.current) return;
 

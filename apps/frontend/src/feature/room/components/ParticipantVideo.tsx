@@ -1,10 +1,10 @@
-import { memo, useEffect, useRef } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import { motion } from 'motion/react';
 import { cn } from '@/shared/lib/utils';
 import { Icon } from '@/shared/components/icon/Icon';
 import { Button } from '@/shared/components/Button';
 import { MediaType, ParticipantRole } from '@plum/shared-interfaces';
-import { useMediaConnectionContext } from '../hooks/useMediaConnectionContext';
+import { useMediaControlContext } from '../hooks/useMediaControlContext';
 import { logger } from '@/shared/lib/logger';
 import { useMediaStore } from '../stores/useMediaStore';
 import { useGestureStore } from '../stores/useGestureStore';
@@ -91,7 +91,6 @@ export interface ParticipantVideoProps {
   participantRole?: ParticipantRole;
   isActive?: boolean;
   isCurrentlyVisible?: boolean;
-  onVideoElementChange?: (element: HTMLVideoElement | null) => void;
 }
 
 function ParticipantVideoComponent({
@@ -106,10 +105,10 @@ function ParticipantVideoComponent({
   participantRole,
   isActive = true,
   isCurrentlyVisible = true,
-  onVideoElementChange,
 }: ParticipantVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const { consumeRemoteProducer, stopConsuming } = useMediaConnectionContext();
+  const [showOverlay, setShowOverlay] = useState(true);
+  const { consumeRemoteProducer, stopConsuming } = useMediaControlContext();
 
   // 원격 스트림인 경우에만 스토어에서 비디오 스트림 구독
   const remoteStream = useRemoteVideoStream(isCurrentUser ? '' : id);
@@ -138,14 +137,14 @@ function ParticipantVideoComponent({
     } // 수신 중단 (마운트는 유지되나 윈도우에서 밀려남)
     else {
       logger.ui.debug(`[Network] 수신 중단(InActive): ${name} (ID: ${id})`);
-      stopConsuming(videoProducerId, 'video');
+      stopConsuming(id, 'video');
     }
 
-    // 언마운트 로그 (DOM에서 완전히 제거됨)
+    // 언마운트 시 정리 (DOM에서 완전히 제거됨)
     return () => {
       if (videoProducerId) {
         logger.ui.debug(`[Network] 수신 중단(언마운트): ${name} (ID: ${id})`);
-        stopConsuming(videoProducerId, 'video');
+        stopConsuming(id, 'video');
       }
     };
   }, [
@@ -158,30 +157,44 @@ function ParticipantVideoComponent({
     stopConsuming,
   ]);
 
+  // 스트림 바뀌면 오버레이 리셋
+  useEffect(() => {
+    setShowOverlay(true);
+  }, [activeStream]);
+
   // 스트림 연결 처리
   useEffect(() => {
     const videoElement = videoRef.current;
-    if (!videoElement) return;
+    if (!videoElement || mode === 'minimize') return;
 
-    if (mode !== 'minimize' && activeStream && isVideoEnabled) {
-      if (videoElement.srcObject !== activeStream) {
-        logger.ui.debug('[ParticipantVideo] 새로 연결');
-        videoElement.srcObject = activeStream;
+    // 스트림 또는 비디오 비활성화 시 정리
+    if (!activeStream || !isVideoEnabled) {
+      if (videoElement?.srcObject) {
+        videoElement.pause();
+        videoElement.srcObject = null;
       }
-    } else {
-      // 카메라 꺼지면 srcObject 정리 (마지막 프레임 제거)
-      if (videoElement.srcObject !== null) videoElement.srcObject = null;
+      return;
+    }
+
+    // 이전 srcObject와 다르고 트랙 확인
+    if (videoElement.srcObject !== activeStream) {
+      const tracks = activeStream.getVideoTracks();
+
+      // 트랙 live 확인
+      if (tracks.length > 0 && tracks[0].readyState === 'live') {
+        logger.ui.debug(`[Video] 연결: 트랙 ${tracks.length}, readyState ${tracks[0].readyState}`);
+        videoElement.srcObject = activeStream;
+
+        // loadeddata 대기 후 play
+        const handleLoadedData = () => {
+          videoElement.removeEventListener('loadeddata', handleLoadedData);
+          videoElement.play().catch((error) => logger.ui.warn('[Video] 재생 실패', error));
+          setShowOverlay(false);
+        };
+        videoElement.addEventListener('loadeddata', handleLoadedData);
+      }
     }
   }, [activeStream, isVideoEnabled, mode]);
-
-  useEffect(() => {
-    const videoElement = videoRef.current;
-    if (videoElement && mode !== 'minimize' && activeStream && isVideoEnabled) {
-      onVideoElementChange?.(videoElement);
-    } else {
-      onVideoElementChange?.(null);
-    }
-  }, [onVideoElementChange, mode, activeStream, isVideoEnabled]);
 
   return (
     <motion.div
@@ -198,31 +211,39 @@ function ParticipantVideoComponent({
         },
       }}
       className={cn(
-        'relative z-50 w-50.5 overflow-hidden rounded-lg',
+        'relative z-25 w-50.5 overflow-hidden rounded-lg',
         isCurrentUser && 'group',
         mode === 'minimize' && 'flex h-9 items-center justify-between bg-gray-500 px-2 shadow-md',
         mode === 'pip' && 'shadow-md',
       )}
     >
       {/* 비디오 영역 */}
-      {mode !== 'minimize' &&
-        (activeStream && isVideoEnabled ? (
+      {mode !== 'minimize' && (
+        <div className="relative h-full w-full">
           <video
             ref={videoRef}
             autoPlay
-            muted={isCurrentUser}
+            muted={true} // 자동 재생 정책 준수를 위해 항상 음소거 (비디오 전용)
             playsInline
+            preload="metadata"
             className="h-full w-full object-cover"
           />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center bg-gray-200">
-            <Icon
-              name="cam-disabled"
-              size={32}
-              className="text-text"
-            />
-          </div>
-        ))}
+
+          {(showOverlay || !isVideoEnabled) && (
+            <div className="absolute inset-0 flex items-center justify-center bg-linear-to-br from-gray-200 to-gray-300 transition-all duration-300">
+              {showOverlay && isVideoEnabled ? (
+                <div className="border-primary h-6 w-6 animate-spin rounded-full border-4 border-t-transparent" />
+              ) : (
+                <Icon
+                  name="cam-disabled"
+                  size={32}
+                  className="text-text"
+                />
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* 제스처 인식 프로그레스바 */}
       {mode !== 'minimize' && isCurrentUser && <GestureProgressOverlay />}

@@ -13,18 +13,23 @@ import {
   CreateRoomResponse,
   EnterLectureRequestBody,
   EnterRoomResponse,
+  FileInfo,
   MediasoupProducer,
   Participant,
+  ParticipantPayload,
   ParticipantRole,
   Room,
   RoomInfo,
+  RoomSummary,
   RoomValidationResponse,
 } from '@plum/shared-interfaces';
 import { InteractionService } from '../interaction/interaction.service.js';
-import { RoomManagerService } from '../redis/repository-manager/index.js';
+import {
+  ActivityScoreManagerService,
+  RoomManagerService,
+} from '../redis/repository-manager/index.js';
 import { MediasoupService } from '../mediasoup/mediasoup.service.js';
-
-const AUDIENCE_VIDEO_LIMIT = 5;
+import { RoomType } from '../mediasoup/mediasoup.type.js';
 
 @Injectable()
 export class RoomService {
@@ -36,6 +41,7 @@ export class RoomService {
     private readonly configService: ConfigService,
     private readonly interactionService: InteractionService,
     private readonly roomManagerService: RoomManagerService,
+    private readonly activityScoreManagerService: ActivityScoreManagerService,
     private readonly mediasoupService: MediasoupService,
   ) {
     this.region = configService.get<string>('AWS_S3_REGION') || '';
@@ -52,8 +58,9 @@ export class RoomService {
     });
   }
 
-  private async uploadFile(file: Express.Multer.File): Promise<string> {
-    const fileName = `${ulid()}_${file.originalname}`;
+  private async uploadFile(file: Express.Multer.File): Promise<FileInfo> {
+    const originalName = Buffer.from(file.originalname, 'latin1').toString('utf8');
+    const fileName = `${ulid()}_${originalName}`;
 
     try {
       const upload = new Upload({
@@ -69,13 +76,16 @@ export class RoomService {
       await upload.done();
 
       // 환경 변수로 관리되는 region과 bucketName을 사용하여 URL 반환
-      return `https://${this.bucketName}.s3.${this.region}.amazonaws.com/${fileName}`;
+      return {
+        url: `https://${this.bucketName}.s3.${this.region}.amazonaws.com/${fileName}`,
+        size: file.size,
+      };
     } catch (error) {
       throw new InternalServerErrorException('파일 업로드 중 오류가 발생했습니다.', error);
     }
   }
 
-  private async multipleFileUpload(files: Express.Multer.File[]): Promise<string[]> {
+  private async multipleFileUpload(files: Express.Multer.File[]): Promise<FileInfo[]> {
     if (!files || files.length === 0) return [];
 
     return await Promise.all(files.map((file) => this.uploadFile(file)));
@@ -93,10 +103,6 @@ export class RoomService {
       currentRoomId: roomId,
       name,
       role,
-      participationScore: 0,
-      gestureCount: 0,
-      chatCount: 0,
-      pollParticipation: 0,
       cameraEnable: false,
       micEnable: false,
       screenEnable: false,
@@ -119,80 +125,56 @@ export class RoomService {
 
   async getRoomInfo(roomId: string, participant: Participant): Promise<RoomInfo> {
     const rtpCapabilities = this.mediasoupService.getRouterRtpCapabilities(roomId);
-    const allParticipants = (await this.roomManagerService.getParticipantsInRoom(roomId)).sort(
-      (a, b) => new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime(),
-    );
+    const allParticipants = await this.roomManagerService.getParticipantsInRoom(roomId);
 
-    if (allParticipants.length === 0) {
-      // 조기 종료
-      return {
-        mediasoup: {
-          routerRtpCapabilities: rtpCapabilities,
-          existingProducers: [],
-        },
-        participants: [],
-      };
-    }
-
-    const others = allParticipants.filter((p) => p.id !== participant.id);
-    const audienceVideoCandidates = others
-      .filter((p) => p.role === 'audience' && p.producers.video)
-      .slice(0, AUDIENCE_VIDEO_LIMIT - 1);
-
-    const videoTargetIds = new Set(audienceVideoCandidates.map((p) => p.id));
     const existingProducers: MediasoupProducer[] = [];
+    const otherParticipants: ParticipantPayload[] = [];
+    let presenterInfo: ParticipantPayload | undefined = undefined;
 
     for (const p of allParticipants) {
-      if (p.id === participant.id) continue; // 본인 제외
+      if (p.id === participant.id) continue;
 
-      if (p.producers.audio) {
-        existingProducers.push({
-          producerId: p.producers.audio,
-          participantId: p.id,
-          kind: 'audio',
-          type: 'audio',
-        });
-      }
-
-      if (p.role === 'presenter') {
-        if (p.producers.video) {
+      if (p.producers) {
+        if (p.producers.audio)
+          existingProducers.push({
+            producerId: p.producers.audio,
+            participantId: p.id,
+            kind: 'audio',
+            type: 'audio',
+          });
+        if (p.producers.video)
           existingProducers.push({
             producerId: p.producers.video,
             participantId: p.id,
             kind: 'video',
             type: 'video',
           });
-        }
-        if (p.producers.screen) {
+        if (p.producers.screen)
           existingProducers.push({
             producerId: p.producers.screen,
             participantId: p.id,
             kind: 'video',
             type: 'screen',
           });
-        }
-      } else if (videoTargetIds.has(p.id)) {
-        existingProducers.push({
-          producerId: p.producers.video,
-          participantId: p.id,
-          kind: 'video',
-          type: 'video',
-        });
       }
+
+      const info = {
+        id: p.id,
+        name: p.name,
+        role: p.role,
+        joinedAt: new Date(p.joinedAt),
+      };
+
+      if (p.role === 'presenter') presenterInfo = info;
+      else otherParticipants.push(info);
     }
 
-    const existingParticipants = allParticipants.filter((p) => p.id !== participant.id);
     return {
       mediasoup: {
         routerRtpCapabilities: rtpCapabilities,
         existingProducers,
       },
-      participants: existingParticipants.map((p) => ({
-        id: p.id,
-        name: p.name,
-        role: p.role,
-        joinedAt: new Date(p.joinedAt),
-      })),
+      participants: presenterInfo ? [presenterInfo, ...otherParticipants] : otherParticipants,
     };
   }
 
@@ -207,7 +189,7 @@ export class RoomService {
       this.multipleFileUpload(files),
       this.interactionService.createMultiplePoll(roomId, body.polls),
       this.interactionService.createMultipleQna(roomId, body.qnas),
-      this.mediasoupService.createRouter(roomId),
+      this.mediasoupService.createRoutersWithStrategy(roomId, RoomType.LECTURE),
     ]);
 
     const room: Room = {
@@ -219,7 +201,6 @@ export class RoomService {
       startedAt: new Date().toISOString(),
       endedAt: '',
       files: uploadFilesUrl,
-      aiSummery: '',
     };
 
     await this.roomManagerService.saveOne(roomId, room);
@@ -260,7 +241,10 @@ export class RoomService {
   async createParticipant(roomId: string, name: string): Promise<Participant> {
     const participant = this.generateParticipantObject(ulid(), roomId, name, 'audience');
 
-    await this.roomManagerService.addParticipant(roomId, participant);
+    await Promise.all([
+      this.roomManagerService.addParticipant(roomId, participant),
+      this.activityScoreManagerService.initializeParticipantScore(roomId, participant.id),
+    ]);
     return participant;
   }
 
@@ -274,5 +258,41 @@ export class RoomService {
 
   async validateNickname(roomId: string, nickname: string): Promise<boolean> {
     return await this.roomManagerService.isNameAvailable(roomId, nickname);
+  }
+
+  async getFiles(roomId: string): Promise<FileInfo[]> {
+    const room = await this.roomManagerService.findOne(roomId);
+
+    if (!room) throw new NotFoundException(`Room with ID ${roomId} not found`);
+
+    return room.files;
+  }
+
+  async finalizeRoom(roomId: string): Promise<void> {
+    await Promise.all([
+      this.interactionService.stopAllActivePoll(roomId),
+      this.interactionService.stopAllActiveQna(roomId),
+    ]);
+  }
+
+  async getSummary(roomId: string): Promise<RoomSummary> {
+    const room = await this.roomManagerService.findOne(roomId);
+    if (!room) throw new NotFoundException(`Room with ID ${roomId} not found`);
+
+    const [polls, qnas, activityStatistics] = await Promise.all([
+      this.interactionService.getEndedPolls(roomId),
+      this.interactionService.getEndedQnas(roomId),
+      this.activityScoreManagerService.getActivityStatistics(roomId),
+    ]);
+
+    return {
+      name: room.name,
+      roomId: room.id,
+      summary: '', // TODO: add real summary
+      timelines: '', // TODO: add real timeline
+      polls,
+      qnas,
+      activityStatistics,
+    };
   }
 }

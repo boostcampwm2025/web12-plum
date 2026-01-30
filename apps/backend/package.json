@@ -26,6 +26,7 @@
     "@nestjs/websockets": "^10.4.20",
     "@plum/shared-interfaces": "workspace:*",
     "@socket.io/redis-adapter": "^8.3.0",
+    "async-mutex": "^0.5.0",
     "ioredis": "^5.9.1",
     "mediasoup": "^3.19.14",
     "nest-winston": "^1.10.2",

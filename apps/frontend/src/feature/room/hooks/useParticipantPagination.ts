@@ -4,31 +4,18 @@ import { useRoomStore } from '../stores/useRoomStore';
 
 const MAX_ITEMS = 5;
 
-export function useParticipantPagination(dynamicItemsPerPage: number) {
+export function useParticipantPagination(dynamicItemsPerPage: number | null) {
   const [currentPage, setCurrentPage] = useState(0);
   const participantsMap = useRoomStore(useShallow((state) => state.participants));
   const participants = useMemo(() => Array.from(participantsMap.values()), [participantsMap]);
 
-  const itemsPerPage = Math.min(MAX_ITEMS, dynamicItemsPerPage) || MAX_ITEMS;
+  // 아직 측정되지 않았으면 0으로 처리 (빈 윈도우)
+  const itemsPerPage = dynamicItemsPerPage !== null ? Math.min(MAX_ITEMS, dynamicItemsPerPage) : 0;
 
-  /**
-   * 비디오를 송출하는 참가자를 우선적으로 정렬
-   */
-  const sortedParticipants = useMemo(() => {
-    return [...participants].sort((a, b) => {
-      const aHasVideo = a.producers.has('video');
-      const bHasVideo = b.producers.has('video');
-
-      if (aHasVideo && !bHasVideo) return -1;
-      if (!aHasVideo && bHasVideo) return 1;
-      return 0;
-    });
-  }, [participants]);
-
-  const totalPages = Math.ceil(sortedParticipants.length / itemsPerPage);
+  const totalPages = Math.ceil(participants.length / itemsPerPage);
   const startIndex = currentPage * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const currentItems = sortedParticipants.slice(startIndex, endIndex);
+  const currentItems = participants.slice(startIndex, endIndex);
 
   const goToPrevPage = () => {
     setCurrentPage((prev) => Math.max(0, prev - 1));
@@ -54,8 +41,8 @@ export function useParticipantPagination(dynamicItemsPerPage: number) {
     // 윈도우 끝: 다음 페이지의 끝점
     const windowEnd = currentStart + itemsPerPage * 2;
 
-    return sortedParticipants.slice(windowStart, windowEnd);
-  }, [sortedParticipants, currentPage, itemsPerPage]);
+    return participants.slice(windowStart, windowEnd);
+  }, [participants, currentPage, itemsPerPage]);
 
   return {
     currentPage,
@@ -66,7 +53,7 @@ export function useParticipantPagination(dynamicItemsPerPage: number) {
     goToNextPage,
     hasPrevPage,
     hasNextPage,
-    sortedParticipants,
+    participants,
     visibleWindowParticipants,
   };
 }

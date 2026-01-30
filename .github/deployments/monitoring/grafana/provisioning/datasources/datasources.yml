@@ -6,6 +6,7 @@ apiVersion: 1
 datasources:
   # Prometheus - 메트릭 데이터
   - name: Prometheus
+    uid: prometheus
     type: prometheus
     access: proxy
     url: http://prometheus:9090
@@ -16,6 +17,7 @@ datasources:
 
   # Loki - 로그 데이터
   - name: Loki
+    uid: loki
     type: loki
     access: proxy
     url: http://loki:3100

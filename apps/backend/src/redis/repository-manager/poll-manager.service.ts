@@ -4,6 +4,7 @@ import { Poll, PollOption, UpdatePollStatusSubPayload, Voter } from '@plum/share
 import { RedisService } from '../redis.service.js';
 import { TTL_BOUNDS } from '../redis.constants.js';
 import { BaseRedisRepository } from './base-redis.repository.js';
+import { ChainableCommander } from 'ioredis';
 
 @Injectable()
 export class PollManagerService extends BaseRedisRepository<Poll> {
@@ -104,6 +105,85 @@ export class PollManagerService extends BaseRedisRepository<Poll> {
     if (!pollIds || pollIds.length === 0) return [];
 
     return await this.findMany(pollIds);
+  }
+
+  /**
+   * 투표 선택지별 현재 집계 수 조회
+   */
+  async getVoteCounts(pollId: string): Promise<Record<number, number>> {
+    const client = this.redisService.getClient();
+    const countKey = this.getVoteCountKey(pollId);
+    const countsRaw = await client.hgetall(countKey);
+
+    const counts: Record<number, number> = {};
+    Object.entries(countsRaw || {}).forEach(([id, count]) => {
+      const optionId = Number(id);
+      if (!Number.isNaN(optionId)) {
+        counts[optionId] = Number(count);
+      }
+    });
+
+    return counts;
+  }
+
+  /**
+   * 여러 투표의 집계 데이터를 한 번에 조회
+   */
+  async getMultiVoteCounts(pollIds: string[]): Promise<Record<string, Record<number, number>>> {
+    if (pollIds.length === 0) return {};
+
+    try {
+      const client = this.redisService.getClient();
+      const pipeline = client.pipeline();
+
+      pollIds.forEach((id) => {
+        pipeline.hgetall(this.getVoteCountKey(id));
+      });
+
+      const results = await pipeline.exec();
+      if (!results) return {};
+
+      const multiCounts: Record<string, Record<number, number>> = {};
+      results.forEach((entry, index) => {
+        if (!entry) return;
+
+        const [err, rawData] = entry;
+        if (err || !rawData) return;
+
+        const pollId = pollIds[index];
+        const counts: Record<number, number> = {};
+        Object.entries(rawData as Record<string, string>).forEach(([optId, count]) => {
+          const optionId = Number(optId);
+          if (!Number.isNaN(optionId)) {
+            counts[optionId] = Number(count);
+          }
+        });
+
+        multiCounts[pollId] = counts;
+      });
+
+      return multiCounts;
+    } catch (error) {
+      this.logger.error('[getMultiVoteCounts] Failed to fetch vote counts', error.stack);
+      return {};
+    }
+  }
+
+  /**
+   * 특정 참가자의 투표 선택지 조회
+   */
+  async getVotedOptionId(pollId: string, participantId: string): Promise<number | null> {
+    const client = this.redisService.getClient();
+    const voterKey = this.getVoterKey(pollId);
+    const storedValue = await client.hget(voterKey, participantId);
+
+    if (!storedValue) return null;
+
+    const separatorIndex = storedValue.indexOf(':');
+    const optionIdRaw =
+      separatorIndex === -1 ? storedValue : storedValue.substring(0, separatorIndex);
+    const optionId = Number(optionIdRaw);
+    return Number.isNaN(optionId) ? null : optionId;
   }
 
   /**
@@ -344,5 +424,18 @@ export class PollManagerService extends BaseRedisRepository<Poll> {
     } catch (error) {
       this.logger.error(`[AutoClose Error] ${pollId}: ${error.message}`);
     }
+  }
+
+  async addClearToPipeline(pipeline: ChainableCommander, roomId: string): Promise<void> {
+    const pollIds = await this.redisService.getClient().smembers(this.getPollListKey(roomId));
+
+    pollIds.forEach((id) => {
+      pipeline.del(`${this.keyPrefix}${id}`); // 투표 상세 Hash
+      pipeline.del(this.getActiveKey(id)); // 활성화 키
+      pipeline.del(this.getVoteCountKey(id)); // 카운트
+      pipeline.del(this.getVoterKey(id)); // 투표자 셋
+    });
+
+    pipeline.del(this.getPollListKey(roomId));
   }
 }

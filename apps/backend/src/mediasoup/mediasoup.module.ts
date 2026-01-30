@@ -1,5 +1,6 @@
 import { Module, Global } from '@nestjs/common';
 import { MediasoupService } from './mediasoup.service.js';
+import { MultiRouterManagerService } from './multi-router-manager.service.js';
 import { PrometheusModule } from '../prometheus/prometheus.module.js';
 
 /**
@@ -10,7 +11,7 @@ import { PrometheusModule } from '../prometheus/prometheus.module.js';
 @Global()
 @Module({
   imports: [PrometheusModule],
-  providers: [MediasoupService],
-  exports: [MediasoupService],
+  providers: [MediasoupService, MultiRouterManagerService],
+  exports: [MediasoupService, MultiRouterManagerService],
 })
 export class MediasoupModule {}
