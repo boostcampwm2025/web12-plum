@@ -35,7 +35,7 @@ export class SocketDomainError extends Error {
 /**
  * 소켓 연결 타임아웃 시간 (밀리초)
  */
-const CONNECTION_TIMEOUT = 7000;
+const CONNECTION_TIMEOUT = 5000;
 
 /**
  * 소켓 서버 URL
