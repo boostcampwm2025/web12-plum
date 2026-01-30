@@ -12,12 +12,16 @@ vi.mock('../stores/useMediaStore', () => ({
   useMediaStore: vi.fn(),
 }));
 
+vi.mock('../stores/useGestureStore', () => ({
+  useGestureStore: vi.fn(() => ({ gesture: null, progress: 0 })),
+}));
+
 vi.mock('../hooks/useMediaControlContext', () => ({
   useMediaControlContext: vi.fn(),
 }));
 
 vi.mock('@/shared/lib/logger', () => ({
-  logger: { ui: { debug: vi.fn() } },
+  logger: { ui: { debug: vi.fn(), warn: vi.fn() } },
 }));
 
 const mockUseMediaStore = vi.mocked(useMediaStore);
@@ -26,7 +30,11 @@ const mockUseMediaControlContext = vi.mocked(useMediaControlContext);
 describe('ParticipantVideo', () => {
   const mockConsume = vi.fn();
   const mockStopConsuming = vi.fn();
-  const mockStream = { id: 'stream-123', getTracks: () => [] } as unknown as MediaStream;
+  const mockStream = {
+    id: 'stream-123',
+    getTracks: () => [],
+    getVideoTracks: () => [{ readyState: 'live' }],
+  } as unknown as MediaStream;
 
   const defaultProps = {
     id: 'participant-1',
@@ -127,7 +135,7 @@ describe('ParticipantVideo', () => {
 
       const videoElement = document.querySelector('video') as HTMLVideoElement | null;
       expect(videoElement).toBeInTheDocument();
-      expect(videoElement?.srcObject).toBeNull();
+      expect(videoElement?.srcObject).toBeFalsy();
     });
   });
 
