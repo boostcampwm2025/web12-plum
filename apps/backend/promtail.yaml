@@ -23,15 +23,18 @@ scrape_configs:
           env: ${NODE_ENV}
           __path__: /app/logs/nestjs/app-*.log
 
-    # JSON 파싱과 타임스탬프만 처리 (동적 labels 제거)
+    # JSON 파싱: level 라벨 추출 + 타임스탬프 처리
     pipeline_stages:
       - json:
           expressions:
             timestamp: timestamp
+            level: level
             message: message
+      - labels:
+          level:
       - timestamp:
           source: timestamp
-          format: '2026-01-02 15:04:05' 
+          format: '2006-01-02 15:04:05'
       - output:
           source: message
 
@@ -45,14 +48,17 @@ scrape_configs:
           env: ${NODE_ENV}
           __path__: /app/logs/nestjs/error-*.log
 
-    # JSON 파싱과 타임스탬프만 처리 (동적 labels 제거)
+    # JSON 파싱: level 라벨 추출 + 타임스탬프 처리
     pipeline_stages:
       - json:
           expressions:
             timestamp: timestamp
+            level: level
             message: message
+      - labels:
+          level:
       - timestamp:
           source: timestamp
-          format: '2026-01-02 15:04:05'
+          format: '2006-01-02 15:04:05'
       - output:
           source: message
