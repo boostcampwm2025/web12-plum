@@ -79,8 +79,8 @@ jobs:
             GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy_key -o StrictHostKeyChecking=no" \
               git fetch origin
             git checkout ${DEPLOY_BRANCH}
-            GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy_key -o StrictHostKeyChecking=no" \
-              git pull origin ${DEPLOY_BRANCH}
+            # 로컬 변경사항 무시하고 원격 상태로 강제 동기화
+            git reset --hard origin/${DEPLOY_BRANCH}
 
             # .env 파일에 값 업데이트
             update_env() {
@@ -171,8 +171,8 @@ jobs:
             GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy_key -o StrictHostKeyChecking=no" \
               git fetch origin
             git checkout ${DEPLOY_BRANCH}
-            GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy_key -o StrictHostKeyChecking=no" \
-              git pull origin ${DEPLOY_BRANCH}
+            # 로컬 변경사항 무시하고 원격 상태로 강제 동기화
+            git reset --hard origin/${DEPLOY_BRANCH}
             
             update_env() {
               local key=$1
