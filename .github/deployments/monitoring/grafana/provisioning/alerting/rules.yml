@@ -166,7 +166,7 @@ groups:
         for: 2m
         annotations:
           summary: 'HTTP 5xx 에러가 급증했습니다'
-          description: '분당 {{ with $values.A }}{{ .Value | printf "%.1f" }}{{ else }}N/A{{ end }}회 발생 (Redis 연결 오류 가능성)'
+          description: '분당 {{ if $values.A }}{{ $values.A.Value | printf "%.1f" }}{{ else }}N/A{{ end }}회 발생 (Redis 연결 오류 가능성)'
         labels:
           severity: critical
           component: backend
@@ -207,7 +207,7 @@ groups:
         for: 2m
         annotations:
           summary: 'Redis 연결 오류가 로그에 기록되었습니다'
-          description: '5분간 {{ with $values.A }}{{ .Value }}{{ else }}N/A{{ end }}건의 Redis 연결 오류 발생'
+          description: '5분간 {{ if $values.A }}{{ $values.A.Value }}{{ else }}N/A{{ end }}건의 Redis 연결 오류 발생'
         labels:
           severity: critical
           component: redis
@@ -253,7 +253,7 @@ groups:
         for: 5m
         annotations:
           summary: 'Backend CPU 사용률이 높습니다'
-          description: 'CPU {{ with $values.A }}{{ .Value | printf "%.1f" }}{{ else }}N/A{{ end }}% (서버 크기 무관, 비율 기반)'
+          description: 'CPU {{ if $values.A }}{{ $values.A.Value | printf "%.1f" }}{{ else }}N/A{{ end }}% (서버 크기 무관, 비율 기반)'
         labels:
           severity: warning
           component: backend
@@ -293,7 +293,7 @@ groups:
         for: 2m
         annotations:
           summary: 'Event Loop Lag 발생 (CPU 과부하)'
-          description: 'Lag {{ with $values.A }}{{ .Value | printf "%.3f" }}{{ else }}N/A{{ end }}s (임계치: 0.05s)'
+          description: 'Lag {{ if $values.A }}{{ $values.A.Value | printf "%.3f" }}{{ else }}N/A{{ end }}s (임계치: 0.05s)'
         labels:
           severity: critical
           component: backend
@@ -339,7 +339,7 @@ groups:
         for: 5m
         annotations:
           summary: 'HTTP 응답 시간이 느립니다 (P95)'
-          description: 'P95: {{ with $values.A }}{{ .Value | printf "%.2f" }}{{ else }}N/A{{ end }}s'
+          description: 'P95: {{ if $values.A }}{{ $values.A.Value | printf "%.2f" }}{{ else }}N/A{{ end }}s'
         labels:
           severity: warning
           component: http
@@ -385,7 +385,7 @@ groups:
         for: 3m
         annotations:
           summary: 'Socket.IO 연결이 급증했습니다'
-          description: '5분간 {{ with $values.A }}{{ .Value | printf "%.0f" }}{{ else }}N/A{{ end }}명 증가'
+          description: '5분간 {{ if $values.A }}{{ $values.A.Value | printf "%.0f" }}{{ else }}N/A{{ end }}명 증가'
         labels:
           severity: warning
           component: socketio
@@ -445,7 +445,7 @@ groups:
         for: 2m
         annotations:
           summary: 'Mediasoup Consumers가 급증했습니다'
-          description: '5분간 {{ with $values.C }}{{ .Value | printf "%.1f" }}{{ else }}N/A{{ end }}% 증가 (강의실 급증 가능성)'
+          description: '5분간 {{ if $values.C }}{{ $values.C.Value | printf "%.1f" }}{{ else }}N/A{{ end }}% 증가 (강의실 급증 가능성)'
         labels:
           severity: warning
           component: mediasoup
@@ -485,7 +485,7 @@ groups:
         for: 5m
         annotations:
           summary: 'Worker 간 CPU 편차가 큽니다 (라운드 로빈 실패)'
-          description: 'Worker CPU 편차: {{ with $values.A }}{{ .Value | printf "%.1f" }}{{ else }}N/A{{ end }}%p'
+          description: 'Worker CPU 편차: {{ if $values.A }}{{ $values.A.Value | printf "%.1f" }}{{ else }}N/A{{ end }}%p'
         labels:
           severity: warning
           component: mediasoup
@@ -525,7 +525,7 @@ groups:
         for: 3m
         annotations:
           summary: 'Mediasoup Worker CPU가 매우 높습니다'
-          description: 'Worker {{ $labels.worker_id }} CPU: {{ with $values.A }}{{ .Value | printf "%.1f" }}{{ else }}N/A{{ end }}%'
+          description: 'Worker {{ $labels.worker_id }} CPU: {{ if $values.A }}{{ $values.A.Value | printf "%.1f" }}{{ else }}N/A{{ end }}%'
         labels:
           severity: critical
           component: mediasoup
@@ -585,7 +585,7 @@ groups:
         for: 3m
         annotations:
           summary: '네트워크 송신 대역폭이 급증했습니다'
-          description: '5분간 {{ with $values.C }}{{ .Value | printf "%.1f" }}{{ else }}N/A{{ end }}% 증가 (현재: {{ with $values.B }}{{ .Value | printf "%.0f" }}{{ else }}N/A{{ end }}Mbps)'
+          description: '5분간 {{ if $values.C }}{{ $values.C.Value | printf "%.1f" }}{{ else }}N/A{{ end }}% 증가 (현재: {{ if $values.B }}{{ $values.B.Value | printf "%.0f" }}{{ else }}N/A{{ end }}Mbps)'
         labels:
           severity: warning
           component: network
@@ -631,7 +631,7 @@ groups:
         for: 3m
         annotations:
           summary: '제스처 이벤트 처리가 느립니다'
-          description: 'P95 처리 시간: {{ with $values.A }}{{ .Value | printf "%.3f" }}{{ else }}N/A{{ end }}s (Redis 연결 확인 필요)'
+          description: 'P95 처리 시간: {{ if $values.A }}{{ $values.A.Value | printf "%.3f" }}{{ else }}N/A{{ end }}s (Redis 연결 확인 필요)'
         labels:
           severity: warning
           component: gesture
@@ -671,7 +671,7 @@ groups:
         for: 2m
         annotations:
           summary: '제스처 이벤트가 급증했습니다'
-          description: '초당 {{ with $values.A }}{{ .Value | printf "%.1f" }}{{ else }}N/A{{ end }}회'
+          description: '초당 {{ if $values.A }}{{ $values.A.Value | printf "%.1f" }}{{ else }}N/A{{ end }}회'
         labels:
           severity: warning
           component: gesture
@@ -731,7 +731,7 @@ groups:
         for: 3m
         annotations:
           summary: 'Redis 메모리 사용량이 급증했습니다'
-          description: '5분간 {{ with $values.C }}{{ .Value | printf "%.1f" }}{{ else }}N/A{{ end }}% 증가 (현재: {{ with $values.B }}{{ .Value | printf "%.0f" }}{{ else }}N/A{{ end }}MB)'
+          description: '5분간 {{ if $values.C }}{{ $values.C.Value | printf "%.1f" }}{{ else }}N/A{{ end }}% 증가 (현재: {{ if $values.B }}{{ $values.B.Value | printf "%.0f" }}{{ else }}N/A{{ end }}MB)'
         labels:
           severity: warning
           component: redis
@@ -777,7 +777,7 @@ groups:
         for: 3m
         annotations:
           summary: 'ERROR 로그가 급증했습니다'
-          description: '최근 5분간 {{ with $values.A }}{{ .Value }}{{ else }}N/A{{ end }}건의 ERROR 로그'
+          description: '최근 5분간 {{ if $values.A }}{{ $values.A.Value }}{{ else }}N/A{{ end }}건의 ERROR 로그'
         labels:
           severity: warning
           component: logs
