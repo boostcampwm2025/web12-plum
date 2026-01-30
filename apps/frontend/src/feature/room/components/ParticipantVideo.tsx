@@ -165,20 +165,34 @@ function ParticipantVideoComponent({
   // 스트림 연결 처리
   useEffect(() => {
     const videoElement = videoRef.current;
-    if (!videoElement) return;
+    if (!videoElement || mode === 'minimize') return;
 
-    if (mode !== 'minimize' && activeStream && isVideoEnabled) {
-      if (videoElement.srcObject !== activeStream) {
-        const tracks = activeStream.getTracks();
-        logger.ui.debug(
-          `[ParticipantVideo] 새로 연결. 트랙 수: ${tracks.length}, 상태: ${tracks[0]?.readyState}, Enabled: ${tracks[0]?.enabled}`,
-        );
-        videoElement.srcObject = activeStream;
-        videoElement.play().catch((e) => logger.ui.warn('[ParticipantVideo] 재생 실패', e));
+    // 스트림 또는 비디오 비활성화 시 정리
+    if (!activeStream || !isVideoEnabled) {
+      if (videoElement?.srcObject) {
+        videoElement.pause();
+        videoElement.srcObject = null;
       }
-    } else {
-      // 카메라 꺼지면 srcObject 정리 (마지막 프레임 제거)
-      if (videoElement.srcObject !== null) videoElement.srcObject = null;
+      return;
+    }
+
+    // 이전 srcObject와 다르고 트랙 확인
+    if (videoElement.srcObject !== activeStream) {
+      const tracks = activeStream.getVideoTracks();
+
+      // 트랙 live 확인
+      if (tracks.length > 0 && tracks[0].readyState === 'live') {
+        logger.ui.debug(`[Video] 연결: 트랙 ${tracks.length}, readyState ${tracks[0].readyState}`);
+        videoElement.srcObject = activeStream;
+
+        // loadeddata 대기 후 play
+        const handleLoadedData = () => {
+          videoElement.removeEventListener('loadeddata', handleLoadedData);
+          videoElement.play().catch((error) => logger.ui.warn('[Video] 재생 실패', error));
+          setShowOverlay(false);
+        };
+        videoElement.addEventListener('loadeddata', handleLoadedData);
+      }
     }
   }, [activeStream, isVideoEnabled, mode]);
 
@@ -211,7 +225,7 @@ function ParticipantVideoComponent({
             autoPlay
             muted={true} // 자동 재생 정책 준수를 위해 항상 음소거 (비디오 전용)
             playsInline
-            onCanPlay={() => setShowOverlay(false)}
+            preload="metadata"
             className="h-full w-full object-cover"
           />
 
