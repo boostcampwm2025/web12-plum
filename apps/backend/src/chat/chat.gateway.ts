@@ -110,11 +110,13 @@ export class ChatGateway {
     }
 
     // 3. 참여도 점수 올리기
-    await this.activityScoreManagerService.updateScore(
-      metadata.roomId,
-      metadata.participantId,
-      'chat',
-    );
+    if (participant.role === 'audience') {
+      await this.activityScoreManagerService.updateScore(
+        metadata.roomId,
+        metadata.participantId,
+        'chat',
+      );
+    }
 
     // 4. 메시지 생성
     const messageId = this.chatManagerService.generateMessageId();
