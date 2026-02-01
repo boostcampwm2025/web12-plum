@@ -70,12 +70,10 @@ export class SocketClient {
 
     logger.socket.debug('[ensureConnected] 소켓 연결 시도');
 
-    // connect 호출 전 Promise를 먼저 생성하여 중복 연결 방지
-    this.connectPromise = this.createConnectPromise();
     this.connect();
 
     try {
-      await this.connectPromise;
+      await this.connectPromise!;
       logger.socket.debug('[ensureConnected] 소켓 연결 완료');
     } catch (error) {
       logger.socket.error('[ensureConnected] 소켓 연결 실패', error);
@@ -96,8 +94,9 @@ export class SocketClient {
     }
 
     this.socket = io(SOCKET_URL, SOCKET_OPTIONS) as TypedSocket;
-
     this.setupSocketListeners();
+
+    this.connectPromise = this.createConnectPromise();
     this.socket.connect();
   }
 
@@ -115,6 +114,78 @@ export class SocketClient {
     this.reconnectCount = 0;
     this.handlerMap.clear();
     logger.socket.debug('소켓 연결 해제');
+  }
+
+  /** 소켓 연결 프로미스 생성 */
+  private static createConnectPromise(): Promise<void> {
+    const promise: Promise<void> = new Promise((resolve, reject) => {
+      // 연결 타임아웃 설정
+      const timer = setTimeout(() => {
+        this.connectPromise = null;
+        reject(new Error(`소켓 연결 대기 시간 초과 (${CONNECTION_TIMEOUT}ms)`));
+      }, CONNECTION_TIMEOUT);
+
+      /**
+       * 연결 성공 핸들러 등록
+       * 'once'를 사용하여 한 번만 실행되도록 함
+       */
+      this.socket!.once('connect', () => {
+        clearTimeout(timer);
+        resolve();
+      });
+
+      /**
+       * 연결 오류 핸들러 등록
+       * socket.active가 false인 경우에만 처리
+       * 서버에서 명시적 연결 해제 시 타임아웃까지 대기할 필요 없음
+       */
+      this.socket!.once('connect_error', (error) => {
+        if (this.socket?.active) return;
+        clearTimeout(timer);
+        this.connectPromise = null;
+        reject(new Error(error.message || '소켓 연결 오류'));
+      });
+    });
+    return promise;
+  }
+
+  /** 소켓 이벤트 리스너 설정 */
+  private static setupSocketListeners(): void {
+    const socket = this.socket!;
+
+    socket.on('connect', () => {
+      logger.socket.info('소켓 연결 성공', socket.id);
+      this.isReconnected = false;
+    });
+
+    /**
+     * 소켓 연결 해제 처리
+     * - 서버에서 연결 해제 시 : 'io server disconnect' - 자동 재연결 불가
+     * - 네트워크 문제 등으로 연결이 끊어졌을 때 : 'ping timeout', 'transport close' 등 - 자동 재연결 시도
+     */
+    socket.on('disconnect', (reason) => logger.socket.debug('소켓 연결 해제', reason));
+
+    /**
+     * 소켓 연결 오류 처리
+     * - 서버 미접속 시 : 'connect_error' 이벤트 발생
+     * - 네트워크 문제 등으로 연결이 끊어졌을 때 : 'reconnect_error' 이벤트 발생
+     */
+    socket.on('connect_error', (error) => logger.socket.error('연결 오류', error));
+
+    socket.io.on('reconnect', () => {
+      logger.socket.debug('소켓 재연결 성공');
+      this.isReconnected = true;
+      this.reconnectCount = 0;
+    });
+
+    socket.io.on('reconnect_attempt', (attempt) => {
+      this.reconnectCount = attempt;
+      logger.socket.debug(`소켓 재연결 시도 중... (${attempt}회)`);
+    });
+
+    socket.io.on('reconnect_error', (error) =>
+      logger.socket.error('재연결 시도 실패', error.message),
+    );
   }
 
   /** 서버 이벤트 핸들러 등록 */
@@ -198,77 +269,5 @@ export class SocketClient {
       }
     });
     return promise;
-  }
-
-  /** 소켓 연결 프로미스 생성 */
-  private static createConnectPromise(): Promise<void> {
-    const promise: Promise<void> = new Promise((resolve, reject) => {
-      // 연결 타임아웃 설정
-      const timer = setTimeout(() => {
-        this.connectPromise = null;
-        reject(new Error(`소켓 연결 대기 시간 초과 (${CONNECTION_TIMEOUT}ms)`));
-      }, CONNECTION_TIMEOUT);
-
-      /**
-       * 연결 성공 핸들러 등록
-       * 'once'를 사용하여 한 번만 실행되도록 함
-       */
-      this.socket!.once('connect', () => {
-        clearTimeout(timer);
-        resolve();
-      });
-
-      /**
-       * 연결 오류 핸들러 등록
-       * socket.active가 false인 경우에만 처리
-       * 서버에서 명시적 연결 해제 시 타임아웃까지 대기할 필요 없음
-       */
-      this.socket!.once('connect_error', (error) => {
-        if (this.socket?.active) return;
-        clearTimeout(timer);
-        this.connectPromise = null;
-        reject(new Error(error.message || '소켓 연결 오류'));
-      });
-    });
-    return promise;
-  }
-
-  /** 소켓 이벤트 리스너 설정 */
-  private static setupSocketListeners(): void {
-    const socket = this.socket!;
-
-    socket.on('connect', () => {
-      logger.socket.info('소켓 연결 성공', socket.id);
-      this.isReconnected = false;
-    });
-
-    /**
-     * 소켓 연결 해제 처리
-     * - 서버에서 연결 해제 시 : 'io server disconnect' - 자동 재연결 불가
-     * - 네트워크 문제 등으로 연결이 끊어졌을 때 : 'ping timeout', 'transport close' 등 - 자동 재연결 시도
-     */
-    socket.on('disconnect', (reason) => logger.socket.debug('소켓 연결 해제', reason));
-
-    /**
-     * 소켓 연결 오류 처리
-     * - 서버 미접속 시 : 'connect_error' 이벤트 발생
-     * - 네트워크 문제 등으로 연결이 끊어졌을 때 : 'reconnect_error' 이벤트 발생
-     */
-    socket.on('connect_error', (error) => logger.socket.error('연결 오류', error));
-
-    socket.io.on('reconnect', () => {
-      logger.socket.debug('소켓 재연결 성공');
-      this.isReconnected = true;
-      this.reconnectCount = 0;
-    });
-
-    socket.io.on('reconnect_attempt', (attempt) => {
-      this.reconnectCount = attempt;
-      logger.socket.debug(`소켓 재연결 시도 중... (${attempt}회)`);
-    });
-
-    socket.io.on('reconnect_error', (error) =>
-      logger.socket.error('재연결 시도 실패', error.message),
-    );
   }
 }
