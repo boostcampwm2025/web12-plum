@@ -19,7 +19,9 @@ export class MediasoupClient {
 
   private static producers = new Map<MediaType, Producer>();
 
+  // consumerId -> Consumer
   private static consumers = new Map<string, Consumer>();
+  // consumerId -> MediaStream
   private static streams = new Map<string, MediaStream>();
 
   /** 반드시 존재하는 Device 반환 */
