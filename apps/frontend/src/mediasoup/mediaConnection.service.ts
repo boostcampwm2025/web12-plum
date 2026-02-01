@@ -127,6 +127,11 @@ export class MediaConnectionService {
     MediasoupService.removeEventHandlers();
   }
 
+  /** 특정 타입의 Producer 조회 */
+  static getProducer(type: MediaType) {
+    return MediasoupClient.getProducer(type);
+  }
+
   /** 미디어 트랙을 서버로 송출 */
   static async startProducing(track: MediaStreamTrack, type: MediaType) {
     const sendTransport = MediasoupClient.getRequiredSendTransport();
