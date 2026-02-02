@@ -67,6 +67,7 @@ export class HeartbeatService implements OnModuleInit, OnModuleDestroy {
         pipeline.expire(`room:${roomId}`, SESSION_TTL);
         pipeline.expire(`room:${roomId}:participants`, SESSION_TTL);
         pipeline.expire(`room:${roomId}:names`, SESSION_TTL);
+        pipeline.expire(`room:${roomId}:server`, SESSION_TTL);
       }
 
       // 4. Participant 키 TTL 갱신
