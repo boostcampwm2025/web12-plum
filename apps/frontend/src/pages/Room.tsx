@@ -14,9 +14,13 @@ import { useSafeRoomId } from '@/shared/hooks/useSafeRoomId';
 import { logger } from '@/shared/lib/logger';
 import { useChatStore } from '@/feature/room/stores/useChatStore';
 import { useToastStore } from '@/store/useToastStore';
+import { useLocalMedia } from '@/feature/room/hooks/useLocalMedia';
 
 export default function Room() {
-  const { isLoading, isSuccess, isError } = useRoomInit();
+  const { toggleCamera, toggleMic, toggleScreenShare, disableScreenShare, handleInitialMedia } =
+    useLocalMedia();
+
+  const { isLoading, isSuccess, isError } = useRoomInit(handleInitialMedia);
   const { addToast } = useToastStore((state) => state.actions);
 
   const roomId = useSafeRoomId();
@@ -92,10 +96,15 @@ export default function Room() {
       <RemoteAudioPlayer />
       <RoomDialogs />
       <div className="flex h-full overflow-hidden px-4">
-        <RoomMainSection />
+        <RoomMainSection onDisableScreenShare={disableScreenShare} />
         <RoomSideSection />
       </div>
-      <RoomMenuBar roomTitle={roomTitle ?? '강의실'} />
+      <RoomMenuBar
+        roomTitle={roomTitle ?? '강의실'}
+        onToggleCamera={toggleCamera}
+        onToggleMic={toggleMic}
+        onToggleScreenShare={toggleScreenShare}
+      />
       <RoomEndedModal />
       <PollResultModal />
     </div>

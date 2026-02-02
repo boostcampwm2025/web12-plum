@@ -94,11 +94,15 @@ function MyVideo({ currentUser, videoMode, onModeChange, stream }: MyVideoProps)
   );
 }
 
+interface RoomMainSectionProps {
+  onDisableScreenShare: () => void;
+}
+
 /**
  * 강의실 메인 섹션 컴포넌트
  * 강의 화면과 참가자 비디오를 포함
  */
-export function RoomMainSection() {
+export function RoomMainSection({ onDisableScreenShare }: RoomMainSectionProps) {
   const [userVideoMode, setUserVideoMode] = useState<VideoDisplayMode>('side');
   const [gestureVideoElement, setGestureVideoElement] = useState<HTMLVideoElement | null>(null);
   const isCameraOn = useMediaStore((state) => state.isCameraOn);
@@ -137,7 +141,10 @@ export function RoomMainSection() {
   return (
     <>
       <main className="relative flex grow flex-col text-sm">
-        <ScreenShareBanner userName={currentUser.name} />
+        <ScreenShareBanner
+          userName={currentUser.name}
+          onDisableScreenShare={onDisableScreenShare}
+        />
         <ToastStack />
         <motion.div
           layout

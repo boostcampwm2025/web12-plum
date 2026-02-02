@@ -11,7 +11,6 @@ import { useQnaStore } from '../stores/useQnaStore';
 import { useRoomStore } from '../stores/useRoomStore';
 import { useRankStore } from '../stores/useRankStore';
 import { ExitButton } from './ExitButton';
-import { useLocalMedia } from '../hooks/useLocalMedia';
 
 interface MenuButton {
   icon: IconName;
@@ -70,11 +69,17 @@ function ScoreDeltaAnimation() {
   );
 }
 
+interface MainMenuProps {
+  onToggleCamera?: () => void;
+  onToggleMic?: () => void;
+  onToggleScreenShare?: () => void;
+}
+
 /**
  * 메인 메뉴 컴포넌트
  * 마이크, 카메라, 화면공유, 투표, Q&A, 랭킹 버튼
  */
-function MainMenu() {
+function MainMenu({ onToggleCamera, onToggleMic, onToggleScreenShare }: MainMenuProps) {
   const isMicOn = useMediaStore((state) => state.isMicOn);
   const isCameraOn = useMediaStore((state) => state.isCameraOn);
   const isScreenSharing = useMediaStore((state) => state.isScreenSharing);
@@ -86,26 +91,24 @@ function MainMenu() {
   const hasActiveQna = useQnaStore((state) => state.qnas.some((qna) => qna.status === 'active'));
   const myRole = useRoomStore((state) => state.myInfo?.role);
 
-  const { toggleCamera, toggleMic, toggleScreenShare } = useLocalMedia();
-
   const menuButtons: MenuButton[] = [
     {
       icon: isMicOn ? 'mic' : 'mic-disabled',
       tooltip: isMicOn ? '마이크 끄기' : '마이크 켜기',
       isActive: isMicOn,
-      onClick: toggleMic,
+      onClick: onToggleMic,
     },
     {
       icon: isCameraOn ? 'cam' : 'cam-disabled',
       tooltip: isCameraOn ? '카메라 끄기' : '카메라 켜기',
       isActive: isCameraOn,
-      onClick: toggleCamera,
+      onClick: onToggleCamera,
     },
     {
       icon: 'screen-share',
       tooltip: isScreenSharing ? '화면공유 중지' : '화면공유',
       isActive: isScreenSharing,
-      onClick: toggleScreenShare,
+      onClick: onToggleScreenShare,
     },
     {
       icon: 'vote',
@@ -209,9 +212,19 @@ function SideMenu() {
 interface RoomMenuBarProps {
   className?: string;
   roomTitle?: string;
+  onToggleCamera?: () => void;
+  onToggleMic?: () => void;
+  onToggleScreenShare?: () => void;
+  onDisableScreenShare?: () => void;
 }
 
-export function RoomMenuBar({ className, roomTitle = '강의실' }: RoomMenuBarProps) {
+export function RoomMenuBar({
+  className,
+  onToggleCamera,
+  onToggleMic,
+  onToggleScreenShare,
+  roomTitle = '강의실',
+}: RoomMenuBarProps) {
   const myRole = useRoomStore((state) => state.myInfo?.role);
   const participantCount = useRoomStore((state) => state.participants.size);
 
@@ -230,7 +243,11 @@ export function RoomMenuBar({ className, roomTitle = '강의실' }: RoomMenuBarP
 
       <div className="flex items-center gap-3 justify-self-center">
         <>
-          <MainMenu />
+          <MainMenu
+            onToggleCamera={onToggleCamera}
+            onToggleMic={onToggleMic}
+            onToggleScreenShare={onToggleScreenShare}
+          />
           <div className="mx-2 h-8 w-px bg-gray-400" />
           <ExitButton />
         </>

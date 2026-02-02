@@ -4,7 +4,6 @@ import { MediaConnectionService } from '@/mediasoup/mediaConnection.service';
 import { useRoomJoin } from './useRoomJoin';
 import { useRoomEventHandlers } from './useRoomEventHandlers';
 import { useRemoteMedia } from './useRemoteMedia';
-import { useLocalMedia } from './useLocalMedia';
 import { useMediaCleanup } from './useMediaCleanup';
 import { useSafeRoomId } from '@/shared/hooks/useSafeRoomId';
 import { useRoomStore } from '../stores/useRoomStore';
@@ -31,7 +30,7 @@ import { logger } from '@/shared/lib/logger';
  * - isSuccess: 초기화 성공 여부 (성공 UI 분기용)
  * - isError: 초기화 실패 여부 (에러 토스트 표시용)
  */
-export function useRoomInit() {
+export function useRoomInit(handleInitialMedia: () => Promise<void>) {
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [isError, setIsError] = useState(false);
@@ -43,7 +42,6 @@ export function useRoomInit() {
   const { joinRoom } = useRoomJoin();
   const { consumeExistingProducers } = useRemoteMedia();
   const { setupAllHandlers } = useRoomEventHandlers();
-  const { handleInitialMedia } = useLocalMedia();
   const { cleanupMedia } = useMediaCleanup();
 
   /**
