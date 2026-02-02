@@ -117,6 +117,7 @@ export class SocketClient {
        */
       this.socket!.once('connect', () => {
         clearTimeout(timer);
+        this.connectPromise = null;
         resolve();
       });
 

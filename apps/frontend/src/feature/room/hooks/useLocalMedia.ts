@@ -53,11 +53,14 @@ export const useLocalMedia = () => {
       const processedTrack = await startBackgroundEffect(videoTrack);
       const trackToSend = processedTrack ?? videoTrack;
 
-      // 기존에 Producer가 존재하는지 확인
+      // 기존에 유효한 Producer가 존재하는지 확인 (closed 상태가 아닌 경우만)
       const existingProducer = MediaConnectionService.getProducer('video');
-      if (existingProducer) {
+      if (existingProducer && !existingProducer.closed) {
+        // 기존 Producer가 있으면 트랙을 교체하고 resume
+        await MediaConnectionService.replaceTrack('video', trackToSend);
         await MediaConnectionService.toggleProducer('video', false);
       } else {
+        // Producer가 없거나 closed 상태면 새로 생성
         await MediaConnectionService.startProducing(trackToSend, 'video');
       }
 
@@ -70,7 +73,7 @@ export const useLocalMedia = () => {
       logger.media.error('[useLocalMedia] 카메라 활성화 실패', error);
       throw error;
     }
-  }, [streamActions, mediaActions, startBackgroundEffect, stopBackgroundEffect]);
+  }, [streamActions, mediaActions, startBackgroundEffect]);
 
   /**
    * 카메라 비활성화
@@ -136,6 +139,7 @@ export const useLocalMedia = () => {
       // 기존에 Producer가 존재하는지 확인
       const existingProducer = MediaConnectionService.getProducer('audio');
       if (existingProducer) {
+        await MediaConnectionService.replaceTrack('audio', audioTrack);
         await MediaConnectionService.toggleProducer('audio', false);
       } else {
         await MediaConnectionService.startProducing(audioTrack, 'audio');
