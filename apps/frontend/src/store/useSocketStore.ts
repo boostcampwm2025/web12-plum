@@ -60,7 +60,7 @@ interface SocketState {
   isReconnected: boolean;
   reconnectCount: number;
   actions: {
-    connect: () => Promise<TypedSocket>;
+    connect: (serverUrl?: string) => Promise<TypedSocket>;
     disconnect: () => void;
     emit: <K extends keyof ClientToServerEvents>(
       event: K,
@@ -91,8 +91,9 @@ export const useSocketStore = create<SocketState>((set, get) => ({
     /**
      * 소켓 연결
      * 소켓이 연결되어 있지 않으면 연결을 시도
+     * @param serverUrl 연결할 서버 URL (없으면 기본 SOCKET_URL 사용)
      */
-    connect: async () => {
+    connect: async (serverUrl?: string) => {
       const { socket } = get();
 
       // 이미 연결되어 있다면 즉시 현재 소켓 반환
@@ -101,13 +102,15 @@ export const useSocketStore = create<SocketState>((set, get) => ({
         return socket;
       }
 
+      const targetUrl = serverUrl || SOCKET_URL;
+
       // 연결 프로세스 시작 상태 설정
-      logger.socket.info('소켓 연결 시도');
+      logger.socket.info(`소켓 연결 시도: ${targetUrl}`);
       let currentSocket = socket;
 
       if (!currentSocket) {
         // 소켓 인스턴스 생성 및 설정
-        currentSocket = io(SOCKET_URL, SOCKET_OPTIONS);
+        currentSocket = io(targetUrl, SOCKET_OPTIONS);
         // 이전에 등록된 모든 이벤트 리스너 제거하여 중복 등록 방지
         currentSocket.removeAllListeners();
 
