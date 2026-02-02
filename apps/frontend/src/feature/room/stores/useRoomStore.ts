@@ -1,6 +1,11 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import type { MediaType, ParticipantRole, UserJoinedPayload } from '@plum/shared-interfaces';
+import type {
+  MediaType,
+  ParticipantPayload,
+  ParticipantRole,
+  UserJoinedPayload,
+} from '@plum/shared-interfaces';
 import { RtpCapabilities } from 'mediasoup-client/types';
 
 export interface MyInfo {
@@ -22,7 +27,11 @@ export interface RoomActions {
   setRoomTitle: (title: string) => void;
   setRouterRtpCapabilities: (capabilities: RtpCapabilities) => void;
   setRoomEnded: (isEnded: boolean) => void;
-
+  initializeRoomData: (data: {
+    myInfo: MyInfo;
+    participants: ParticipantPayload[];
+    existingProducers: { participantId: string; type: MediaType; producerId: string }[];
+  }) => void;
   initParticipants: (participantMap: Map<string, Participant>) => void;
   addParticipant: (data: UserJoinedPayload) => void;
   removeParticipant: (id: string) => void;
@@ -71,6 +80,39 @@ export const useRoomStore = create<RoomState>()(
         /** 참가자 목록 초기화 */
         initParticipants: (participantMap: Map<string, Participant>) => {
           set({ participants: participantMap });
+        },
+
+        /**
+         * 방 데이터 초기화
+         * @param data.myInfo 내 참가자 정보
+         * @param data.participants 전체 참가자 목록
+         * @param data.existingProducers 기존 프로듀서(미디어) 정보
+         */
+        initializeRoomData: ({ myInfo, participants, existingProducers }) => {
+          const participantMap = new Map<string, Participant>();
+
+          // 전체 참가자 기본 정보 로드
+          participants.forEach((participant) => {
+            // 내 정보는 제외
+            if (participant.id === myInfo.id) return;
+
+            participantMap.set(participant.id, {
+              ...participant,
+              role: participant.role as ParticipantRole,
+              joinedAt: new Date(participant.joinedAt),
+              producers: new Map(),
+            });
+          });
+
+          // 기존 프로듀서(미디어) 정보 연결
+          existingProducers.forEach((existingProducer) => {
+            const participant = participantMap.get(existingProducer.participantId);
+            if (participant) {
+              participant.producers.set(existingProducer.type, existingProducer.producerId);
+            }
+          });
+
+          set({ myInfo, participants: participantMap });
         },
 
         /** 참가자 추가 */

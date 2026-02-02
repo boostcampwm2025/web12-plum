@@ -44,7 +44,7 @@ export const useMediaCleanup = () => {
    * - 일부 정리가 실패해도 나머지는 계속 진행해야 함
    * - 퇴장 시에는 에러를 throw하지 않고 로그만 남김
    */
-  const leaveAndCleanup = useCallback(async () => {
+  const cleanupMedia = useCallback(async () => {
     try {
       logger.media.info('[useMediaCleanup] 모든 미디어 자원 해제 시작');
 
@@ -71,5 +71,5 @@ export const useMediaCleanup = () => {
     }
   }, [streamActions, mediaActions]);
 
-  return { leaveAndCleanup };
+  return { cleanupMedia };
 };
