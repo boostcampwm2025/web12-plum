@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import type { RoomSummary as RoomSummaryData } from '@plum/shared-interfaces';
+import { AnimatePresence, motion } from 'motion/react';
 
 import { Footer } from '@/shared/components/Footer';
 import { Header } from '@/shared/components/Header';
@@ -109,7 +110,17 @@ export function Summary() {
             activeTab={activeTab}
             onChangeTab={setActiveTab}
           />
-          {tabContent[activeTab]}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.2 }}
+            >
+              {tabContent[activeTab]}
+            </motion.div>
+          </AnimatePresence>
         </div>
       </main>
       <Footer />
