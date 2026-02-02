@@ -173,6 +173,11 @@ export class MediaConnectionService {
     MediasoupService.removeEventHandlers();
   }
 
+  /** 특정 타입의 Producer 조회 */
+  static getProducer(type: MediaType) {
+    return MediasoupClient.getProducer(type);
+  }
+
   /**
    * 내 미디어를 다른 참여자들에게 송출 시작
    *
