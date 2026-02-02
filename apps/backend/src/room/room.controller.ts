@@ -88,4 +88,12 @@ export class RoomController {
   async getSummary(@Param('id', UlidValidationPipe) id: string): Promise<RoomSummary> {
     return await this.roomService.getSummary(id);
   }
+
+  // 강의실이 할당된 서버의 URL을 반환
+  @Get(':id/server')
+  @HttpCode(HttpStatus.OK)
+  async getRoomServer(@Param('id', UlidValidationPipe) id: string): Promise<{ serverUrl: string }> {
+    const serverUrl = await this.roomService.getRoomServer(id);
+    return { serverUrl };
+  }
 }
