@@ -271,6 +271,25 @@ export class MediasoupClient {
   }
 
   /**
+   * 특정 Producer의 트랙을 교체 (카메라 재활성화 시 사용)
+   *
+   * 트랙 교체에 성공하면 true, 실패하면 false 반환
+   * 트랙 교체는 로컬에서만 처리되며, 서버 통신은 하지 않음
+   *
+   * @param type 교체할 미디어 종류 ('video' | 'audio' | 'screen')
+   * @param newTrack 새로 교체할 MediaStreamTrack
+   * @return 성공 여부
+   */
+  static async replaceProducerTrack(type: MediaType, newTrack: MediaStreamTrack): Promise<boolean> {
+    const producer = this.getProducer(type);
+    if (!producer || producer.closed) return false;
+
+    await producer.replaceTrack({ track: newTrack });
+    logger.media.debug(`[Producer] ${type} 트랙 교체 완료`);
+    return true;
+  }
+
+  /**
    * 모든 Producer 정리 (ID 반환 없음)
    *
    * cleanup() 내부에서 사용되는 단순 정리 메서드

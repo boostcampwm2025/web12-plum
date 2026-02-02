@@ -240,6 +240,20 @@ export class MediaConnectionService {
   }
 
   /**
+   * Producer 트랙 교체 (카메라 재활성화 시 사용)
+   *
+   * 카메라를 끄고 다시 켤 때 새로운 MediaStreamTrack으로 교체
+   * 기존 Producer를 종료하지 않고 트랙만 바꾸므로 빠르게 전환 가능
+   */
+  static async replaceTrack(type: MediaType, newTrack: MediaStreamTrack) {
+    const success = await MediasoupClient.replaceProducerTrack(type, newTrack);
+    if (success) {
+      logger.media.debug(`[MediaConnectionService] ${type} 트랙 교체 완료`);
+    }
+    return success;
+  }
+
+  /**
    * 모든 미디어 송출 일괄 종료
    *
    * 방 퇴장 시 내가 송출 중인 모든 미디어(카메라, 마이크, 화면공유)를 한 번에 정리하고, 서버에 종료를 알림
