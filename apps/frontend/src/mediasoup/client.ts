@@ -358,13 +358,7 @@ export class MediasoupClient {
    */
   static closeAllConsumersLocally(): string[] {
     const consumerIds = Array.from(this.consumers.keys());
-
-    this.consumers.forEach((consumer) => {
-      if (!consumer.closed) consumer.close();
-    });
-
-    this.consumers.clear();
-    this.streams.clear();
+    consumerIds.forEach((id) => this.removeConsumerLocally(id));
 
     return consumerIds;
   }
