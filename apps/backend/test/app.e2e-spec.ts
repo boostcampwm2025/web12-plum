@@ -8,6 +8,13 @@ import { RedisModule } from '../src/redis/redis.module.js';
 import { RedisService } from '../src/redis/redis.service.js';
 import * as Managers from '../src/redis/repository-manager/index.js';
 
+jest.mock('chokidar', () => ({
+  watch: jest.fn().mockReturnValue({
+    on: jest.fn().mockReturnThis(),
+    close: jest.fn().mockResolvedValue(undefined),
+  }),
+}));
+
 const mockRedisService = {};
 const mockManagers = {
   RoomManagerService: {},
