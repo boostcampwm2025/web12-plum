@@ -4,11 +4,11 @@ import { cn } from '@/shared/lib/utils';
 import { Icon } from '@/shared/components/icon/Icon';
 import { Button } from '@/shared/components/Button';
 import { MediaType, ParticipantRole } from '@plum/shared-interfaces';
-import { useMediaControlContext } from '../hooks/useMediaControlContext';
 import { logger } from '@/shared/lib/logger';
 import { useMediaStore } from '../stores/useMediaStore';
 import { useGestureStore } from '../stores/useGestureStore';
 import { GESTURE_ICON_MAP } from '@/shared/constants/gesture';
+import { useRemoteMedia } from '../hooks/useRemoteMedia';
 
 export type VideoDisplayMode = 'minimize' | 'pip' | 'side';
 
@@ -108,7 +108,7 @@ function ParticipantVideoComponent({
 }: ParticipantVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [showOverlay, setShowOverlay] = useState(true);
-  const { consumeRemoteProducer, stopConsuming } = useMediaControlContext();
+  const { consumeRemoteProducer, stopConsuming } = useRemoteMedia();
 
   // 원격 스트림인 경우에만 스토어에서 비디오 스트림 구독
   const remoteStream = useRemoteVideoStream(isCurrentUser ? '' : id);
