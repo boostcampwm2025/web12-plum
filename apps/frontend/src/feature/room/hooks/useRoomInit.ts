@@ -305,7 +305,7 @@ export function useRoomInit() {
       }
     };
 
-    void rejoinRoom();
+    rejoinRoom();
 
     const lastMessageId = chatActions.getLastMessageId();
     if (lastMessageId) {

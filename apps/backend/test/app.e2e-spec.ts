@@ -15,7 +15,22 @@ jest.mock('chokidar', () => ({
   }),
 }));
 
-const mockRedisService = {};
+const mockRedisClient = {
+  hgetall: jest.fn().mockResolvedValue({}),
+  hset: jest.fn().mockResolvedValue(1),
+  hdel: jest.fn().mockResolvedValue(1),
+  del: jest.fn().mockResolvedValue(1),
+  expire: jest.fn().mockResolvedValue(1),
+  pipeline: jest.fn().mockReturnValue({
+    exec: jest.fn().mockResolvedValue([]),
+  }),
+};
+
+const mockRedisService = {
+  getClient: jest.fn().mockReturnValue(mockRedisClient),
+  getSubscriber: jest.fn().mockReturnValue(mockRedisClient),
+  acquireLock: jest.fn().mockResolvedValue(true),
+};
 const mockManagers = {
   RoomManagerService: {},
   ParticipantManagerService: {},

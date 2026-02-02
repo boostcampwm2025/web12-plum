@@ -1,6 +1,12 @@
 import { create } from 'zustand';
 import { logger } from '@/shared/lib/logger';
 
+const DEFAULT_AUDIO_CONSTRAINTS = {
+  noiseSuppression: true,
+  echoCancellation: true,
+  autoGainControl: true,
+};
+
 interface StreamState {
   localStream: MediaStream | null;
   actions: {
@@ -28,7 +34,11 @@ export const useStreamStore = create<StreamState>((set, get) => ({
         let { localStream } = get();
 
         // 새로운 하드웨어 스트림 요청
-        const newStream = await navigator.mediaDevices.getUserMedia(constraints);
+        const audioConstraints = constraints.audio ? DEFAULT_AUDIO_CONSTRAINTS : false;
+        const newStream = await navigator.mediaDevices.getUserMedia({
+          ...constraints,
+          audio: audioConstraints,
+        });
 
         // 관리할 메인 스트림이 없다면 새로 생성
         if (!localStream) localStream = new MediaStream();

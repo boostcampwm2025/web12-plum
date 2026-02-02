@@ -7,6 +7,7 @@ import { PollManagerService } from './poll-manager.service.js';
 import { QnaManagerService } from './qna-manager.service.js';
 import { ActivityScoreManagerService } from './activity-score-manager.service.js';
 import { OnEvent } from '@nestjs/event-emitter';
+import { SESSION_TTL } from '../../common/constants/socket.constants.js';
 
 /**
  * 강의실 데이터 관리
@@ -53,8 +54,10 @@ export class RoomManagerService extends BaseRedisRepository<Room> {
 
     try {
       const pipeline = client.pipeline();
-      this.participantManager.addSaveToPipeline(pipeline, participant.id, participant);
+      this.participantManager.addSaveToPipeline(pipeline, participant.id, participant, SESSION_TTL);
       pipeline.sadd(listKey, participant.id);
+      pipeline.expire(listKey, SESSION_TTL);
+      pipeline.expire(nameKey, SESSION_TTL);
 
       await pipeline.exec();
       this.logger.log(
@@ -142,6 +145,13 @@ export class RoomManagerService extends BaseRedisRepository<Room> {
   async handleRoomExpired(key: string) {
     const parts = key.split(':');
     if (parts[parts.length - 1] !== 'stats') return;
+
+    // 분산 락 획득 시도
+    const acquired = await this.redisService.acquireLock(key);
+    if (!acquired) {
+      this.logger.debug(`[Room Expired] 다른 서버가 이미 처리 중: ${key}`);
+      return;
+    }
 
     const roomId = parts[1];
     this.logger.log(`[Room Expired] Room ${roomId} expired. Starting finalization...`);

@@ -9,20 +9,39 @@ import { PresentationManagementTabs } from './PresentationManagementTabs';
 
 type SubPage = 'breakroom' | 'vote' | 'qna' | 'material' | 'participant';
 
-const menuItems: { id: SubPage; label: string; description: string; icon: IconName }[] = [
+const menuItems: {
+  id: SubPage;
+  label: string;
+  description: string;
+  icon: IconName;
+  guideTarget?: string;
+}[] = [
   {
     id: 'breakroom',
     label: '소강의실 관리',
     description: '소강의실 생성 및 관리',
     icon: 'breakdown-room',
   },
-  { id: 'vote', label: '투표 관리', description: '투표 생성 및 관리', icon: 'vote' },
-  { id: 'qna', label: 'Q&A 관리', description: 'Q&A 생성 및 관리', icon: 'qna' },
+  {
+    id: 'vote',
+    label: '투표 관리',
+    description: '투표 생성 및 관리',
+    icon: 'vote',
+    guideTarget: 'menu-vote',
+  },
+  {
+    id: 'qna',
+    label: 'Q&A 관리',
+    description: 'Q&A 생성 및 관리',
+    icon: 'qna',
+    guideTarget: 'menu-qna',
+  },
   {
     id: 'material',
     label: '발표 자료 관리',
     description: '발표 자료 업로드 및 삭제',
     icon: 'download',
+    guideTarget: 'menu-material',
   },
   {
     id: 'participant',
@@ -67,6 +86,7 @@ export function MenuPanel({ onClose }: MenuPanelProps) {
                   key={item.id}
                   className="flex items-center gap-4 rounded-2xl bg-gray-400"
                   onClick={() => handlePushSubPage(item.id)}
+                  data-guide={item.guideTarget}
                 >
                   <Icon
                     name={item.icon}

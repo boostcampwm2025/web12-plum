@@ -30,6 +30,7 @@ import {
 } from '../redis/repository-manager/index.js';
 import { MediasoupService } from '../mediasoup/mediasoup.service.js';
 import { RoomType } from '../mediasoup/mediasoup.type.js';
+import { SESSION_TTL } from '../common/constants/socket.constants.js';
 
 @Injectable()
 export class RoomService {
@@ -203,7 +204,7 @@ export class RoomService {
       files: uploadFilesUrl,
     };
 
-    await this.roomManagerService.saveOne(roomId, room);
+    await this.roomManagerService.saveOne(roomId, room, SESSION_TTL);
     const host = await this.createHost(roomId, hostId, body.hostName);
     const roomInfo = await this.getRoomInfo(roomId, host);
 
