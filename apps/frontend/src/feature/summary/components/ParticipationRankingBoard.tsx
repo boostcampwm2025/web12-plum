@@ -77,6 +77,7 @@ export function ParticipationRankingBoard({
   participants,
 }: ParticipationRankingBoardProps) {
   const topParticipants = participants.slice(0, 3);
+  const showLastParticipant = participants.length > 3;
   const lastParticipant = participants[participants.length - 1];
 
   return (
@@ -92,20 +93,24 @@ export function ParticipationRankingBoard({
             participationScore={participant.participationScore}
           />
         ))}
-        <ul className="mx-auto flex flex-col gap-1 py-3">
-          {[...Array(3)].map((_, index) => (
-            <li
-              key={index}
-              className="size-2 rounded-full bg-gray-200"
+        {showLastParticipant ? (
+          <>
+            <ul className="mx-auto flex flex-col gap-1 py-3">
+              {[...Array(3)].map((_, index) => (
+                <li
+                  key={index}
+                  className="size-2 rounded-full bg-gray-200"
+                />
+              ))}
+            </ul>
+            <RankingItem
+              rank={participants.length}
+              name={lastParticipant.name}
+              totalScore={totalScore}
+              participationScore={lastParticipant.participationScore}
             />
-          ))}
-        </ul>
-        <RankingItem
-          rank={participants.length}
-          name={lastParticipant.name}
-          totalScore={totalScore}
-          participationScore={lastParticipant.participationScore}
-        />
+          </>
+        ) : null}
       </div>
     </article>
   );
