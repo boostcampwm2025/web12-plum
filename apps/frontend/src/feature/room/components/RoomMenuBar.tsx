@@ -211,7 +211,6 @@ function SideMenu() {
 
 interface RoomMenuBarProps {
   className?: string;
-  roomTitle?: string;
   onToggleCamera?: () => void;
   onToggleMic?: () => void;
   onToggleScreenShare?: () => void;
@@ -223,8 +222,8 @@ export function RoomMenuBar({
   onToggleCamera,
   onToggleMic,
   onToggleScreenShare,
-  roomTitle = '강의실',
 }: RoomMenuBarProps) {
+  const roomTitle = useRoomStore((state) => state.roomTitle) || '강의실';
   const myRole = useRoomStore((state) => state.myInfo?.role);
   const participantCount = useRoomStore((state) => state.participants.size);
 
