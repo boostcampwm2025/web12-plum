@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { RedisService } from '../../redis/redis.service.js';
 import { SocketMetadata } from '../types/index.js';
+import { SESSION_TTL } from '../constants/socket.constants.js';
 
 const SOCKET_KEY_PREFIX = 'socket';
 
@@ -16,11 +17,15 @@ export class SocketMetadataService {
   // 소켓 메타데이터 저장
   async set(socketId: string, metadata: SocketMetadata): Promise<void> {
     const client = this.redisService.getClient();
-    await client.hset(this.key(socketId), {
+    const key = this.key(socketId);
+    const pipeline = client.pipeline();
+    pipeline.hset(key, {
       roomId: metadata.roomId,
       participantId: metadata.participantId,
       transportIds: JSON.stringify(metadata.transportIds),
     });
+    pipeline.expire(key, SESSION_TTL);
+    await pipeline.exec();
   }
 
   // 소켓 메타데이터 조회

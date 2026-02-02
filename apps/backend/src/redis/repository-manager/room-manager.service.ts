@@ -7,6 +7,7 @@ import { PollManagerService } from './poll-manager.service.js';
 import { QnaManagerService } from './qna-manager.service.js';
 import { ActivityScoreManagerService } from './activity-score-manager.service.js';
 import { OnEvent } from '@nestjs/event-emitter';
+import { SESSION_TTL } from '../../common/constants/socket.constants.js';
 
 /**
  * 강의실 데이터 관리
@@ -53,8 +54,10 @@ export class RoomManagerService extends BaseRedisRepository<Room> {
 
     try {
       const pipeline = client.pipeline();
-      this.participantManager.addSaveToPipeline(pipeline, participant.id, participant);
+      this.participantManager.addSaveToPipeline(pipeline, participant.id, participant, SESSION_TTL);
       pipeline.sadd(listKey, participant.id);
+      pipeline.expire(listKey, SESSION_TTL);
+      pipeline.expire(nameKey, SESSION_TTL);
 
       await pipeline.exec();
       this.logger.log(
