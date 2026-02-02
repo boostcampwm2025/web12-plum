@@ -59,6 +59,7 @@ import {
 } from '../redis/repository-manager/index.js';
 import { RoomService } from './room.service.js';
 import { PrometheusService } from '../prometheus/prometheus.service.js';
+import { RedisService } from '../redis/redis.service.js';
 
 /**
  * 강의실 WebSocket Gateway
@@ -85,6 +86,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly socketMetadataService: SocketMetadataService,
     private readonly roomService: RoomService,
     private readonly prometheusService: PrometheusService,
+    private readonly redisService: RedisService,
   ) {}
 
   /**
@@ -646,6 +648,13 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @OnEvent('redis.expired.reconnect')
   async handleReconnectExpired(key: string) {
+    // 분산 락 획득 시도
+    const acquired = await this.redisService.acquireLock(key);
+    if (!acquired) {
+      this.logger.debug(`[Reconnect Expired] 다른 서버가 이미 처리 중: ${key}`);
+      return;
+    }
+
     const participantId = key.split(':').pop();
     const metadata = await this.participantManagerService.popReconnectMetadata(participantId!);
 

@@ -146,6 +146,13 @@ export class RoomManagerService extends BaseRedisRepository<Room> {
     const parts = key.split(':');
     if (parts[parts.length - 1] !== 'stats') return;
 
+    // 분산 락 획득 시도
+    const acquired = await this.redisService.acquireLock(key);
+    if (!acquired) {
+      this.logger.debug(`[Room Expired] 다른 서버가 이미 처리 중: ${key}`);
+      return;
+    }
+
     const roomId = parts[1];
     this.logger.log(`[Room Expired] Room ${roomId} expired. Starting finalization...`);
 
