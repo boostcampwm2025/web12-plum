@@ -95,7 +95,7 @@ export class InteractionGateway implements OnGatewayDisconnect {
   ): Promise<ActionGestureResponse> {
     const startTime = Date.now();
 
-    const metadata = this.socketMetadataService.get(socket.id);
+    const metadata = await this.socketMetadataService.get(socket.id);
     if (!metadata) {
       return { success: false, error: '먼저 join_room을 호출하세요.' };
     }
@@ -499,7 +499,7 @@ export class InteractionGateway implements OnGatewayDisconnect {
   private async validateMetadata(
     socketId: string,
   ): Promise<{ room: Room; participant: Participant; metadata: SocketMetadata }> {
-    const metadata = this.socketMetadataService.get(socketId);
+    const metadata = await this.socketMetadataService.get(socketId);
     if (!metadata) {
       throw new BusinessException('세션이 만료되었거나 유효하지 않은 접근입니다.');
     }
