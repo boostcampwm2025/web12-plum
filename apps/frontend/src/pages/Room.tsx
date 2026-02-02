@@ -6,18 +6,16 @@ import { RemoteAudioPlayer } from '../feature/room/components/RemoteAudioPlayer'
 import { RoomEndedModal } from '../feature/room/components/RoomEndedModal';
 import { PollResultModal } from '../feature/room/components/PollResultModal';
 import { useRoomInit } from '@/feature/room/hooks/useRoomInit';
-import { MediaControlsProvider } from '@/feature/room/hooks/useMediaControlContext';
 import { useRoomStore } from '@/feature/room/stores/useRoomStore';
 import { useEffect } from 'react';
 import { SocketClient } from '@/shared/socket/socket';
-import { useSocketStore } from '@/store/useSocketStore';
 import { useRoomJoin } from '@/feature/room/hooks/useRoomJoin';
 import { useSafeRoomId } from '@/shared/hooks/useSafeRoomId';
 import { logger } from '@/shared/lib/logger';
 import { useChatStore } from '@/feature/room/stores/useChatStore';
 import { useToastStore } from '@/store/useToastStore';
 
-function RoomContent() {
+export default function Room() {
   const { isLoading, isSuccess, isError } = useRoomInit();
   const { addToast } = useToastStore((state) => state.actions);
 
@@ -38,9 +36,8 @@ function RoomContent() {
 
     const rejoinRoom = async () => {
       const myInfo = useRoomStore.getState().myInfo;
-      const socket = useSocketStore.getState().socket;
 
-      if (!myInfo || !socket?.connected) return;
+      if (!myInfo) return;
 
       try {
         await joinRoom(roomId!, myInfo.id);
@@ -102,13 +99,5 @@ function RoomContent() {
       <RoomEndedModal />
       <PollResultModal />
     </div>
-  );
-}
-
-export default function Room() {
-  return (
-    <MediaControlsProvider>
-      <RoomContent />
-    </MediaControlsProvider>
   );
 }
