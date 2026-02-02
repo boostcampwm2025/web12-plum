@@ -1,7 +1,7 @@
 import { Button } from '@/shared/components/Button';
 import { logger } from '@/shared/lib/logger';
 import { useMediaStore } from '../stores/useMediaStore';
-import { useMediaControlContext } from '../hooks/useMediaControlContext';
+import { useLocalMedia } from '../hooks/useLocalMedia';
 
 interface ScreenShareBannerProps {
   userName: string;
@@ -9,7 +9,7 @@ interface ScreenShareBannerProps {
 
 export function ScreenShareBanner({ userName }: ScreenShareBannerProps) {
   const isScreenSharing = useMediaStore((state) => state.isScreenSharing);
-  const { disableScreenShare } = useMediaControlContext();
+  const { disableScreenShare } = useLocalMedia();
 
   const handleStopScreenShare = () => {
     logger.ui.debug('화면 공유 중지 요청');

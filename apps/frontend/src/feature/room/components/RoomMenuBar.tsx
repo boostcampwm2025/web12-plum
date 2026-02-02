@@ -6,12 +6,12 @@ import { GestureButton } from './GestureButton';
 import type { IconName } from '@/shared/components/icon/iconMap';
 import { useMediaStore } from '../stores/useMediaStore';
 import { useRoomUIStore } from '../stores/useRoomUIStore';
-import { useMediaControlContext } from '../hooks/useMediaControlContext';
 import { usePollStore } from '../stores/usePollStore';
 import { useQnaStore } from '../stores/useQnaStore';
 import { useRoomStore } from '../stores/useRoomStore';
 import { useRankStore } from '../stores/useRankStore';
 import { ExitButton } from './ExitButton';
+import { useLocalMedia } from '../hooks/useLocalMedia';
 
 interface MenuButton {
   icon: IconName;
@@ -85,33 +85,27 @@ function MainMenu() {
   );
   const hasActiveQna = useQnaStore((state) => state.qnas.some((qna) => qna.status === 'active'));
   const myRole = useRoomStore((state) => state.myInfo?.role);
-  const {
-    enableMic,
-    disableMic,
-    enableCamera,
-    disableCamera,
-    enableScreenShare,
-    disableScreenShare,
-  } = useMediaControlContext();
+
+  const { toggleCamera, toggleMic, toggleScreenShare } = useLocalMedia();
 
   const menuButtons: MenuButton[] = [
     {
       icon: isMicOn ? 'mic' : 'mic-disabled',
       tooltip: isMicOn ? '마이크 끄기' : '마이크 켜기',
       isActive: isMicOn,
-      onClick: isMicOn ? disableMic : enableMic,
+      onClick: toggleMic,
     },
     {
       icon: isCameraOn ? 'cam' : 'cam-disabled',
       tooltip: isCameraOn ? '카메라 끄기' : '카메라 켜기',
       isActive: isCameraOn,
-      onClick: isCameraOn ? disableCamera : enableCamera,
+      onClick: toggleCamera,
     },
     {
       icon: 'screen-share',
       tooltip: isScreenSharing ? '화면공유 중지' : '화면공유',
       isActive: isScreenSharing,
-      onClick: isScreenSharing ? disableScreenShare : enableScreenShare,
+      onClick: toggleScreenShare,
     },
     {
       icon: 'vote',
