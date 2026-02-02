@@ -1,4 +1,5 @@
 import popMp3 from '@/assets/sounds/pop.mp3';
+import { useSoundStore } from '@/store/useSoundStore';
 
 const SOUND_SOURCES = {
   pop: popMp3,
@@ -19,6 +20,7 @@ export function playSound(
     cooldownMs?: number;
   },
 ) {
+  if (useSoundStore.getState().isMuted) return;
   const now = Date.now();
   const cooldownMs = options?.cooldownMs ?? DEFAULT_COOLDOWN_MS;
   const lastPlayed = lastPlayedAt[id] ?? 0;
