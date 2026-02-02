@@ -16,6 +16,7 @@ describe('RoomManagerService', () => {
   const mockPipeline = {
     sadd: jest.fn().mockReturnThis(),
     srem: jest.fn().mockReturnThis(),
+    expire: jest.fn().mockReturnThis(),
     exec: jest.fn().mockResolvedValue([[null, 'OK']]),
   };
 

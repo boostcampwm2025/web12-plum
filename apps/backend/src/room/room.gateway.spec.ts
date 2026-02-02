@@ -50,6 +50,7 @@ describe('RoomGateway', () => {
           useValue: {
             getClient: jest.fn(),
             getSubscriber: jest.fn(),
+            acquireLock: jest.fn().mockResolvedValue(true),
           },
         },
         {
@@ -127,6 +128,7 @@ describe('RoomGateway', () => {
             set: jest.fn(),
             delete: jest.fn(),
             has: jest.fn(),
+            addTransportId: jest.fn(),
           },
         },
         {

@@ -138,6 +138,7 @@ describe('RoomService', () => {
             }),
           ],
         }),
+        expect.any(Number),
       );
 
       expect(mediasoupService.createRoutersWithStrategy).toHaveBeenCalledWith(
@@ -160,6 +161,7 @@ describe('RoomService', () => {
       expect(roomManagerService.saveOne).toHaveBeenCalledWith(
         expect.any(String),
         expect.objectContaining({ files: [] }),
+        expect.any(Number),
       );
     });
 
