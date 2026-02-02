@@ -9,7 +9,6 @@ const rankColors = ['text-gold', 'text-silver', 'text-bronze', 'text-error'];
 interface RankingItemProps {
   name: string;
   rank: number;
-  reactions: number;
   totalScore: number;
   participationScore: number;
 }
@@ -18,12 +17,10 @@ interface RankingItemProps {
  * 참여자별 통계 컴포넌트
  * @param name 참여자 이름
  * @param rank 참여자 순위
- * @param reactions 반응 수
  * @param totalScore 전체 참여도 점수
  * @param participationScore 참여자 참여도 점수
- * @returns
  */
-function RankingItem({ name, rank, reactions, totalScore, participationScore }: RankingItemProps) {
+function RankingItem({ name, rank, totalScore, participationScore }: RankingItemProps) {
   const percentage = calculatePercentage(participationScore, totalScore);
 
   return (
@@ -46,14 +43,9 @@ function RankingItem({ name, rank, reactions, totalScore, participationScore }: 
           <p className="text-text grow font-bold">{name}</p>
         </div>
 
-        <div className="text-text flex gap-4">
-          <p className="font-bold">
-            반응: <span className="font-extrabold">{reactions}회</span>
-          </p>
-          <p className="font-bold">
-            참여도: <span className="text-primary font-extrabold">{participationScore}점</span>
-          </p>
-        </div>
+        <p className="text-text font-bold">
+          참여도: <span className="text-primary font-extrabold">{participationScore}점</span>
+        </p>
       </div>
 
       <div className="relative h-3 w-full">
@@ -71,7 +63,6 @@ interface ParticipationRankingBoardProps {
   totalScore: number;
   participants: Array<{
     name: string;
-    reactions: number;
     participationScore: number;
   }>;
 }
@@ -97,7 +88,6 @@ export function ParticipationRankingBoard({
             key={index}
             rank={index + 1}
             name={participant.name}
-            reactions={participant.reactions}
             totalScore={totalScore}
             participationScore={participant.participationScore}
           />
@@ -113,7 +103,6 @@ export function ParticipationRankingBoard({
         <RankingItem
           rank={participants.length}
           name={lastParticipant.name}
-          reactions={lastParticipant.reactions}
           totalScore={totalScore}
           participationScore={lastParticipant.participationScore}
         />
