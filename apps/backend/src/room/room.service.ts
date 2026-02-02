@@ -198,7 +198,7 @@ export class RoomService {
       presenter: hostId,
       status: 'pending',
       createdAt: new Date().toISOString(),
-      startedAt: new Date().toISOString(),
+      startedAt: '',
       endedAt: '',
       files: uploadFilesUrl,
     };

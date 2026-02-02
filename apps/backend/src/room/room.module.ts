@@ -4,9 +4,10 @@ import { RoomGateway } from './room.gateway.js';
 import { RoomService } from './room.service.js';
 import { InteractionModule } from '../interaction/interaction.module.js';
 import { PrometheusModule } from '../prometheus/prometheus.module.js';
+import { RecordModule } from '../records/record.module.js';
 
 @Module({
-  imports: [InteractionModule, PrometheusModule],
+  imports: [InteractionModule, PrometheusModule, RecordModule],
   providers: [RoomService, RoomGateway],
   controllers: [RoomController],
 })
