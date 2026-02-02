@@ -36,8 +36,6 @@ const SOCKET_OPTIONS = {
 export class SocketClient {
   private static socket: TypedSocket | null = null;
   private static connectPromise: Promise<void> | null = null;
-  private static isReconnected = false;
-  private static reconnectCount = 0;
   private static handlerMap = new Map<
     ServerToClientEvents[SocketEventNameFromServer],
     ServerToClientEvents[SocketEventNameFromServer]
@@ -46,16 +44,6 @@ export class SocketClient {
   /** 소켓 인스턴스 반환 */
   static getSocket(): TypedSocket | null {
     return this.socket;
-  }
-
-  /** 재연결 여부 반환 */
-  static getIsReconnected(): boolean {
-    return this.isReconnected;
-  }
-
-  /** 재연결 횟수 반환 */
-  static getReconnectCount(): number {
-    return this.reconnectCount;
   }
 
   /**
@@ -110,8 +98,6 @@ export class SocketClient {
 
     this.socket = null;
     this.connectPromise = null;
-    this.isReconnected = false;
-    this.reconnectCount = 0;
     this.handlerMap.clear();
     logger.socket.debug('소켓 연결 해제');
   }
@@ -155,7 +141,6 @@ export class SocketClient {
 
     socket.on('connect', () => {
       logger.socket.info('소켓 연결 성공', socket.id);
-      this.isReconnected = false;
     });
 
     /**
@@ -174,12 +159,9 @@ export class SocketClient {
 
     socket.io.on('reconnect', () => {
       logger.socket.debug('소켓 재연결 성공');
-      this.isReconnected = true;
-      this.reconnectCount = 0;
     });
 
     socket.io.on('reconnect_attempt', (attempt) => {
-      this.reconnectCount = attempt;
       logger.socket.debug(`소켓 재연결 시도 중... (${attempt}회)`);
     });
 
