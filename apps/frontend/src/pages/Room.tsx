@@ -15,9 +15,11 @@ import { useRoomJoin } from '@/feature/room/hooks/useRoomJoin';
 import { useSafeRoomId } from '@/shared/hooks/useSafeRoomId';
 import { logger } from '@/shared/lib/logger';
 import { useChatStore } from '@/feature/room/stores/useChatStore';
+import { useToastStore } from '@/store/useToastStore';
 
 function RoomContent() {
-  const { isLoading, isSuccess } = useRoomInit();
+  const { isLoading, isSuccess, isError } = useRoomInit();
+  const { addToast } = useToastStore((state) => state.actions);
 
   const roomId = useSafeRoomId();
   const isReconnected = SocketClient.getIsReconnected();
@@ -67,6 +69,12 @@ function RoomContent() {
     rejoinRoom();
     syncChat();
   }, [isReconnected, chatActions, roomId, joinRoom]);
+
+  useEffect(() => {
+    if (isError) {
+      addToast({ type: 'error', title: '강의실 입장에 실패했습니다.' });
+    }
+  }, [isError, addToast]);
 
   if (isLoading) {
     return <div>연결 중</div>;
