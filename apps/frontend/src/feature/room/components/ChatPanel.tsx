@@ -2,11 +2,11 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { SidePanelHeader, SidePanelContent } from './SidePanel';
 import { useChatStore } from '../stores/useChatStore';
-import { useSocketStore } from '@/store/useSocketStore';
 import { Icon } from '@/shared/components/icon/Icon';
 import { cn } from '@/shared/lib/utils';
 import { logger } from '@/shared/lib/logger';
 import { Button } from '@/shared/components/Button';
+import { SocketClient } from '@/shared/socket/socket';
 
 const RATE_LIMIT_COOLDOWN = 3000;
 const MAX_CHAT_LENGTH = 60;
@@ -205,7 +205,6 @@ interface ChatInputProps {
 }
 
 function ChatInput({ hasNewItems, newItemPreview, onScrollToBottom }: ChatInputProps) {
-  const emit = useSocketStore((state) => state.actions.emit);
   const [text, setText] = useState('');
   const [isRateLimited, setIsRateLimited] = useState(false);
   const [chatToast, setChatToast] = useState<string | null>(null);
@@ -220,7 +219,7 @@ function ChatInput({ hasNewItems, newItemPreview, onScrollToBottom }: ChatInputP
     };
   }, []);
 
-  const startRateLimitCooldown = useCallback(() => {
+  const _startRateLimitCooldown = useCallback(() => {
     setIsRateLimited(true);
     rateLimitTimerRef.current = setTimeout(() => {
       setIsRateLimited(false);
@@ -241,21 +240,35 @@ function ChatInput({ hasNewItems, newItemPreview, onScrollToBottom }: ChatInputP
     [chatToast],
   );
 
-  const handleSendChat = () => {
+  // TODO: 에러 발생 시, response.retryable 이거 어케 처리함.....
+  const handleSendChat = async () => {
     const trimmed = text.trim();
     if (!trimmed || isRateLimited) return;
 
-    emit('send_chat', { text: trimmed }, (response) => {
-      if (!response.success) {
-        logger.socket.warn('채팅 전송 실패', response.error);
-        if (response.retryable === false) {
-          showChatToast('너무 많은 메시지를 보냈습니다. 잠시 후 다시 시도해주세요.');
-          startRateLimitCooldown();
-          return;
-        }
-        showChatToast('채팅 전송에 실패했습니다. 잠시 후 다시 시도해주세요.');
-      }
-    });
+    /**
+     * TODO: response.retryable로 넘겨주는 방식 고려
+     * 이전 방식들과 방식이 달라서 일단 주석처리해둠
+     * error의 message로 처리할 수는 없는지?
+     * 기본 에러랑 구분이 안되기 때문인지
+     */
+    try {
+      await SocketClient.emitWithAck('send_chat', { text: trimmed });
+    } catch (error) {
+      logger.custom.error('[ChatPanel] 채팅 전송 실패', error);
+      showChatToast('채팅 전송에 실패했습니다. 잠시 후 다시 시도해주세요.');
+    }
+
+    // emit('send_chat', { text: trimmed }, (response) => {
+    //   if (!response.success) {
+    //     logger.socket.warn('채팅 전송 실패', response.error);
+    //     if (response.retryable === false) {
+    //       showChatToast('너무 많은 메시지를 보냈습니다. 잠시 후 다시 시도해주세요.');
+    //       startRateLimitCooldown();
+    //       return;
+    //     }
+    //     showChatToast('채팅 전송에 실패했습니다. 잠시 후 다시 시도해주세요.');
+    //   }
+    // });
     setText('');
   };
 
