@@ -28,11 +28,13 @@ import { logger } from '@/shared/lib/logger';
  *
  * ## 반환값
  * - isLoading: 초기화 진행 중 여부 (로딩 UI 표시용)
- * - isSuccess: 초기화 성공 여부 (에러 UI 분기용)
+ * - isSuccess: 초기화 성공 여부 (성공 UI 분기용)
+ * - isError: 초기화 실패 여부 (에러 토스트 표시용)
  */
 export function useRoomInit() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [isError, setIsError] = useState(false);
 
   const roomId = useSafeRoomId();
   const hasStarted = useRef(false);
@@ -74,7 +76,7 @@ export function useRoomInit() {
       setIsSuccess(true);
     } catch (error) {
       logger.custom.error('[useRoomInit] 초기화 실패', error);
-      throw error;
+      setIsError(true);
     } finally {
       setIsLoading(false);
     }
@@ -107,5 +109,5 @@ export function useRoomInit() {
     };
   }, [cleanupMedia]);
 
-  return { isLoading, isSuccess };
+  return { isLoading, isSuccess, isError };
 }
