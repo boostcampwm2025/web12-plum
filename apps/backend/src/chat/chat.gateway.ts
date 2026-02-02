@@ -71,7 +71,7 @@ export class ChatGateway {
     @ConnectedSocket() socket: Socket,
     @MessageBody() data: SendChatRequest,
   ): Promise<SendChatResponse> {
-    const metadata = this.socketMetadataService.get(socket.id);
+    const metadata = await this.socketMetadataService.get(socket.id);
     if (!metadata) {
       return { success: false, error: '먼저 join_room을 호출하세요.', retryable: false };
     }
@@ -224,7 +224,7 @@ export class ChatGateway {
     @ConnectedSocket() socket: Socket,
     @MessageBody() data: SyncChatRequest,
   ): Promise<SyncChatResponse> {
-    const metadata = this.socketMetadataService.get(socket.id);
+    const metadata = await this.socketMetadataService.get(socket.id);
     if (!metadata) {
       return { success: false, error: '먼저 join_room을 호출하세요.' };
     }

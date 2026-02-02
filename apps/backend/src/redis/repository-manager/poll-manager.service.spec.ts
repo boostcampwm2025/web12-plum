@@ -40,6 +40,7 @@ describe('PollManagerService', () => {
           provide: RedisService,
           useValue: {
             getClient: jest.fn().mockReturnValue(redisClient),
+            acquireLock: jest.fn().mockResolvedValue(true),
           },
         },
       ],

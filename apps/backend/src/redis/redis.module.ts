@@ -1,5 +1,6 @@
 import { Module, Global } from '@nestjs/common';
 import { RedisService } from './redis.service.js';
+import { HeartbeatService } from './heartbeat.service.js';
 import * as Managers from './repository-manager/index.js';
 
 const managers = [
@@ -12,7 +13,7 @@ const managers = [
 ];
 @Global()
 @Module({
-  providers: [RedisService, ...managers],
+  providers: [RedisService, HeartbeatService, ...managers],
   exports: [RedisService, ...managers],
 })
 export class RedisModule {}
