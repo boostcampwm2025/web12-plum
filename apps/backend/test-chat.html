@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>채팅 테스트</title>
+  <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+  <style>
+    body { font-family: monospace; padding: 20px; }
+    #messages {
+      border: 1px solid #ccc;
+      height: 400px;
+      overflow-y: auto;
+      padding: 10px;
+      margin-bottom: 10px;
+      background: #f5f5f5;
+    }
+    .message {
+      margin: 5px 0;
+      padding: 5px;
+      background: white;
+      border-radius: 3px;
+    }
+    .message-me { background: #e3f2fd; }
+    .message-other { background: #fff3e0; }
+    .system { color: #666; font-style: italic; }
+    input { width: 70%; padding: 8px; }
+    button { padding: 8px 15px; margin-left: 5px; }
+    .status {
+      padding: 10px;
+      margin-bottom: 10px;
+      background: #f0f0f0;
+      border-radius: 3px;
+    }
+    .connected { color: green; }
+    .disconnected { color: red; }
+  </style>
+</head>
+<body>
+  <h1>채팅 테스트 클라이언트</h1>
+
+  <div class="status">
+    상태: <span id="status" class="disconnected">연결 안 됨</span><br>
+    참가자: <span id="participant">-</span><br>
+    방: <span id="room">-</span>
+  </div>
+
+  <div>
+    <input type="text" id="roomId" placeholder="방 ID (예: test-room)" value="test-room">
+    <input type="text" id="participantId" placeholder="참가자 ID (예: p123)" value="p123">
+    <button onclick="joinRoom()">방 입장</button>
+    <button onclick="disconnect()">연결 끊기</button>
+  </div>
+
+  <div id="messages"></div>
+
+  <div>
+    <input type="text" id="messageInput" placeholder="메시지 입력 (최대 60자)" maxlength="60">
+    <button onclick="sendMessage()">전송</button>
+    <button onclick="syncChat()">동기화 (재연결 시뮬레이션)</button>
+    <button onclick="clearMessages()">화면 지우기</button>
+  </div>
+
+  <script>
+    let socket;
+    let messageQueue = [];
+    let lastMessageId = null;
+    let currentRoomId = null;
+    let currentParticipantId = null;
+
+    // Socket 연결
+    function connectSocket() {
+      socket = io('http://localhost:3000/session', {
+        transports: ['websocket']
+      });
+
+      socket.on('connect', () => {
+        updateStatus('connected', '연결됨');
+        addSystemMessage('✅ Socket 연결 성공');
+      });
+
+      socket.on('disconnect', () => {
+        updateStatus('disconnected', '연결 끊김');
+        addSystemMessage('❌ Socket 연결 끊김');
+      });
+
+      socket.on('reconnect', () => {
+        addSystemMessage('🔄 자동 재연결됨');
+        // 자동 재연결 시 동기화
+        if (lastMessageId) {
+          syncChat();
+        }
+      });
+
+      // new_chat 이벤트 수신 (핵심!)
+      socket.on('new_chat', (message) => {
+        console.log('📨 new_chat 수신:', message);
+        addMessage(message);
+      });
+
+      // 다른 이벤트들
+      socket.on('user_joined', (data) => {
+        addSystemMessage(`👤 ${data.name}님이 입장했습니다.`);
+      });
+
+      socket.on('user_left', (data) => {
+        addSystemMessage(`👋 ${data.name}님이 퇴장했습니다.`);
+      });
+    }
+
+    // 방 입장
+    async function joinRoom() {
+      const roomId = document.getElementById('roomId').value;
+      const participantId = document.getElementById('participantId').value;
+
+      if (!roomId || !participantId) {
+        alert('방 ID와 참가자 ID를 입력하세요');
+        return;
+      }
+
+      if (!socket) {
+        connectSocket();
+      }
+
+      // join_room 요청
+      socket.emit('join_room', { roomId, participantId }, (response) => {
+        console.log('join_room 응답:', response);
+        if (response.success) {
+          currentRoomId = roomId;
+          currentParticipantId = participantId;
+          document.getElementById('room').textContent = roomId;
+          document.getElementById('participant').textContent = response.participantName;
+          addSystemMessage(`✅ 방 입장 성공: ${roomId}`);
+        } else {
+          alert('방 입장 실패: ' + response.error);
+        }
+      });
+    }
+
+    // 메시지 전송
+    async function sendMessage() {
+      const input = document.getElementById('messageInput');
+      const text = input.value.trim();
+
+      if (!text) {
+        alert('메시지를 입력하세요');
+        return;
+      }
+
+      if (!socket || !currentRoomId) {
+        alert('먼저 방에 입장하세요');
+        return;
+      }
+
+      console.log('📤 send_chat 전송:', { text });
+
+      // send_chat 요청
+      socket.emit('send_chat', { text }, (response) => {
+        console.log('send_chat 응답:', response);
+        if (response.success) {
+          input.value = ''; // 입력창 비우기
+          // 성공 시 아무것도 안 함 (브로드캐스트 기다림)
+        } else {
+          alert('전송 실패: ' + response.error);
+        }
+      });
+    }
+
+    // 채팅 동기화 (재연결 시뮬레이션)
+    async function syncChat() {
+      if (!socket || !currentRoomId) {
+        alert('먼저 방에 입장하세요');
+        return;
+      }
+
+      if (!lastMessageId) {
+        addSystemMessage('⚠️ 동기화할 메시지가 없습니다 (lastMessageId 없음)');
+        return;
+      }
+
+      console.log('🔄 sync_chat 요청:', { lastMessageId });
+
+      socket.emit('sync_chat', { lastMessageId }, (response) => {
+        console.log('sync_chat 응답:', response);
+        if (response.success) {
+          if (response.messages.length > 0) {
+            addSystemMessage(`🔄 ${response.messages.length}개 메시지 동기화됨`);
+            response.messages.forEach(msg => addMessage(msg));
+          } else {
+            addSystemMessage('🔄 동기화할 메시지 없음');
+          }
+        } else {
+          alert('동기화 실패: ' + response.error);
+        }
+      });
+    }
+
+    // 메시지 추가 (정렬)
+    function addMessage(message) {
+      // 중복 체크
+      if (messageQueue.find(m => m.messageId === message.messageId)) {
+        console.log('⚠️ 중복 메시지 무시:', message.messageId);
+        return;
+      }
+
+      // 대기열에 추가
+      messageQueue.push(message);
+
+      // timestamp 기준 정렬
+      messageQueue.sort((a, b) => {
+        const tsA = parseInt(a.messageId.split('-')[0]);
+        const tsB = parseInt(b.messageId.split('-')[0]);
+        return tsA - tsB;
+      });
+
+      // lastMessageId 업데이트
+      lastMessageId = messageQueue[messageQueue.length - 1].messageId;
+
+      // 화면 렌더링
+      renderMessages();
+    }
+
+    // 메시지 렌더링
+    function renderMessages() {
+      const container = document.getElementById('messages');
+      container.innerHTML = '';
+
+      messageQueue.forEach(msg => {
+        const div = document.createElement('div');
+        div.className = 'message';
+
+        // 내 메시지인지 확인
+        if (msg.senderId === currentParticipantId) {
+          div.classList.add('message-me');
+        } else {
+          div.classList.add('message-other');
+        }
+
+        const time = new Date(msg.timestamp).toLocaleTimeString('ko-KR');
+        div.innerHTML = `
+          <strong>${msg.senderName}</strong>
+          <small>(${time})</small><br>
+          ${escapeHtml(msg.text)}
+        `;
+        container.appendChild(div);
+      });
+
+      // 스크롤 맨 아래로
+      container.scrollTop = container.scrollHeight;
+    }
+
+    // 시스템 메시지 추가
+    function addSystemMessage(text) {
+      const container = document.getElementById('messages');
+      const div = document.createElement('div');
+      div.className = 'message system';
+      div.textContent = `[시스템] ${text}`;
+      container.appendChild(div);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    // 상태 업데이트
+    function updateStatus(className, text) {
+      const status = document.getElementById('status');
+      status.className = className;
+      status.textContent = text;
+    }
+
+    // HTML 이스케이프
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // 화면 지우기
+    function clearMessages() {
+      messageQueue = [];
+      lastMessageId = null;
+      document.getElementById('messages').innerHTML = '';
+      addSystemMessage('화면이 지워졌습니다 (새로고침 시뮬레이션)');
+    }
+
+    // 연결 끊기
+    function disconnect() {
+      if (socket) {
+        socket.disconnect();
+        addSystemMessage('연결을 끊었습니다');
+      }
+    }
+
+    // Enter 키로 전송
+    document.getElementById('messageInput').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        sendMessage();
+      }
+    });
+  </script>
+</body>
+</html>
