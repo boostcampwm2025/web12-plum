@@ -44,7 +44,10 @@ export function InfoPanel({ joinLink, onClose }: InfoPanelProps) {
       <SidePanelContent>
         <div className="px-4">
           <h3 className="mb-3 text-sm">참여 링크</h3>
-          <div className="mb-6 flex items-center justify-between gap-6 rounded-lg bg-gray-400 py-1 pr-1 pl-3 text-sm">
+          <div
+            className="mb-6 flex items-center justify-between gap-6 rounded-lg bg-gray-400 py-1 pr-1 pl-3 text-sm"
+            data-guide="info-join-link"
+          >
             <span className="truncate">{joinLink}</span>
             <Button
               variant="icon"
@@ -60,7 +63,10 @@ export function InfoPanel({ joinLink, onClose }: InfoPanelProps) {
           </div>
 
           <h3 className="mb-3 text-sm">발표 자료</h3>
-          <div className="mb-6">
+          <div
+            className="mb-6"
+            data-guide="info-files"
+          >
             {isLoading ? (
               <p className="text-text/60 text-xs">자료를 불러오는 중...</p>
             ) : files.length === 0 ? (
@@ -92,7 +98,10 @@ export function InfoPanel({ joinLink, onClose }: InfoPanelProps) {
           </div>
 
           <h3 className="mb-3 text-sm">배경 효과</h3>
-          <div className="mb-6">
+          <div
+            className="mb-6"
+            data-guide="info-background"
+          >
             {/*TODO: 드롭다운 컴포넌트 구현 후 적용 */}
             <select
               value={backgroundMode}
