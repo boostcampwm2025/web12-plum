@@ -16,6 +16,7 @@ import { Tabs } from '@/feature/summary/components/Tabs';
 import { Loading } from '@/shared/components/Loading';
 import { Button } from '@/shared/components/Button';
 import { roomApi } from '@/shared/api/endpoints/room';
+import { logger } from '@sentry/react';
 
 export function Summary() {
   const { roomId } = useParams<{ roomId: string }>();
@@ -23,17 +24,22 @@ export function Summary() {
   const [activeTab, setActiveTab] = useState<Tab>('statistics');
   const [summaryData, setSummaryData] = useState<RoomSummaryData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [hasError, setHasError] = useState(false);
+  const [fetchedAt, setFetchedAt] = useState<Date | null>(null);
 
   const fetchSummary = useCallback(async () => {
     if (!roomId) return;
 
     try {
       setIsLoading(true);
+      setHasError(false);
       const response = await roomApi.getSummary(roomId);
       setSummaryData(response.data);
+      setFetchedAt(new Date());
     } catch (err) {
-      setError(err instanceof Error ? err.message : '데이터를 불러오는데 실패했습니다.');
+      logger.error('요약 데이터 불러오기 실패', { error: err });
+      setHasError(true);
+      setFetchedAt(null);
     } finally {
       setIsLoading(false);
     }
@@ -51,16 +57,14 @@ export function Summary() {
     );
   }
 
-  if (error || !summaryData) {
+  if (hasError || !summaryData) {
     return (
       <>
         <main className="flex min-h-screen items-center justify-center px-6">
-          <div className="max-w-md rounded-2xl bg-gray-500 p-8 text-center shadow-lg">
+          <div className="w-xs rounded-2xl bg-gray-400 p-8 text-center shadow-lg">
             <div className="mb-4 text-3xl">⚠️</div>
             <h2 className="text-text mb-2 text-xl font-bold">요약을 불러오지 못했어요</h2>
-            <p className="text-subtext-light mb-6 text-sm">
-              {error || '잠시 후 다시 시도해주세요.'}
-            </p>
+            <p className="text-subtext-light mb-6 text-sm">잠시 후 다시 시도해주세요.</p>
             <div className="flex items-center justify-center gap-3">
               <Button
                 variant="ghost"
@@ -106,6 +110,21 @@ export function Summary() {
               day: 'numeric',
             })}
           />
+          {fetchedAt && (
+            <section className="mt-3 px-1 text-right">
+              <p className="text-subtext-light text-xs">
+                {new Date(fetchedAt.getTime() + 24 * 60 * 60 * 1000).toLocaleString('ko-KR', {
+                  year: 'numeric',
+                  month: '2-digit',
+                  day: '2-digit',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  hour12: false,
+                })}
+                까지 조회 가능
+              </p>
+            </section>
+          )}
           <Tabs
             activeTab={activeTab}
             onChangeTab={setActiveTab}
