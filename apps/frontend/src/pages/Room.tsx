@@ -10,18 +10,19 @@ import { MediaControlsProvider } from '@/feature/room/hooks/useMediaControlConte
 import { useRoomStore } from '@/feature/room/stores/useRoomStore';
 
 function RoomContent() {
-  const { isLoading, isSuccess, error, retry } = useRoomInit();
+  const { isLoading, isSuccess } = useRoomInit();
   const roomTitle = useRoomStore((state) => state.roomTitle);
 
   if (isLoading) {
     return <div>연결 중</div>;
   }
 
+  //TODO: 임시처리
   if (!isSuccess) {
     return (
       <div>
-        <p>에러: {error?.message}</p>
-        <button onClick={retry}>다시 시도</button>
+        <p>에러: 알 수 없는 오류가 발생했습니다.</p>
+        <button onClick={() => window.location.reload()}>다시 시도</button>
       </div>
     );
   }
