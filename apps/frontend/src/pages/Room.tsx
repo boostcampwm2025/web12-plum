@@ -1,3 +1,11 @@
+import { useEffect } from 'react';
+import { AsyncBoundary } from '@/shared/components/AsyncBoundary';
+import { ErrorFallback } from '@/shared/components/ErrorFallback';
+import { useToastStore } from '@/store/useToastStore';
+import { useRoomInit } from '@/feature/room/hooks/useRoomInit';
+import { useLocalMedia } from '@/feature/room/hooks/useLocalMedia';
+import { useRoomSync } from '@/feature/room/hooks/useRoomSync';
+
 import { RoomMenuBar } from '../feature/room/components/RoomMenuBar';
 import { RoomDialogs } from '../feature/room/components/RoomDialogs';
 import { RoomMainSection } from '../feature/room/components/RoomMainSection';
@@ -6,11 +14,6 @@ import { RemoteAudioPlayer } from '../feature/room/components/RemoteAudioPlayer'
 import { RoomEndedModal } from '../feature/room/components/RoomEndedModal';
 import { PollResultModal } from '../feature/room/components/PollResultModal';
 import { RoomGuide } from '../feature/room/components/RoomGuide.tsx';
-import { useRoomInit } from '@/feature/room/hooks/useRoomInit';
-import { useEffect } from 'react';
-import { useToastStore } from '@/store/useToastStore';
-import { useLocalMedia } from '@/feature/room/hooks/useLocalMedia';
-import { useRoomSync } from '@/feature/room/hooks/useRoomSync';
 
 export default function Room() {
   const { addToast } = useToastStore((state) => state.actions);
@@ -40,21 +43,36 @@ export default function Room() {
   }
 
   return (
-    <div className="flex h-full w-full flex-col bg-gray-700 pt-4">
-      <RemoteAudioPlayer />
-      <RoomDialogs />
-      <RoomGuide />
-      <div className="flex h-full overflow-hidden px-4">
-        <RoomMainSection onDisableScreenShare={disableScreenShare} />
-        <RoomSideSection />
+    <AsyncBoundary
+      isLoading={isLoading}
+      isError={isError}
+      errorFallback={
+        <ErrorFallback
+          title="연결에 실패했어요"
+          description="강의실에 연결할 수 없습니다."
+          onRetry={() => {
+            //TODO: 강의실 재입장 로직 추가 예정
+            // window.location.reload();
+          }}
+        />
+      }
+    >
+      <div className="flex h-full w-full flex-col bg-gray-700 pt-4">
+        <RemoteAudioPlayer />
+        <RoomDialogs />
+        <RoomGuide />
+        <div className="flex h-full overflow-hidden px-4">
+          <RoomMainSection onDisableScreenShare={disableScreenShare} />
+          <RoomSideSection />
+        </div>
+        <RoomMenuBar
+          onToggleCamera={toggleCamera}
+          onToggleMic={toggleMic}
+          onToggleScreenShare={toggleScreenShare}
+        />
+        <RoomEndedModal />
+        <PollResultModal />
       </div>
-      <RoomMenuBar
-        onToggleCamera={toggleCamera}
-        onToggleMic={toggleMic}
-        onToggleScreenShare={toggleScreenShare}
-      />
-      <RoomEndedModal />
-      <PollResultModal />
-    </div>
+    </AsyncBoundary>
   );
 }

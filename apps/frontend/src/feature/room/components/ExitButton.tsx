@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router';
 
 import { Button } from '@/shared/components/Button';
@@ -49,10 +49,12 @@ export function ExitButton() {
    * 서버 알림 실패해도 finally에서 정리 및 이동은 진행됨
    */
   const handleExit = useCallback(async () => {
+    const isPresenter = myInfo?.role === 'presenter';
+
     try {
       logger.ui.info('[ExitButton] 강의실 퇴장 시작');
 
-      if (myInfo?.role === 'presenter') await SocketClient.emitWithAck('break_room');
+      if (isPresenter) await SocketClient.emitWithAck('break_room');
       else await SocketClient.emitWithAck('leave_room');
     } catch (error) {
       logger.ui.error('[ExitButton] 서버 퇴장 알림 실패:', error);
