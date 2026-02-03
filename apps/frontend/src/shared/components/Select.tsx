@@ -27,7 +27,7 @@ export interface SelectOption<T = string> {
  * Select 트리거 버튼 스타일 변형
  */
 const selectTriggerVariants = cva(
-  'text-text flex w-full cursor-pointer items-center justify-between gap-2 rounded-lg px-4 py-2 text-sm transition-all duration-200 focus-visible:ring-2 focus-visible:outline-none',
+  'text-text flex w-full cursor-pointer items-center justify-between gap-2 rounded-lg px-4 py-2 text-sm transition-all duration-200 focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset',
   {
     variants: {
       variant: {

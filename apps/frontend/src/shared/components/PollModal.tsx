@@ -164,7 +164,7 @@ export function PollModal({
 
       <FormProvider {...formMethods}>
         <form
-          className="flex h-full min-h-0 flex-col gap-6 overflow-y-scroll"
+          className="flex h-full min-h-0 flex-col gap-6 overflow-y-auto px-2"
           onSubmit={handleSubmit(handleSubmitForm)}
         >
           {/* 투표 제목 섹션 */}
