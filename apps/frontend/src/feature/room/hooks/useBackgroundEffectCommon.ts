@@ -24,6 +24,31 @@ export type RenderCanvases<T extends HTMLCanvasElement | OffscreenCanvas> = {
   maskCanvas: T;
 };
 
+function drawBackgroundImage(
+  ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+  background: CanvasImageSource,
+  canvasWidth: number,
+  canvasHeight: number,
+): void {
+  const bgWidth = (background as HTMLImageElement | ImageBitmap).width;
+  const bgHeight = (background as HTMLImageElement | ImageBitmap).height;
+  const imageRatio = bgWidth / bgHeight;
+  const canvasRatio = canvasWidth / canvasHeight;
+  let drawWidth = canvasWidth;
+  let drawHeight = canvasHeight;
+  let offsetX = 0;
+  let offsetY = 0;
+
+  if (imageRatio > canvasRatio) {
+    drawHeight = canvasWidth / imageRatio;
+    offsetY = (canvasHeight - drawHeight) / 2;
+  } else {
+    drawWidth = canvasHeight * imageRatio;
+    offsetX = (canvasWidth - drawWidth) / 2;
+  }
+  ctx.drawImage(background, offsetX, offsetY, drawWidth, drawHeight);
+}
+
 export function renderBackgroundEffect<T extends HTMLCanvasElement | OffscreenCanvas>(
   source: CanvasImageSource,
   background: CanvasImageSource | null,
@@ -42,12 +67,18 @@ export function renderBackgroundEffect<T extends HTMLCanvasElement | OffscreenCa
     return;
   }
 
-  // 마스크가 아직 준비되지 않은 경우 전체 블러 처리 (원본 배경 노출 방지)
+  // 마스크가 아직 준비되지 않은 경우 (원본 배경 노출 방지)
   if (!mask) {
     outputCtx.clearRect(0, 0, width, height);
-    outputCtx.filter = `blur(${BLUR_PX}px)`;
-    outputCtx.drawImage(source, 0, 0, width, height);
-    outputCtx.filter = 'none';
+    if (mode === 'image' && background) {
+      // 이미지 모드: 배경 이미지만 표시 (마스크 준비되면 사람이 합성됨)
+      drawBackgroundImage(outputCtx, background, width, height);
+    } else {
+      // 블러 모드: 전체 블러 처리
+      outputCtx.filter = `blur(${BLUR_PX}px)`;
+      outputCtx.drawImage(source, 0, 0, width, height);
+      outputCtx.filter = 'none';
+    }
     return;
   }
 
@@ -74,23 +105,7 @@ export function renderBackgroundEffect<T extends HTMLCanvasElement | OffscreenCa
   outputCtx.clearRect(0, 0, width, height);
 
   if (mode === 'image' && background) {
-    const bgWidth = (background as HTMLImageElement | ImageBitmap).width;
-    const bgHeight = (background as HTMLImageElement | ImageBitmap).height;
-    const imageRatio = bgWidth / bgHeight;
-    const canvasRatio = width / height;
-    let drawWidth = width;
-    let drawHeight = height;
-    let offsetX = 0;
-    let offsetY = 0;
-
-    if (imageRatio > canvasRatio) {
-      drawHeight = width / imageRatio;
-      offsetY = (height - drawHeight) / 2;
-    } else {
-      drawWidth = height * imageRatio;
-      offsetX = (width - drawWidth) / 2;
-    }
-    outputCtx.drawImage(background, offsetX, offsetY, drawWidth, drawHeight);
+    drawBackgroundImage(outputCtx, background, width, height);
   } else {
     outputCtx.filter = `blur(${BLUR_PX}px)`;
     outputCtx.drawImage(source, 0, 0, width, height);
