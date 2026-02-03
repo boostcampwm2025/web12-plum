@@ -20,7 +20,7 @@ export function playSound(
     cooldownMs?: number;
   },
 ) {
-  if (useSoundStore.getState().isMuted) return;
+  if (!useSoundStore.getState().isSoundEnabled) return;
   const now = Date.now();
   const cooldownMs = options?.cooldownMs ?? DEFAULT_COOLDOWN_MS;
   const lastPlayed = lastPlayedAt[id] ?? 0;
