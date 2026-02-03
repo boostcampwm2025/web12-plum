@@ -114,8 +114,6 @@ export function useInteractionSync() {
       const tasks = [syncRankInfo(role)];
       if (role === 'audience') tasks.push(syncActivePoll(), syncActiveQna());
       await Promise.allSettled(tasks);
-      await syncActivePoll();
-      await syncActiveQna();
     },
     [syncActivePoll, syncActiveQna, syncRankInfo],
   );
