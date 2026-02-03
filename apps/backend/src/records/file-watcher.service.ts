@@ -4,7 +4,9 @@ import { join, parse } from 'path';
 import { writeFile, unlink } from 'fs/promises';
 import { spawn } from 'child_process';
 
+import { RecordingManagerService } from '../redis/repository-manager/index.js';
 import { BATCH_SIZE, RECORD_DIR, SEGMENT_TIME } from './record.constant.js';
+import { ChatLog, STTWorkerResponse } from './record.types.js';
 
 interface STTData {
   fileName: string;
@@ -22,6 +24,8 @@ export class FileWatcherService implements OnModuleInit, OnModuleDestroy {
   private fileBatches = new Map<string, string[]>();
   private isMerging = new Map<string, boolean>();
   private lastedChanged = new Map<string, number>();
+
+  constructor(private readonly recordingManager: RecordingManagerService) {}
 
   onModuleInit() {
     // 1. record 폴더 감시 시작
@@ -171,6 +175,19 @@ export class FileWatcherService implements OnModuleInit, OnModuleDestroy {
       const firstMeta = this.getParseFileName(filePaths[0]);
       const startTime = firstMeta ? firstMeta.timestamp / 1000 + firstMeta.index * SEGMENT_TIME : 0;
 
+      // 사용 완료한 임시 리스트 파일 및 원본 조각들 삭제
+      await unlink(listFilePath).catch((e) =>
+        this.logger.error(`리스트 파일 삭제 실패: ${e.message}`),
+      );
+      for (const path of filePaths) {
+        try {
+          await unlink(path);
+          this.logger.debug(`🗑️ 삭제 성공: ${path}`);
+        } catch (err) {
+          this.logger.error(`❌ 파일 삭제 실패 (${path}): ${err.message}`);
+        }
+      }
+
       await this.runSTT({
         fileName: mergedFileName,
         roomId,
@@ -178,47 +195,58 @@ export class FileWatcherService implements OnModuleInit, OnModuleDestroy {
         startTime,
         index: firstMeta?.index ?? 0,
       });
-
-      // 사용 완료한 임시 리스트 파일 및 원본 조각들 삭제
-      await unlink(listFilePath);
-      for (const path of filePaths) {
-        await unlink(path).catch(() => {}); // 조각 파일 삭제
-      }
     } catch (error) {
       this.logger.error(`❌ 병합 실패: ${error.message}`);
     }
   }
 
-  // TODO: implement
-  private async runSTT(data: Omit<STTData, 'timestamp'> & { startTime: number }) {
+  private async runSTT(data: Omit<STTData, 'timestamp'> & { startTime: number }): Promise<ChatLog> {
     const { fileName, roomId, role, index, startTime } = data;
-    const filePath = join(RECORD_DIR, fileName);
+    const containerPath = `/app/apps/backend/record/${data.fileName}`;
 
     try {
       this.logger.log(`[File watcher] AI 분석 시작: ${fileName} (Timeline: ${startTime}s)`);
 
-      // TODO: change to real text msg;
-      const mockResult = { text: '실제 AI 인식 결과가 여기에 들어옵니다.', duration: 10 };
+      const localPath = join(RECORD_DIR, fileName);
+      const workerUrl = process.env.STT_WORKER_URL || 'http://127.0.0.1:8000';
+      const response = await fetch(`${workerUrl}/transcribe`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ file_path: containerPath }),
+      });
 
+      if (!response.ok) {
+        const errorDetail = await response.text();
+        throw new Error(`Worker Error (${response.status}): ${errorDetail}`);
+      }
+
+      const { text, duration, segments } = (await response.json()) as STTWorkerResponse;
       // 텍스트와 함께 '절대 시간'을 저장하는 것이 핵심입니다.
-      const chatLog = {
+      const chatLog: ChatLog = {
+        id: `${roomId}:${role}:${index}`,
         roomId,
         speaker: role,
-        text: mockResult.text,
+        text: text,
         startTime,
-        endTime: startTime + mockResult.duration,
+        endTime: startTime + duration,
         segmentIndex: index,
-        fileUrl: filePath,
+        fileUrl: fileName,
+        segments,
       };
 
-      // 예: await this.db.transcript.create({ data: chatLog });
-      this.logger.log(
-        `[File watcher] 분석 완료 및 DB 저장: [${startTime}s] ${role}: ${mockResult.text}`,
-      );
+      await this.recordingManager.saveChatLog(chatLog);
 
+      try {
+        await unlink(localPath);
+        this.logger.debug(`🗑️ 삭제 성공: ${localPath}`);
+      } catch (err) {
+        this.logger.error(`파일 삭제 실패 (${localPath}): ${err.message}`);
+      }
+      this.logger.log(`[STT Worker] 분석 완료: ${role} - ${text.substring(0, 20)}...`);
       return chatLog;
     } catch (error) {
       this.logger.error(`❌ STT 분석 실패 (${fileName}): ${error.message}`);
+      throw error;
     }
   }
 

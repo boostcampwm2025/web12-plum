@@ -152,8 +152,8 @@ describe('RoomGateway', () => {
             startRecording: jest.fn(),
             stopParticipantRecording: jest.fn(),
             stopAllRecording: jest.fn(),
-          }
-        }
+          },
+        },
       ],
     }).compile();
 

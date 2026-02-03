@@ -25,7 +25,24 @@ services:
     restart: unless-stopped
     volumes:
       - ./apps/backend/logs:/app/apps/backend/logs # Winston 로그 파일 (Promtail이 읽음)
-      - ./recordings:/app/record # 로컬의 ./recordings 폴더를 컨테이너 내부 /app/record와 연결
+      - ./apps/backend/record:/app/apps/backend/record # 로컬의 ./recordings 폴더를 컨테이너 내부 /app/record와 연결
+
+  ai-worker:
+    build:
+      context: ./ai-worker
+    container_name: plum-ai-worker-develop
+    network_mode: host
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --log-level info
+    environment:
+      - STT_CPU_THREADS=1
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./apps/backend/record:/app/apps/backend/record
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: 1
 
   # Node Exporter - 시스템 메트릭 수집
   node-exporter:
