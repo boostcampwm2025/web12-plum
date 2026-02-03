@@ -53,6 +53,11 @@ export const roomApi = {
     return apiClient.get<NicknameValidationResponse>(`/room/${roomId}/nickname/validate?${query}`);
   },
 
+  // 강의실이 할당된 서버의 URL 반환하기
+  async getRoomServer(roomId: string): Promise<ApiResponse<{ serverUrl: string }>> {
+    return apiClient.get<{ serverUrl: string }>(`/room/${roomId}/server`);
+  },
+
   async getSummary(roomId: string): Promise<ApiResponse<RoomSummary>> {
     return apiClient.get<RoomSummary>(`/room/${roomId}/summary`);
   },

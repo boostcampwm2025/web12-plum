@@ -19,9 +19,6 @@ import {
 // 소켓 연결 타임아웃 (ms)
 const CONNECTION_TIMEOUT = 5000;
 
-// 소켓 서버 URL
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL as string;
-
 // 소켓 클라이언트 옵션
 const SOCKET_OPTIONS = {
   transports: ['websocket', 'polling'], // 우선 WebSocket 사용
@@ -36,6 +33,7 @@ const SOCKET_OPTIONS = {
 export class SocketClient {
   private static socket: TypedSocket | null = null;
   private static connectPromise: Promise<void> | null = null;
+  private static socketUrl: string | null = null;
   private static handlerMap = new Map<
     ServerToClientEvents[SocketEventNameFromServer],
     ServerToClientEvents[SocketEventNameFromServer]
@@ -50,15 +48,19 @@ export class SocketClient {
    * 소켓 연결 보장 - public
    * 이미 연결된 경우 즉시 반환, 아니면 연결 시도 후 반환
    * 최초 연결 또는 재연결 시도 시 사용
+   * @param url 소켓 서버 URL (최초 연결 시 필수)
    */
-  static async ensureConnected(): Promise<void> {
+  static async ensureConnected(url?: string): Promise<void> {
     // 이미 연결된 경우 바로 반환
     if (this.socket?.connected) return;
     if (this.connectPromise) return this.connectPromise;
 
+    const targetUrl = url ?? this.socketUrl;
+    if (!targetUrl) throw new Error('소켓 URL이 설정되지 않음');
+
     logger.socket.debug('[ensureConnected] 소켓 연결 시도');
 
-    this.connect();
+    this.connect(targetUrl);
 
     try {
       await this.connectPromise!;
@@ -73,15 +75,17 @@ export class SocketClient {
   /**
    * 실제 소켓 인스턴스 생성 및 연결 - private
    * 싱글톤을 유지하기 위해 private 메서드로 구현
+   * @param url 소켓 서버 URL
    */
-  private static connect(): void {
+  private static connect(url: string): void {
     // 기존 소켓이 있으면 핸들러 제거
     if (this.socket) {
       this.socket.removeAllListeners();
       this.socket.disconnect();
     }
 
-    this.socket = io(SOCKET_URL, SOCKET_OPTIONS) as TypedSocket;
+    this.socketUrl = url;
+    this.socket = io(url, SOCKET_OPTIONS) as TypedSocket;
     this.setupSocketListeners();
 
     this.connectPromise = this.createConnectPromise();
