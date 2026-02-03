@@ -113,11 +113,16 @@ describe('ParticipantGrid', () => {
     vi.mocked(useItemsPerPage).mockReturnValue(2);
 
     vi.mocked(useMediaStore).mockImplementation((selector) =>
-      selector({ isCameraOn: false, remoteStreams: new Map() } as Parameters<typeof selector>[0]),
+      selector({
+        isCameraOn: false,
+        isMicOn: false,
+        remoteStreams: new Map(),
+      } as Parameters<typeof selector>[0]),
     );
     vi.mocked(useRoomStore).mockImplementation((selector) =>
       selector({
         actions: { getParticipantList: () => participants },
+        participantAudioMuted: new Map(),
       } as Parameters<typeof selector>[0]),
     );
     vi.mocked(useStreamStore).mockImplementation((selector) =>
