@@ -43,24 +43,22 @@ type ExtractPayload<T> = T extends (cb: (res: any) => void) => void
     ? P
     : void;
 
-/**
- * success: true인 응답만 추출
- */
-type ToSuccessResponse<T> = T extends { success: true }
-  ? T
-  : T extends { success: false }
-    ? never
-    : T extends { success: boolean }
-      ? Omit<T, 'success'> & { success: true }
-      : T;
-
 // 소켓 이벤트 페이로드 및 응답 타입
 export type SocketEventPayload<E extends SocketEventName> = ExtractPayload<ClientToServerEvents[E]>;
 export type SocketEventResponse<E extends SocketEventName> = ExtractResponse<
   ClientToServerEvents[E]
+> & { success: boolean };
+
+// 성공 응답 타입 추출
+export type SocketSuccessResponse<E extends SocketEventName> = Extract<
+  SocketEventResponse<E>,
+  { success: true }
 >;
-export type SocketSuccessResponse<E extends SocketEventName> = ToSuccessResponse<
-  SocketEventResponse<E>
+
+// 실패 응답 타입 추출
+export type SocketFailResponse<E extends SocketEventName> = Exclude<
+  SocketEventResponse<E>,
+  { success: true }
 >;
 
 // 서버 이벤트 핸들러 및 페이로드 타입
