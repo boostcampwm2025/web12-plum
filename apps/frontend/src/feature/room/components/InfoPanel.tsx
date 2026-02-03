@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { SidePanelHeader, SidePanelContent } from './SidePanel';
 import { Button } from '@/shared/components/Button';
 import { Icon } from '@/shared/components/icon/Icon';
+import { Toggle } from '@/shared/components/Toggle';
 import { logger } from '@/shared/lib/logger';
 import { useRoomPresentation } from '../hooks/useRoomPresentation';
 import { useToastStore } from '@/store/useToastStore';
@@ -9,6 +10,7 @@ import {
   useBackgroundEffectStore,
   type BackgroundEffectMode,
 } from '../stores/useBackgroundEffectStore';
+import { useSoundStore } from '@/store/useSoundStore';
 
 interface InfoPanelProps {
   joinLink: string;
@@ -20,6 +22,8 @@ export function InfoPanel({ joinLink, onClose }: InfoPanelProps) {
   const addToast = useToastStore((state) => state.actions.addToast);
   const backgroundMode = useBackgroundEffectStore((state) => state.mode);
   const setBackgroundMode = useBackgroundEffectStore((state) => state.actions.setMode);
+  const isSoundMuted = useSoundStore((state) => state.isMuted);
+  const toggleSoundMuted = useSoundStore((state) => state.actions.toggleMuted);
 
   const copyText = async (text: string) => {
     try {
@@ -44,7 +48,10 @@ export function InfoPanel({ joinLink, onClose }: InfoPanelProps) {
       <SidePanelContent>
         <div className="px-4">
           <h3 className="mb-3 text-sm">참여 링크</h3>
-          <div className="mb-6 flex items-center justify-between gap-6 rounded-lg bg-gray-400 py-1 pr-1 pl-3 text-sm">
+          <div
+            className="mb-6 flex items-center justify-between gap-6 rounded-lg bg-gray-400 py-1 pr-1 pl-3 text-sm"
+            data-guide="info-join-link"
+          >
             <span className="truncate">{joinLink}</span>
             <Button
               variant="icon"
@@ -60,7 +67,10 @@ export function InfoPanel({ joinLink, onClose }: InfoPanelProps) {
           </div>
 
           <h3 className="mb-3 text-sm">발표 자료</h3>
-          <div className="mb-6">
+          <div
+            className="mb-6"
+            data-guide="info-files"
+          >
             {isLoading ? (
               <p className="text-text/60 text-xs">자료를 불러오는 중...</p>
             ) : files.length === 0 ? (
@@ -92,7 +102,10 @@ export function InfoPanel({ joinLink, onClose }: InfoPanelProps) {
           </div>
 
           <h3 className="mb-3 text-sm">배경 효과</h3>
-          <div className="mb-6">
+          <div
+            className="mb-6"
+            data-guide="info-background"
+          >
             {/*TODO: 드롭다운 컴포넌트 구현 후 적용 */}
             <select
               value={backgroundMode}
@@ -104,6 +117,19 @@ export function InfoPanel({ joinLink, onClose }: InfoPanelProps) {
               <option value="image">플럼 배경</option>
               <option value="off">처리 안함</option>
             </select>
+          </div>
+
+          <div className="mb-6 flex items-center justify-between">
+            <h3 className="text-text text-sm">
+              <label htmlFor="interaction-sound-mute">인터렉션 사운드</label>
+            </h3>
+
+            <Toggle
+              id="interaction-sound-mute"
+              checked={isSoundMuted}
+              onChange={toggleSoundMuted}
+              size="sm"
+            />
           </div>
         </div>
       </SidePanelContent>

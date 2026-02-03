@@ -200,6 +200,7 @@ function ParticipantVideoComponent({
     <motion.div
       layout="position"
       layoutId={isCurrentUser ? `participant-video-${id}` : undefined}
+      data-guide={isCurrentUser ? 'cam-layout' : undefined}
       animate={{
         height: mode === 'minimize' ? VIDEO_HEIGHTS.MINIMIZED : VIDEO_HEIGHTS.NORMAL,
       }}

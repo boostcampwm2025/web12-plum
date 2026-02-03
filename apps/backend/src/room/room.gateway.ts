@@ -59,6 +59,8 @@ import {
 } from '../redis/repository-manager/index.js';
 import { RoomService } from './room.service.js';
 import { PrometheusService } from '../prometheus/prometheus.service.js';
+import { RedisService } from '../redis/redis.service.js';
+import { RecordService } from '../records/record.service.js';
 
 /**
  * 강의실 WebSocket Gateway
@@ -85,6 +87,8 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly socketMetadataService: SocketMetadataService,
     private readonly roomService: RoomService,
     private readonly prometheusService: PrometheusService,
+    private readonly recordService: RecordService,
+    private readonly redisService: RedisService,
   ) {}
 
   /**
@@ -105,7 +109,10 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const room = await this.roomManagerService.findOne(roomId);
     if (!room) return { success: false, error: '강의실을 찾을 수 없습니다.' };
     if (room.status === 'pending')
-      await this.roomManagerService.updatePartial(roomId, { status: 'active' });
+      await this.roomManagerService.updatePartial(roomId, {
+        status: 'active',
+        startedAt: new Date().toISOString(),
+      });
 
     // 재입장 여부 판단
     const pending = await this.participantManagerService.popReconnectMetadata(participantId);
@@ -135,7 +142,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
       socket.join(participantId);
 
       // 3. 메타데이터 저장
-      this.socketMetadataService.set(socket.id, {
+      await this.socketMetadataService.set(socket.id, {
         roomId,
         participantId,
         transportIds: [],
@@ -178,7 +185,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() socket: Socket,
     @MessageBody() data: CreateTransportRequest,
   ): Promise<CreateTransportResponse<IceParameters, IceCandidate[], DtlsParameters>> {
-    const metadata = this.socketMetadataService.get(socket.id);
+    const metadata = await this.socketMetadataService.get(socket.id);
     if (!metadata) {
       return { success: false, error: '먼저 join_room을 호출하세요.' };
     }
@@ -191,7 +198,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
       );
 
       // 2. transportId 저장
-      metadata.transportIds.push(transportParams.id);
+      await this.socketMetadataService.addTransportId(socket.id, transportParams.id);
 
       // 3. Redis에 participant.transports 업데이트
       const participant = await this.participantManagerService.findOne(metadata.participantId);
@@ -222,7 +229,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() socket: Socket,
     @MessageBody() data: ConnectTransportRequest<DtlsParameters>,
   ): Promise<ConnectTransportResponse> {
-    const metadata = this.socketMetadataService.get(socket.id);
+    const metadata = await this.socketMetadataService.get(socket.id);
     if (!metadata) {
       return { success: false, error: '먼저 join_room을 호출하세요.' };
     }
@@ -245,7 +252,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() socket: Socket,
     @MessageBody() data: ProduceRequest<RtpParameters>,
   ): Promise<ProduceResponse> {
-    const metadata = this.socketMetadataService.get(socket.id);
+    const metadata = await this.socketMetadataService.get(socket.id);
     if (!metadata) return { success: false, error: '먼저 join_room을 호출하세요.' };
 
     try {
@@ -264,6 +271,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
         data.type,
         data.rtpParameters,
       );
+
       await this.participantManagerService.updatePartial(metadata.participantId, {
         producers: {
           ...participant.producers,
@@ -302,6 +310,14 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
       // 청중 video는 파이프 안 함 (Lazy - consume 시점에)
 
+      // 오디오 녹음 시작
+
+      if (isAudio) {
+        this.recordService
+          .startRecording(metadata.roomId, producer.id, isPresenter)
+          .catch((err) => this.logger.error(`녹음 시작 실패: ${err.message}`));
+      }
+
       socket.to(metadata.roomId).emit('new_producer', payload);
 
       this.logger.log(
@@ -321,7 +337,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() socket: Socket,
     @MessageBody() data: GetProducerRequest,
   ): Promise<GetProducerResponse> {
-    const metadata = this.socketMetadataService.get(socket.id);
+    const metadata = await this.socketMetadataService.get(socket.id);
     if (!metadata) return { success: false, error: '먼저 join_room을 호출하세요.' };
 
     try {
@@ -345,7 +361,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() socket: Socket,
     @MessageBody() data: CloseProducerRequest,
   ): Promise<CloseProducerResponse> {
-    const metadata = this.socketMetadataService.get(socket.id);
+    const metadata = await this.socketMetadataService.get(socket.id);
     if (!metadata) return { success: false, error: '먼저 join_room을 호출하세요.' };
 
     try {
@@ -371,6 +387,14 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
           await this.participantManagerService.updatePartial(metadata.participantId, {
             producers: updatedProducers,
           });
+          // 녹음 서비스 중단 호출
+          if (closedType === 'audio') {
+            await this.recordService.stopParticipantRecording(
+              metadata.roomId,
+              participant.role,
+              data.producerId,
+            );
+          }
 
           // 3. producer_closed 이벤트 브로드캐스트
           const payload: ProducerClosedPayload = {
@@ -399,7 +423,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() socket: Socket,
     @MessageBody() data: ConsumeRequest<RtpCapabilities>,
   ): Promise<ConsumeResponse<RtpParameters>> {
-    const metadata = this.socketMetadataService.get(socket.id);
+    const metadata = await this.socketMetadataService.get(socket.id);
     if (!metadata) return { success: false, error: '먼저 join_room을 호출하세요.' };
 
     try {
@@ -491,7 +515,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() socket: Socket,
     @MessageBody() data: CloseConsumerRequest,
   ): Promise<CloseConsumerResponse> {
-    const metadata = this.socketMetadataService.get(socket.id);
+    const metadata = await this.socketMetadataService.get(socket.id);
     if (!metadata) return { success: false, error: '먼저 join_room을 호출하세요.' };
 
     try {
@@ -520,7 +544,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() socket: Socket,
     @MessageBody() data: ToggleMediaRequest,
   ): Promise<ToggleMediaResponse> {
-    const metadata = this.socketMetadataService.get(socket.id);
+    const metadata = await this.socketMetadataService.get(socket.id);
     if (!metadata) return { success: false, error: '먼저 join_room을 호출하세요.' };
 
     try {
@@ -554,7 +578,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
   // leave_room: 강의실 퇴장
   @SubscribeMessage('leave_room')
   async handleLeaveRoom(@ConnectedSocket() socket: Socket): Promise<LeaveRoomResponse> {
-    const metadata = this.socketMetadataService.get(socket.id);
+    const metadata = await this.socketMetadataService.get(socket.id);
     if (!metadata) return { success: true };
 
     socket.leave(metadata.roomId);
@@ -564,13 +588,13 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
       metadata.participantId,
       metadata.transportIds,
     );
-    this.socketMetadataService.delete(socket.id);
+    await this.socketMetadataService.delete(socket.id);
     return { success: true };
   }
 
   @SubscribeMessage('break_room')
   async handleBreakRoom(@ConnectedSocket() socket: Socket): Promise<BreakRoomResponse> {
-    const metadata = this.socketMetadataService.get(socket.id);
+    const metadata = await this.socketMetadataService.get(socket.id);
     if (!metadata) {
       return { success: false, error: '세션이 만료되었거나 유효하지 않은 접근입니다.' };
     }
@@ -593,6 +617,9 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
     try {
       await this.roomManagerService.updatePartial(room.id, { status: 'ended' });
       this.server.to(room.id).emit('room_end');
+      // 해당 방의 모든 녹음(강사+학생) 중단 및 파일 닫기
+      await this.recordService.stopAllRecording(metadata.roomId);
+
       // Multi-Router 정리 (모든 Router + PipeProducer)
       await this.mediasoupService.closeRoutersWithStrategy(room.id);
 
@@ -613,7 +640,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('get_presentation')
   async handleGetPresentation(@ConnectedSocket() socket: Socket): Promise<GetPresentationResponse> {
-    const metadata = this.socketMetadataService.get(socket.id);
+    const metadata = await this.socketMetadataService.get(socket.id);
     if (!metadata) return { success: false, error: '먼저 join_room을 호출하세요.' };
 
     try {
@@ -634,18 +661,25 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
     // Prometheus 메트릭 감소
     this.prometheusService.decrementSocketIOConnections();
 
-    const metadata = this.socketMetadataService.get(socket.id);
+    const metadata = await this.socketMetadataService.get(socket.id);
     if (!metadata) return;
 
     this.logger.log(
       `[disconnect] ${metadata.participantId} 유저 접속 끊김. Redis 15초 타이머 시작.`,
     );
     await this.participantManagerService.setReconnectPending(metadata.participantId, metadata);
-    this.socketMetadataService.delete(socket.id);
+    await this.socketMetadataService.delete(socket.id);
   }
 
   @OnEvent('redis.expired.reconnect')
   async handleReconnectExpired(key: string) {
+    // 분산 락 획득 시도
+    const acquired = await this.redisService.acquireLock(key);
+    if (!acquired) {
+      this.logger.debug(`[Reconnect Expired] 다른 서버가 이미 처리 중: ${key}`);
+      return;
+    }
+
     const participantId = key.split(':').pop();
     const metadata = await this.participantManagerService.popReconnectMetadata(participantId!);
 

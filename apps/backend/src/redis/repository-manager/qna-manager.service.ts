@@ -304,6 +304,13 @@ export class QnaManagerService extends BaseRedisRepository<Qna> {
     // 마지막 요소가 active인 경우에만 처리 (Shadow Key 역할)
     if (parts[parts.length - 1] !== 'active') return;
 
+    // 분산 락 획득 시도
+    const acquired = await this.redisService.acquireLock(key);
+    if (!acquired) {
+      this.logger.debug(`[Qna AutoClose] 다른 서버가 이미 처리 중: ${key}`);
+      return;
+    }
+
     const qnaId = parts[1];
 
     const qna = await this.findOne(qnaId);

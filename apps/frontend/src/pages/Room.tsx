@@ -5,6 +5,7 @@ import { RoomSideSection } from '../feature/room/components/RoomSideSection';
 import { RemoteAudioPlayer } from '../feature/room/components/RemoteAudioPlayer';
 import { RoomEndedModal } from '../feature/room/components/RoomEndedModal';
 import { PollResultModal } from '../feature/room/components/PollResultModal';
+import { RoomGuide } from '../feature/room/components/RoomGuide.tsx';
 import { useRoomInit } from '@/feature/room/hooks/useRoomInit';
 import { useEffect } from 'react';
 import { useToastStore } from '@/store/useToastStore';
@@ -42,6 +43,7 @@ export default function Room() {
     <div className="flex h-full w-full flex-col bg-gray-700 pt-4">
       <RemoteAudioPlayer />
       <RoomDialogs />
+      <RoomGuide />
       <div className="flex h-full overflow-hidden px-4">
         <RoomMainSection onDisableScreenShare={disableScreenShare} />
         <RoomSideSection />

@@ -18,6 +18,7 @@ interface MenuButton {
   isActive?: boolean;
   hasAlarm?: boolean;
   onClick?: () => void;
+  guideTarget?: string;
 }
 
 /**
@@ -97,18 +98,21 @@ function MainMenu({ onToggleCamera, onToggleMic, onToggleScreenShare }: MainMenu
       tooltip: isMicOn ? '마이크 끄기' : '마이크 켜기',
       isActive: isMicOn,
       onClick: onToggleMic,
+      guideTarget: 'mic',
     },
     {
       icon: isCameraOn ? 'cam' : 'cam-disabled',
       tooltip: isCameraOn ? '카메라 끄기' : '카메라 켜기',
       isActive: isCameraOn,
       onClick: onToggleCamera,
+      guideTarget: 'cam',
     },
     {
       icon: 'screen-share',
       tooltip: isScreenSharing ? '화면공유 중지' : '화면공유',
       isActive: isScreenSharing,
       onClick: onToggleScreenShare,
+      guideTarget: 'screen-share',
     },
     {
       icon: 'vote',
@@ -116,6 +120,7 @@ function MainMenu({ onToggleCamera, onToggleMic, onToggleScreenShare }: MainMenu
       isActive: activeDialog === 'vote',
       hasAlarm: hasActivePoll,
       onClick: () => setActiveDialog('vote'),
+      guideTarget: 'vote',
     },
     {
       icon: 'qna',
@@ -123,12 +128,14 @@ function MainMenu({ onToggleCamera, onToggleMic, onToggleScreenShare }: MainMenu
       isActive: activeDialog === 'qna',
       hasAlarm: hasActiveQna,
       onClick: () => setActiveDialog('qna'),
+      guideTarget: 'qna',
     },
     {
       icon: 'ranking',
       tooltip: '랭킹',
       isActive: activeDialog === 'ranking',
       onClick: () => setActiveDialog('ranking'),
+      guideTarget: 'ranking',
     },
   ];
   const visibleButtons =
@@ -144,6 +151,7 @@ function MainMenu({ onToggleCamera, onToggleMic, onToggleScreenShare }: MainMenu
         <div
           key={`${button.icon}-${index}`}
           className={cn(button.icon === 'ranking' && 'relative inline-block')}
+          data-guide={button.guideTarget}
         >
           <RoomButton
             icon={button.icon}
@@ -155,7 +163,9 @@ function MainMenu({ onToggleCamera, onToggleMic, onToggleScreenShare }: MainMenu
           {button.icon === 'ranking' && <ScoreDeltaAnimation />}
         </div>
       ))}
-      <GestureButton />
+      <div data-guide="gesture">
+        <GestureButton />
+      </div>
     </>
   );
 }
@@ -174,18 +184,21 @@ function SideMenu() {
       tooltip: '채팅',
       isActive: activeSidePanel === 'chat',
       onClick: () => setActiveSidePanel('chat'),
+      guideTarget: 'chat',
     },
     {
       icon: 'info',
       tooltip: '정보',
       isActive: activeSidePanel === 'info',
       onClick: () => setActiveSidePanel('info'),
+      guideTarget: 'info',
     },
     {
       icon: 'menu',
       tooltip: '메뉴',
       isActive: activeSidePanel === 'menu',
       onClick: () => setActiveSidePanel('menu'),
+      guideTarget: 'menu',
     },
   ];
   const visibleSideButtons =
@@ -196,14 +209,18 @@ function SideMenu() {
   return (
     <div className="flex items-center gap-1 justify-self-end">
       {visibleSideButtons.map((button, index) => (
-        <RoomButton
+        <div
           key={`${button.icon}-${index}`}
-          icon={button.icon}
-          variant="ghost"
-          tooltip={button.tooltip}
-          isActive={button.isActive}
-          onClick={button.onClick}
-        />
+          data-guide={button.guideTarget}
+        >
+          <RoomButton
+            icon={button.icon}
+            variant="ghost"
+            tooltip={button.tooltip}
+            isActive={button.isActive}
+            onClick={button.onClick}
+          />
+        </div>
       ))}
     </div>
   );

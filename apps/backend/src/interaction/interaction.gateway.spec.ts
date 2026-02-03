@@ -52,7 +52,7 @@ describe('InteractionGateway', () => {
         {
           provide: ActivityScoreManagerService,
           useValue: {
-            updateScore: jest.fn().mockResolvedValue(undefined),
+            updateScore: jest.fn().mockResolvedValue(null),
             getTopRankings: jest.fn(),
             getLowest: jest.fn(),
             getParticipantScore: jest.fn(),
@@ -143,7 +143,7 @@ describe('InteractionGateway', () => {
     });
 
     it('소켓 메타데이터가 없는 경우 에러를 반환한다', async () => {
-      jest.spyOn(socketMetadataService, 'get').mockReturnValue(undefined);
+      jest.spyOn(socketMetadataService, 'get').mockResolvedValue(null);
 
       const result = await gateway.handleActionGesture(mockSocket, mockGestureData as any);
 
@@ -187,7 +187,7 @@ describe('InteractionGateway', () => {
     });
 
     it('세션 정보(metadata)가 없는 경우', async () => {
-      jest.spyOn(socketMetadataService, 'get').mockReturnValue(undefined);
+      jest.spyOn(socketMetadataService, 'get').mockResolvedValue(null);
 
       const result = await gateway.creatPoll(mockSocket, createPollDto as any);
 

@@ -10,6 +10,7 @@ import {
   Consumer,
   RtpParameters,
   RtpCapabilities,
+  PlainTransport,
 } from 'mediasoup/node/lib/types';
 import { MediaType } from '@plum/shared-interfaces';
 import { mediasoupConfig } from './mediasoup.config.js';
@@ -33,6 +34,7 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
   private workers: Worker[] = []; // CPU 코어 수만큼 생성되는 Worker 배열
   private routers: Map<string, Router> = new Map(); // 강의실별 Router 저장 (roomId -> Router)
   private transports: Map<string, WebRtcTransport> = new Map(); // Transport 저장 (transportId -> Transport)
+  private plainTransports: Map<string, PlainTransport> = new Map(); // 녹음용 Transport
   private producers: Map<string, Producer<ProducerAppData>> = new Map();
   private consumers: Map<string, Consumer<ConsumerAppData>> = new Map();
   private nextWorkerIdx = 0; // Round-robin Worker 선택 인덱스
@@ -644,5 +646,67 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
         this.logger.warn(`Consumer ${consumerId} 정리 중 오류: ${error.message}`);
       }
     });
+  }
+
+  /**
+   * STT 수집을 위한 PlainTransport 생성
+   */
+  async createPlainTransport(roomId: string): Promise<PlainTransport> {
+    const router = this.getRouter(roomId);
+    if (!router) throw new Error(`${roomId} Router를 찾을 수 없습니다.`);
+
+    const transport = await router.createPlainTransport({
+      listenInfo: { protocol: 'udp', ip: '127.0.0.1' },
+      rtcpMux: true,
+      comedia: false,
+    });
+
+    this.plainTransports.set(transport.id, transport);
+    return transport;
+  }
+
+  /**
+   * PlainTransport 닫기
+   */
+  closePlainTransport(transportId: string) {
+    const transport = this.plainTransports.get(transportId);
+
+    if (transport) {
+      transport.close();
+      this.plainTransports.delete(transportId);
+      this.logger.log(`🗑️ Transport 해제 완료 (ID: ${transportId})`);
+    }
+  }
+
+  async consumeAudioToPlain(
+    transport: PlainTransport,
+    producerId: string,
+    remotePort: number,
+    rtpCapabilities: RtpCapabilities,
+  ): Promise<Consumer> {
+    const audioCodec = rtpCapabilities.codecs?.find((c) => c.kind === 'audio');
+
+    if (!audioCodec) {
+      throw new Error('Router에 오디오 코덱 설정이 없습니다.');
+    }
+
+    const fixedCapabilities: RtpCapabilities = {
+      codecs: [audioCodec],
+      headerExtensions: rtpCapabilities.headerExtensions,
+    };
+
+    await transport.connect({
+      ip: '127.0.0.1',
+      port: remotePort,
+    });
+
+    const consumer = await transport.consume({
+      producerId,
+      rtpCapabilities: fixedCapabilities,
+      paused: true,
+    });
+
+    this.logger.log(`📢 STT용 오디오 분기 시작 (Consumer ID: ${consumer.id})`);
+    return consumer;
   }
 }

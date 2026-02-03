@@ -6,8 +6,13 @@ import { useRoomEventHandlers } from './useRoomEventHandlers';
 import { useRemoteMedia } from './useRemoteMedia';
 import { useMediaCleanup } from './useMediaCleanup';
 import { useSafeRoomId } from '@/shared/hooks/useSafeRoomId';
+
 import { useRoomStore } from '../stores/useRoomStore';
 import { logger } from '@/shared/lib/logger';
+import { usePollStore } from '../stores/usePollStore';
+import { useQnaStore } from '../stores/useQnaStore';
+import { useRankStore } from '../stores/useRankStore';
+import { useRoomUIStore } from '../stores/useRoomUIStore';
 
 /**
  * 방 입장 시 전체 초기화 파이프라인을 실행하는 훅
@@ -44,6 +49,10 @@ export function useRoomInit(handleInitialMedia: () => Promise<void>) {
   const { setupAllHandlers } = useRoomEventHandlers();
   const { cleanupMedia } = useMediaCleanup();
 
+  const pollActions = usePollStore((state) => state.actions);
+  const qnaActions = useQnaStore((state) => state.actions);
+  const rankActions = useRankStore((state) => state.actions);
+
   /**
    * 초기화 파이프라인 실행
    *
@@ -60,6 +69,58 @@ export function useRoomInit(handleInitialMedia: () => Promise<void>) {
       setIsLoading(true);
       await SocketClient.ensureConnected();
       const rtpCapabilities = await joinRoom(roomId!, myInfo?.id || '');
+
+      const role = useRoomStore.getState().myInfo?.role ?? myInfo?.role;
+      if (role === 'audience') {
+        try {
+          const response = await SocketClient.emitWithAck('get_active_poll');
+          if (!response.poll) throw new Error('활성 투표 없음');
+
+          pollActions.setActivePoll(response.poll);
+          if (response.votedOptionId !== null) {
+            pollActions.setAudienceVotedOption(response.poll.id, response.votedOptionId);
+          }
+
+          const { activeDialog, setActiveDialog } = useRoomUIStore.getState();
+          if (activeDialog !== 'vote') setActiveDialog('vote');
+        } catch (error) {
+          logger.socket.info('[useRoomInit] 활성 투표 없음 또는 조회 실패', error);
+        }
+
+        try {
+          const response = await SocketClient.emitWithAck('get_active_qna');
+          if (!response.qna) throw new Error('활성 Q&A 없음');
+          qnaActions.setActiveQna(response.qna);
+          if (response.answered) {
+            qnaActions.setAnswered(response.qna.id, true);
+          }
+          const { activeDialog, setActiveDialog } = useRoomUIStore.getState();
+          if (!activeDialog) setActiveDialog('qna');
+        } catch (error) {
+          logger.socket.info('[useRoomInit] 활성 Q&A 없음 또는 조회 실패', error);
+        }
+      }
+
+      try {
+        const response = await SocketClient.emitWithAck('get_activity_score_rank');
+        logger.socket.info('[useRoomInit] 랭킹 정보 수신', { role, response });
+
+        if (role === 'presenter') {
+          // 발표자: top + lowest
+          rankActions.initializeRank({
+            top: response.top,
+            lowest: 'lowest' in response ? response.lowest : null,
+          });
+        } else {
+          // 청중: top + 자신의 점수
+          rankActions.initializeRank({
+            top: response.top,
+            score: 'score' in response ? response.score : 0,
+          });
+        }
+      } catch (error) {
+        logger.socket.error('[useRoomInit] 랭킹 정보 조회 실패', error);
+      }
 
       // 전체 미디어 서비스 초기화
       await MediaConnectionService.initialize(rtpCapabilities);
@@ -87,11 +148,12 @@ export function useRoomInit(handleInitialMedia: () => Promise<void>) {
    * - deps 변경으로 인한 재실행 방지
    */
   useEffect(() => {
-    if (!hasStarted.current) {
-      hasStarted.current = true;
-      runInitPipeline();
-    }
-  }, [runInitPipeline]);
+    const shouldWait = hasStarted.current || isSuccess || isLoading;
+    if (shouldWait) return;
+
+    hasStarted.current = true;
+    runInitPipeline();
+  }, [isSuccess, isLoading, runInitPipeline]);
 
   /**
    * 언마운트 시 정리
