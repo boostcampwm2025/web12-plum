@@ -73,7 +73,7 @@ docker-compose -f docker-compose.local.yml up -d
 # 공통 패키지 빌드 (백엔드/프론트엔드에서 사용)
 pnpm --filter @plum/shared-interfaces build
 
-# ffmpeg 설치 
+# ffmpeg 설치
 ## macOS
 brew install ffmpeg
 ## Windows (PowerShell 관리자 권한)
