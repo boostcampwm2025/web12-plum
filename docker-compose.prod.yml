@@ -32,6 +32,22 @@ services:
       retries: 3    # 3번 실패 시 unhealthy
       start_period: 5s # 컨테이너 시작 후 5초 동안은 실패해도 무시
 
+  ai-worker:
+    image: ${DOCKER_USERNAME}/plum-ai-worker:${TAG:-latest}
+    container_name: plum-ai-worker-develop
+    network_mode: host
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --log-level info
+    environment:
+      - STT_CPU_THREADS=1
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./apps/backend/record:/app/apps/backend/record
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: 1
+
   # Node Exporter - 시스템 메트릭 수집
   node-exporter:
     image: prom/node-exporter:v1.6.1

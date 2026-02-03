@@ -10,6 +10,7 @@ const managers = [
   Managers.QnaManagerService,
   Managers.ChatManagerService,
   Managers.ActivityScoreManagerService,
+  Managers.RecordingManagerService,
 ];
 @Global()
 @Module({

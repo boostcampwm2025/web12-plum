@@ -47,9 +47,6 @@ RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
 
 WORKDIR /app
 
-# 컨테이너 내부에서 FFmpeg가 파일을 쓸 폴더를 미리 만듭니다.
-RUN mkdir -p /app/apps/backend/record && chown -R node:node /app/apps/backend/record
-
 # 워크스페이스 루트의 패키지 파일 복사
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/backend/package.json ./apps/backend/

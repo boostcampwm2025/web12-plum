@@ -31,7 +31,7 @@ import {
 } from '../redis/repository-manager/index.js';
 import { MediasoupService } from '../mediasoup/mediasoup.service.js';
 import { RoomType } from '../mediasoup/mediasoup.type.js';
-import { SESSION_TTL } from '../common/constants/socket.constants.js';
+import { SESSION_TTL, SOCKET_NAMESPACE } from '../common/constants/socket.constants.js';
 
 @Injectable()
 export class RoomService {
@@ -206,10 +206,12 @@ export class RoomService {
     };
 
     const serverWsUrl = this.configService.get<string>('SERVER_WS_URL') || '';
+    // Socket.IO namespace 포함
+    const serverWsUrlWithNamespace = `${serverWsUrl}/${SOCKET_NAMESPACE}`;
 
     await Promise.all([
       this.roomManagerService.saveOne(roomId, room, SESSION_TTL),
-      this.roomManagerService.saveRoomServer(roomId, serverWsUrl),
+      this.roomManagerService.saveRoomServer(roomId, serverWsUrlWithNamespace),
     ]);
     const host = await this.createHost(roomId, hostId, body.hostName);
     const roomInfo = await this.getRoomInfo(roomId, host);

@@ -94,6 +94,7 @@ jobs:
             }
             
             update_env "FE_URL" "${FE_URL}"
+            update_env "STT_WORKER_URL" "http://localhost:8000"
             update_env "AWS_S3_REGION" "${AWS_REGION}"
             update_env "AWS_S3_ACCESS_KEY" "${AWS_KEY}"
             update_env "AWS_S3_SECRET_KEY" "${AWS_SECRET}"
@@ -106,13 +107,17 @@ jobs:
             update_env "REDIS_PORT" "${{ secrets.NCP_DEV_REDIS_PORT }}"
             update_env "ANNOUNCED_IP" "${{ secrets.NCP_DEV_HOST }}"
             update_env "REDIS_PASSWORD" "${REDIS_PASSWORD}"
-            update_env "SERVER_WS_URL" "ws://${{ secrets.NCP_DEV_HOST }}:3000/session"
+            update_env "SERVER_WS_URL" "wss://${{ secrets.NCP_DEV_DOMAIN }}"
 
             # 기존 컨테이너 중지 및 제거 (포트 충돌 방지)
             docker compose -f docker-compose.yml -f docker-compose.develop.yml down || true
 
             docker compose -f docker-compose.yml -f docker-compose.develop.yml pull
             docker compose -f docker-compose.yml -f docker-compose.develop.yml up -d
+            
+            # record 폴더 생성
+            mkdir -p apps/backend/record
+            chmod -R 777 apps/backend/record
 
             # 헬스체크 (30초 타임아웃)
             echo "헬스체크 중..."
@@ -120,6 +125,14 @@ jobs:
               echo "✅ 헬스체크 성공"
             else
               echo "⚠️  헬스체크 타임아웃"
+            fi
+            
+            # 헬스체크 (ai-worker 헬스체크 추가 권장)
+            echo "AI Worker 체크 중..."
+            if timeout 20 bash -c 'until curl -f http://localhost:8000/docs 2>/dev/null; do sleep 2; done'; then
+              echo "✅ AI Worker 준비 완료"
+            else
+              echo "⚠️ AI Worker 응답 없음 (하지만 진행)"
             fi
 
             # 사용하지 않는 이미지 정리
@@ -186,6 +199,7 @@ jobs:
             }
             
             update_env "FE_URL" "${FE_URL}"
+            update_env "STT_WORKER_URL" "http://localhost:8000"
             update_env "AWS_S3_REGION" "${AWS_REGION}"
             update_env "AWS_S3_ACCESS_KEY" "${AWS_KEY}"
             update_env "AWS_S3_SECRET_KEY" "${AWS_SECRET}"
@@ -198,13 +212,17 @@ jobs:
             update_env "REDIS_PORT" "${{ secrets.NCP_PROD_REDIS_PORT }}"
             update_env "ANNOUNCED_IP" "${{ secrets.NCP_PROD_HOST }}"
             update_env "REDIS_PASSWORD" "${REDIS_PASSWORD}"
-            update_env "SERVER_WS_URL" "ws://${{ secrets.NCP_PROD_HOST }}:3000/session"
+            update_env "SERVER_WS_URL" "wss://${{ secrets.NCP_PROD_DOMAIN }}"
 
             # 기존 컨테이너 중지 및 제거 (포트 충돌 방지)
             docker compose -f docker-compose.yml -f docker-compose.prod.yml down || true
 
             docker compose -f docker-compose.yml -f docker-compose.prod.yml pull
             docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+            
+            # record 폴더 생성
+            mkdir -p apps/backend/record
+            chmod -R 777 apps/backend/record
 
             # 헬스체크 (60초 타임아웃, 운영 환경은 더 긴 시간)
             echo "헬스체크 중..."
@@ -215,6 +233,14 @@ jobs:
               echo "컨테이너 로그:"
               docker logs --tail 50 plum-backend-prod
               exit 1
+            fi
+            
+            # 헬스체크 (ai-worker 헬스체크 추가 권장)
+            echo "AI Worker 체크 중..."
+            if timeout 20 bash -c 'until curl -f http://localhost:8000/docs 2>/dev/null; do sleep 2; done'; then
+              echo "✅ AI Worker 준비 완료"
+            else
+              echo "⚠️ AI Worker 응답 없음 (하지만 진행)"
             fi
 
             # 사용하지 않는 이미지 정리

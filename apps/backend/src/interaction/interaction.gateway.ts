@@ -181,6 +181,7 @@ export class InteractionGateway implements OnGatewayDisconnect {
         room.id,
         participant.id,
       );
+      if (poll === null) return { success: false, error: '현재 진행중인 투표가 없습니다' };
 
       return { success: true, poll, votedOptionId };
     } catch (error) {
@@ -320,6 +321,7 @@ export class InteractionGateway implements OnGatewayDisconnect {
     try {
       const { room, participant } = await this.validateAudienceAction(socket.id);
       const { qna, answered } = await this.interactionService.getActiveQna(room.id, participant.id);
+      if (qna === null) return { success: false, error: '현재 진행중인 질문이 없습니다' };
 
       return { success: true, qna, answered };
     } catch (error) {
