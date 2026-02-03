@@ -191,7 +191,7 @@ export function CreateLectureForm() {
   const onSubmit = async (data: CreateRoomRequest) => {
     try {
       const response = await createRoom(data);
-      navigate(ROUTES.ROOM(response.roomId));
+      navigate(ROUTES.ROOM(response.roomId), { replace: true });
     } catch (error) {
       logger.ui.error('강의실 생성 실패:', error);
       const { title, description } = getUserFriendlyError(error);
