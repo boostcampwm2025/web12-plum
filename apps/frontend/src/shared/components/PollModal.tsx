@@ -15,7 +15,8 @@ import { FormField } from '@/shared/components/FormField';
 import { Button } from '@/shared/components/Button';
 import { Input } from '@/shared/components/Input';
 import { Icon } from '@/shared/components/icon/Icon';
-import { TimeLimitDropdown } from '@/shared/components/TimeLimitDropdown';
+import { Select } from '@/shared/components/Select';
+import { TIME_LIMIT_OPTIONS } from '@/shared/constants/timeLimit';
 import { logger } from '@/shared/lib/logger';
 import {
   MAX_POLL_OPTIONS,
@@ -206,9 +207,11 @@ export function PollModal({
               control={control}
               name={POLL_FORM_KEYS.timeLimit}
               render={({ field: { onChange, value } }) => (
-                <TimeLimitDropdown
-                  selectedTime={value}
+                <Select
+                  value={value}
                   onChange={onChange}
+                  options={TIME_LIMIT_OPTIONS}
+                  aria-label="제한 시간 선택"
                 />
               )}
             />
