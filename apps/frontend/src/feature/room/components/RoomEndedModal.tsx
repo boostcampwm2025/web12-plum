@@ -31,6 +31,7 @@ const REDIRECT_DELAY_SECONDS = 3;
  */
 export function RoomEndedModal() {
   const roomId = useSafeRoomId();
+  const myInfo = useRoomStore((state) => state.myInfo);
   const navigate = useNavigate();
   const { cleanupMedia } = useMediaCleanup();
 
@@ -92,6 +93,8 @@ export function RoomEndedModal() {
       clearInterval(timer);
     };
   }, [isRoomEnded, navigate, roomId, roomActions, cleanupMedia]);
+
+  if (myInfo?.role === 'presenter') return null;
 
   return (
     <Modal
