@@ -7,6 +7,7 @@ import { useRemoteMedia } from './useRemoteMedia';
 import { useMediaCleanup } from './useMediaCleanup';
 import { useInteractionSync } from './useInteractionSync';
 import { useSafeRoomId } from '@/shared/hooks/useSafeRoomId';
+import { roomApi } from '@/shared/api';
 
 import { useRoomStore } from '../stores/useRoomStore';
 import { logger } from '@/shared/lib/logger';
@@ -17,7 +18,7 @@ import { logger } from '@/shared/lib/logger';
  * 컴포넌트 마운트 시 자동으로 초기화를 시작하고, 언마운트 시 정리
  *
  * ## 초기화 순서 (runInitPipeline)
- * 1. Socket 연결 확인/수립
+ * 1. 서버 URL 조회 및 Socket 연결
  * 2. 방 입장 (joinRoom) → RTP Capabilities 획득
  * 3. mediasoup Device/Transport 초기화
  * 4. 이벤트 핸들러 등록 (역할별)
@@ -63,7 +64,11 @@ export function useRoomInit(handleInitialMedia: () => Promise<void>) {
   const runInitPipeline = useCallback(async () => {
     try {
       setIsLoading(true);
-      await SocketClient.ensureConnected();
+
+      // 서버 URL 조회 및 소켓 연결
+      const { data: serverData } = await roomApi.getRoomServer(roomId!);
+      await SocketClient.ensureConnected(serverData.serverUrl);
+
       const rtpCapabilities = await joinRoom(roomId!, myInfo?.id || '');
 
       // 전체 미디어 서비스 초기화
