@@ -12,7 +12,7 @@ RUN python -c "from faster_whisper import WhisperModel; WhisperModel('small', de
 WORKDIR /app
 
 # 현재 폴더(apps/ai-worker)의 모든 파일을 컨테이너 /app으로 복사
-COPY . .
+COPY /apps/ai-worker/main.py main.py
 
 EXPOSE 8000
 
