@@ -5,14 +5,11 @@ import { useRoomJoin } from './useRoomJoin';
 import { useRoomEventHandlers } from './useRoomEventHandlers';
 import { useRemoteMedia } from './useRemoteMedia';
 import { useMediaCleanup } from './useMediaCleanup';
+import { useInteractionSync } from './useInteractionSync';
 import { useSafeRoomId } from '@/shared/hooks/useSafeRoomId';
 
 import { useRoomStore } from '../stores/useRoomStore';
 import { logger } from '@/shared/lib/logger';
-import { usePollStore } from '../stores/usePollStore';
-import { useQnaStore } from '../stores/useQnaStore';
-import { useRankStore } from '../stores/useRankStore';
-import { useRoomUIStore } from '../stores/useRoomUIStore';
 
 /**
  * 방 입장 시 전체 초기화 파이프라인을 실행하는 훅
@@ -24,8 +21,9 @@ import { useRoomUIStore } from '../stores/useRoomUIStore';
  * 2. 방 입장 (joinRoom) → RTP Capabilities 획득
  * 3. mediasoup Device/Transport 초기화
  * 4. 이벤트 핸들러 등록 (역할별)
- * 5. 기존 참가자 미디어 수신 (consume)
- * 6. 내 미디어 송출 시작 (대기실 설정 복원)
+ * 5. 상호작용 상태 동기화 (투표/Q&A/랭킹)
+ * 6. 기존 참가자 미디어 수신 (consume)
+ * 7. 내 미디어 송출 시작 (대기실 설정 복원)
  *
  * ## 정리 (언마운트 시)
  * - leaveAndCleanup으로 모든 미디어 자원 해제
@@ -48,10 +46,7 @@ export function useRoomInit(handleInitialMedia: () => Promise<void>) {
   const { consumeExistingProducers } = useRemoteMedia();
   const { setupAllHandlers } = useRoomEventHandlers();
   const { cleanupMedia } = useMediaCleanup();
-
-  const pollActions = usePollStore((state) => state.actions);
-  const qnaActions = useQnaStore((state) => state.actions);
-  const rankActions = useRankStore((state) => state.actions);
+  const { syncInteractionState } = useInteractionSync();
 
   /**
    * 초기화 파이프라인 실행
@@ -61,8 +56,9 @@ export function useRoomInit(handleInitialMedia: () => Promise<void>) {
    * 2. joinRoom: RTP Capabilities 없으면 Device 초기화 불가
    * 3. initialize: Transport 없으면 미디어 송수신 불가
    * 4. setupAllHandlers: 이벤트 수신 준비
-   * 5. consumeExistingProducers: 기존 참가자 미디어 수신
-   * 6. handleInitialMedia: 내 미디어 송출 시작
+   * 5. syncInteractionState: 투표/Q&A/랭킹 상태 동기화
+   * 6. consumeExistingProducers: 기존 참가자 미디어 수신
+   * 7. handleInitialMedia: 내 미디어 송출 시작
    */
   const runInitPipeline = useCallback(async () => {
     try {
@@ -70,61 +66,12 @@ export function useRoomInit(handleInitialMedia: () => Promise<void>) {
       await SocketClient.ensureConnected();
       const rtpCapabilities = await joinRoom(roomId!, myInfo?.id || '');
 
-      const role = useRoomStore.getState().myInfo?.role ?? myInfo?.role;
-      if (role === 'audience') {
-        try {
-          const response = await SocketClient.emitWithAck('get_active_poll');
-          if (!response.poll) throw new Error('활성 투표 없음');
-
-          pollActions.setActivePoll(response.poll);
-          if (response.votedOptionId !== null) {
-            pollActions.setAudienceVotedOption(response.poll.id, response.votedOptionId);
-          }
-
-          const { activeDialog, setActiveDialog } = useRoomUIStore.getState();
-          if (activeDialog !== 'vote') setActiveDialog('vote');
-        } catch (error) {
-          logger.socket.info('[useRoomInit] 활성 투표 없음 또는 조회 실패', error);
-        }
-
-        try {
-          const response = await SocketClient.emitWithAck('get_active_qna');
-          if (!response.qna) throw new Error('활성 Q&A 없음');
-          qnaActions.setActiveQna(response.qna);
-          if (response.answered) {
-            qnaActions.setAnswered(response.qna.id, true);
-          }
-          const { activeDialog, setActiveDialog } = useRoomUIStore.getState();
-          if (!activeDialog) setActiveDialog('qna');
-        } catch (error) {
-          logger.socket.info('[useRoomInit] 활성 Q&A 없음 또는 조회 실패', error);
-        }
-      }
-
-      try {
-        const response = await SocketClient.emitWithAck('get_activity_score_rank');
-        logger.socket.info('[useRoomInit] 랭킹 정보 수신', { role, response });
-
-        if (role === 'presenter') {
-          // 발표자: top + lowest
-          rankActions.initializeRank({
-            top: response.top,
-            lowest: 'lowest' in response ? response.lowest : null,
-          });
-        } else {
-          // 청중: top + 자신의 점수
-          rankActions.initializeRank({
-            top: response.top,
-            score: 'score' in response ? response.score : 0,
-          });
-        }
-      } catch (error) {
-        logger.socket.error('[useRoomInit] 랭킹 정보 조회 실패', error);
-      }
-
       // 전체 미디어 서비스 초기화
       await MediaConnectionService.initialize(rtpCapabilities);
+
+      // 역할별 실시간 이벤트 핸들러 설정
       await setupAllHandlers(myInfo?.role || 'participant');
+      await syncInteractionState(myInfo?.role ?? 'participant');
 
       // 기존 참가자 미디어 수신 및 내 미디어 송출 시작
       await consumeExistingProducers();
@@ -139,7 +86,15 @@ export function useRoomInit(handleInitialMedia: () => Promise<void>) {
     } finally {
       setIsLoading(false);
     }
-  }, [joinRoom, setupAllHandlers, consumeExistingProducers, handleInitialMedia, myInfo, roomId]);
+  }, [
+    joinRoom,
+    setupAllHandlers,
+    consumeExistingProducers,
+    handleInitialMedia,
+    syncInteractionState,
+    myInfo,
+    roomId,
+  ]);
 
   /**
    * 마운트 시 초기화 실행 (1회만)
