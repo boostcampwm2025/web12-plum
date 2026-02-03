@@ -1,53 +1,8 @@
-import { Icon } from '@/shared/components/icon/Icon';
-import { cn } from '@/shared/lib/utils';
+import type { Answer, Qna } from '@plum/shared-interfaces';
 import { useState } from 'react';
 
-const mockQnaData: Qna[] = [
-  {
-    id: 'qna1',
-    title: '강의 내용 중 가장 어려웠던 부분은 무엇인가요?',
-    answers: [
-      {
-        participantId: 'user1',
-        participantName: '김철수',
-        text: '비동기 프로그래밍 개념이 어려웠습니다.',
-      },
-      {
-        participantId: 'user2',
-        participantName: '이영희',
-        text: 'RESTful API 설계가 헷갈렸어요.',
-      },
-    ],
-  },
-  {
-    id: 'qna2',
-    title: '강의에서 가장 유익했던 점은 무엇인가요?',
-    answers: [
-      {
-        participantId: 'user3',
-        participantName: '박민수',
-        text: '실제 프로젝트 예제를 통해 실습한 것이 매우 도움이 되었습니다.',
-      },
-      {
-        participantId: 'user4',
-        participantName: '최지은',
-        text: '코드 리뷰 세션이 특히 유익했어요.',
-      },
-    ],
-  },
-];
-
-interface Answer {
-  participantId: string;
-  participantName: string;
-  text: string;
-}
-
-interface Qna {
-  id: string;
-  title: string;
-  answers: Answer[];
-}
+import { Icon } from '@/shared/components/icon/Icon';
+import { cn } from '@/shared/lib/utils';
 
 interface QnaAnswerItemProps {
   name: string;
@@ -59,7 +14,6 @@ interface QnaAnswerItemProps {
  * @param name 참여자 이름
  * @param answer 답변 데이터
  */
-
 function QnaAnswerItem({ name, answer }: QnaAnswerItemProps) {
   return (
     <div className="flex flex-col gap-5">
@@ -108,7 +62,8 @@ interface QnaResultCardProps {
 
 /**
  * 단일 qna 결과를 보여주는 카드 컴포넌트
- * @param qna qna 데이터
+ * @param title qna 제목
+ * @param answers 답변 데이터 배열
  */
 function QnaAccordionCard({ title, answers }: QnaResultCardProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -140,10 +95,18 @@ function QnaAccordionCard({ title, answers }: QnaResultCardProps) {
 /**
  * QnA 결과 탭 컴포넌트
  */
-export function QnAResultsTab() {
+export function QnAResultsTab({ qnas }: { qnas: Qna[] }) {
+  if (qnas.length === 0) {
+    return (
+      <section className="mt-10 flex flex-col gap-4 rounded-2xl bg-gray-600 p-6">
+        <p className="text-subtext-light py-4 text-center">등록된 QnA가 없습니다.</p>
+      </section>
+    );
+  }
+
   return (
     <section className="mt-10 flex flex-col gap-4">
-      {mockQnaData.map((qna) => (
+      {qnas.map((qna) => (
         <QnaAccordionCard
           key={qna.id}
           title={qna.title}

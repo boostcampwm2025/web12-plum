@@ -1,5 +1,5 @@
-import { useCallback, useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useState, useCallback } from 'react';
+import { useNavigate, useParams } from 'react-router';
 
 import { Button } from '@/shared/components/Button';
 import { Modal } from '@/shared/components/Modal';
@@ -16,6 +16,7 @@ import { useRoomStore } from '../stores/useRoomStore';
  */
 export function ExitButton() {
   const navigate = useNavigate();
+  const { roomId } = useParams<{ roomId: string }>();
   const socket = useSocketStore((state) => state.socket);
   const myInfo = useRoomStore((state) => state.myInfo);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -26,22 +27,27 @@ export function ExitButton() {
    *
    * 1. 서버에 퇴장 알림 (발표자는 강의 종료, 참가자는 퇴장)
    * 2. 로컬 미디어 트랙 및 리소스 정리
-   * 3. 로비 페이지로 이동
+   * 3. 발표자는 강의록 페이지로, 참가자는 메인 페이지로 이동
    */
   const handleExit = useCallback(async () => {
+    const isPresenter = myInfo?.role === 'presenter';
+
     try {
       logger.ui.info('[Room] 강의실 퇴장 시작');
       if (!socket) throw new Error('소켓이 연결되어 있지 않습니다');
 
-      if (myInfo?.role === 'presenter') await RoomSignaling.breakRoom(socket);
+      if (isPresenter) await RoomSignaling.breakRoom(socket);
       else await RoomSignaling.leaveRoom(socket);
     } catch (error) {
       logger.ui.warn('[Room] 서버 퇴장 알림 실패:', error);
     } finally {
-      // TODO: 페이지 이동 (현재 로비로 이동, 추후에 요약 페이지로 이동)
-      navigate(ROUTES.HOME, { replace: true });
+      if (isPresenter && roomId) {
+        navigate(ROUTES.ROOM_SUMMARY(roomId), { replace: true });
+      } else {
+        navigate(ROUTES.HOME, { replace: true });
+      }
     }
-  }, [socket, navigate, myInfo?.role]);
+  }, [socket, navigate, myInfo?.role, roomId]);
 
   const handleConfirmExit = useCallback(async () => {
     setIsModalOpen(false);
