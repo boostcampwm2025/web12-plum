@@ -37,7 +37,7 @@ export function EnterLecture() {
         const response = await roomApi.validateRoom(roomId);
 
         if (!isActive) return;
-        setLectureName(response.data.name);
+        setLectureName(String(response.data.name));
         setIsLoading(false);
       } catch (error) {
         logger.api.error(`강의실 이름 조회 실패: ${error}`);
