@@ -17,6 +17,7 @@ import { Loading } from '@/shared/components/Loading';
 import { Button } from '@/shared/components/Button';
 import { roomApi } from '@/shared/api/endpoints/room';
 import { logger } from '@sentry/react';
+import { formatSummaryAvailableUntil } from '@/shared/lib/date';
 
 export function Summary() {
   const { roomId } = useParams<{ roomId: string }>();
@@ -113,14 +114,7 @@ export function Summary() {
           {fetchedAt && (
             <section className="mt-3 px-1 text-right">
               <p className="text-subtext-light text-xs">
-                {new Date(fetchedAt.getTime() + 24 * 60 * 60 * 1000).toLocaleString('ko-KR', {
-                  year: 'numeric',
-                  month: '2-digit',
-                  day: '2-digit',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  hour12: false,
-                })}
+                {formatSummaryAvailableUntil(fetchedAt)}
                 까지 조회 가능
               </p>
             </section>
