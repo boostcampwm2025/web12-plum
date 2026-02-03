@@ -204,7 +204,12 @@ export class RoomService {
       files: uploadFilesUrl,
     };
 
-    await this.roomManagerService.saveOne(roomId, room, SESSION_TTL);
+    const serverWsUrl = this.configService.get<string>('SERVER_WS_URL') || '';
+
+    await Promise.all([
+      this.roomManagerService.saveOne(roomId, room, SESSION_TTL),
+      this.roomManagerService.saveRoomServer(roomId, serverWsUrl),
+    ]);
     const host = await this.createHost(roomId, hostId, body.hostName);
     const roomInfo = await this.getRoomInfo(roomId, host);
 
@@ -221,7 +226,8 @@ export class RoomService {
 
   async joinRoom(roomId: string, body: EnterLectureRequestBody): Promise<EnterRoomResponse> {
     const room = await this.validateRoom(roomId);
-    if (room.name !== body.name) throw new BadRequestException('Room name does not match');
+    const isRoomNameMismatch = String(room.name) !== String(body.name);
+    if (isRoomNameMismatch) throw new BadRequestException('Room name does not match');
 
     const participant = await this.createParticipant(roomId, body.nickname);
     const roomInfo = await this.getRoomInfo(room.id, participant);
@@ -267,6 +273,14 @@ export class RoomService {
     if (!room) throw new NotFoundException(`Room with ID ${roomId} not found`);
 
     return room.files;
+  }
+
+  async getRoomServer(roomId: string): Promise<string> {
+    const serverUrl = await this.roomManagerService.getRoomServer(roomId);
+
+    if (!serverUrl) throw new NotFoundException(`Room with ID ${roomId} not found`);
+
+    return serverUrl;
   }
 
   async finalizeRoom(roomId: string): Promise<void> {

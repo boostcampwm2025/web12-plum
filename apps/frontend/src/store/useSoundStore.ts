@@ -1,15 +1,15 @@
 import { create } from 'zustand';
 
 interface SoundState {
-  isMuted: boolean;
+  isSoundEnabled: boolean;
   actions: {
-    toggleMuted: () => void;
+    toggleSoundEnabled: () => void;
   };
 }
 
 export const useSoundStore = create<SoundState>((set) => ({
-  isMuted: false,
+  isSoundEnabled: true,
   actions: {
-    toggleMuted: () => set((state) => ({ isMuted: !state.isMuted })),
+    toggleSoundEnabled: () => set((state) => ({ isSoundEnabled: !state.isSoundEnabled })),
   },
 }));

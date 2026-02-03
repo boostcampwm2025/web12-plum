@@ -11,6 +11,8 @@ export interface RemoteStream {
 
 export interface MediaActions {
   // 로컬 미디어 토글
+  setCameraOn: (value: boolean) => void;
+  setMicOn: (value: boolean) => void;
   toggleMic: () => void;
   toggleCamera: () => void;
   toggleScreenShare: () => void;
@@ -61,6 +63,8 @@ export const useMediaStore = create<MediaState>()(
     (set, get) => ({
       ...initialState,
       actions: {
+        setCameraOn: (value: boolean) => set({ isCameraOn: value }),
+        setMicOn: (value: boolean) => set({ isMicOn: value }),
         toggleMic: () => set((state) => ({ isMicOn: !state.isMicOn })),
         toggleCamera: () => set((state) => ({ isCameraOn: !state.isCameraOn })),
         toggleScreenShare: () => set((state) => ({ isScreenSharing: !state.isScreenSharing })),

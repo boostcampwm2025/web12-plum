@@ -1,4 +1,8 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { useParams } from 'react-router';
+import type { RoomSummary as RoomSummaryData } from '@plum/shared-interfaces';
+import { AnimatePresence, motion } from 'motion/react';
+import { logger } from '@sentry/react';
 
 import { Footer } from '@/shared/components/Footer';
 import { Header } from '@/shared/components/Header';
@@ -10,28 +14,62 @@ import { QnAResultsTab } from '@/feature/summary/components/QnAResultsTab';
 import { LectureSummaryTab } from '@/feature/summary/components/LectureSummaryTab';
 import { Tab } from '@/feature/summary/constants';
 import { Tabs } from '@/feature/summary/components/Tabs';
-
-/**
- * 요약 페이지 탭 콘텐츠 매핑
- */
-const TAB_CONTENT: Record<Tab, () => JSX.Element> = {
-  statistics: StatisticsTab,
-  poll: PollResultsTab,
-  qna: QnAResultsTab,
-  lecture: LectureSummaryTab,
-};
-
-const mockReportData = {
-  roomTitle: '웹 풀스택',
-  date: '2025년 12월 24일',
-};
+import { AsyncBoundary } from '@/shared/components/AsyncBoundary';
+import { ErrorFallback } from '@/shared/components/ErrorFallback';
+import { roomApi } from '@/shared/api/endpoints/room';
+import { formatSummaryAvailableUntil } from '@/shared/lib/date';
 
 export function Summary() {
+  const { roomId } = useParams<{ roomId: string }>();
   const [activeTab, setActiveTab] = useState<Tab>('statistics');
-  const ActiveTabContent = TAB_CONTENT[activeTab];
+  const [summaryData, setSummaryData] = useState<RoomSummaryData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
+  const [fetchedAt, setFetchedAt] = useState<Date | null>(null);
+
+  const fetchSummary = useCallback(async () => {
+    if (!roomId) return;
+
+    try {
+      setIsLoading(true);
+      setHasError(false);
+      const response = await roomApi.getSummary(roomId);
+      setSummaryData(response.data);
+      setFetchedAt(new Date());
+    } catch (err) {
+      logger.error('요약 데이터 불러오기 실패', { error: err });
+      setHasError(true);
+      setFetchedAt(null);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [roomId]);
+
+  useEffect(() => {
+    fetchSummary();
+  }, [fetchSummary]);
+
+  const tabContent: Record<Tab, JSX.Element> | null = summaryData
+    ? {
+        statistics: <StatisticsTab activityStatistics={summaryData.activityStatistics} />,
+        poll: <PollResultsTab polls={summaryData.polls} />,
+        qna: <QnAResultsTab qnas={summaryData.qnas} />,
+        lecture: <LectureSummaryTab />,
+      }
+    : null;
 
   return (
-    <>
+    <AsyncBoundary
+      isLoading={isLoading}
+      isError={hasError || !summaryData}
+      errorFallback={
+        <ErrorFallback
+          title="요약을 불러오지 못했어요"
+          description="잠시 후 다시 시도해주세요."
+          onRetry={fetchSummary}
+        />
+      }
+    >
       <Header />
       <main className="px-12">
         <div className="mx-auto w-full max-w-4xl py-12">
@@ -40,17 +78,39 @@ export function Summary() {
             description="AI가 자동으로 생성한 회의 요약 내용입니다."
           />
           <ReportDownload
-            roomTitle={mockReportData.roomTitle}
-            date={mockReportData.date}
+            roomTitle={summaryData!.name}
+            date={new Date().toLocaleDateString('ko-KR', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+            })}
           />
+          {fetchedAt && (
+            <section className="mt-3 px-1 text-right">
+              <p className="text-subtext-light text-xs">
+                {formatSummaryAvailableUntil(fetchedAt)}
+                까지 조회 가능
+              </p>
+            </section>
+          )}
           <Tabs
             activeTab={activeTab}
             onChangeTab={setActiveTab}
           />
-          <ActiveTabContent />
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.2 }}
+            >
+              {tabContent![activeTab]}
+            </motion.div>
+          </AnimatePresence>
         </div>
       </main>
       <Footer />
-    </>
+    </AsyncBoundary>
   );
 }

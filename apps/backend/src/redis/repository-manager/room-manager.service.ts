@@ -119,6 +119,25 @@ export class RoomManagerService extends BaseRedisRepository<Room> {
     );
   }
 
+  /**
+   * 방을 생성한 서버 주소 저장
+   */
+  async saveRoomServer(roomId: string, serverUrl: string): Promise<void> {
+    const client = this.redisService.getClient();
+    const key = `room:${roomId}:server`;
+    await client.set(key, serverUrl, 'EX', SESSION_TTL);
+    this.logger.log(`[SaveRoomServer] Room ${roomId} -> ${serverUrl}`);
+  }
+
+  /**
+   * 방을 생성한 서버 주소 조회
+   */
+  async getRoomServer(roomId: string): Promise<string | null> {
+    const client = this.redisService.getClient();
+    const key = `room:${roomId}:server`;
+    return await client.get(key);
+  }
+
   async clearAllRoomData(roomId: string) {
     const client = this.redisService.getClient();
     const participantIds = await client.smembers(`room:${roomId}:participants`);

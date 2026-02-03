@@ -3,9 +3,10 @@ import type { GestureType } from '@plum/shared-interfaces';
 import { usePollStore } from '../stores/usePollStore';
 import { useRoomUIStore } from '../stores/useRoomUIStore';
 import { useRoomStore } from '../stores/useRoomStore';
-import { useSocketStore } from '@/store/useSocketStore';
 import type { GestureHandler } from './useGestureHandlers';
 import { isNumericGesture, type NumericGesture } from './gestureCategory';
+import { SocketClient } from '@/shared/socket/socket';
+import { logger } from '@/shared/lib/logger';
 
 const POLL_GESTURE_MAP: Record<NumericGesture, number> = {
   one: 0,
@@ -21,7 +22,6 @@ export function usePollGestureHandler(): GestureHandler {
   const audienceVotedOptionByPollId = usePollStore((state) => state.audienceVotedOptionByPollId);
   const pollActions = usePollStore((state) => state.actions);
   const myRole = useRoomStore((state) => state.myInfo?.role);
-  const { emit } = useSocketStore((state) => state.actions);
 
   const activePoll = useMemo(() => polls.find((poll) => poll.status === 'active'), [polls]);
   const selectedOptionId = activePoll ? (audienceVotedOptionByPollId[activePoll.id] ?? null) : null;
@@ -44,22 +44,23 @@ export function usePollGestureHandler(): GestureHandler {
   );
 
   const handle = useCallback(
-    (gesture: GestureType) => {
+    async (gesture: GestureType) => {
       if (!isNumericGesture(gesture) || !activePoll) return;
 
       const optionIndex = POLL_GESTURE_MAP[gesture];
       pollActions.setAudienceVotedOption(activePoll.id, optionIndex);
-      emit(
-        'vote',
-        { pollId: activePoll.id, optionId: optionIndex, isGesture: true },
-        (response) => {
-          if (!response.success) {
-            pollActions.setAudienceVotedOption(activePoll.id, null);
-          }
-        },
-      );
+      try {
+        await SocketClient.emitWithAck('vote', {
+          pollId: activePoll.id,
+          optionId: optionIndex,
+          isGesture: true,
+        });
+      } catch (error) {
+        logger.custom.error('[usePollGesture] 제스처 투표 전송 실패', error);
+        pollActions.setAudienceVotedOption(activePoll.id, null);
+      }
     },
-    [activePoll, pollActions, emit],
+    [activePoll, pollActions],
   );
 
   return useMemo(() => ({ canHandle, handle }), [canHandle, handle]);

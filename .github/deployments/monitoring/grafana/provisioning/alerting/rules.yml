@@ -400,31 +400,17 @@ groups:
       # Mediasoup Consumers 급증 (5분간 50% 이상 증가)
       - uid: mediasoup_consumers_spike
         title: Mediasoup Consumers Rapid Increase
-        condition: D
+        condition: C
         data:
           - refId: A
-            relativeTimeRange:
-              from: 600
-              to: 300
-            datasourceUid: prometheus
-            model:
-              expr: 'mediasoup_consumers_active{job="backend-app"}'
-              refId: A
-          - refId: B
             relativeTimeRange:
               from: 300
               to: 0
             datasourceUid: prometheus
             model:
-              expr: 'mediasoup_consumers_active{job="backend-app"}'
-              refId: B
+              expr: '(mediasoup_consumers_active{job="backend-app"} - mediasoup_consumers_active{job="backend-app"} offset 5m) / (mediasoup_consumers_active{job="backend-app"} offset 5m) * 100'
+              refId: A
           - refId: C
-            datasourceUid: __expr__
-            model:
-              expression: '($B - $A) / $A * 100'
-              refId: C
-              type: math
-          - refId: D
             datasourceUid: __expr__
             model:
               conditions:
@@ -434,18 +420,18 @@ groups:
                   operator:
                     type: and
                   query:
-                    params: [C]
+                    params: [A]
                   reducer:
                     type: last
                   type: query
-              refId: D
+              refId: C
               type: classic_conditions
         noDataState: OK
         execErrState: Error
         for: 2m
         annotations:
           summary: 'Mediasoup Consumers가 급증했습니다'
-          description: '5분간 {{ if $values.C }}{{ $values.C.Value | printf "%.1f" }}{{ else }}N/A{{ end }}% 증가 (강의실 급증 가능성)'
+          description: '5분간 {{ if $values.A }}{{ $values.A.Value | printf "%.1f" }}{{ else }}N/A{{ end }}% 증가 (강의실 급증 가능성)'
         labels:
           severity: warning
           component: mediasoup
@@ -540,15 +526,15 @@ groups:
       # 네트워크 송신 대역폭 급증 (5분간 50% 증가)
       - uid: network_transmit_spike
         title: Network Transmit Bandwidth Spike
-        condition: D
+        condition: C
         data:
           - refId: A
             relativeTimeRange:
-              from: 600
-              to: 300
+              from: 300
+              to: 0
             datasourceUid: prometheus
             model:
-              expr: 'rate(node_network_transmit_bytes_total{job="backend-node",device="eth0"}[5m]) * 8 / 1000000'
+              expr: '((rate(node_network_transmit_bytes_total{job="backend-node",device="eth0"}[5m]) * 8 / 1000000) - (rate(node_network_transmit_bytes_total{job="backend-node",device="eth0"}[5m] offset 5m) * 8 / 1000000)) / (rate(node_network_transmit_bytes_total{job="backend-node",device="eth0"}[5m] offset 5m) * 8 / 1000000) * 100'
               refId: A
           - refId: B
             relativeTimeRange:
@@ -561,12 +547,6 @@ groups:
           - refId: C
             datasourceUid: __expr__
             model:
-              expression: '($B - $A) / $A * 100'
-              refId: C
-              type: math
-          - refId: D
-            datasourceUid: __expr__
-            model:
               conditions:
                 - evaluator:
                     params: [50]
@@ -574,18 +554,18 @@ groups:
                   operator:
                     type: and
                   query:
-                    params: [C]
+                    params: [A]
                   reducer:
                     type: last
                   type: query
-              refId: D
+              refId: C
               type: classic_conditions
         noDataState: OK
         execErrState: Error
         for: 3m
         annotations:
           summary: '네트워크 송신 대역폭이 급증했습니다'
-          description: '5분간 {{ if $values.C }}{{ $values.C.Value | printf "%.1f" }}{{ else }}N/A{{ end }}% 증가 (현재: {{ if $values.B }}{{ $values.B.Value | printf "%.0f" }}{{ else }}N/A{{ end }}Mbps)'
+          description: '5분간 {{ if $values.A }}{{ $values.A.Value | printf "%.1f" }}{{ else }}N/A{{ end }}% 증가 (현재: {{ if $values.B }}{{ $values.B.Value | printf "%.0f" }}{{ else }}N/A{{ end }}Mbps)'
         labels:
           severity: warning
           component: network
@@ -686,15 +666,15 @@ groups:
       # Redis 메모리 사용량 급증 (5분간 50% 증가)
       - uid: redis_memory_spike
         title: Redis Memory Usage Spike
-        condition: D
+        condition: C
         data:
           - refId: A
             relativeTimeRange:
-              from: 600
-              to: 300
+              from: 300
+              to: 0
             datasourceUid: prometheus
             model:
-              expr: 'redis_memory_used_bytes / 1024 / 1024'
+              expr: '((redis_memory_used_bytes / 1024 / 1024) - (redis_memory_used_bytes offset 5m / 1024 / 1024)) / (redis_memory_used_bytes offset 5m / 1024 / 1024) * 100'
               refId: A
           - refId: B
             relativeTimeRange:
@@ -707,12 +687,6 @@ groups:
           - refId: C
             datasourceUid: __expr__
             model:
-              expression: '($B - $A) / $A * 100'
-              refId: C
-              type: math
-          - refId: D
-            datasourceUid: __expr__
-            model:
               conditions:
                 - evaluator:
                     params: [50]
@@ -720,18 +694,18 @@ groups:
                   operator:
                     type: and
                   query:
-                    params: [C]
+                    params: [A]
                   reducer:
                     type: last
                   type: query
-              refId: D
+              refId: C
               type: classic_conditions
         noDataState: OK
         execErrState: Error
         for: 3m
         annotations:
           summary: 'Redis 메모리 사용량이 급증했습니다'
-          description: '5분간 {{ if $values.C }}{{ $values.C.Value | printf "%.1f" }}{{ else }}N/A{{ end }}% 증가 (현재: {{ if $values.B }}{{ $values.B.Value | printf "%.0f" }}{{ else }}N/A{{ end }}MB)'
+          description: '5분간 {{ if $values.A }}{{ $values.A.Value | printf "%.1f" }}{{ else }}N/A{{ end }}% 증가 (현재: {{ if $values.B }}{{ $values.B.Value | printf "%.0f" }}{{ else }}N/A{{ end }}MB)'
         labels:
           severity: warning
           component: redis

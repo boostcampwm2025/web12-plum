@@ -68,6 +68,7 @@ describe('RoomService', () => {
           provide: RoomManagerService,
           useValue: {
             saveOne: jest.fn().mockResolvedValue(undefined),
+            saveRoomServer: jest.fn().mockResolvedValue(undefined),
             addParticipant: jest.fn().mockResolvedValue(undefined),
             findOne: jest.fn().mockResolvedValue(undefined),
             isNameAvailable: jest.fn(),
