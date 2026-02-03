@@ -1,4 +1,13 @@
-import { useState, useRef, useId, useCallback, type KeyboardEvent } from 'react';
+import {
+  useState,
+  useRef,
+  useId,
+  useCallback,
+  type KeyboardEvent,
+  type CSSProperties,
+  type RefObject,
+} from 'react';
+import { createPortal } from 'react-dom';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/shared/lib/utils';
 import { Icon } from '@/shared/components/icon/Icon';
@@ -61,8 +70,8 @@ interface SelectListProps<T> {
   focusedIndex: number;
   onSelect: (value: T) => void;
   onFocusChange: (index: number) => void;
-  listRef: React.RefObject<HTMLUListElement>;
-  positionStyles: Record<string, string>;
+  listRef: RefObject<HTMLUListElement>;
+  positionStyles: CSSProperties;
   listboxId: string;
 }
 
@@ -93,7 +102,7 @@ function SelectList<T>({
       ref={listRef}
       id={listboxId}
       role="listbox"
-      className="absolute right-0 left-0 z-50 max-h-60 overflow-y-auto rounded-lg bg-gray-400 py-2 shadow-lg"
+      className="z-50 max-h-60 overflow-y-auto rounded-lg bg-gray-400 py-2 shadow-lg"
       style={positionStyles}
     >
       {options.map((option, index) => {
@@ -176,7 +185,7 @@ export function Select<T>({
     setFocusedIndex(-1);
   }, []);
 
-  useOutsideClick(containerRef, isOpen, closeDropdown);
+  useOutsideClick([containerRef, listRef], isOpen, closeDropdown);
   useEscapeKey(isOpen, closeDropdown);
 
   const selectedOption = options.find((option) => option.value === value);
@@ -269,18 +278,20 @@ export function Select<T>({
         />
       </button>
 
-      {isOpen && (
-        <SelectList
-          options={options}
-          selectedValue={value}
-          focusedIndex={focusedIndex}
-          onSelect={handleSelect}
-          onFocusChange={setFocusedIndex}
-          listRef={listRef}
-          positionStyles={positionStyles}
-          listboxId={listboxId}
-        />
-      )}
+      {isOpen &&
+        createPortal(
+          <SelectList
+            options={options}
+            selectedValue={value}
+            focusedIndex={focusedIndex}
+            onSelect={handleSelect}
+            onFocusChange={setFocusedIndex}
+            listRef={listRef}
+            positionStyles={positionStyles}
+            listboxId={listboxId}
+          />,
+          document.body,
+        )}
     </div>
   );
 }
