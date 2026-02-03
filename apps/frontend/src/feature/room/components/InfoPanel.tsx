@@ -22,8 +22,8 @@ export function InfoPanel({ joinLink, onClose }: InfoPanelProps) {
   const addToast = useToastStore((state) => state.actions.addToast);
   const backgroundMode = useBackgroundEffectStore((state) => state.mode);
   const setBackgroundMode = useBackgroundEffectStore((state) => state.actions.setMode);
-  const isSoundMuted = useSoundStore((state) => state.isMuted);
-  const toggleSoundMuted = useSoundStore((state) => state.actions.toggleMuted);
+  const isSoundOn = useSoundStore((state) => state.isSoundEnabled);
+  const toggleSoundEnabled = useSoundStore((state) => state.actions.toggleSoundEnabled);
 
   const copyText = async (text: string) => {
     try {
@@ -126,8 +126,8 @@ export function InfoPanel({ joinLink, onClose }: InfoPanelProps) {
 
             <Toggle
               id="interaction-sound-mute"
-              checked={isSoundMuted}
-              onChange={toggleSoundMuted}
+              checked={isSoundOn}
+              onChange={toggleSoundEnabled}
               size="sm"
             />
           </div>

@@ -228,7 +228,8 @@ export class RoomService {
 
   async joinRoom(roomId: string, body: EnterLectureRequestBody): Promise<EnterRoomResponse> {
     const room = await this.validateRoom(roomId);
-    if (room.name !== body.name) throw new BadRequestException('Room name does not match');
+    const isRoomNameMismatch = String(room.name) !== String(body.name);
+    if (isRoomNameMismatch) throw new BadRequestException('Room name does not match');
 
     const participant = await this.createParticipant(roomId, body.nickname);
     const roomInfo = await this.getRoomInfo(room.id, participant);
