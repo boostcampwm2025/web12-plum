@@ -25,6 +25,7 @@ services:
     restart: unless-stopped
     volumes:
       - ./apps/backend/logs:/app/apps/backend/logs # Winston 로그 파일 (Promtail이 읽음)
+      - ./recordings:/app/record # 로컬의 ./recordings 폴더를 컨테이너 내부 /app/record와 연결
 
   # Node Exporter - 시스템 메트릭 수집
   node-exporter:

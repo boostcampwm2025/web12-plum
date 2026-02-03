@@ -24,6 +24,7 @@ services:
     restart: always # 운영에서는 항상 재시작 (unless-stopped보다 강함)
     volumes:
       - ./apps/backend/logs:/app/apps/backend/logs # Winston 로그 파일 (Promtail이 읽음)
+      - ./apps/backend/record:/app/apps/backend/record # 로컬의 ./recordings 폴더를 컨테이너 내부 /app/record와 연결
     healthcheck: # 헬스체크 추가하여 컨테이너 상태 모니터링 및 자동 재시작
       test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
       interval: 30s # 30초마다 체크
