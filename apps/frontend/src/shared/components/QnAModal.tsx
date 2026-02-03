@@ -4,7 +4,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 
 import { Modal } from '@/shared/components/Modal';
 import { FormField } from '@/shared/components/FormField';
-import { TimeLimitDropdown } from '@/shared/components/TimeLimitDropdown';
+import { Select } from '@/shared/components/Select';
+import { TIME_LIMIT_OPTIONS } from '@/shared/constants/timeLimit';
 import { Button } from '@/shared/components/Button';
 import {
   QNA_FORM_KEYS,
@@ -79,7 +80,7 @@ export function QnAModal({
       </header>
 
       <form
-        className="flex h-full min-h-0 flex-col gap-6 overflow-y-scroll"
+        className="flex h-full min-h-0 flex-col gap-6 overflow-y-auto px-2"
         onSubmit={handleSubmit(handleSubmitForm)}
       >
         {/* QnA 제목 필드 */}
@@ -98,9 +99,11 @@ export function QnAModal({
             control={control}
             name={QNA_FORM_KEYS.timeLimit}
             render={({ field: { onChange, value } }) => (
-              <TimeLimitDropdown
-                selectedTime={value}
+              <Select
+                value={value}
                 onChange={onChange}
+                options={TIME_LIMIT_OPTIONS}
+                aria-label="제한 시간 선택"
               />
             )}
           />
