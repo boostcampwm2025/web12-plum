@@ -18,6 +18,7 @@ import { PollService } from '../service/poll';
 import { QnaService } from '../service/qna';
 import { logger } from '@/shared/lib/logger';
 import { useRemoteMedia } from './useRemoteMedia';
+import { playSound } from '@/shared/lib/sound';
 
 /**
  * 실시간 이벤트 핸들러 설정 훅
@@ -48,6 +49,7 @@ export function useRoomEventHandlers() {
   const chatActions = useChatStore((state) => state.actions);
   const rankActions = useRankStore((state) => state.actions);
   const toastActions = useToastStore((state) => state.actions);
+  const addToast = useToastStore((state) => state.actions.addToast);
 
   /**
    * 모든 이벤트 핸들러 등록
@@ -121,7 +123,12 @@ export function useRoomEventHandlers() {
       if (role === 'presenter') {
         roleTasks = [
           PollService.setupPresenterEventHandlers({
-            onUpdatePollDetail: pollActions.updatePollDetail,
+            onUpdatePollDetail: (data) => {
+              pollActions.updatePollDetail({
+                ...data,
+                voter: { ...data.voter, optionId: data.voter.optionId },
+              });
+            },
             onPollEndDetail: pollActions.setCompletedFromEndDetail,
           }),
           QnaService.setupPresenterEventHandlers({
@@ -144,22 +151,41 @@ export function useRoomEventHandlers() {
             onUpdatePoll: pollActions.updatePollOptions,
             onStartPoll: (data) => {
               pollActions.setActivePoll(data);
-              useRoomUIStore.getState().setActiveDialog('vote');
+              const { activeDialog, setActiveDialog } = useRoomUIStore.getState();
+              if (activeDialog !== 'vote') {
+                playSound('pop');
+                setActiveDialog('vote');
+              }
             },
             onPollEnd: (data) => {
               pollActions.clearActivePoll(data.pollId);
-              useRoomUIStore.getState().setPollResult(data);
+              const { activeDialog, setActiveDialog, setPollResult } = useRoomUIStore.getState();
+              if (activeDialog === 'vote') setActiveDialog('vote');
+              setPollResult(data);
             },
           }),
           QnaService.setupAudienceEventHandlers({
             onUpdateQna: qnaActions.updateQnaSub,
             onStartQna: (data) => {
               qnaActions.setActiveQna(data);
-              useRoomUIStore.getState().setActiveDialog('qna');
+              const { activeDialog, setActiveDialog } = useRoomUIStore.getState();
+              if (activeDialog !== 'qna') {
+                playSound('pop');
+                setActiveDialog('qna');
+              }
             },
             onQnaEnd: (data) => {
               qnaActions.clearActiveQna(data.qnaId);
-              if (data.text?.length) chatActions.addQnaResult(data);
+              const { activeDialog, setActiveDialog } = useRoomUIStore.getState();
+              if (activeDialog === 'qna') setActiveDialog('qna');
+              addToast({
+                type: 'info',
+                title: 'Q&A가 종료되었습니다.',
+                description: 'Q&A 결과를 채팅창에서 확인하세요.',
+              });
+              if (data.text && data.text.length > 0) {
+                chatActions.addQnaResult(data);
+              }
             },
           }),
           InteractionService.setupAudienceEventHandlers({
