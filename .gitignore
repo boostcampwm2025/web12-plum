@@ -37,3 +37,6 @@ apps/load-test/bundle-*.js
 .codex
 .gemini
 CLAUDE.md
+
+# audio records
+record

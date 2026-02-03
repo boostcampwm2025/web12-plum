@@ -35,10 +35,20 @@ RUN pnpm run build
 # Alpine 대신 Debian 기반 이미지 사용 (Mediasoup 실행 호환성)
 FROM node:20-slim
 
+# FFmpeg 및 필수 라이브러리 설치
+# apt-get update 후 ffmpeg를 설치하고 용량 최적화를 위해 캐시를 삭제합니다.
+RUN apt-get update && apt-get install -y \
+    ffmpeg \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
 # pnpm 설치
 RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
 
 WORKDIR /app
+
+# 컨테이너 내부에서 FFmpeg가 파일을 쓸 폴더를 미리 만듭니다.
+RUN mkdir -p /app/apps/backend/record && chown -R node:node /app/apps/backend/record
 
 # 워크스페이스 루트의 패키지 파일 복사
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./

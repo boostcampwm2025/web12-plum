@@ -6,6 +6,7 @@ import { useSocketStore } from '@/store/useSocketStore';
 import { useToastStore } from '@/store/useToastStore';
 import { useMediaInfra } from '@/mediasoup/useMediaInfra';
 import { useSafeRoomId } from '@/shared/hooks/useSafeRoomId';
+import { playSound } from '@/shared/lib/sound';
 
 import { InteractionSignaling } from '../mediasoup/InteractionSignaling';
 import { useMediaStore } from '../stores/useMediaStore';
@@ -188,7 +189,10 @@ export function useRoomInit() {
             pollActions.setActivePoll(data);
 
             const { activeDialog, setActiveDialog } = useRoomUIStore.getState();
-            if (activeDialog !== 'vote') setActiveDialog('vote');
+            if (activeDialog !== 'vote') {
+              playSound('pop');
+              setActiveDialog('vote');
+            }
           },
           handleUpdatePoll: pollActions.updatePollOptions,
           handlePollEnd: (data) => {
@@ -200,7 +204,10 @@ export function useRoomInit() {
           handleStartQna: (data) => {
             qnaActions.setActiveQna(data);
             const { activeDialog, setActiveDialog } = useRoomUIStore.getState();
-            if (activeDialog !== 'qna') setActiveDialog('qna');
+            if (activeDialog !== 'qna') {
+              playSound('pop');
+              setActiveDialog('qna');
+            }
           },
           handleUpdateQna: qnaActions.updateQnaSub,
           handleQnaEnd: (data) => {

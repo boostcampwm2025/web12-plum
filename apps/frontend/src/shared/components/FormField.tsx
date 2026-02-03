@@ -11,6 +11,7 @@ import { Input, InputProps } from './Input';
 import { cn } from '../lib/utils';
 import { cva, VariantProps } from 'class-variance-authority';
 import { Icon } from './icon/Icon';
+import { Toggle } from './Toggle';
 
 interface FormFieldContextValue {
   id: string;
@@ -188,45 +189,19 @@ type FormFieldToggleInputProps = InputHTMLAttributes<HTMLInputElement>;
  * @returns FormField Toggle Input JSX 요소
  */
 const FormFieldToggleInput = forwardRef<HTMLInputElement, FormFieldToggleInputProps>(
-  ({ className, ...props }, ref) => {
+  ({ className, size: _size, ...props }, ref) => {
     const { id, error, required } = useFormFieldContext();
-    const isChecked = props.checked;
 
     return (
-      <>
-        <input
-          {...props}
-          ref={ref}
-          id={id}
-          required={required}
-          type="checkbox"
-          className="sr-only"
-          aria-invalid={error ? 'true' : 'false'}
-          aria-describedby={error ? `${id}-error` : undefined}
-        />
-
-        <label
-          htmlFor={id}
-          role="switch"
-          aria-checked={isChecked}
-          aria-invalid={!!error}
-          aria-describedby={error ? `${id}-error` : undefined}
-          className={cn(
-            'relative inline-flex h-9 w-16 shrink-0 cursor-pointer rounded-full border-4 border-transparent transition-colors duration-200 ease-in-out',
-            isChecked ? 'bg-primary' : 'bg-gray-300',
-            props.disabled && 'cursor-not-allowed opacity-50',
-            className,
-          )}
-        >
-          <span
-            aria-hidden="true"
-            className={cn(
-              'bg-text inline-block size-7 transform rounded-full transition duration-200 ease-in-out',
-              isChecked ? 'translate-x-7' : 'translate-x-0',
-            )}
-          />
-        </label>
-      </>
+      <Toggle
+        {...props}
+        ref={ref}
+        id={id}
+        required={required}
+        aria-invalid={error ? 'true' : 'false'}
+        aria-describedby={error ? `${id}-error` : undefined}
+        className={className}
+      />
     );
   },
 );

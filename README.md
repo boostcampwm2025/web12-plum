@@ -73,6 +73,14 @@ docker-compose -f docker-compose.local.yml up -d
 # 공통 패키지 빌드 (백엔드/프론트엔드에서 사용)
 pnpm --filter @plum/shared-interfaces build
 
+# ffmpeg 설치
+## macOS
+brew install ffmpeg
+## Windows (PowerShell 관리자 권한)
+winget install Gyan.FFmpeg
+## Linux (Debian/Ubuntu)
+sudo apt update && sudo apt install ffmpeg
+
 # 백엔드 및 프론트엔드 애플리케이션 실행
 pnpm dev
 ```
@@ -85,6 +93,8 @@ pnpm dev
 - Runtime
   - Node.js 18.0.0+
   - pnpm 9.15.0+
+- Media Processing
+  - FFmpeg: `segment` 뮤서 및 `concat` 필터 지원 버전 (시스템 PATH 등록 필수)
 - Infrastructure
   - Docker & Docker Compose (for local infrastructure)
 - Build Tools (for Mediasoup)

@@ -13,6 +13,14 @@ import {
 import { SocketMetadataService } from '../common/services/index.js';
 import { RoomService } from './room.service.js';
 import { PrometheusService } from '../prometheus/prometheus.service.js';
+import { RecordService } from '../records/record.service.js';
+
+jest.mock('chokidar', () => ({
+  watch: jest.fn().mockReturnValue({
+    on: jest.fn().mockReturnThis(),
+    close: jest.fn().mockResolvedValue(undefined),
+  }),
+}));
 
 describe('RoomGateway', () => {
   let gateway: RoomGateway;
@@ -136,6 +144,14 @@ describe('RoomGateway', () => {
           useValue: {
             incrementSocketIOConnections: jest.fn(),
             decrementSocketIOConnections: jest.fn(),
+          },
+        },
+        {
+          provide: RecordService,
+          useValue: {
+            startRecording: jest.fn(),
+            stopParticipantRecording: jest.fn(),
+            stopAllRecording: jest.fn(),
           },
         },
       ],

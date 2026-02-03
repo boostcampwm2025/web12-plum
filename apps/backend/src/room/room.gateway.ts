@@ -60,6 +60,7 @@ import {
 import { RoomService } from './room.service.js';
 import { PrometheusService } from '../prometheus/prometheus.service.js';
 import { RedisService } from '../redis/redis.service.js';
+import { RecordService } from '../records/record.service.js';
 
 /**
  * 강의실 WebSocket Gateway
@@ -86,6 +87,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly socketMetadataService: SocketMetadataService,
     private readonly roomService: RoomService,
     private readonly prometheusService: PrometheusService,
+    private readonly recordService: RecordService,
     private readonly redisService: RedisService,
   ) {}
 
@@ -107,7 +109,10 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const room = await this.roomManagerService.findOne(roomId);
     if (!room) return { success: false, error: '강의실을 찾을 수 없습니다.' };
     if (room.status === 'pending')
-      await this.roomManagerService.updatePartial(roomId, { status: 'active' });
+      await this.roomManagerService.updatePartial(roomId, {
+        status: 'active',
+        startedAt: new Date().toISOString(),
+      });
 
     // 재입장 여부 판단
     const pending = await this.participantManagerService.popReconnectMetadata(participantId);
@@ -266,6 +271,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
         data.type,
         data.rtpParameters,
       );
+
       await this.participantManagerService.updatePartial(metadata.participantId, {
         producers: {
           ...participant.producers,
@@ -303,6 +309,14 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
         );
       }
       // 청중 video는 파이프 안 함 (Lazy - consume 시점에)
+
+      // 오디오 녹음 시작
+
+      if (isAudio) {
+        this.recordService
+          .startRecording(metadata.roomId, producer.id, isPresenter)
+          .catch((err) => this.logger.error(`녹음 시작 실패: ${err.message}`));
+      }
 
       socket.to(metadata.roomId).emit('new_producer', payload);
 
@@ -373,6 +387,14 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
           await this.participantManagerService.updatePartial(metadata.participantId, {
             producers: updatedProducers,
           });
+          // 녹음 서비스 중단 호출
+          if (closedType === 'audio') {
+            await this.recordService.stopParticipantRecording(
+              metadata.roomId,
+              participant.role,
+              data.producerId,
+            );
+          }
 
           // 3. producer_closed 이벤트 브로드캐스트
           const payload: ProducerClosedPayload = {
@@ -595,6 +617,9 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
     try {
       await this.roomManagerService.updatePartial(room.id, { status: 'ended' });
       this.server.to(room.id).emit('room_end');
+      // 해당 방의 모든 녹음(강사+학생) 중단 및 파일 닫기
+      await this.recordService.stopAllRecording(metadata.roomId);
+
       // Multi-Router 정리 (모든 Router + PipeProducer)
       await this.mediasoupService.closeRoutersWithStrategy(room.id);
 
