@@ -34,7 +34,7 @@ services:
 
   ai-worker:
     build:
-      context: ./ai-worker
+      context: ./apps/ai-worker
     container_name: plum-ai-worker-prod
     network_mode: host
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --log-level info
