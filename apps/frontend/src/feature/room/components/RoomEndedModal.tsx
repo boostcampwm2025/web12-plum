@@ -103,17 +103,17 @@ export function RoomEndedModal() {
       className="max-w-sm text-center"
     >
       <Modal.Title>강의가 종료되었습니다</Modal.Title>
-      <div className="flex flex-col gap-3 py-15">
+      <div className="flex flex-col gap-3 pt-10">
         <p className="text-primary text-2xl font-bold">{countdown} 초 후</p>
         <p className="text-subtext-light text-lg font-bold">요약 페이지로 이동합니다.</p>
-
-        <Button
-          onClick={redirectToSummary}
-          className="px-4 py-2"
-        >
-          바로 이동하기
-        </Button>
       </div>
+
+      <Button
+        onClick={redirectToSummary}
+        className="mx-auto mt-10 mb-2 w-fit px-4 py-2"
+      >
+        바로 이동하기
+      </Button>
     </Modal>
   );
 }
