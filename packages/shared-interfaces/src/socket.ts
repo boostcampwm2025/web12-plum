@@ -429,7 +429,7 @@ export interface ClientToServerEvents {
 
   toggle_media: (data: ToggleMediaRequest, cb: (res: ToggleMediaResponse) => void) => void;
 
-  get_producer: (data: GetProducerRequest, cb: (res: GetProducerRequest) => void) => void;
+  get_producer: (data: GetProducerRequest, cb: (res: GetProducerResponse) => void) => void;
 
   leave_room: (cb: (res: LeaveRoomResponse) => void) => void;
 
