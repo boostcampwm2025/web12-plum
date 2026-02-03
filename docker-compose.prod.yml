@@ -33,9 +33,8 @@ services:
       start_period: 5s # 컨테이너 시작 후 5초 동안은 실패해도 무시
 
   ai-worker:
-    build:
-      context: ./apps/ai-worker
-    container_name: plum-ai-worker-prod
+    image: ${DOCKER_USERNAME}/plum-ai-worker:${TAG:-latest}
+    container_name: plum-ai-worker-develop
     network_mode: host
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --log-level info
     environment:

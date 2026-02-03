@@ -28,8 +28,7 @@ services:
       - ./apps/backend/record:/app/apps/backend/record # 로컬의 ./recordings 폴더를 컨테이너 내부 /app/record와 연결
 
   ai-worker:
-    build:
-      context: ./apps/ai-worker
+    image: ${DOCKER_USERNAME}/plum-ai-worker:${TAG:-staging}
     container_name: plum-ai-worker-develop
     network_mode: host
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --log-level info

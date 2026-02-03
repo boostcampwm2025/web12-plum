@@ -67,6 +67,7 @@ async def transcribe(request: STTRequest):
             "language": info.language,
             "duration": info.duration
         }
+
     except Exception as e:
         print(f"🔥 Error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
