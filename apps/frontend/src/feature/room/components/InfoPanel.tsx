@@ -11,6 +11,13 @@ import {
   type BackgroundEffectMode,
 } from '../stores/useBackgroundEffectStore';
 import { useSoundStore } from '@/store/useSoundStore';
+import { Select, type SelectOption } from '@/shared/components/Select';
+
+const BACKGROUND_EFFECT_OPTIONS: SelectOption<BackgroundEffectMode>[] = [
+  { label: '블러', value: 'blur' },
+  { label: '플럼 배경', value: 'image' },
+  { label: '처리 안함', value: 'off' },
+];
 
 interface InfoPanelProps {
   joinLink: string;
@@ -106,17 +113,12 @@ export function InfoPanel({ joinLink, onClose }: InfoPanelProps) {
             className="mb-6"
             data-guide="info-background"
           >
-            {/*TODO: 드롭다운 컴포넌트 구현 후 적용 */}
-            <select
+            <Select
               value={backgroundMode}
-              onChange={(event) => setBackgroundMode(event.target.value as BackgroundEffectMode)}
-              className="text-text w-full rounded-lg bg-gray-300 py-2 text-sm"
+              onChange={setBackgroundMode}
+              options={BACKGROUND_EFFECT_OPTIONS}
               aria-label="배경 효과 선택"
-            >
-              <option value="blur">블러</option>
-              <option value="image">플럼 배경</option>
-              <option value="off">처리 안함</option>
-            </select>
+            />
           </div>
 
           <div className="mb-6 flex items-center justify-between">
