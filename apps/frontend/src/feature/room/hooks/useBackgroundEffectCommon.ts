@@ -36,9 +36,18 @@ export function renderBackgroundEffect<T extends HTMLCanvasElement | OffscreenCa
     canvases;
   const { width, height } = canvasSize;
 
-  if (mode === 'off' || !mask) {
+  if (mode === 'off') {
     outputCtx.clearRect(0, 0, width, height);
     outputCtx.drawImage(source, 0, 0, width, height);
+    return;
+  }
+
+  // 마스크가 아직 준비되지 않은 경우 전체 블러 처리 (원본 배경 노출 방지)
+  if (!mask) {
+    outputCtx.clearRect(0, 0, width, height);
+    outputCtx.filter = `blur(${BLUR_PX}px)`;
+    outputCtx.drawImage(source, 0, 0, width, height);
+    outputCtx.filter = 'none';
     return;
   }
 
