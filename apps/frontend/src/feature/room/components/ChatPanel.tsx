@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { SidePanelHeader, SidePanelContent } from './SidePanel';
-import { useChatStore } from '../stores/useChatStore';
-import { useSocketStore } from '@/store/useSocketStore';
 import { Icon } from '@/shared/components/icon/Icon';
 import { cn } from '@/shared/lib/utils';
 import { logger } from '@/shared/lib/logger';
 import { Button } from '@/shared/components/Button';
+import { SocketClient } from '@/shared/socket/socket';
+import { isSocketFailResponse } from '@/shared/socket/guard';
+
+import { useChatStore } from '../stores/useChatStore';
+import { SidePanelHeader, SidePanelContent } from './SidePanel';
 
 const RATE_LIMIT_COOLDOWN = 3000;
 const MAX_CHAT_LENGTH = 60;
@@ -205,7 +207,6 @@ interface ChatInputProps {
 }
 
 function ChatInput({ hasNewItems, newItemPreview, onScrollToBottom }: ChatInputProps) {
-  const emit = useSocketStore((state) => state.actions.emit);
   const [text, setText] = useState('');
   const [isRateLimited, setIsRateLimited] = useState(false);
   const [chatToast, setChatToast] = useState<string | null>(null);
@@ -241,21 +242,23 @@ function ChatInput({ hasNewItems, newItemPreview, onScrollToBottom }: ChatInputP
     [chatToast],
   );
 
-  const handleSendChat = () => {
+  const handleSendChat = async () => {
     const trimmed = text.trim();
     if (!trimmed || isRateLimited) return;
 
-    emit('send_chat', { text: trimmed }, (response) => {
-      if (!response.success) {
-        logger.socket.warn('채팅 전송 실패', response.error);
-        if (response.retryable === false) {
-          showChatToast('너무 많은 메시지를 보냈습니다. 잠시 후 다시 시도해주세요.');
-          startRateLimitCooldown();
-          return;
-        }
-        showChatToast('채팅 전송에 실패했습니다. 잠시 후 다시 시도해주세요.');
+    try {
+      await SocketClient.emitWithAck('send_chat', { text: trimmed });
+    } catch (error) {
+      logger.custom.error('[ChatPanel] 채팅 전송 실패', error);
+
+      if (isSocketFailResponse<'send_chat'>(error) && !error.retryable) {
+        showChatToast('너무 많은 메시지를 보냈습니다. 잠시 후 다시 시도해주세요.');
+        startRateLimitCooldown();
+        return;
       }
-    });
+      showChatToast('채팅 전송에 실패했습니다. 잠시 후 다시 시도해주세요.');
+    }
+
     setText('');
   };
 

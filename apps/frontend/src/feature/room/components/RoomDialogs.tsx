@@ -7,9 +7,9 @@ import { QnaDialog } from './QnaDialog';
 import { RankingDialog } from './RankingDialog';
 import { usePollStore } from '../stores/usePollStore';
 import { useQnaStore } from '../stores/useQnaStore';
-import { useSocketStore } from '@/store/useSocketStore';
 import { logger } from '@/shared/lib/logger';
 import { useToastStore } from '@/store/useToastStore';
+import { SocketClient } from '@/shared/socket/socket';
 
 export function RoomDialogs() {
   const activeDialog = useRoomUIStore((state) => state.activeDialog);
@@ -20,7 +20,6 @@ export function RoomDialogs() {
   const qnas = useQnaStore((state) => state.qnas);
   const answeredByQnaId = useQnaStore((state) => state.answeredByQnaId);
   const qnaActions = useQnaStore((state) => state.actions);
-  const emit = useSocketStore((state) => state.actions.emit);
   const addToast = useToastStore((state) => state.actions.addToast);
 
   const activePoll = useMemo(() => polls.find((poll) => poll.status === 'active'), [polls]);
@@ -30,26 +29,23 @@ export function RoomDialogs() {
   const qnaStartedAt = getStartedAt(activeQna?.startedAt);
   const selectedOptionId = activePoll ? (audienceVotedOptionByPollId[activePoll.id] ?? null) : null;
 
-  const handleVote = (pollId: string, optionId: number) => {
-    emit('vote', { pollId, optionId, isGesture: false }, (response) => {
-      if (!response.success) {
-        logger.socket.warn('투표 참여 실패', response.error);
-      }
-    });
+  const handleVote = async (pollId: string, optionId: number) => {
+    try {
+      await SocketClient.emitWithAck('vote', { pollId, optionId, isGesture: false });
+    } catch (error) {
+      logger.custom.error('[RoomDialogs] 투표 참여 실패', error);
+      addToast({ type: 'error', title: '투표 참여에 실패했습니다.' });
+    }
   };
 
-  const handleAnswer = (qnaId: string, text: string) => {
-    emit('answer', { qnaId, text }, (response) => {
-      if (!response.success) {
-        logger.socket.warn('QnA 답변 실패', response.error);
-        addToast({
-          type: 'error',
-          title: 'Q&A 답변에 실패했습니다.',
-        });
-        return;
-      }
+  const handleAnswer = async (qnaId: string, text: string) => {
+    try {
+      await SocketClient.emitWithAck('answer', { qnaId, text });
       qnaActions.setAnswered(qnaId, true);
-    });
+    } catch (error) {
+      logger.custom.error('[RoomDialogs] Q&A 답변 실패', error);
+      addToast({ type: 'error', title: 'Q&A 답변에 실패했습니다.' });
+    }
   };
 
   return (

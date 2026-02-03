@@ -7,18 +7,17 @@ import { Tabs, TabsList, TabContent, type TabItem, type TabValue } from './Tabs'
 import { ScheduledCard } from './ScheduledCard';
 import { TimeLeft } from './TimeLeft';
 import { cn } from '@/shared/lib/utils';
-import { useSocketStore } from '@/store/useSocketStore';
 import { useQnaStore } from '../stores/useQnaStore';
 import { logger } from '@/shared/lib/logger';
 import type { QnAFormValues } from '@/shared/constants/qna';
 import { useToastStore } from '@/store/useToastStore';
+import { SocketClient } from '@/shared/socket/socket';
 
 export function QnaManagementTabs() {
   const [activeTab, setActiveTab] = useState<TabValue>('scheduled');
   const qnas = useQnaStore((state) => state.qnas);
   const qnaActions = useQnaStore((state) => state.actions);
   const addToast = useToastStore((state) => state.actions.addToast);
-  const emit = useSocketStore((state) => state.actions.emit);
 
   const scheduledQnas = useMemo(() => qnas.filter((qna) => qna.status === 'pending'), [qnas]);
   const activeQna = useMemo(() => qnas.find((qna) => qna.status === 'active'), [qnas]);
@@ -34,15 +33,14 @@ export function QnaManagementTabs() {
     [scheduledQnas.length, activeQna, completedQnas.length],
   );
 
-  const fetchQnas = useCallback(() => {
-    emit('get_qna', (response) => {
-      if (!response.success) {
-        logger.socket.warn('Q&A 목록 조회 실패', response.error);
-        return;
-      }
+  const fetchQnas = useCallback(async () => {
+    try {
+      const response = await SocketClient.emitWithAck('get_qna');
       qnaActions.hydrateFromQnas(response.qnas);
-    });
-  }, [emit, qnaActions]);
+    } catch (error) {
+      logger.socket.error('[QnaManagementTabs] Q&A 목록 조회 실패', error);
+    }
+  }, [qnaActions]);
 
   useEffect(() => {
     fetchQnas();
@@ -60,51 +58,36 @@ export function QnaManagementTabs() {
   }, [activeQna?.id]);
 
   const handleCreateQna = useCallback(
-    (data: QnAFormValues) => {
-      emit('create_qna', data, (response) => {
-        if (!response.success) {
-          logger.socket.warn('Q&A 생성 실패', response.error);
-          addToast({
-            type: 'error',
-            title: 'Q&A 생성에 실패했습니다.',
-          });
-          return;
-        }
+    async (data: QnAFormValues) => {
+      try {
+        await SocketClient.emitWithAck('create_qna', data);
         fetchQnas();
-      });
+      } catch (error) {
+        logger.socket.error('[QnaManagementTabs] Q&A 생성 실패', error);
+        addToast({ type: 'error', title: 'Q&A 생성에 실패했습니다.' });
+      }
     },
-    [emit, fetchQnas, addToast],
+    [fetchQnas, addToast],
   );
 
   const handleStartQna = useCallback(
-    (qnaId: string) => {
-      emit('emit_qna', { qnaId }, (response) => {
-        if (!response.success) {
-          logger.socket.warn('Q&A 시작 실패', response.error);
-          addToast({
-            type: 'error',
-            title: 'Q&A 시작에 실패했습니다.',
-          });
-          return;
-        }
+    async (qnaId: string) => {
+      try {
+        await SocketClient.emitWithAck('emit_qna', { qnaId });
         setActiveTab('active');
         fetchQnas();
-      });
+      } catch (error) {
+        logger.socket.error('[QnaManagementTabs] Q&A 시작 실패', error);
+        addToast({ type: 'error', title: 'Q&A 시작에 실패했습니다.' });
+      }
     },
-    [emit, fetchQnas, addToast],
+    [fetchQnas, addToast],
   );
 
-  const handleBreakQna = useCallback(() => {
+  const handleBreakQna = useCallback(async () => {
     if (!activeQna) return;
-    emit('break_qna', { qnaId: activeQna.id }, (response) => {
-      if (!response.success) {
-        logger.socket.warn('Q&A 종료 실패', response.error);
-        addToast({
-          type: 'error',
-          title: 'Q&A 종료에 실패했습니다.',
-        });
-        return;
-      }
+    try {
+      const response = await SocketClient.emitWithAck('break_qna', { qnaId: activeQna.id });
       qnaActions.setCompletedFromEndDetail({
         qnaId: activeQna.id,
         title: activeQna.title,
@@ -113,8 +96,11 @@ export function QnaManagementTabs() {
       });
       setActiveTab('completed');
       fetchQnas();
-    });
-  }, [emit, activeQna, qnaActions, fetchQnas, addToast]);
+    } catch (error) {
+      logger.socket.error('[QnaManagementTabs] Q&A 종료 실패', error);
+      addToast({ type: 'error', title: 'Q&A 종료에 실패했습니다.' });
+    }
+  }, [activeQna, qnaActions, fetchQnas, addToast]);
 
   return (
     <>

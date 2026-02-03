@@ -3,6 +3,7 @@ import type {
   EnterLectureRequestBody,
   EnterRoomResponse,
   NicknameValidationResponse,
+  RoomSummary,
   RoomValidationResponse,
 } from '@plum/shared-interfaces';
 import { createLectureSchema } from '@plum/shared-interfaces';
@@ -55,5 +56,9 @@ export const roomApi = {
   // 강의실이 할당된 서버의 URL 반환하기
   async getRoomServer(roomId: string): Promise<ApiResponse<{ serverUrl: string }>> {
     return apiClient.get<{ serverUrl: string }>(`/room/${roomId}/server`);
+  },
+
+  async getSummary(roomId: string): Promise<ApiResponse<RoomSummary>> {
+    return apiClient.get<RoomSummary>(`/room/${roomId}/summary`);
   },
 };
