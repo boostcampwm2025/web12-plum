@@ -7,19 +7,18 @@ import { Tabs, TabsList, TabContent, type TabItem, type TabValue } from './Tabs'
 import { ScheduledCard } from './ScheduledCard';
 import { TimeLeft } from './TimeLeft';
 import { cn } from '@/shared/lib/utils';
-import { useSocketStore } from '@/store/useSocketStore';
 import { usePollStore } from '../stores/usePollStore';
 import { logger } from '@/shared/lib/logger';
 import type { PollFormValues } from '@/shared/constants/poll';
 import type { Poll, Voter } from '@plum/shared-interfaces';
 import { useToastStore } from '@/store/useToastStore';
+import { SocketClient } from '@/shared/socket/socket';
 
 export function PollManagementTabs() {
   const [activeTab, setActiveTab] = useState<TabValue>('scheduled');
   const polls = usePollStore((state) => state.polls);
   const pollActions = usePollStore((state) => state.actions);
   const addToast = useToastStore((state) => state.actions.addToast);
-  const emit = useSocketStore((state) => state.actions.emit);
 
   const scheduledPolls = useMemo(() => polls.filter((poll) => poll.status === 'pending'), [polls]);
   const activePoll = useMemo(() => polls.find((poll) => poll.status === 'active'), [polls]);
@@ -35,15 +34,15 @@ export function PollManagementTabs() {
     [scheduledPolls.length, activePoll, completedPolls.length],
   );
 
-  const fetchPolls = useCallback(() => {
-    emit('get_poll', (response) => {
-      if (!response.success) {
-        logger.socket.warn('투표 목록 조회 실패', response.error);
-        return;
-      }
+  // 투표 목록 조회
+  const fetchPolls = useCallback(async () => {
+    try {
+      const response = await SocketClient.emitWithAck('get_poll');
       pollActions.hydrateFromPolls(response.polls);
-    });
-  }, [emit, pollActions]);
+    } catch (error) {
+      logger.socket.error('[PollManagementTabs] 투표 목록 조회 실패', error);
+    }
+  }, [pollActions]);
 
   useEffect(() => {
     fetchPolls();
@@ -60,57 +59,49 @@ export function PollManagementTabs() {
     previousActivePollIdRef.current = currentActiveId;
   }, [activePoll?.id]);
 
+  // 투표 생성 핸들러
   const handleCreatePoll = useCallback(
-    (data: PollFormValues) => {
-      emit('create_poll', data, (response) => {
-        if (!response.success) {
-          logger.socket.warn('투표 생성 실패', response.error);
-          addToast({
-            type: 'error',
-            title: '투표 생성에 실패했습니다.',
-          });
-          return;
-        }
+    async (data: PollFormValues) => {
+      try {
+        await SocketClient.emitWithAck('create_poll', data);
         fetchPolls();
-      });
-    },
-    [emit, fetchPolls, addToast],
-  );
-
-  const handleStartPoll = useCallback(
-    (pollId: string) => {
-      emit('emit_poll', { pollId }, (response) => {
-        if (!response.success) {
-          logger.socket.warn('투표 시작 실패', response.error);
-          addToast({
-            type: 'error',
-            title: '투표 시작에 실패했습니다.',
-          });
-          return;
-        }
-        setActiveTab('active');
-        fetchPolls();
-      });
-    },
-    [emit, fetchPolls, addToast],
-  );
-
-  const handleBreakPoll = useCallback(() => {
-    if (!activePoll) return;
-    emit('break_poll', { pollId: activePoll.id }, (response) => {
-      if (!response.success) {
-        logger.socket.warn('투표 종료 실패', response.error);
-        addToast({
-          type: 'error',
-          title: '투표 종료에 실패했습니다.',
-        });
+      } catch (error) {
+        logger.socket.error('[PollManagementTabs] 투표 생성 실패', error);
+        addToast({ type: 'error', title: '투표 생성에 실패했습니다.' });
         return;
       }
+    },
+    [fetchPolls, addToast],
+  );
+
+  // 투표 시작 핸들러
+  const handleStartPoll = useCallback(
+    async (pollId: string) => {
+      try {
+        await SocketClient.emitWithAck('emit_poll', { pollId });
+        setActiveTab('active');
+        fetchPolls();
+      } catch (error) {
+        logger.socket.error('[PollManagementTabs] 투표 시작 실패', error);
+        addToast({ type: 'error', title: '투표 시작에 실패했습니다.' });
+      }
+    },
+    [fetchPolls, addToast],
+  );
+
+  // 투표 종료 핸들러
+  const handleBreakPoll = useCallback(async () => {
+    if (!activePoll) return;
+    try {
+      const response = await SocketClient.emitWithAck('break_poll', { pollId: activePoll.id });
       pollActions.setCompletedFromEndDetail({ pollId: activePoll.id, options: response.options });
       setActiveTab('completed');
       fetchPolls();
-    });
-  }, [emit, activePoll, pollActions, fetchPolls, addToast]);
+    } catch (error) {
+      logger.socket.error('[PollManagementTabs] 투표 종료 실패', error);
+      addToast({ type: 'error', title: '투표 종료에 실패했습니다.' });
+    }
+  }, [activePoll, pollActions, fetchPolls, addToast]);
 
   return (
     <>
