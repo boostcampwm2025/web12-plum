@@ -1,5 +1,5 @@
 import { io } from 'socket.io-client';
-import type { BaseResponse, ServerToClientEvents } from '@plum/shared-interfaces';
+import type { ServerToClientEvents } from '@plum/shared-interfaces';
 
 import { logger } from '@/shared/lib/logger';
 
@@ -234,9 +234,9 @@ export class SocketClient {
       // ACK 응답 핸들러
       const handleAck = (response: SocketEventResponse<E>) => {
         clearTimeout(timer);
-        const typedResponse = response as BaseResponse;
-        if (!typedResponse.success) {
-          reject(new Error(`[${event}] ACK 실패: ${typedResponse.error}`));
+        if (!response.success) {
+          reject(response);
+          return;
         }
 
         logger.socket.debug('ACK 성공', { event, response });
