@@ -7,6 +7,7 @@ import { MediaType, ParticipantRole } from '@plum/shared-interfaces';
 import { logger } from '@/shared/lib/logger';
 import { useMediaStore } from '../stores/useMediaStore';
 import { useGestureStore } from '../stores/useGestureStore';
+import { useRoomStore } from '../stores/useRoomStore';
 import { GESTURE_ICON_MAP } from '@/shared/constants/gesture';
 import { useRemoteMedia } from '../hooks/useRemoteMedia';
 
@@ -87,6 +88,7 @@ export interface ParticipantVideoProps {
   onModeChange?: (mode: VideoDisplayMode) => void;
   stream?: MediaStream | null;
   isCameraOn?: boolean;
+  isAudioMuted?: boolean;
   videoProducerId?: string;
   participantRole?: ParticipantRole;
   isActive?: boolean;
@@ -101,6 +103,7 @@ function ParticipantVideoComponent({
   onModeChange,
   stream: localStream,
   isCameraOn: localCameraOn = false,
+  isAudioMuted: localAudioMuted = false,
   videoProducerId,
   participantRole,
   isActive = true,
@@ -112,6 +115,11 @@ function ParticipantVideoComponent({
 
   // 원격 스트림인 경우에만 스토어에서 비디오 스트림 구독
   const remoteStream = useRemoteVideoStream(isCurrentUser ? '' : id);
+
+  const remoteAudioMuted = useRoomStore(
+    (state) => state.participantAudioMuted.get(isCurrentUser ? '' : id) ?? true,
+  );
+  const isAudioMuted = isCurrentUser ? localAudioMuted : remoteAudioMuted;
 
   // 최종적으로 화면에 띄울 스트림과 카메라 상태 결정
   const activeStream = isCurrentUser ? localStream : remoteStream;
@@ -252,10 +260,18 @@ function ParticipantVideoComponent({
       {/* 이름 표시 */}
       <div
         className={cn(
-          'absolute bottom-2 left-2 rounded px-1 text-xs text-white',
+          'text-text absolute bottom-2 left-2 flex items-center gap-1 rounded px-1 text-xs',
           mode !== 'minimize' && 'bg-gray-700/40 py-1',
         )}
       >
+        {isAudioMuted && (
+          <Icon
+            name="mic-disabled"
+            size={12}
+            className="text-error"
+            decorative
+          />
+        )}
         {name}
       </div>
 
