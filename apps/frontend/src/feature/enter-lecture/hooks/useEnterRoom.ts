@@ -7,7 +7,6 @@ import { roomApi } from '@/shared/api';
 import { logger } from '@/shared/lib/logger';
 import { useSafeRoomId } from '@/shared/hooks/useSafeRoomId';
 import { useMediaStore } from '@/feature/room/stores/useMediaStore';
-import { useSocketStore } from '@/store/useSocketStore';
 
 /**
  * 강의실 입장 훅
@@ -24,7 +23,6 @@ export function useEnterRoom() {
   const { setMyInfo, setRoomTitle, setRouterRtpCapabilities, initParticipants } = useRoomStore(
     (state) => state.actions,
   );
-  const { connect } = useSocketStore((state) => state.actions);
 
   /**
    * 강의실 입장 처리
@@ -36,14 +34,6 @@ export function useEnterRoom() {
     logger.api.info('강의실 입장 요청');
 
     try {
-      // 1. 서버 주소 조회
-      const { data: serverData } = await roomApi.getRoomServer(roomId);
-      logger.api.info(`강의실 서버 주소: ${serverData.serverUrl}`);
-
-      // 2. 해당 서버로 소켓 연결
-      await connect(serverData.serverUrl);
-
-      // 3. 방 입장
       const { data: roomData } = await roomApi.joinRoom(roomId, data);
       const { participantId, name, role, mediasoup, participants: rawParticipants } = roomData;
       const { routerRtpCapabilities, existingProducers } = mediasoup;
