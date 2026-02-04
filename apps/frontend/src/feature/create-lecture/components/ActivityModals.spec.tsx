@@ -78,8 +78,8 @@ describe('ActivityModals', () => {
   it('투표 생성 모달이 열리면 isEditMode가 false이고 initialData가 undefined이다', () => {
     vi.mocked(useActivityModalStore).mockImplementation((selector) => {
       const state = {
-        modalState: { type: 'create-poll' },
-        actions: { close: mockCloseModal },
+        modalState: { type: 'create-poll' as const },
+        actions: { close: mockCloseModal, open: vi.fn() },
       };
       return selector(state);
     });
@@ -100,8 +100,8 @@ describe('ActivityModals', () => {
   it('투표 수정 모달이 열리면 해당 ID의 투표 데이터를 initialData로 전달한다', () => {
     vi.mocked(useActivityModalStore).mockImplementation((selector) => {
       const state = {
-        modalState: { type: 'edit-poll', id: 'poll-1' },
-        actions: { close: mockCloseModal },
+        modalState: { type: 'edit-poll' as const, id: 'poll-1' },
+        actions: { close: mockCloseModal, open: vi.fn() },
       };
       return selector(state);
     });
@@ -122,8 +122,8 @@ describe('ActivityModals', () => {
   it('Q&A 생성 모달이 열리면 isEditMode가 false이고 initialData가 undefined이다', () => {
     vi.mocked(useActivityModalStore).mockImplementation((selector) => {
       const state = {
-        modalState: { type: 'create-qna' },
-        actions: { close: mockCloseModal },
+        modalState: { type: 'create-qna' as const },
+        actions: { close: mockCloseModal, open: vi.fn() },
       };
       return selector(state);
     });
@@ -144,8 +144,8 @@ describe('ActivityModals', () => {
   it('Q&A 수정 모달이 열리면 해당 ID의 Q&A 데이터를 initialData로 전달한다', () => {
     vi.mocked(useActivityModalStore).mockImplementation((selector) => {
       const state = {
-        modalState: { type: 'edit-qna', id: 'qna-1' },
-        actions: { close: mockCloseModal },
+        modalState: { type: 'edit-qna' as const, id: 'qna-1' },
+        actions: { close: mockCloseModal, open: vi.fn() },
       };
       return selector(state);
     });
