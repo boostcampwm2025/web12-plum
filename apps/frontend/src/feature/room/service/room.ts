@@ -8,6 +8,7 @@ export interface RoomEventHandlers {
   onUserJoined: ServerToClientEvents['user_joined'];
   onUserLeft: ServerToClientEvents['user_left'];
   onRoomEnd: ServerToClientEvents['room_end'];
+  onSpeakerDetected: ServerToClientEvents['speaker_detected'];
 }
 
 /**
@@ -45,6 +46,7 @@ export class RoomService {
       SocketClient.on('user_joined', handlers.onUserJoined),
       SocketClient.on('user_left', handlers.onUserLeft),
       SocketClient.on('room_end', handlers.onRoomEnd),
+      SocketClient.on('speaker_detected', handlers.onSpeakerDetected),
     ]);
 
     this.unsubscribers = results;

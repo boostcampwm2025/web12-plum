@@ -82,6 +82,11 @@ export function useRoomEventHandlers() {
           mediaActions.removeRemoteStreamByParticipant(data.id, 'audio');
           mediaActions.removeRemoteStreamByParticipant(data.id, 'screen');
         },
+        onSpeakerDetected: (data) => {
+          const myInfo = useRoomStore.getState().myInfo;
+          if (myInfo && data.participantId === myInfo.id) return;
+          roomActions.addSpeakerToOrder(data.participantId);
+        },
       });
 
       // MediaConnectionService 이벤트 핸들러
