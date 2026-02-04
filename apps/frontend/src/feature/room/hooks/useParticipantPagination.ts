@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useShallow } from 'zustand/shallow';
 import { useRoomStore } from '../stores/useRoomStore';
 
@@ -13,6 +13,14 @@ export function useParticipantPagination(dynamicItemsPerPage: number | null) {
   const itemsPerPage = dynamicItemsPerPage !== null ? Math.min(MAX_ITEMS, dynamicItemsPerPage) : 0;
 
   const totalPages = Math.ceil(participants.length / itemsPerPage);
+
+  // itemsPerPage 또는 participants.length 변경 시 currentPage가 유효 범위를 벗어나면 조정
+  useEffect(() => {
+    const maxPage = Math.max(0, totalPages - 1);
+    if (currentPage > maxPage) {
+      setCurrentPage(maxPage);
+    }
+  }, [itemsPerPage, participants.length, totalPages, currentPage]);
   const startIndex = currentPage * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   const currentItems = participants.slice(startIndex, endIndex);
