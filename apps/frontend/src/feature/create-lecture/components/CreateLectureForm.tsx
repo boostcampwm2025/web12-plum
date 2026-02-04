@@ -14,6 +14,7 @@ import { getUserFriendlyError } from '@/shared/api';
 
 import { lectureFormDefaultValues } from '../schema';
 import { useActivityModalStore } from '../store/useActivityModalStore';
+import { useActivityDataStore } from '../store/useActivityDataStore';
 import { useCreateRoom } from '../hooks/useCreateRoom';
 import { ActivityModals } from './ActivityModals';
 import { PresentationSection } from './PresentationSection';
@@ -34,9 +35,12 @@ import { LectureNameSection } from './LectureNameSection';
  */
 function SubmitButton() {
   const navigate = useNavigate();
-  const { handleSubmit, formState } = useFormContext<CreateRoomRequest>();
+  const polls = useActivityDataStore((state) => state.polls);
+  const qnas = useActivityDataStore((state) => state.qnas);
+
   const { addToast } = useToastStore((state) => state.actions);
   const { createRoom, isSubmitting } = useCreateRoom();
+  const { handleSubmit, formState } = useFormContext<CreateRoomRequest>();
 
   /**
    * 폼 제출 최종 핸들러
@@ -49,7 +53,9 @@ function SubmitButton() {
    */
   const onSubmit = async (data: CreateRoomRequest) => {
     try {
-      const response = await createRoom(data);
+      // 스토어의 활동 데이터(투표/Q&A)를 폼 데이터에 병합
+      const requestData: CreateRoomRequest = { ...data, polls, qnas };
+      const response = await createRoom(requestData);
       navigate(ROUTES.ROOM(response.roomId), { replace: true });
     } catch (error) {
       logger.ui.error('강의실 생성 실패:', error);
@@ -75,12 +81,13 @@ function SubmitButton() {
  * 강의실 생성을 위한 모든 입력 섹션과 상태 관리 로직을 총괄하는 메인 폼 컨테이너
  *
  * 1. `useForm`을 초기화하고 Zod 스키마를 연동하여 강력한 타입 검증 환경 구축.
- * 2. `useEffect`를 통해 컴포넌트 파기 시 열려 있을 수 있는 활동 모달 상태를 초기화.
+ * 2. `useEffect`를 통해 컴포넌트 파기 시 전역 모달 및 활동 데이터 스토어 상태 초기화.
  * 3. 각 입력 섹션(강의명, 호스트명, 동의항목 등)을 배치하고 `FormProvider`로 감싸 데이터 흐름 연결.
  * 4. 활동 생성을 위한 `ActivityModals`를 폼 바깥 영역에 배치하여 레이아웃 간섭 방지.
  */
 export function CreateLectureForm() {
   const { close: closeModal } = useActivityModalStore((state) => state.actions);
+  const { reset: resetActivityData } = useActivityDataStore((state) => state.actions);
 
   const formMethods = useForm<CreateRoomRequest>({
     resolver: zodResolver(createLectureSchema),
@@ -88,10 +95,13 @@ export function CreateLectureForm() {
     mode: 'onChange',
   });
 
-  // 컴포넌트 언마운트 시 모달 상태 초기화
+  // 컴포넌트 언마운트 시 스토어 상태 초기화
   useEffect(() => {
-    return () => closeModal();
-  }, [closeModal]);
+    return () => {
+      closeModal();
+      resetActivityData();
+    };
+  }, [closeModal, resetActivityData]);
 
   return (
     <FormProvider {...formMethods}>
