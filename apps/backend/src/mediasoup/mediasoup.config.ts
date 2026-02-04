@@ -98,13 +98,13 @@ export const mediasoupConfig = {
   // 발화자 감지를 위한 오디오 레벨 모니터링
   audioLevelObserver: {
     maxEntries: 1, // 한 번에 감지할 최대 발화자 수
-    threshold: -50, // dBov 기준
+    threshold: -40, // dBov 기준
     interval: 300, // 감지 주기 (ms)
   },
 
   // 발화 판정 설정
   speakerDetection: {
-    minDuration: 500, // 최소 발화 지속시간 (ms) - 연속 발화 시 발화자로 판정
+    minDuration: 800, // 최소 발화 지속시간 (ms) - 연속 발화 시 발화자로 판정
     cooldownTime: 2000, // 동일 참가자 재발송 방지 시간 (ms)
   },
 };

@@ -141,15 +141,16 @@ export class AudioLevelObserverService {
         state.lastActiveTime = now;
       }
 
-      // 발화 판정: minDuration 충족 여부 확인
+      // 발화 판정: minDuration 충족 시 confirmed 상태로 변경
       const duration = now - state.startTime;
       if (!state.isConfirmed && duration >= minDuration) {
         state.isConfirmed = true;
+      }
 
-        // 쿨다운 체크
+      // confirmed된 발화자만 이벤트 발송 (cooldown 간격으로)
+      if (state.isConfirmed) {
         const lastEmit = emitMap.get(participantId) || 0;
         if (now - lastEmit >= cooldownTime) {
-          // 이벤트 발송
           this.eventEmitter.emit('speaker.detected', {
             roomId,
             participantId,
