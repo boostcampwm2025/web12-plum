@@ -17,6 +17,7 @@ import { mediasoupConfig } from './mediasoup.config.js';
 import { ConsumerAppData, ProducerAppData, RoomType } from './mediasoup.type.js';
 import { PrometheusService } from '../prometheus/prometheus.service.js';
 import { MultiRouterManagerService } from './multi-router-manager.service.js';
+import { AudioLevelObserverService } from './audio-level-observer.service.js';
 
 /**
  * Mediasoup Worker 및 Router 관리 서비스
@@ -42,6 +43,7 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
   constructor(
     private readonly prometheusService: PrometheusService,
     private readonly multiRouterManager: MultiRouterManagerService,
+    private readonly audioLevelObserverService: AudioLevelObserverService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
@@ -140,6 +142,9 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
 
       this.logger.log(`✅ Router이 ${roomId} 강의실에 생성되었습니다. (Worker PID: ${worker.pid})`);
 
+      // AudioLevelObserver 생성 (싱글 라우터)
+      await this.audioLevelObserverService.createObserver(roomId, 0, router);
+
       // Prometheus 메트릭 업데이트
       this.prometheusService.setMediasoupRouters(this.routers.size);
 
@@ -170,6 +175,11 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
       // 첫 번째 Router를 legacy Map에도 저장 (하위 호환성)
       if (routers.length > 0) {
         this.routers.set(roomId, routers[0]);
+      }
+
+      // AudioLevelObserver 생성 (모든 라우터)
+      for (let i = 0; i < routers.length; i++) {
+        await this.audioLevelObserverService.createObserver(roomId, i, routers[i]);
       }
 
       // Prometheus 메트릭 업데이트 - 실제 전체 Router 수 반영
@@ -233,6 +243,8 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
    * 모든 Router와 PipeProducer 정리
    */
   async closeRoutersWithStrategy(roomId: string): Promise<void> {
+    await this.audioLevelObserverService.cleanupRoom(roomId);
+
     await this.multiRouterManager.cleanupRoom(roomId);
     this.routers.delete(roomId);
 
@@ -287,6 +299,13 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
    */
   removeParticipantFromRouter(roomId: string, participantId: string): void {
     this.multiRouterManager.removeParticipant(roomId, participantId);
+  }
+
+  /**
+   * 발화 상태 정리 (참가자 퇴장 시)
+   */
+  cleanupParticipantSpeakerState(roomId: string, participantId: string): void {
+    this.audioLevelObserverService.removeParticipantState(roomId, participantId);
   }
 
   /**
@@ -492,6 +511,7 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
     participantId: string,
     source: MediaType,
     rtpParameters: RtpParameters,
+    roomId?: string,
   ): Promise<Producer<ProducerAppData>> {
     const transport = this.transports.get(transportId);
     if (!transport) throw new Error(`${transportId} Transport를 찾을 수 없습니다.`);
@@ -510,7 +530,29 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
     const producerKind: 'video' | 'audio' | 'screen' =
       source === 'screen' ? 'screen' : (kind as 'video' | 'audio');
 
+    // Audio producer를 AudioLevelObserver에 추가
+    if (kind === 'audio' && roomId) {
+      let routerIndex = 0;
+      try {
+        routerIndex = this.multiRouterManager.getParticipantRouterIndex(roomId, participantId);
+      } catch {
+        // 싱글 라우터 폴백
+        routerIndex = 0;
+      }
+      await this.audioLevelObserverService.addProducer(roomId, routerIndex, producer);
+    }
+
     producer.observer.on('close', () => {
+      if (kind === 'audio' && roomId) {
+        let routerIndex = 0;
+        try {
+          routerIndex = this.multiRouterManager.getParticipantRouterIndex(roomId, participantId);
+        } catch {
+          routerIndex = 0;
+        }
+        void this.audioLevelObserverService.removeProducer(roomId, routerIndex, producer.id);
+      }
+
       this.producers.delete(producer.id);
       this.logger.log(`Producer 닫힘 (id: ${producer.id})`);
 

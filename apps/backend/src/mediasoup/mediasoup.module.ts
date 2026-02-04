@@ -1,6 +1,7 @@
 import { Module, Global } from '@nestjs/common';
 import { MediasoupService } from './mediasoup.service.js';
 import { MultiRouterManagerService } from './multi-router-manager.service.js';
+import { AudioLevelObserverService } from './audio-level-observer.service.js';
 import { PrometheusModule } from '../prometheus/prometheus.module.js';
 
 /**
@@ -11,7 +12,7 @@ import { PrometheusModule } from '../prometheus/prometheus.module.js';
 @Global()
 @Module({
   imports: [PrometheusModule],
-  providers: [MediasoupService, MultiRouterManagerService],
-  exports: [MediasoupService, MultiRouterManagerService],
+  providers: [MediasoupService, MultiRouterManagerService, AudioLevelObserverService],
+  exports: [MediasoupService, MultiRouterManagerService, AudioLevelObserverService],
 })
 export class MediasoupModule {}
