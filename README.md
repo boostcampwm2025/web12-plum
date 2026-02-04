@@ -74,6 +74,79 @@
 
 <br />
 
+<img width="1209" height="60" alt="image" src="https://github.com/user-attachments/assets/35be108e-5d39-4cac-9ee5-8ef439e14a95" />
+
+<br />
+<br />
+
+<img width="2418" height="72" alt="image" src="https://github.com/user-attachments/assets/feee61e9-9962-4b67-a3ab-f7410aee6aa8" />
+
+강의 시작 전에 투표와 Q&A를 미리 구성하고 발표 자료를 업로드하여 체계적인 강의 준비가 가능합니다.
+
+<br />
+
+<div align="center">
+  <img width="600" alt="image" src="https://github.com/user-attachments/assets/36e64870-a980-445a-aab7-a6b179c44b37" />
+</div>
+
+<br />
+<br />
+
+<img width="2418" height="72" alt="image" src="https://github.com/user-attachments/assets/821d1b10-4503-433b-93bc-fbf81378e571" />
+
+카메라를 통해 손가락 제스처를 인식하여 말 없이도 의견을 표현할 수 있으며, 투표 참여도 손가락으로 간편하게 가능합니다.
+
+<br />
+
+<div align="center">
+  <img width="600" alt="image" src="https://github.com/user-attachments/assets/c5270713-bc34-4e68-8e92-88731ca7934a" />
+</div>
+
+<br />
+<br />
+
+<img width="2418" height="72" alt="image" src="https://github.com/user-attachments/assets/ca400e62-c0c3-420e-a1e9-00bfbede05d3" />
+
+강의 중 즉석에서 투표를 생성하고 청중의 의견을 실시간으로 수집할 수 있으며, 제스처로도 참여할 수 있습니다.
+
+<br />
+
+<div align="center">
+  <img width="600" alt="image" src="https://github.com/user-attachments/assets/cad6614e-774c-4f98-b04a-95960fdf5b94" /><br />
+  <figcaption align="center">▲ 발표자 기준</figcaption>
+</div>
+
+<br />
+
+<div align="center">
+  <img width="600" alt="image" src="https://github.com/user-attachments/assets/91b03080-f9ab-4b6e-a070-19ffc30bd039" /><br />
+  <figcaption align="center">▲ 청중 기준</figcaption>
+</div>
+
+<br />
+<br />
+
+<img width="2418" height="72" alt="image" src="https://github.com/user-attachments/assets/4977d398-a136-4c1a-bbeb-1db7fba1afbf" />
+
+강의 중 질문을 던지고 청중의 답변을 실시간으로 받아볼 수 있습니다. 익명 답변 수집 기능을 통해 답변에 대한 심리적 부담감을 덜어줍니다.
+
+<br />
+
+<div align="center">
+  <img width="600" alt="image" src="https://github.com/user-attachments/assets/a39aab06-0e68-4401-9b5f-15cbc37005e0" /><br />
+  <figcaption align="center">▲ 발표자 기준</figcaption>
+</div>
+
+<br />
+
+<div align="center">
+  <img width="600" alt="image" src="https://github.com/user-attachments/assets/45abc02b-bf4c-4ba8-8600-3344e500cae0" /><br />
+  <figcaption align="center">▲ 청중 기준</figcaption>
+</div>
+
+
+<br />
+
 ## 🚀 Quick Start
 
 ### ⚙️ Installation & Run
