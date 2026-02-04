@@ -46,7 +46,7 @@
 **2. 소통의 단절: "듣고 있나요?"라는 질문의 반복**
 
 <div align="center">
-  <img width="600" alt="image" src="https://github.com/user-attachments/assets/ced4cc95-8f00-4ce8-b241-510ccc25944f" />
+  <img width="600" alt="image" src="https://github.com/user-attachments/assets/9128770c-4a2b-4c83-976c-1d797cad34c7" />
 </div>
 
 한국교육학술정보원(KERIS)의 조사에 따르면, 온라인 교육 환경에서 강의자와 학습자 간의 가장 큰 장벽은 상호작용의 부재입니다.
@@ -217,7 +217,7 @@ pnpm dev
 </h2>
 
 <h3>
-  <img width="2418" height="72" alt="image" src="https://github.com/user-attachments/assets/feee61e9-9962-4b67-a3ab-f7410aee6aa8" />
+  <img width="2418" height="72" alt="image" src="https://github.com/user-attachments/assets/636ce89b-bec3-41a2-b608-d5fda7b9d1b7" />
 </h3>
 
 강의 시작 전에 투표와 Q&A를 미리 구성하고 발표 자료를 업로드하여 체계적인 강의 준비가 가능합니다.
@@ -232,7 +232,7 @@ pnpm dev
 <br />
 
 <h3>
-  <img width="2418" height="72" alt="image" src="https://github.com/user-attachments/assets/821d1b10-4503-433b-93bc-fbf81378e571" />
+  <img width="2418" height="72" alt="image" src="https://github.com/user-attachments/assets/eabe2358-c212-4e4b-a184-91fc83a5df44" />
 </h3>
 
 카메라를 통해 손가락 제스처를 인식하여 말 없이도 의견을 표현할 수 있으며, 투표 참여도 손가락으로 간편하게 가능합니다.
@@ -247,7 +247,7 @@ pnpm dev
 <br />
 
 <h3>
-  <img width="2418" height="72" alt="image" src="https://github.com/user-attachments/assets/ca400e62-c0c3-420e-a1e9-00bfbede05d3" />
+  <img width="2418" height="72" alt="image" src="https://github.com/user-attachments/assets/ee4496af-d4b6-4547-a9e2-e851dfcbf9c5" />
 </h3>
 
 강의 중 즉석에서 투표를 생성하고 청중의 의견을 실시간으로 수집할 수 있으며, 제스처로도 참여할 수 있습니다.
@@ -270,7 +270,7 @@ pnpm dev
 <br />
 
 <h3>
-  <img width="2418" height="72" alt="image" src="https://github.com/user-attachments/assets/4977d398-a136-4c1a-bbeb-1db7fba1afbf" />
+  <img width="2418" height="72" alt="image" src="https://github.com/user-attachments/assets/735a7d5d-2da9-4ced-b932-a6eff8918a54" />
 </h3>
 
 강의 중 질문을 던지고 청중의 답변을 실시간으로 받아볼 수 있습니다. 익명 답변 수집 기능을 통해 답변에 대한 심리적 부담감을 덜어줍니다.
@@ -293,7 +293,7 @@ pnpm dev
 <br />
 
 <h3>
-  <img width="2418" height="72" alt="image" src="https://github.com/user-attachments/assets/fb816998-37f7-4dc6-b745-b26a4079db06" />
+  <img width="2418" height="72" alt="image" src="https://github.com/user-attachments/assets/899f7dc4-0bc1-4a69-b0d5-acadac0b3805" />
 </h3>
 
 강의 중 텍스트 기반 채팅으로 자유롭게 소통하고 질문을 주고받을 수 있습니다.
@@ -308,7 +308,7 @@ pnpm dev
 <br />
 
 <h3>
-  <img width="2418" height="72" alt="image" src="https://github.com/user-attachments/assets/fb816998-37f7-4dc6-b745-b26a4079db06" />
+  <img width="2418" height="72" alt="image" src="https://github.com/user-attachments/assets/491027a2-09ea-4ed6-9fa0-cd6f51e51c39" />
 </h3>
 
 제스처, 투표, Q&A 참여 등을 기반으로 실시간 참여도 점수와 순위를 확인할 수 있어 수강생의 능동적 참여를 유도합니다.
@@ -316,7 +316,7 @@ pnpm dev
 <br />
 
 <div align="center">
-  <img width="600" alt="스크린샷 2026-02-04 오후 12 27 21" src="https://github.com/user-attachments/assets/01ae8ff3-3dcd-4136-8a7e-e670e146304a" />
+  <img width="600" alt="스크린샷 2026-02-04 오후 12 27 21" src="https://github.com/user-attachments/assets/2cfa51ee-f69b-408d-b8c9-e8133157957c" />
 </div>
 
 <br />
