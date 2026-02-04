@@ -22,7 +22,17 @@ export function PollManagementTabs() {
 
   const scheduledPolls = useMemo(() => polls.filter((poll) => poll.status === 'pending'), [polls]);
   const activePoll = useMemo(() => polls.find((poll) => poll.status === 'active'), [polls]);
-  const completedPolls = useMemo(() => polls.filter((poll) => poll.status === 'ended'), [polls]);
+  const completedPolls = useMemo(
+    () =>
+      polls
+        .filter((poll) => poll.status === 'ended')
+        .sort((a, b) => {
+          const aTimestamp = a.endedAt ? Date.parse(a.endedAt) : Date.parse(a.updatedAt);
+          const bTimestamp = b.endedAt ? Date.parse(b.endedAt) : Date.parse(b.updatedAt);
+          return bTimestamp - aTimestamp;
+        }),
+    [polls],
+  );
   const previousActivePollIdRef = useRef<string | null>(null);
 
   const voteTabs: TabItem[] = useMemo(
