@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useShallow } from 'zustand/shallow';
 import { useRoomStore } from '../stores/useRoomStore';
 
@@ -13,15 +13,16 @@ export function useParticipantPagination(dynamicItemsPerPage: number | null) {
   const itemsPerPage = dynamicItemsPerPage !== null ? Math.min(MAX_ITEMS, dynamicItemsPerPage) : 0;
 
   const totalPages = Math.ceil(participants.length / itemsPerPage);
+  const maxPage = Math.max(0, totalPages - 1);
 
-  // itemsPerPage 또는 participants.length 변경 시 currentPage가 유효 범위를 벗어나면 조정
-  useEffect(() => {
-    const maxPage = Math.max(0, totalPages - 1);
-    if (currentPage > maxPage) {
-      setCurrentPage(maxPage);
-    }
-  }, [itemsPerPage, participants.length, totalPages, currentPage]);
-  const startIndex = currentPage * itemsPerPage;
+  // 렌더 중 동기적으로 유효한 페이지 계산 (consume/stop 사이클 방지)
+  const effectiveCurrentPage = Math.min(currentPage, maxPage);
+
+  if (currentPage !== effectiveCurrentPage) {
+    setCurrentPage(effectiveCurrentPage);
+  }
+
+  const startIndex = effectiveCurrentPage * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   const currentItems = participants.slice(startIndex, endIndex);
 
@@ -33,15 +34,15 @@ export function useParticipantPagination(dynamicItemsPerPage: number | null) {
     setCurrentPage((prev) => Math.min(totalPages - 1, prev + 1));
   };
 
-  const hasPrevPage = currentPage > 0;
-  const hasNextPage = currentPage < totalPages - 1;
+  const hasPrevPage = effectiveCurrentPage > 0;
+  const hasNextPage = effectiveCurrentPage < totalPages - 1;
 
   /**
    * 현재 페이지(P)를 기준으로 P-1, P, P+1 페이지의 참가자들만 렌더링
    */
   const visibleWindowParticipants = useMemo(() => {
     // 현재 페이지의 시작 인덱스
-    const currentStart = currentPage * itemsPerPage;
+    const currentStart = effectiveCurrentPage * itemsPerPage;
 
     // 윈도우 시작: 이전 페이지의 시작점 (0보다 작을 수 없음)
     const windowStart = Math.max(0, currentStart - itemsPerPage);
@@ -50,10 +51,10 @@ export function useParticipantPagination(dynamicItemsPerPage: number | null) {
     const windowEnd = currentStart + itemsPerPage * 2;
 
     return participants.slice(windowStart, windowEnd);
-  }, [participants, currentPage, itemsPerPage]);
+  }, [participants, effectiveCurrentPage, itemsPerPage]);
 
   return {
-    currentPage,
+    currentPage: effectiveCurrentPage,
     currentItems,
     itemsPerPage,
     totalPages,
