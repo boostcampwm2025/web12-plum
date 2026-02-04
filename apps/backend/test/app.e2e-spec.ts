@@ -7,7 +7,7 @@ import { SOCKET_CONFIG } from '../src/common/constants/socket.constants.js';
 import { RedisModule } from '../src/redis/redis.module.js';
 import { RedisService } from '../src/redis/redis.service.js';
 import * as Managers from '../src/redis/repository-manager/index.js';
-import { ConfigService } from '@nestjs/config'
+import { ConfigService } from '@nestjs/config';
 
 jest.mock('chokidar', () => ({
   watch: jest.fn().mockReturnValue({

@@ -314,7 +314,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       if (isAudio) {
         this.recordService
-          .startRecording(metadata.roomId, producer.id, isPresenter)
+          .startRecording(metadata.roomId, participant.id, producer.id, isPresenter)
           .catch((err) => this.logger.error(`녹음 시작 실패: ${err.message}`));
       }
 
@@ -392,7 +392,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
             await this.recordService.stopParticipantRecording(
               metadata.roomId,
               participant.role,
-              data.producerId,
+              participant.id,
             );
           }
 
@@ -675,11 +675,24 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const room = await this.roomManagerService.findOne(roomId);
 
       // 발표자가 미복귀한 경우에만 방 전체 종료
-      if (participant && room && participant.role === 'presenter' && room.presenter === participantId) {
-        await this.terminateRoom(metadata.roomId, `발표자(${participant.name}) 미복귀로 인한 자동 종료`);
+      if (
+        participant &&
+        room &&
+        participant.role === 'presenter' &&
+        room.presenter === participantId
+      ) {
+        await this.terminateRoom(
+          metadata.roomId,
+          `발표자(${participant.name}) 미복귀로 인한 자동 종료`,
+        );
       } else {
         // 일반 유저면 기존처럼 해당 유저만 정리
-        await this.cleanup('reconnect expired', metadata.roomId, participantId!, metadata.transportIds);
+        await this.cleanup(
+          'reconnect expired',
+          metadata.roomId,
+          participantId!,
+          metadata.transportIds,
+        );
       }
     } catch (error) {
       this.logger.error(`❌ [reconnect expired] 처리 중 오류: ${error.message}`);

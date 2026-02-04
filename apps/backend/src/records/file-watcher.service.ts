@@ -4,7 +4,7 @@ import { join, parse } from 'path';
 import { writeFile, unlink } from 'fs/promises';
 import { spawn } from 'child_process';
 
-import { RecordingManagerService } from '../redis/repository-manager/index.js';
+import { RecordingManagerService, RoomManagerService } from '../redis/repository-manager/index.js';
 import { BATCH_SIZE, RECORD_DIR, SEGMENT_TIME } from './record.constant.js';
 import { ChatLog, STTWorkerResponse } from './record.types.js';
 import { SummarizeService } from '../summarize/summarize.service.js';
@@ -28,6 +28,7 @@ export class FileWatcherService implements OnModuleInit, OnModuleDestroy {
 
   constructor(
     private readonly recordingManager: RecordingManagerService,
+    private readonly roomManagerService: RoomManagerService,
     private readonly summarizeService: SummarizeService,
   ) {}
 
@@ -263,6 +264,9 @@ export class FileWatcherService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async checkAllProcessingFinished(roomId: string) {
+    const room = await this.roomManagerService.findOne(roomId);
+    if (!room || room.status !== 'ended') return;
+
     const pendingCount = await this.recordingManager.getPendingCount(roomId);
     if (pendingCount === 0) {
       this.logger.log(`🎊 [${roomId}] 모든 STT 작업 완료. 요약 프로세스를 시작할 수 있습니다.`);
