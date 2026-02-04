@@ -157,7 +157,7 @@ export function PollModal({
       onClose={onClose}
       className="max-w-181.5"
     >
-      <header className="flex items-center justify-between pb-4">
+      <header className="flex items-center justify-between pb-4 pl-2">
         <Modal.Title>{title}</Modal.Title>
         <Modal.CloseButton onClose={onClose} />
       </header>

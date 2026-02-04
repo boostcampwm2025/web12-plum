@@ -66,7 +66,7 @@ describe('AppController (e2e)', () => {
         {
           provide: Managers.RecordingManagerService,
           useValue: mockManagers.RecordingManagerService,
-        }
+        },
       ],
       exports: [RedisService, ...Object.values(Managers)],
     })

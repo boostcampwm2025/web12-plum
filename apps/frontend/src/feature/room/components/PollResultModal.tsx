@@ -32,7 +32,7 @@ export function PollResultModal() {
       onClose={handleClose}
       className="max-w-md"
     >
-      <div className="mb-2 flex items-center justify-between">
+      <div className="mb-2 flex items-center justify-between pl-2">
         <Modal.Title>투표 결과</Modal.Title>
         <Modal.CloseButton onClose={handleClose} />
       </div>

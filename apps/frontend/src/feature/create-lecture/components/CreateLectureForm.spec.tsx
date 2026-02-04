@@ -60,7 +60,9 @@ describe('CreateLectureForm 통합 테스트', () => {
 
     await waitFor(() => {
       expect(mockCreateRoom).toHaveBeenCalled();
-      expect(mockNavigate).toHaveBeenCalledWith(expect.stringContaining('room-123'));
+      expect(mockNavigate).toHaveBeenCalledWith(expect.stringContaining('room-123'), {
+        replace: true,
+      });
     });
   });
 

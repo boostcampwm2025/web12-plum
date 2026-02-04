@@ -33,7 +33,7 @@ const mockManagers = {
   QnaManagerService: {},
   ChatManagerService: {},
   ActivityScoreManagerService: {},
-  RecordingManagerService: {}
+  RecordingManagerService: {},
 };
 
 describe('RoomController (E2E) - 데코레이터 및 유효성 검사', () => {
@@ -67,7 +67,7 @@ describe('RoomController (E2E) - 데코레이터 및 유효성 검사', () => {
         {
           provide: Managers.RecordingManagerService,
           useValue: mockManagers.RecordingManagerService,
-        }
+        },
       ],
       exports: [RedisService, ...Object.values(Managers)],
     })
