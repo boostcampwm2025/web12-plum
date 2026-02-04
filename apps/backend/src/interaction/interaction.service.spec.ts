@@ -17,6 +17,7 @@ describe('InteractionService (투표 및 Q&A 생성 테스트)', () => {
     getFinalResults: jest.fn(),
     getVoteCounts: jest.fn(),
     getMultiVoteCounts: jest.fn(),
+    getVoteGroups: jest.fn(),
     getVotedOptionId: jest.fn(),
   };
 
@@ -147,8 +148,8 @@ describe('InteractionService (투표 및 Q&A 생성 테스트)', () => {
           id: 'poll-active',
           status: 'active',
           options: [
-            { id: 0, value: 'A', count: 0 },
-            { id: 1, value: 'B', count: 0 },
+            { id: 0, value: 'A', count: 0, voters: [] },
+            { id: 1, value: 'B', count: 0, voters: [] },
           ],
         },
       ];
@@ -157,14 +158,19 @@ describe('InteractionService (투표 및 Q&A 생성 테스트)', () => {
       mockPollManager.getMultiVoteCounts.mockResolvedValue({
         'poll-active': { 0: 3, 1: 5 },
       });
+      mockPollManager.getVoteGroups.mockResolvedValue({
+        0: [{ id: 'u1', name: 'A' }],
+        1: [{ id: 'u2', name: 'B' }],
+      });
 
       const result = await service.getPolls(roomId);
 
       expect(result[0].options).toEqual([
-        { id: 0, value: 'A', count: 3 },
-        { id: 1, value: 'B', count: 5 },
+        { id: 0, value: 'A', count: 3, voters: [{ id: 'u1', name: 'A' }] },
+        { id: 1, value: 'B', count: 5, voters: [{ id: 'u2', name: 'B' }] },
       ]);
       expect(mockPollManager.getMultiVoteCounts).toHaveBeenCalledWith(['poll-active']);
+      expect(mockPollManager.getVoteGroups).toHaveBeenCalledWith('poll-active');
     });
 
     it('진행 중인 투표가 여러 개면 각각의 카운트를 합쳐서 반환해야 한다', async () => {
@@ -174,16 +180,16 @@ describe('InteractionService (투표 및 Q&A 생성 테스트)', () => {
           id: 'poll-1',
           status: 'active',
           options: [
-            { id: 0, value: 'A', count: 0 },
-            { id: 1, value: 'B', count: 0 },
+            { id: 0, value: 'A', count: 0, voters: [] },
+            { id: 1, value: 'B', count: 0, voters: [] },
           ],
         },
         {
           id: 'poll-2',
           status: 'active',
           options: [
-            { id: 0, value: 'C', count: 0 },
-            { id: 1, value: 'D', count: 0 },
+            { id: 0, value: 'C', count: 0, voters: [] },
+            { id: 1, value: 'D', count: 0, voters: [] },
           ],
         },
         {
@@ -198,19 +204,26 @@ describe('InteractionService (투표 및 Q&A 생성 테스트)', () => {
         'poll-1': { 0: 2, 1: 4 },
         'poll-2': { 0: 1, 1: 3 },
       });
+      mockPollManager.getVoteGroups.mockImplementation(async (pollId: string) => {
+        if (pollId === 'poll-1') return { 0: [{ id: 'u1', name: 'A' }] };
+        if (pollId === 'poll-2') return { 1: [{ id: 'u2', name: 'B' }] };
+        return {};
+      });
 
       const result = await service.getPolls(roomId);
 
       expect(result[0].options).toEqual([
-        { id: 0, value: 'A', count: 2 },
-        { id: 1, value: 'B', count: 4 },
+        { id: 0, value: 'A', count: 2, voters: [{ id: 'u1', name: 'A' }] },
+        { id: 1, value: 'B', count: 4, voters: [] },
       ]);
       expect(result[1].options).toEqual([
-        { id: 0, value: 'C', count: 1 },
-        { id: 1, value: 'D', count: 3 },
+        { id: 0, value: 'C', count: 1, voters: [] },
+        { id: 1, value: 'D', count: 3, voters: [{ id: 'u2', name: 'B' }] },
       ]);
       expect(result[2]).toEqual(mockPolls[2]);
       expect(mockPollManager.getMultiVoteCounts).toHaveBeenCalledWith(['poll-1', 'poll-2']);
+      expect(mockPollManager.getVoteGroups).toHaveBeenCalledWith('poll-1');
+      expect(mockPollManager.getVoteGroups).toHaveBeenCalledWith('poll-2');
     });
   });
 

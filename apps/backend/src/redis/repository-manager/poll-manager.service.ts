@@ -170,6 +170,30 @@ export class PollManagerService extends BaseRedisRepository<Poll> {
   }
 
   /**
+   * 특정 투표의 옵션별 투표자 목록 조회
+   */
+  async getVoteGroups(pollId: string): Promise<Record<number, Voter[]>> {
+    const client = this.redisService.getClient();
+    const voterKey = this.getVoterKey(pollId);
+    const votersRaw = await client.hgetall(voterKey);
+
+    const voterGroups: Record<number, Voter[]> = {};
+    Object.entries(votersRaw || {}).forEach(([pId, valueStr]) => {
+      const separatorIndex = valueStr.indexOf(':');
+      if (separatorIndex === -1) return;
+
+      const optionId = Number(valueStr.substring(0, separatorIndex));
+      if (Number.isNaN(optionId)) return;
+
+      const participantName = valueStr.substring(separatorIndex + 1);
+      if (!voterGroups[optionId]) voterGroups[optionId] = [];
+      voterGroups[optionId].push({ id: pId, name: participantName });
+    });
+
+    return voterGroups;
+  }
+
+  /**
    * 특정 참가자의 투표 선택지 조회
    */
   async getVotedOptionId(pollId: string, participantId: string): Promise<number | null> {

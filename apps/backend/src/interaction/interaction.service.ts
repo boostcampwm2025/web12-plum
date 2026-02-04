@@ -6,6 +6,7 @@ import {
   Poll,
   PollOption,
   PollPayload,
+  Voter,
   Qna,
   QnaPayload,
   UpdatePollStatusSubPayload,
@@ -96,17 +97,29 @@ export class InteractionService {
     if (activePollIds.length === 0) return polls;
 
     const countsByPoll = await this.pollManagerService.getMultiVoteCounts(activePollIds);
+    const votersByPoll = new Map<string, Record<number, Voter[]>>(
+      await Promise.all(
+        activePollIds.map(async (pollId) => {
+          const groups = await this.pollManagerService.getVoteGroups(pollId);
+          return [pollId, groups] as const;
+        }),
+      ),
+    );
+
     return polls.map((poll) => {
       if (poll.status !== 'active') return poll;
 
       const counts = countsByPoll[poll.id];
       if (!counts) return poll;
 
+      const voterGroups = votersByPoll.get(poll.id) || {};
+
       return {
         ...poll,
         options: poll.options.map((option) => ({
           ...option,
           count: counts[option.id] ?? option.count,
+          voters: voterGroups[option.id] ?? option.voters ?? [],
         })),
       };
     });
