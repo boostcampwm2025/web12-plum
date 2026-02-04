@@ -43,6 +43,7 @@ import {
   ProducerClosedPayload,
   ProduceRequest,
   ProduceResponse,
+  SpeakerDetectedPayload,
   ToggleMediaRequest,
   ToggleMediaResponse,
   UserJoinedPayload,
@@ -270,6 +271,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
         metadata.participantId,
         data.type,
         data.rtpParameters,
+        metadata.roomId,
       );
 
       await this.participantManagerService.updatePartial(metadata.participantId, {
@@ -704,6 +706,25 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.logger.log(`📢 [Consumer 종료] 대상 유저: ${participantId}, ID: ${consumerId}`);
   }
 
+  @OnEvent('speaker.detected')
+  async handleSpeakerDetected(payload: {
+    roomId: string;
+    participantId: string;
+    detectedAt: number;
+  }) {
+    const participant = await this.participantManagerService.findOne(payload.participantId);
+    if (!participant) return;
+
+    const broadcastPayload: SpeakerDetectedPayload = {
+      participantId: payload.participantId,
+      participantName: participant.name,
+      detectedAt: payload.detectedAt,
+    };
+
+    this.server.to(payload.roomId).emit('speaker_detected', broadcastPayload);
+    this.logger.log(`🗣️ [Speaker 감지] ${participant.name} (Room: ${payload.roomId})`);
+  }
+
   private async cleanupMediasoup(
     transportIds: string[],
     participant: Participant,
@@ -751,6 +772,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       // Multi-Router에서 참가자 제거
       this.mediasoupService.removeParticipantFromRouter(roomId, participantId);
+      this.mediasoupService.cleanupParticipantSpeakerState(roomId, participantId);
 
       await this.roomManagerService.removeParticipant(roomId, participantId);
       this.logger.log(`[${reason}] ${participant?.name || participantId} left room ${roomId}`);

@@ -101,6 +101,7 @@ describe('RoomGateway', () => {
             pipeProducerToAllRouters: jest.fn().mockResolvedValue(undefined),
             cleanupPipeProducers: jest.fn().mockResolvedValue(undefined),
             removeParticipantFromRouter: jest.fn(),
+            cleanupParticipantSpeakerState: jest.fn(),
             closeRoutersWithStrategy: jest.fn().mockResolvedValue(undefined),
           },
         },
