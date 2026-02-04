@@ -3,7 +3,7 @@ import { Button } from '@/shared/components/Button';
 import { Icon } from '@/shared/components/icon/Icon';
 
 import { useActivityModalStore } from '../store/useActivityModalStore';
-import { useActivityActions } from '../hooks/useActivityActions';
+import { useActivityDataStore } from '../store/useActivityDataStore';
 
 interface ActivityItemProps {
   type: 'poll' | 'qna';
@@ -72,13 +72,16 @@ function ActivityItem({ type, title, onEdit, onDelete }: ActivityItemProps) {
  * 현재 폼 상태에 저장된 모든 투표 및 Q&A 활동들을 리스트 형태로 나열
  * 활동이 없을 경우 사용자에게 안내 문구를 표시
  *
- * 1. `useActivityActions`를 통해 현재 폼에 등록된 `polls`, `qnas` 데이터 배열을 가져옴.
+ * 1. `useActivityDataStore`를 통해 전역 스토어에 저장된 `polls`, `qnas` 데이터 배열을 가져옴.
  * 2. 활동 데이터가 하나도 없을 경우 빈 상태 UI를 조건부 렌더링.
- * 3. 데이터가 존재할 경우 각 배열을 순회하며 `ActivityItem`을 렌더링하고, 인덱스 기반의 수정/삭제 로직을 연결.
+ * 3. 데이터가 존재할 경우 각 배열을 순회하며 `ActivityItem`을 렌더링하고, ID 기반의 수정/삭제 로직을 연결.
  */
-export function ActivityList() {
-  const { polls, qnas, actions } = useActivityActions();
+function ActivityList() {
+  const polls = useActivityDataStore((state) => state.polls);
+  const qnas = useActivityDataStore((state) => state.qnas);
+
   const { open: openModal } = useActivityModalStore((state) => state.actions);
+  const { removePoll, removeQna } = useActivityDataStore((state) => state.actions);
 
   const hasNoActivities = polls.length === 0 && qnas.length === 0;
 
@@ -96,22 +99,22 @@ export function ActivityList() {
   return (
     <div className="flex flex-col gap-2 rounded-lg border-2 border-gray-300 p-4">
       <ul className="flex flex-col gap-2">
-        {polls.map((item, index) => (
+        {polls.map((poll) => (
           <ActivityItem
-            key={item.id}
+            key={poll.id}
             type="poll"
-            title={item.title}
-            onEdit={() => openModal({ type: 'edit-poll', index })}
-            onDelete={() => actions.removePoll(index)}
+            title={poll.title}
+            onEdit={() => openModal({ type: 'edit-poll', id: poll.id })}
+            onDelete={() => removePoll(poll.id)}
           />
         ))}
-        {qnas.map((item, index) => (
+        {qnas.map((qna) => (
           <ActivityItem
-            key={item.id}
+            key={qna.id}
             type="qna"
-            title={item.title}
-            onEdit={() => openModal({ type: 'edit-qna', index })}
-            onDelete={() => actions.removeQna(index)}
+            title={qna.title}
+            onEdit={() => openModal({ type: 'edit-qna', id: qna.id })}
+            onDelete={() => removeQna(qna.id)}
           />
         ))}
       </ul>
