@@ -124,6 +124,9 @@ importers:
       '@nestjs/testing':
         specifier: ^10.4.15
         version: 10.4.20(@nestjs/common@10.4.20(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@10.4.20)(@nestjs/platform-express@10.4.20)
+      '@types/chokidar':
+        specifier: ^2.1.7
+        version: 2.1.7
       '@types/jest':
         specifier: ^29.5.12
         version: 29.5.14
@@ -2993,6 +2996,10 @@ packages:
 
   '@types/canvas-confetti@1.9.0':
     resolution: {integrity: sha512-aBGj/dULrimR1XDZLtG9JwxX1b4HPRF6CX9Yfwh3NvstZEm1ZL7RBnel4keCPSqs1ANRu1u2Aoz9R+VmtjYuTg==}
+
+  '@types/chokidar@2.1.7':
+    resolution: {integrity: sha512-A7/MFHf6KF7peCzjEC1BBTF8jpmZTokb3vr/A0NxRGfwRLK3Ws+Hq6ugVn6cJIMfM6wkCak/aplWrxbTcu8oig==}
+    deprecated: This is a stub types definition. chokidar provides its own type definitions, so you do not need this installed.
 
   '@types/connect@3.4.38':
     resolution: {integrity: sha512-K6uROf1LD88uDQqJCktA4yzL1YYAK6NgfsI0v/mTgyPKWsX1CnJ0XPSDhViejru1GcRkLWb8RlzFYJRqGUbaug==}
@@ -11510,6 +11517,10 @@ snapshots:
       '@types/responselike': 1.0.3
 
   '@types/canvas-confetti@1.9.0': {}
+
+  '@types/chokidar@2.1.7':
+    dependencies:
+      chokidar: 5.0.0
 
   '@types/connect@3.4.38':
     dependencies:
