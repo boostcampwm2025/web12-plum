@@ -242,7 +242,7 @@ export function RoomMenuBar({
 }: RoomMenuBarProps) {
   const roomTitle = useRoomStore((state) => state.roomTitle) || '강의실';
   const myRole = useRoomStore((state) => state.myInfo?.role);
-  const participantCount = useRoomStore((state) => state.participants.size);
+  const participantCount = useRoomStore((state) => state.participants.size) + 1; // 본인 포함
 
   return (
     <nav
