@@ -27,6 +27,7 @@ export interface RoomActions {
   setRoomTitle: (title: string) => void;
   setRouterRtpCapabilities: (capabilities: RtpCapabilities) => void;
   setRoomEnded: (isEnded: boolean) => void;
+  setParticipantAudioMuted: (participantId: string, isMuted: boolean) => void;
   initializeRoomData: (data: {
     myInfo: MyInfo;
     participants: ParticipantPayload[];
@@ -57,6 +58,7 @@ interface RoomState {
 
   // 참가자 목록
   participants: Map<string, Participant>; // id -> Participant
+  participantAudioMuted: Map<string, boolean>; // id -> muted
 }
 
 const initialState: Omit<RoomState, 'actions'> = {
@@ -65,6 +67,7 @@ const initialState: Omit<RoomState, 'actions'> = {
   routerRtpCapabilities: null,
   isRoomEnded: false,
   participants: new Map(),
+  participantAudioMuted: new Map(),
 };
 
 export const useRoomStore = create<RoomState>()(
@@ -76,6 +79,15 @@ export const useRoomStore = create<RoomState>()(
         setRoomTitle: (title) => set({ roomTitle: title }),
         setRouterRtpCapabilities: (capabilities) => set({ routerRtpCapabilities: capabilities }),
         setRoomEnded: (isEnded) => set({ isRoomEnded: isEnded }),
+        setParticipantAudioMuted: (participantId, isMuted) => {
+          set((state) => {
+            const current = state.participantAudioMuted.get(participantId);
+            if (current === isMuted) return state;
+            const next = new Map(state.participantAudioMuted);
+            next.set(participantId, isMuted);
+            return { participantAudioMuted: next };
+          });
+        },
 
         /** 참가자 목록 초기화 */
         initParticipants: (participantMap: Map<string, Participant>) => {
@@ -90,6 +102,7 @@ export const useRoomStore = create<RoomState>()(
          */
         initializeRoomData: ({ myInfo, participants, existingProducers }) => {
           const participantMap = new Map<string, Participant>();
+          const audioMutedMap = new Map<string, boolean>();
 
           // 전체 참가자 기본 정보 로드
           participants.forEach((participant) => {
@@ -109,10 +122,13 @@ export const useRoomStore = create<RoomState>()(
             const participant = participantMap.get(existingProducer.participantId);
             if (participant) {
               participant.producers.set(existingProducer.type, existingProducer.producerId);
+              if (existingProducer.type === 'audio') {
+                audioMutedMap.set(existingProducer.participantId, false);
+              }
             }
           });
 
-          set({ myInfo, participants: participantMap });
+          set({ myInfo, participants: participantMap, participantAudioMuted: audioMutedMap });
         },
 
         /** 참가자 추가 */
@@ -128,7 +144,12 @@ export const useRoomStore = create<RoomState>()(
               joinedAt: new Date(data.joinedAt),
               producers: new Map(),
             });
-            return { participants: newParticipants };
+
+            // 새 참가자는 기본적으로 음소거 상태 (audio producer 추가 시 해제됨)
+            const nextAudioMuted = new Map(state.participantAudioMuted);
+            nextAudioMuted.set(data.id, true);
+
+            return { participants: newParticipants, participantAudioMuted: nextAudioMuted };
           });
         },
 
@@ -137,7 +158,9 @@ export const useRoomStore = create<RoomState>()(
           set((state) => {
             const newParticipants = new Map(state.participants);
             newParticipants.delete(participantId);
-            return { participants: newParticipants };
+            const nextAudioMuted = new Map(state.participantAudioMuted);
+            nextAudioMuted.delete(participantId);
+            return { participants: newParticipants, participantAudioMuted: nextAudioMuted };
           });
         },
 
@@ -158,7 +181,12 @@ export const useRoomStore = create<RoomState>()(
               producers: updatedProducers,
             });
 
-            return { participants: newParticipants };
+            const nextAudioMuted = new Map(state.participantAudioMuted);
+            if (type === 'audio') {
+              nextAudioMuted.set(participantId, false);
+            }
+
+            return { participants: newParticipants, participantAudioMuted: nextAudioMuted };
           });
         },
 
@@ -179,7 +207,12 @@ export const useRoomStore = create<RoomState>()(
               producers: updatedProducers,
             });
 
-            return { participants: newParticipants };
+            const nextAudioMuted = new Map(state.participantAudioMuted);
+            if (type === 'audio') {
+              nextAudioMuted.set(participantId, true);
+            }
+
+            return { participants: newParticipants, participantAudioMuted: nextAudioMuted };
           });
         },
 
@@ -209,7 +242,8 @@ export const useRoomStore = create<RoomState>()(
         },
 
         /** 스토어 초기화 */
-        reset: () => set({ ...initialState, participants: new Map() }),
+        reset: () =>
+          set({ ...initialState, participants: new Map(), participantAudioMuted: new Map() }),
       },
     }),
     {

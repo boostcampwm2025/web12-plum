@@ -19,6 +19,7 @@ export function ParticipantGrid({ videoMode, currentUser, onModeChange }: Partic
   const containerRef = useRef<HTMLDivElement>(null);
 
   const isCameraOn = useMediaStore((state) => state.isCameraOn);
+  const isMicOn = useMediaStore((state) => state.isMicOn);
   const localStream = useStreamStore((state) => state.localStream);
   const processedStream = useBackgroundEffectStore((state) => state.processedStream);
 
@@ -56,6 +57,7 @@ export function ParticipantGrid({ videoMode, currentUser, onModeChange }: Partic
           onModeChange={onModeChange}
           stream={processedStream ?? localStream}
           isCameraOn={isCameraOn}
+          isAudioMuted={!isMicOn}
         />
 
         {/* 이전 페이지 버튼 */}
