@@ -552,7 +552,7 @@ describe('RoomGateway', () => {
   describe('handleBreakRoom', () => {
     it('발표자가 요청 시 방을 종료하고 리소스를 정리해야 함', async () => {
       const socket = createMockSocket();
-      const roomId = 'room-123';
+      const roomId = 'room-1';
       const presenterId = 'presenter-456';
 
       // 1. 메타데이터 설정

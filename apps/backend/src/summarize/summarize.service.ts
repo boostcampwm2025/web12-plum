@@ -46,7 +46,7 @@ export class SummarizeService {
     const apiKey = configService.get<string>('LLM_WORKER_KEY');
 
     if (!apiKey) {
-      this.logger.error('GEMINI_API_KEY가 설정되지 않았습니다.');
+      this.logger.error('LLM_WORKER_KEY가 설정되지 않았습니다.');
       throw new InternalServerErrorException('AI 서비스 설정 오류');
     }
 

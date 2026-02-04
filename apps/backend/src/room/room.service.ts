@@ -316,6 +316,7 @@ export class RoomService {
         activityStatistics,
         summary: '',
         timelines: [],
+        tags: [],
       };
     }
 
