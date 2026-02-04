@@ -1,6 +1,6 @@
 import { CORS_CONFIG } from './cors.constants.js';
 
-export const SOCKET_NAMESPACE = 'session';
+export const SOCKET_NAMESPACE = ''; // 기본 namespace 사용 (프론트엔드와 호환)
 
 export const SOCKET_TIMEOUT = 5;
 

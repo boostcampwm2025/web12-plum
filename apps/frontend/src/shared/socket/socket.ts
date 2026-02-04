@@ -85,16 +85,7 @@ export class SocketClient {
     }
 
     this.socketUrl = url;
-
-    // URL에서 path와 query 분리 (Socket.IO namespace 제대로 처리)
-    const parsedUrl = new URL(url);
-    const basePath = parsedUrl.origin + parsedUrl.pathname;
-    const query = Object.fromEntries(parsedUrl.searchParams);
-
-    this.socket = io(basePath, {
-      ...SOCKET_OPTIONS,
-      query: query, // roomId를 query로 전달
-    }) as TypedSocket;
+    this.socket = io(url, SOCKET_OPTIONS) as TypedSocket;
     this.setupSocketListeners();
 
     this.connectPromise = this.createConnectPromise();
