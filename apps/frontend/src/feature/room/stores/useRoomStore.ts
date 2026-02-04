@@ -44,6 +44,7 @@ export interface RoomActions {
     participantId: string | null;
     type: MediaType | null;
   };
+  addSpeakerToOrder: (participantId: string) => void;
 
   reset: () => void;
 }
@@ -59,6 +60,9 @@ interface RoomState {
   // 참가자 목록
   participants: Map<string, Participant>; // id -> Participant
   participantAudioMuted: Map<string, boolean>; // id -> muted
+
+  // 발화자 정렬 순서 (participantId 배열, 먼저 말한 사람이 앞)
+  speakerOrder: string[];
 }
 
 const initialState: Omit<RoomState, 'actions'> = {
@@ -68,6 +72,7 @@ const initialState: Omit<RoomState, 'actions'> = {
   isRoomEnded: false,
   participants: new Map(),
   participantAudioMuted: new Map(),
+  speakerOrder: [],
 };
 
 export const useRoomStore = create<RoomState>()(
@@ -160,7 +165,12 @@ export const useRoomStore = create<RoomState>()(
             newParticipants.delete(participantId);
             const nextAudioMuted = new Map(state.participantAudioMuted);
             nextAudioMuted.delete(participantId);
-            return { participants: newParticipants, participantAudioMuted: nextAudioMuted };
+            const newSpeakerOrder = state.speakerOrder.filter((id) => id !== participantId);
+            return {
+              participants: newParticipants,
+              participantAudioMuted: nextAudioMuted,
+              speakerOrder: newSpeakerOrder,
+            };
           });
         },
 
@@ -241,9 +251,25 @@ export const useRoomStore = create<RoomState>()(
           return { participantId: null, type: null };
         },
 
+        /** 발화자를 정렬 순서에 추가 (이미 있으면 무시 - 영구 이동) */
+        addSpeakerToOrder: (participantId: string) => {
+          set((state) => {
+            if (state.speakerOrder.includes(participantId)) {
+              return state;
+            }
+            // 새로운 발화자는 맨 앞에 추가
+            return { speakerOrder: [participantId, ...state.speakerOrder] };
+          });
+        },
+
         /** 스토어 초기화 */
         reset: () =>
-          set({ ...initialState, participants: new Map(), participantAudioMuted: new Map() }),
+          set({
+            ...initialState,
+            participants: new Map(),
+            participantAudioMuted: new Map(),
+            speakerOrder: [],
+          }),
       },
     }),
     {
