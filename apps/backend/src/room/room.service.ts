@@ -283,7 +283,9 @@ export class RoomService {
 
     if (!serverUrl) throw new NotFoundException(`Room with ID ${roomId} not found`);
 
-    return serverUrl;
+    // roomId를 URL에 포함해서 반환 (nginx hash 라우팅용)
+    const baseUrl = serverUrl.replace(`/${SOCKET_NAMESPACE}`, '');
+    return `${baseUrl}/${SOCKET_NAMESPACE}/${roomId}`;
   }
 
   async finalizeRoom(roomId: string): Promise<void> {
