@@ -1,40 +1,58 @@
 <div align="center">
   <img width="1000" alt="banner" src="https://github.com/user-attachments/assets/361b9118-ddaa-4575-a64f-59127b1eec62" />
+</div>
+
+<br />
+  
+<div align="center">
+  <a href="https://github.com/boostcampwm2025/web12-plum/wiki">
+    <img width="269" height="78" alt="image" src="https://github.com/user-attachments/assets/0378439a-9f6b-48c3-a911-8738570eef06" />
+  </a>
+  <a href="https://web12-plum-dev.vercel.app/">
+    <img width="261" height="78" alt="image" src="https://github.com/user-attachments/assets/31584581-40f0-4b23-b56e-c7c87f508e02" />
+  </a>
+</div>
+
+<div align="center">
 
 # PLUM
 
-**강의는 놀이처럼, 성과는 전문가처럼!** ✨
+**강의실은 놀이터처럼, 결과는 전문가처럼!** ✨
 
 [![Node.js](https://img.shields.io/badge/Node.js-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![Mediasoup](https://img.shields.io/badge/Mediasoup-darkred?logo=webrtc&logoColor=white)](https://mediasoup.org/)
 [![pnpm](https://img.shields.io/badge/pnpm-F69220?logo=pnpm&logoColor=white)](https://pnpm.io/)
 [![Turborepo](https://img.shields.io/badge/Turborepo-EF4444?logo=turborepo&logoColor=white)](https://turbo.build/)
 
-[📖 Project Wiki](https://github.com/boostcampwm2025/web12-plum/wiki) &nbsp; | &nbsp; [🚀 Live Demo](https://web12-plum.vercel.app/)
-
 </div>
 
 ---
 
-## 💫 Background & Problem
+<img width="1209" height="60" alt="image" src="https://github.com/user-attachments/assets/5e42ad61-56bd-43e0-a8e8-ceb8622e4417" />
 
-> [!IMPORTANT]
-> **"카메라 너머 수강생들은 지금 제 수업을 잘 따라오고 있을까요?"**
->
-> 실시간 비대면 교육 환경에서 가장 큰 장벽은 기술적 연결이 아닌 **상호작용의 부재**입니다.
+> _**"카메라 너머 수강생들은 지금 제 수업을 잘 따라오고 있을까요?"**_
+
 
 **1. 비대면 교육의 확산과 도구의 한계**
 
 실시간 비대면 교육은 급격히 증가하고 있지만, 정작 교육 현장에서는 교육 특화 도구가 부족하여 일반 회의용 솔루션(Zoom, Google Meet 등)에 의존하고 있습니다. 이러한 범용 도구들은 **화상회의 기능에는 충실하지만, 교육에 필수적인 상호작용 레이어는 부족**한 실정입니다.
 
+<br />
+
 **2. 소통의 단절: "듣고 있나요?"라는 질문의 반복**
+
+<div align="center">
+  <img width="700" alt="image" src="https://github.com/user-attachments/assets/ced4cc95-8f00-4ce8-b241-510ccc25944f" />
+</div>
 
 한국교육학술정보원(KERIS)의 조사에 따르면, 온라인 교육 환경에서 강의자와 학습자 간의 가장 큰 장벽은 **상호작용의 부재**입니다.
 
 - **학습자의 수동화**: 채팅이나 음성 답변에 대한 심리적 부담감으로 인해 참여율이 저하됩니다.
 - **강의자의 피드백 부재**: 청중의 반응을 파악할 시각적·비언어적 채널이 없어, 강의자는 벽을 보고 이야기하는 듯한 **단방향 강의**를 지속하게 됩니다.
 
-## 🎯 Core Solution & Values
+<br />
+
+<img width="1209" height="60" alt="image" src="https://github.com/user-attachments/assets/4060f0a5-c4a4-4293-9fb6-e06be6578eec" />
 
 <div align="center">
   <strong>PLUM은 WebRTC 기술과 AI 제스처 인식을 결합하여 강의자와 수강생을 실시간으로 연결합니다.</strong>
@@ -42,7 +60,8 @@
   <br />
   <br />
 
-  <img width="800" height="434" alt="PLUM Core Solution" src="https://github.com/user-attachments/assets/2944b46b-4934-470c-b6e8-8db23184b30b" />
+  <img width="400" alt="Group 29" src="https://github.com/user-attachments/assets/02e3f9d8-d530-4ee6-a2e6-7eea7af1f1b6" />
+
   <br />
   <br />
 </div>
@@ -52,6 +71,8 @@
 - **Insight (통찰)**: 강의 종료 후 LLM 기반 자동 요약과 참여 분석 리포트를 제공합니다. 수업 중 발생한 유의미한 데이터를 분석하여 **강의의 질을 개선하고 더 나은 학습 커리큘럼**을 설계할 수 있는 기반을 마련합니다.
 
 ---
+
+<br />
 
 ## 🚀 Quick Start
 
