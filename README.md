@@ -46,7 +46,7 @@
 **2. 소통의 단절: "듣고 있나요?"라는 질문의 반복**
 
 <div align="center">
-  <img width="700" alt="image" src="https://github.com/user-attachments/assets/ced4cc95-8f00-4ce8-b241-510ccc25944f" />
+  <img width="600" alt="image" src="https://github.com/user-attachments/assets/ced4cc95-8f00-4ce8-b241-510ccc25944f" />
 </div>
 
 한국교육학술정보원(KERIS)의 조사에 따르면, 온라인 교육 환경에서 강의자와 학습자 간의 가장 큰 장벽은 상호작용의 부재입니다.
@@ -155,6 +155,35 @@
   <figcaption align="center">▲ 청중 기준</figcaption>
 </div>
 
+<br />
+<br />
+
+<h3>
+  <img width="2418" height="72" alt="image" src="https://github.com/user-attachments/assets/fb816998-37f7-4dc6-b745-b26a4079db06" />
+</h3>
+
+강의 중 텍스트 기반 채팅으로 자유롭게 소통하고 질문을 주고받을 수 있습니다.
+
+<br />
+
+<div align="center">
+  <img width="600" alt="스크린샷 2026-02-04 오후 12 27 13" src="https://github.com/user-attachments/assets/1bcb6ce7-194a-4e65-8a59-92c804704f78" />
+</div>
+
+<br />
+<br />
+
+<h3>
+  <img width="2418" height="72" alt="image" src="https://github.com/user-attachments/assets/fb816998-37f7-4dc6-b745-b26a4079db06" />
+</h3>
+
+제스처, 투표, Q&A 참여 등을 기반으로 실시간 참여도 점수와 순위를 확인할 수 있어 수강생의 능동적 참여를 유도합니다.
+
+<br />
+
+<div align="center">
+  <img width="600" alt="스크린샷 2026-02-04 오후 12 27 21" src="https://github.com/user-attachments/assets/01ae8ff3-3dcd-4136-8a7e-e670e146304a" />
+</div>
 
 <br />
 
