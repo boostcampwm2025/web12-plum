@@ -401,6 +401,9 @@ jobs:
             chown -R 472:472 grafana/data
             chmod -R 755 prometheus/data loki/data
 
+            # Prometheus 타겟 디렉토리 생성 (오토스케일링 서버 자동 등록용)
+            mkdir -p /opt/prometheus/targets
+
             # 컨테이너 재시작
             docker compose pull
             docker compose up -d
@@ -556,6 +559,9 @@ jobs:
             mkdir -p prometheus/data loki/data grafana/data
             chown -R 472:472 grafana/data
             chmod -R 755 prometheus/data loki/data
+
+            # Prometheus 타겟 디렉토리 생성 (오토스케일링 서버 자동 등록용)
+            mkdir -p /opt/prometheus/targets
 
             docker compose pull
             docker compose up -d

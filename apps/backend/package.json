@@ -44,6 +44,7 @@
     "@nestjs/cli": "^10.4.9",
     "@nestjs/schematics": "^10.2.3",
     "@nestjs/testing": "^10.4.15",
+    "@types/chokidar": "^2.1.7",
     "@types/jest": "^29.5.12",
     "@types/multer": "^2.0.0",
     "@types/node": "^22.10.2",
