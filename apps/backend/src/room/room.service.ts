@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -297,6 +298,7 @@ export class RoomService {
   async getSummary(roomId: string): Promise<RoomSummary> {
     const room = await this.roomManagerService.findOne(roomId);
     if (!room) throw new NotFoundException(`Room with ID ${roomId} not found`);
+    if (room.status !== 'ended') throw new ForbiddenException(`강의실이 아직 진행중입니다.`);
 
     const [polls, qnas, activityStatistics, status] = await Promise.all([
       this.interactionService.getEndedPolls(roomId),

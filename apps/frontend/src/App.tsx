@@ -65,10 +65,13 @@ function App() {
   return (
     <div className="flex h-full flex-col">
       <Routes>
-        <Route
-          path={ROUTES.HOME}
-          element={<Home />}
-        />
+        <Route element={<ToastLayout />}>
+          <Route
+            path={ROUTES.HOME}
+            element={<Home />}
+          />
+        </Route>
+
         <Route element={<MobileGate />}>
           <Route element={<ToastLayout />}>
             <Route

@@ -233,7 +233,7 @@ export function EnterLectureForm({ roomId, lectureName = '예시 강의실' }: E
     try {
       await enterRoom(data);
       logger.ui.info('강의실 입장 폼 제출 성공');
-      navigate(ROUTES.ROOM(roomId));
+      navigate(ROUTES.ROOM(roomId), { replace: true });
     } catch (error) {
       logger.ui.error('강의실 입장 실패:', error);
       addToast({ type: 'error', title: '강의실 입장에 실패했습니다. 잠시 후 다시 시도해주세요.' });

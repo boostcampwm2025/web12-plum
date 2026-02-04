@@ -107,6 +107,9 @@ export function useRoomEventHandlers() {
           if (data.action === 'pause')
             mediaActions.removeRemoteStreamByParticipant(data.participantId, data.type);
           else consumeRemoteProducer(data);
+          if (data.type === 'audio') {
+            roomActions.setParticipantAudioMuted(data.participantId, data.action === 'pause');
+          }
         },
       });
 
