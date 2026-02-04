@@ -39,6 +39,7 @@ const mockManagers = {
   ChatManagerService: {},
   ActivityScoreManagerService: {},
   RecordingManagerService: {},
+  AiSummaryManagerService: {},
 };
 
 describe('AppController (e2e)', () => {
@@ -66,7 +67,11 @@ describe('AppController (e2e)', () => {
         {
           provide: Managers.RecordingManagerService,
           useValue: mockManagers.RecordingManagerService,
-        }
+        },
+        {
+          provide: Managers.AiSummaryManagerService,
+          useValue: mockManagers.AiSummaryManagerService,
+        },
       ],
       exports: [RedisService, ...Object.values(Managers)],
     })

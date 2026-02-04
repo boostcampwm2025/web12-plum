@@ -7,6 +7,7 @@ import { spawn } from 'child_process';
 import { RecordingManagerService } from '../redis/repository-manager/index.js';
 import { BATCH_SIZE, RECORD_DIR, SEGMENT_TIME } from './record.constant.js';
 import { ChatLog, STTWorkerResponse } from './record.types.js';
+import { SummarizeService } from '../summarize/summarize.service.js';
 
 interface STTData {
   fileName: string;
@@ -25,7 +26,10 @@ export class FileWatcherService implements OnModuleInit, OnModuleDestroy {
   private isMerging = new Map<string, boolean>();
   private lastedChanged = new Map<string, number>();
 
-  constructor(private readonly recordingManager: RecordingManagerService) {}
+  constructor(
+    private readonly recordingManager: RecordingManagerService,
+    private readonly summarizeService: SummarizeService,
+  ) {}
 
   onModuleInit() {
     // 1. record 폴더 감시 시작
@@ -45,7 +49,11 @@ export class FileWatcherService implements OnModuleInit, OnModuleDestroy {
     const batchKey = `${roomId}_${role}_${timestamp}`;
     const remaining = this.fileBatches.get(batchKey);
     const index = this.lastedChanged.get(batchKey) ?? 0;
-    if (!remaining || remaining.length === 0) return;
+
+    if (!remaining || remaining.length === 0) {
+      await this.checkAllProcessingFinished(roomId);
+      return;
+    }
 
     this.logger.log(`🔔 종료 신호 감지: 남은 ${remaining.length}개 조각 강제 병합 시작`);
 
@@ -54,6 +62,7 @@ export class FileWatcherService implements OnModuleInit, OnModuleDestroy {
 
     try {
       await this.mergeAndRunSTT(filesToMerge, { roomId, role, timestamp, index });
+      await this.checkAllProcessingFinished(roomId);
     } catch (error) {
       this.logger.error(`❌ 종료 중 강제 병합 실패: ${error.message}`);
     }
@@ -125,6 +134,7 @@ export class FileWatcherService implements OnModuleInit, OnModuleDestroy {
 
   private async mergeAndRunSTT(filePaths: string[], metadata: Omit<STTData, 'fileName'>) {
     const { roomId, role, timestamp, index } = metadata;
+    await this.recordingManager.incrementPendingCount(roomId);
     filePaths.sort((a, b) => {
       const getIdx = (p: string) => {
         const match = parse(p).name.match(/_(\d+)$/);
@@ -197,6 +207,8 @@ export class FileWatcherService implements OnModuleInit, OnModuleDestroy {
       });
     } catch (error) {
       this.logger.error(`❌ 병합 실패: ${error.message}`);
+    } finally {
+      await this.recordingManager.decrementPendingCount(roomId);
     }
   }
 
@@ -205,7 +217,7 @@ export class FileWatcherService implements OnModuleInit, OnModuleDestroy {
     const containerPath = `/app/apps/backend/record/${data.fileName}`;
 
     try {
-      this.logger.log(`[File watcher] AI 분석 시작: ${fileName} (Timeline: ${startTime}s)`);
+      this.logger.log(`[File watcher] STT 분석 시작: ${fileName} (Timeline: ${startTime}s)`);
 
       const localPath = join(RECORD_DIR, fileName);
       const workerUrl = process.env.STT_WORKER_URL || 'http://127.0.0.1:8000';
@@ -247,6 +259,17 @@ export class FileWatcherService implements OnModuleInit, OnModuleDestroy {
     } catch (error) {
       this.logger.error(`❌ STT 분석 실패 (${fileName}): ${error.message}`);
       throw error;
+    }
+  }
+
+  private async checkAllProcessingFinished(roomId: string) {
+    const pendingCount = await this.recordingManager.getPendingCount(roomId);
+    if (pendingCount === 0) {
+      this.logger.log(`🎊 [${roomId}] 모든 STT 작업 완료. 요약 프로세스를 시작할 수 있습니다.`);
+      const allLogs = await this.recordingManager.getFullTranscript(roomId);
+      await this.summarizeService.summarizeRoom(roomId, allLogs);
+    } else {
+      this.logger.debug(`⏳ 아직 처리 중인 작업이 남았습니다 (남은 개수: ${pendingCount})`);
     }
   }
 

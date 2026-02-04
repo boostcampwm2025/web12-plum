@@ -26,6 +26,7 @@ import {
 import { InteractionService } from '../interaction/interaction.service.js';
 import {
   ActivityScoreManagerService,
+  AiSummaryManagerService,
   RoomManagerService,
 } from '../redis/repository-manager/index.js';
 import { MediasoupService } from '../mediasoup/mediasoup.service.js';
@@ -43,6 +44,7 @@ export class RoomService {
     private readonly interactionService: InteractionService,
     private readonly roomManagerService: RoomManagerService,
     private readonly activityScoreManagerService: ActivityScoreManagerService,
+    private readonly aiSummaryManagerService: AiSummaryManagerService,
     private readonly mediasoupService: MediasoupService,
   ) {
     this.region = configService.get<string>('AWS_S3_REGION') || '';
@@ -296,17 +298,30 @@ export class RoomService {
     const room = await this.roomManagerService.findOne(roomId);
     if (!room) throw new NotFoundException(`Room with ID ${roomId} not found`);
 
-    const [polls, qnas, activityStatistics] = await Promise.all([
+    const [polls, qnas, activityStatistics, status] = await Promise.all([
       this.interactionService.getEndedPolls(roomId),
       this.interactionService.getEndedQnas(roomId),
       this.activityScoreManagerService.getActivityStatistics(roomId),
+      this.aiSummaryManagerService.getSummaryStatus(roomId),
     ]);
 
+    if (status !== 'COMPLETED') {
+      return {
+        name: room.name,
+        roomId: room.id,
+        polls,
+        qnas,
+        activityStatistics,
+        summary: '',
+        timelines: [],
+      };
+    }
+
+    const aiSummary = (await this.aiSummaryManagerService.getAiSummary(roomId))!;
     return {
       name: room.name,
       roomId: room.id,
-      summary: '', // TODO: add real summary
-      timelines: '', // TODO: add real timeline
+      ...aiSummary,
       polls,
       qnas,
       activityStatistics,

@@ -81,12 +81,22 @@ export interface Room {
   files: FileInfo[];
 }
 
-export interface RoomSummary {
+export interface RoomSummary extends AiSummary {
   name: string;
   roomId: string;
-  summary: string; // ai 요약
-  timelines: string; // ai 요약 - 타임라인
   polls: Poll[];
   qnas: Qna[];
   activityStatistics: ActivityStatistics;
+}
+
+export interface AiSummary {
+  summary: string;
+  timelines: Timelines[];
+  tags: string[];
+}
+
+export interface Timelines {
+  startedAt: number;
+  endedAt: number;
+  content: string;
 }
