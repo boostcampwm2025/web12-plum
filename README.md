@@ -15,6 +15,8 @@
 
 <div align="center">
 
+<br />
+
 # PLUM
 
 **강의실은 놀이터처럼, 결과는 전문가처럼!** ✨
@@ -26,16 +28,18 @@
 
 </div>
 
----
+<br />
 
-<img width="1209" height="60" alt="image" src="https://github.com/user-attachments/assets/5e42ad61-56bd-43e0-a8e8-ceb8622e4417" />
+<h2>
+  <img width="1209" height="60" alt="image" src="https://github.com/user-attachments/assets/5e42ad61-56bd-43e0-a8e8-ceb8622e4417" />
+</h2>
 
 > _**"카메라 너머 수강생들은 지금 제 수업을 잘 따라오고 있을까요?"**_
 
 
 **1. 비대면 교육의 확산과 도구의 한계**
 
-실시간 비대면 교육은 급격히 증가하고 있지만, 정작 교육 현장에서는 교육 특화 도구가 부족하여 일반 회의용 솔루션(Zoom, Google Meet 등)에 의존하고 있습니다. 이러한 범용 도구들은 **화상회의 기능에는 충실하지만, 교육에 필수적인 상호작용 레이어는 부족**한 실정입니다.
+실시간 비대면 교육은 급격히 증가하고 있지만, 정작 교육 현장에서는 교육 특화 도구가 부족하여 일반 회의용 솔루션(Zoom, Google Meet 등)에 의존하고 있습니다. 이러한 범용 도구들은 화상회의 기능에는 충실하지만, 교육에 필수적인 상호작용 레이어는 부족한 실정입니다.
 
 <br />
 
@@ -45,14 +49,16 @@
   <img width="700" alt="image" src="https://github.com/user-attachments/assets/ced4cc95-8f00-4ce8-b241-510ccc25944f" />
 </div>
 
-한국교육학술정보원(KERIS)의 조사에 따르면, 온라인 교육 환경에서 강의자와 학습자 간의 가장 큰 장벽은 **상호작용의 부재**입니다.
+한국교육학술정보원(KERIS)의 조사에 따르면, 온라인 교육 환경에서 강의자와 학습자 간의 가장 큰 장벽은 상호작용의 부재입니다.
 
 - **학습자의 수동화**: 채팅이나 음성 답변에 대한 심리적 부담감으로 인해 참여율이 저하됩니다.
-- **강의자의 피드백 부재**: 청중의 반응을 파악할 시각적·비언어적 채널이 없어, 강의자는 벽을 보고 이야기하는 듯한 **단방향 강의**를 지속하게 됩니다.
+- **강의자의 피드백 부재**: 청중의 반응을 파악할 시각적·비언어적 채널이 없어, 강의자는 벽을 보고 이야기하는 듯한 단방향 강의를 지속하게 됩니다.
 
 <br />
 
-<img width="1209" height="60" alt="image" src="https://github.com/user-attachments/assets/4060f0a5-c4a4-4293-9fb6-e06be6578eec" />
+<h2>
+  <img width="1209" height="60" alt="image" src="https://github.com/user-attachments/assets/4060f0a5-c4a4-4293-9fb6-e06be6578eec" />
+</h2>
 
 <div align="center">
   <strong>PLUM은 WebRTC 기술과 AI 제스처 인식을 결합하여 강의자와 수강생을 실시간으로 연결합니다.</strong>
@@ -66,20 +72,19 @@
   <br />
 </div>
 
-- **Interactivity (상호작용)**: 단방향 강의를 벗어나 청중이 능동적으로 참여하는 수업 경험을 제공합니다. 제스처 인식, 실시간 투표, 인터랙티브 질문 시스템을 통해 **모든 수강생은 관객이 아닌 주인공이 됩니다.**
-- **Visibility (가시성)**: 강의자는 수강생의 제스처와 참여도 데이터를 대시보드를 통해 실시간으로 확인할 수 있습니다. **보이지 않던 비언어적 반응을 시각화**하여, 흐름에 맞는 즉각적인 대응과 공감 기반의 강의 진행을 돕습니다.
-- **Insight (통찰)**: 강의 종료 후 LLM 기반 자동 요약과 참여 분석 리포트를 제공합니다. 수업 중 발생한 유의미한 데이터를 분석하여 **강의의 질을 개선하고 더 나은 학습 커리큘럼**을 설계할 수 있는 기반을 마련합니다.
-
----
+- **Interactivity (상호작용)**: 단방향 강의를 벗어나 청중이 능동적으로 참여하는 수업 경험을 제공합니다. 제스처 인식, 실시간 투표, 인터랙티브 질문 시스템을 통해 **모든 수강생은 관객이 아닌 주인공이 됩니다.
+- **Visibility (가시성)**: 강의자는 수강생의 제스처와 참여도 데이터를 대시보드를 통해 실시간으로 확인할 수 있습니다. 보이지 않던 비언어적 반응을 시각화하여, 흐름에 맞는 즉각적인 대응과 공감 기반의 강의 진행을 돕습니다.
+- **Insight (통찰)**: 강의 종료 후 LLM 기반 자동 요약과 참여 분석 리포트를 제공합니다. 수업 중 발생한 유의미한 데이터를 분석하여 강의의 질을 개선하고 더 나은 학습 커리큘럼을 설계할 수 있는 기반을 마련합니다.
 
 <br />
 
-<img width="1209" height="60" alt="image" src="https://github.com/user-attachments/assets/35be108e-5d39-4cac-9ee5-8ef439e14a95" />
+<h2>
+  <img width="1209" height="60" alt="image" src="https://github.com/user-attachments/assets/35be108e-5d39-4cac-9ee5-8ef439e14a95" />
+</h2>
 
-<br />
-<br />
-
-<img width="2418" height="72" alt="image" src="https://github.com/user-attachments/assets/feee61e9-9962-4b67-a3ab-f7410aee6aa8" />
+<h3>
+  <img width="2418" height="72" alt="image" src="https://github.com/user-attachments/assets/feee61e9-9962-4b67-a3ab-f7410aee6aa8" />
+</h3>
 
 강의 시작 전에 투표와 Q&A를 미리 구성하고 발표 자료를 업로드하여 체계적인 강의 준비가 가능합니다.
 
@@ -92,7 +97,9 @@
 <br />
 <br />
 
-<img width="2418" height="72" alt="image" src="https://github.com/user-attachments/assets/821d1b10-4503-433b-93bc-fbf81378e571" />
+<h3>
+  <img width="2418" height="72" alt="image" src="https://github.com/user-attachments/assets/821d1b10-4503-433b-93bc-fbf81378e571" />
+</h3>
 
 카메라를 통해 손가락 제스처를 인식하여 말 없이도 의견을 표현할 수 있으며, 투표 참여도 손가락으로 간편하게 가능합니다.
 
@@ -105,7 +112,9 @@
 <br />
 <br />
 
-<img width="2418" height="72" alt="image" src="https://github.com/user-attachments/assets/ca400e62-c0c3-420e-a1e9-00bfbede05d3" />
+<h3>
+  <img width="2418" height="72" alt="image" src="https://github.com/user-attachments/assets/ca400e62-c0c3-420e-a1e9-00bfbede05d3" />
+</h3>
 
 강의 중 즉석에서 투표를 생성하고 청중의 의견을 실시간으로 수집할 수 있으며, 제스처로도 참여할 수 있습니다.
 
@@ -126,7 +135,9 @@
 <br />
 <br />
 
-<img width="2418" height="72" alt="image" src="https://github.com/user-attachments/assets/4977d398-a136-4c1a-bbeb-1db7fba1afbf" />
+<h3>
+  <img width="2418" height="72" alt="image" src="https://github.com/user-attachments/assets/4977d398-a136-4c1a-bbeb-1db7fba1afbf" />
+</h3>
 
 강의 중 질문을 던지고 청중의 답변을 실시간으로 받아볼 수 있습니다. 익명 답변 수집 기능을 통해 답변에 대한 심리적 부담감을 덜어줍니다.
 
@@ -147,7 +158,9 @@
 
 <br />
 
-## 🚀 Quick Start
+<h2>
+  <img width="1209" height="60" alt="image" src="https://github.com/user-attachments/assets/d00c648b-cf55-41d8-8d17-9b7e4cde2ebd" />
+</h2>
 
 ### ⚙️ Installation & Run
 
@@ -196,9 +209,11 @@ pnpm dev
   - macOS: Xcode Command Line Tools (xcode-select --install)
   - Linux: build-essential, python3, make, g+
 
----
+<br />
 
-## 🏗️ Architecture
+<h2>
+  <img width="1209" height="60" alt="image" src="https://github.com/user-attachments/assets/307f0ab9-ec1f-4147-ac8c-7e9b3ce95774" />
+</h2>
 
 ### Infrastructure Architecture
 
@@ -212,9 +227,9 @@ pnpm dev
   <img width="100%" alt="PLUM Monitoring Diagram" src="https://github.com/user-attachments/assets/0c3170a6-dd7c-45eb-8a9c-5ac76b60943d" />
 </div>
 
-### 📂 Project Structure
+### Project Structure
 
-```bash
+```
 ├── apps/
 │   ├── backend/
 │   │   └── src/
@@ -225,10 +240,17 @@ pnpm dev
 │   │       └── room/         # 강의실 관리
 │   ├── frontend/
 │   │   └── src/
-│   │       ├── feature/      # 기능 단위 컴포넌트 (Create, Enter, Room)
+│   │       ├── app/          # 앱 설정 (라우팅, 스타일)
+│   │       ├── feature/      # 기능 단위 컴포넌트 (create-lecture, enter-lecture, room, summary)
 │   │       ├── pages/        # 라우트 페이지
-│   │       ├── shared/       # 공용 컴포넌트 및 유틸리티
-│   │       └── store/        # 전역 상태 관리 (Zustand)
+│   │       ├── shared/       # 공용 컴포넌트, API 클라이언트, 훅, 유틸리티
+│   │       ├── store/        # 전역 상태 관리 (Zustand)
+│   │       ├── mediasoup/    # MediaSoup WebRTC 클라이언트 설정
+│   │       ├── assets/       # 이미지, 폰트 등 정적 자산
+│   │       ├── types/        # TypeScript 타입 정의
+│   │       ├── mocks/        # 테스트용 Mock 데이터
+│   │       ├── App.tsx       # 루트 컴포넌트
+│   │       └── main.tsx      # 앱 진입점
 │   └── load-test/            # 성능 테스트 (K6, Artillery)
 ├── packages/
 │   └── shared-interfaces/    # 공용 타입 및 DTO 정의
@@ -247,9 +269,11 @@ pnpm dev
 | **Testing**        | ![Vitest](https://img.shields.io/badge/Vitest-6E9F18?logo=vitest&logoColor=white) ![Playwright](https://img.shields.io/badge/Playwright-2EAD33?logo=playwright&logoColor=white) ![k6](https://img.shields.io/badge/k6-7D64FF?logo=k6&logoColor=white) ![Artillery](https://img.shields.io/badge/Artillery-5A3E7F?logo=artillery&logoColor=white)                                                                                                          |
 | **Monorepo**       | ![Turborepo](https://img.shields.io/badge/Turborepo-EF4444?logo=turborepo&logoColor=white) ![pnpm](https://img.shields.io/badge/pnpm-F69220?logo=pnpm&logoColor=white)                                                                                                                                                                                                                                                                                    |
 
----
+<br />
 
-## 👥 Meet Our Team
+<h2>
+  <img width="1209" height="60" alt="image" src="https://github.com/user-attachments/assets/f64085d5-15ee-4da5-bd85-b086dac8ed39" />
+</h2>
 
 **TIKI**는 탁구의 리듬감 있는 대화인 '티키타카(Tiki-taka)'에서 영감을 얻었습니다.  
 **즐거운 협업**을 가장 큰 가치로 두고, 사용자와 개발자 모두가 만족하는 **완성도 높은 개발을 지향합니다.**
