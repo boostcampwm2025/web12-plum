@@ -1,164 +1,125 @@
-const mockLectureSummary = {
-  keyTopics: [
-    'React의 기본 개념과 사용법',
-    '상태 관리와 컴포넌트 라이프사이클 이해',
-    'React Router를 이용한 라우팅 구현',
-    'Redux를 활용한 전역 상태 관리',
-    'React Hooks의 활용과 커스텀 훅 만들기',
-  ],
-  timelines: [
-    {
-      startMinute: '00:00',
-      endMinute: '20:00',
-      title: '오리엔테이션 및 학습 환경 조성',
-      items: [
-        '본 강의에서 다룰 현대적인 프론트엔드 개발 생태계와 React의 역할에 대해 개괄적으로 설명하였습니다.',
-        '효율적인 실습을 위해 필수 도구인 Node.js 환경과 VS Code 확장 프로그램 설치 여부를 함께 점검했습니다.',
-      ],
-    },
-    {
-      startMinute: '20:00',
-      endMinute: '40:00',
-      title: 'React의 탄생 배경과 철학적 이해',
-      items: [
-        '명령형 프로그래밍과 대비되는 선언적 프로그래밍의 특징을 파악하고 React가 이를 어떻게 구현하는지 학습했습니다.',
-        'Virtual DOM이 실제 DOM 조작 성능을 어떻게 최적화하며 개발자 경험을 개선하는지 심도 있게 다루었습니다.',
-      ],
-    },
-    {
-      startMinute: '40:00',
-      endMinute: '60:00',
-      title: 'JSX 문법 규격과 컴포넌트 기초 설계',
-      items: [
-        'HTML과 유사해 보이지만 엄격한 JavaScript 확장 문법인 JSX의 작성 규칙과 Babel의 변환 과정을 확인했습니다.',
-        '재사용 가능한 UI 단위를 만들기 위한 함수형 컴포넌트의 정의 방법과 Props를 통한 데이터 전달 원리를 익혔습니다.',
-      ],
-    },
-    {
-      startMinute: '60:00',
-      endMinute: '80:00',
-      title: '중간 휴식 및 사전 질의응답 세션',
-      items: [
-        '본격적인 상태 관리 학습에 앞서 수강생들이 평소 궁금해하던 프론트엔드 커리어에 대한 질의응답을 진행했습니다.',
-        '실습 도중 발생한 환경 설정 오류를 개별적으로 해결하며 다음 세션을 위한 준비 시간을 가졌습니다.',
-      ],
-    },
-    {
-      startMinute: '80:00',
-      endMinute: '100:00',
-      title: 'useState를 활용한 동적 상태 제어',
-      items: [
-        'React Hooks의 핵심인 useState를 사용하여 사용자 상호작용에 따라 UI가 실시간으로 변화하는 로직을 구현했습니다.',
-        '상태 업데이트 시 불변성을 유지해야 하는 이유와 객체/배열 데이터를 안전하게 수정하는 최신 문법을 적용해 보았습니다.',
-      ],
-    },
-  ],
-};
+import type { Timelines } from '@plum/shared-interfaces';
 
-interface HighlightsSectionProps {
-  topics: string[];
-}
+import { useSummaryStore } from '@/store/useSummaryStore';
+
+import { formatTime } from '../utils';
 
 /**
- * 주요 주제 섹션 컴포넌트
- * @param topics 주요 주제 목록
+ * AI가 추출한 강의의 핵심 키워드를 해시태그 형식의 뱃지로 렌더링
+ *
+ * Zustand 스토어에서 직접 태그 목록을 구독
+ * 데이터가 없을 경우 레이아웃을 차지하지 않도록 처리
  */
-function HighlightsSection({ topics }: HighlightsSectionProps) {
+function Tags() {
+  const tags = useSummaryStore((state) => state.summaryData?.tags || []);
+
+  if (!tags || tags.length === 0) return null;
+
   return (
-    <section className="mt-10 flex flex-col gap-6 rounded-2xl bg-gray-600 p-6">
-      <h4 className="text-text text-xl font-bold">주요 주제</h4>
-      <ul className="flex flex-col gap-3">
-        {topics.map((topic, index) => (
-          <li
-            key={index}
-            className="text-subtext-light flex gap-3"
-          >
-            <div className="bg-subtext-light my-2.5 size-1 rounded-full" />
-            <span className="break-keep">{topic}</span>
-          </li>
-        ))}
-      </ul>
-    </section>
+    <div className="flex flex-wrap gap-2">
+      {tags.map((tag, index) => (
+        <span
+          key={index}
+          className="bg-primary/10 text-primary rounded-full px-3 py-1 text-sm"
+        >
+          #{tag}
+        </span>
+      ))}
+    </div>
   );
 }
 
-interface TimelineItemProps {
-  title: string;
-  items: string[];
-  startMinute: string;
-  endMinute: string;
-}
-
 /**
- * 단일 타임라인 아이템 컴포넌트
- * @param title 타임라인 제목
- * @param items 타임라인 항목들
- * @param startMinute 시작 시간
- * @param endMinute 종료 시간
+ * 강의의 특정 구간에 대한 요약 정보를 카드 형태로 렌더링
+ *
+ * @param content - 해당 구간의 요약 내용
+ * @param startedAt - 기준 시점(0초) 대비 상대적인 시작 시간 (단위: 초)
+ * @param endedAt - 기준 시점(0초) 대비 상대적인 종료 시간 (단위: 초)
  */
-function TimelineItem({ title, items, startMinute, endMinute }: TimelineItemProps) {
+function TimelineItem({ content, startedAt, endedAt }: Timelines) {
+  const timeRange = `${formatTime(startedAt)} ~ ${formatTime(endedAt)}`;
+
   return (
-    <article className="flex flex-col gap-6 rounded-2xl border border-gray-300 p-6">
-      <div className="flex gap-3">
-        <h5 className="text-primary grow text-xl font-bold">{title}</h5>
-        <p className="text-text">
-          {startMinute} ~ {endMinute}
-        </p>
-      </div>
-      <ul className="flex list-inside list-disc flex-col gap-3">
-        {items.map((item, index) => (
-          <li
-            key={index}
-            className="text-subtext-light flex gap-3"
-          >
-            <div className="bg-subtext-light my-2.5 size-1 rounded-full" />
-            <span className="break-keep">{item}</span>
-          </li>
-        ))}
-      </ul>
+    <article className="flex flex-col gap-4 rounded-2xl border border-gray-300 p-6">
+      <p className="text-text text-sm">{timeRange}</p>
+      <p className="text-subtext-light leading-relaxed break-keep">{content}</p>
     </article>
   );
 }
 
-interface TimelineProps {
-  timelines: Array<{ title: string; items: string[]; startMinute: string; endMinute: string }>;
+/**
+ * 전체 타임라인 데이터를 순회하며 리스트를 렌더링하고, 상대 시간 계산 로직 관리
+ *
+ * - 서버 데이터의 `startedAt`은 실제 기록 시점.
+ * - 사용자에게 '강의 시작 후 경과 시간'을 보여주어야 함.
+ * - 첫 번째 타임라인의 시작 시간을 기준점(baseTime)으로 삼아 차감 계산.
+ */
+function TimelineList() {
+  const timelines = useSummaryStore((state) => state.summaryData?.timelines ?? []);
+  const baseTime = timelines.length > 0 ? timelines[0].startedAt : 0;
+
+  if (timelines.length === 0) {
+    return <p className="text-subtext-light py-4 text-center">시간대별 요약이 없습니다.</p>;
+  }
+
+  return (
+    <div className="flex flex-col gap-6">
+      {timelines.map((timeline, index) => (
+        <TimelineItem
+          key={index}
+          content={timeline.content}
+          startedAt={timeline.startedAt - baseTime}
+          endedAt={timeline.endedAt - baseTime}
+        />
+      ))}
+    </div>
+  );
 }
 
 /**
- * 시간대별 요약 섹션 컴포넌트
- * @param timelines 시간대별 요약 데이터 배열
+ * AI 분석 프로세스가 아직 진행 중이거나 서버 응답을 대기 중일 때 표시
+ *
+ * `useAiSummaryPolling` 훅이 데이터를 성공적으로 가져오기 전까지 사용자에게 시각적 피드백 제공
  */
-function TimelineSection({ timelines }: TimelineProps) {
+function SummaryPendingSection() {
   return (
-    <section className="mt-10 flex flex-col gap-6 rounded-2xl bg-gray-600 p-6">
-      <h4 className="text-text text-xl font-bold">시간대별 요약</h4>
-      {timelines.length > 0 ? (
-        <div className="flex flex-col gap-10">
-          {timelines.map((timeline, index) => (
-            <TimelineItem
-              key={index}
-              title={timeline.title}
-              items={timeline.items}
-              startMinute={timeline.startMinute}
-              endMinute={timeline.endMinute}
-            />
-          ))}
-        </div>
-      ) : (
-        <p className="text-subtext-light py-4 text-center">강의 요약이 없습니다.</p>
-      )}
+    <section className="mt-10 flex flex-col items-center gap-4 rounded-2xl bg-gray-600 p-10">
+      <div className="border-primary size-8 animate-spin rounded-full border-4 border-t-transparent" />
+      <p className="text-subtext-light text-center">
+        AI가 강의 내용을 요약하고 있습니다.
+        <br />
+        잠시만 기다려주세요.
+      </p>
     </section>
   );
 }
 
 /**
- * 강의 요약 탭 컴포넌트
+ * '강의 요약' 탭의 최상위 컴포넌트로
+ *
+ * 데이터의 유무에 따라 '준비 중' 섹션 또는 '전체 결과' 섹션 분기 처리
+ * Zustand 스토어의 `summary` 필드 존재 여부를 분석 완료의 기준으로 판단
  */
 export function LectureSummaryTab() {
+  const summary = useSummaryStore((state) => state.summaryData?.summary);
+  const isAiSummaryPending = !summary;
+
+  if (isAiSummaryPending) {
+    return <SummaryPendingSection />;
+  }
+
   return (
     <>
-      <HighlightsSection topics={mockLectureSummary.keyTopics} />
-      <TimelineSection timelines={mockLectureSummary.timelines} />
+      <section className="mt-10 flex flex-col gap-6 rounded-2xl bg-gray-600 p-6">
+        <h4 className="text-text text-xl font-bold">AI 요약</h4>
+        <p className="text-subtext-light leading-relaxed break-keep">{summary}</p>
+        <Tags />
+      </section>
+
+      <section className="mt-10 flex flex-col gap-6 rounded-2xl bg-gray-600 p-6">
+        <h4 className="text-text text-xl font-bold">시간대별 요약</h4>
+        <TimelineList />
+      </section>
     </>
   );
 }

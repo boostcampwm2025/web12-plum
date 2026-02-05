@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
-import type { RoomSummary as RoomSummaryData } from '@plum/shared-interfaces';
 import { AnimatePresence, motion } from 'motion/react';
 import { logger } from '@sentry/react';
 
@@ -19,6 +18,8 @@ import { ErrorFallback } from '@/shared/components/ErrorFallback';
 import { roomApi } from '@/shared/api/endpoints/room';
 import { formatSummaryAvailableUntil } from '@/shared/lib/date';
 import { useToastStore } from '@/store/useToastStore';
+import { useSummaryStore } from '@/store/useSummaryStore';
+import { useAiSummaryPolling } from '@/feature/summary/hooks/useAiSummaryPolling';
 import { ROUTES } from '@/app/routes/routes';
 import { useSafeRoomId } from '@/shared/hooks/useSafeRoomId';
 
@@ -35,14 +36,22 @@ import { useSafeRoomId } from '@/shared/hooks/useSafeRoomId';
 export function Summary() {
   const navigate = useNavigate();
   const roomId = useSafeRoomId();
+  const summaryData = useSummaryStore((state) => state.summaryData);
 
   const [activeTab, setActiveTab] = useState<Tab>('statistics');
-  const [summaryData, setSummaryData] = useState<RoomSummaryData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [fetchedAt, setFetchedAt] = useState<Date | null>(null);
 
   const { addToast } = useToastStore((state) => state.actions);
+  const { setSummaryData } = useSummaryStore((state) => state.actions);
+
+  /**
+   * 강의 종료 후 AI 요약 결과가 아직 생성 중인 경우, 서버에 주기적으로 데이터를 요청하여 업데이트
+   * `summaryData.summary` 필드가 비어있다면 '생성 중'인 것으로 간주하고 Polling 시작
+   * 데이터가 성공적으로 확보(summary 존재)되면 즉시 타이머를 중단하고 자원을 해제
+   */
+  useAiSummaryPolling();
 
   /**
    * 강의 요약 데이터를 서버로부터 가져오는 핵심 함수
@@ -62,19 +71,23 @@ export function Summary() {
     try {
       setIsLoading(true);
       setHasError(false);
+
+      // 강의 요약 데이터 요청
       const response = await roomApi.getSummary(roomId!);
       setSummaryData(response.data);
       setFetchedAt(new Date());
     } catch (err) {
+      // 강의가 아직 종료되지 않은 경우
       logger.error('요약 데이터 불러오기 실패', { error: err });
       addToast({ type: 'error', title: '강의가 종료되면 요약을 확인하실 수 있습니다.' });
       navigate(ROUTES.HOME, { replace: true });
+
       setHasError(true);
       setFetchedAt(null);
     } finally {
       setIsLoading(false);
     }
-  }, [roomId, navigate, addToast]);
+  }, [roomId, navigate, addToast, setSummaryData]);
 
   useEffect(() => {
     fetchSummary();
@@ -82,9 +95,9 @@ export function Summary() {
 
   const tabContent: Record<Tab, JSX.Element> | null = summaryData
     ? {
-        statistics: <StatisticsTab activityStatistics={summaryData.activityStatistics} />,
-        poll: <PollResultsTab polls={summaryData.polls} />,
-        qna: <QnAResultsTab qnas={summaryData.qnas} />,
+        statistics: <StatisticsTab />,
+        poll: <PollResultsTab />,
+        qna: <QnAResultsTab />,
         lecture: <LectureSummaryTab />,
       }
     : null;

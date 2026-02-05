@@ -1,4 +1,7 @@
 import type { Poll, PollOption } from '@plum/shared-interfaces';
+
+import { useSummaryStore } from '@/store/useSummaryStore';
+
 import { calculatePercentage } from '../utils';
 
 interface PollOptionItemProps {
@@ -70,7 +73,9 @@ function PollResultCard({ poll }: { poll: Poll }) {
 /**
  * 투표 결과 탭 컴포넌트
  */
-export function PollResultsTab({ polls }: { polls: Poll[] }) {
+export function PollResultsTab() {
+  const polls = useSummaryStore((state) => state.summaryData?.polls ?? []);
+
   if (polls.length === 0) {
     return (
       <section className="mt-10 flex flex-col gap-10 rounded-2xl bg-gray-600 p-6">
