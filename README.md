@@ -98,6 +98,115 @@
 <br />
 
 <h2>
+  <img width="1209" height="60" alt="image" src="https://github.com/user-attachments/assets/35be108e-5d39-4cac-9ee5-8ef439e14a95" />
+</h2>
+
+<h3>
+  <img width="2418" height="72" alt="image" src="https://github.com/user-attachments/assets/636ce89b-bec3-41a2-b608-d5fda7b9d1b7" />
+</h3>
+
+강의 시작 전에 투표와 Q&A를 미리 구성하고 발표 자료를 업로드하여 체계적인 강의 준비가 가능합니다.
+
+<br />
+
+<div align="center">
+  <img width="600" alt="image" src="https://github.com/user-attachments/assets/36e64870-a980-445a-aab7-a6b179c44b37" />
+</div>
+
+<br />
+<br />
+
+<h3>
+  <img width="2418" height="72" alt="image" src="https://github.com/user-attachments/assets/eabe2358-c212-4e4b-a184-91fc83a5df44" />
+</h3>
+
+카메라를 통해 손가락 제스처를 인식하여 말 없이도 의견을 표현할 수 있으며, 투표 참여도 손가락으로 간편하게 가능합니다.
+
+<br />
+
+<div align="center">
+  <img width="600" alt="image" src="https://github.com/user-attachments/assets/c5270713-bc34-4e68-8e92-88731ca7934a" />
+</div>
+
+<br />
+<br />
+
+<h3>
+  <img width="2418" height="72" alt="image" src="https://github.com/user-attachments/assets/ee4496af-d4b6-4547-a9e2-e851dfcbf9c5" />
+</h3>
+
+강의 중 즉석에서 투표를 생성하고 청중의 의견을 실시간으로 수집할 수 있으며, 제스처로도 참여할 수 있습니다.
+
+<br />
+
+<div align="center">
+  <img width="600" alt="image" src="https://github.com/user-attachments/assets/cad6614e-774c-4f98-b04a-95960fdf5b94" /><br />
+  <figcaption align="center">▲ 발표자 기준</figcaption>
+</div>
+
+<br />
+
+<div align="center">
+  <img width="600" alt="image" src="https://github.com/user-attachments/assets/91b03080-f9ab-4b6e-a070-19ffc30bd039" /><br />
+  <figcaption align="center">▲ 청중 기준</figcaption>
+</div>
+
+<br />
+<br />
+
+<h3>
+  <img width="2418" height="72" alt="image" src="https://github.com/user-attachments/assets/735a7d5d-2da9-4ced-b932-a6eff8918a54" />
+</h3>
+
+강의 중 질문을 던지고 청중의 답변을 실시간으로 받아볼 수 있습니다. 익명 답변 수집 기능을 통해 답변에 대한 심리적 부담감을 덜어줍니다.
+
+<br />
+
+<div align="center">
+  <img width="600" alt="image" src="https://github.com/user-attachments/assets/a39aab06-0e68-4401-9b5f-15cbc37005e0" /><br />
+  <figcaption align="center">▲ 발표자 기준</figcaption>
+</div>
+
+<br />
+
+<div align="center">
+  <img width="600" alt="image" src="https://github.com/user-attachments/assets/45abc02b-bf4c-4ba8-8600-3344e500cae0" /><br />
+  <figcaption align="center">▲ 청중 기준</figcaption>
+</div>
+
+<br />
+<br />
+
+<h3>
+  <img width="2418" height="72" alt="image" src="https://github.com/user-attachments/assets/899f7dc4-0bc1-4a69-b0d5-acadac0b3805" />
+</h3>
+
+강의 중 텍스트 기반 채팅으로 자유롭게 소통하고 질문을 주고받을 수 있습니다.
+
+<br />
+
+<div align="center">
+  <img width="600" alt="스크린샷 2026-02-04 오후 12 27 13" src="https://github.com/user-attachments/assets/1bcb6ce7-194a-4e65-8a59-92c804704f78" />
+</div>
+
+<br />
+<br />
+
+<h3>
+  <img width="2418" height="72" alt="image" src="https://github.com/user-attachments/assets/491027a2-09ea-4ed6-9fa0-cd6f51e51c39" />
+</h3>
+
+제스처, 투표, Q&A 참여 등을 기반으로 실시간 참여도 점수와 순위를 확인할 수 있어 수강생의 능동적 참여를 유도합니다.
+
+<br />
+
+<div align="center">
+  <img width="600" alt="스크린샷 2026-02-04 오후 12 27 21" src="https://github.com/user-attachments/assets/2cfa51ee-f69b-408d-b8c9-e8133157957c" />
+</div>
+
+<br />
+
+<h2>
   <img width="1209" height="60" alt="image" src="https://github.com/user-attachments/assets/d00c648b-cf55-41d8-8d17-9b7e4cde2ebd" />
 </h2>
 
@@ -215,115 +324,6 @@ pnpm dev
 | **Monitoring**     | ![Prometheus](https://img.shields.io/badge/Prometheus-E6522C?logo=prometheus&logoColor=white) ![Grafana](https://img.shields.io/badge/Grafana-F46800?logo=grafana&logoColor=white) ![Loki](https://img.shields.io/badge/Loki-F46800?logo=grafana&logoColor=white) ![Sentry](https://img.shields.io/badge/Sentry-362D59?logo=sentry&logoColor=white)                                                                                                                                                                                                                                                                          |
 | **Testing**        | ![Vitest](https://img.shields.io/badge/Vitest-6E9F18?logo=vitest&logoColor=white) ![Playwright](https://img.shields.io/badge/Playwright-2EAD33?logo=playwright&logoColor=white) ![k6](https://img.shields.io/badge/k6-7D64FF?logo=k6&logoColor=white) ![Artillery](https://img.shields.io/badge/Artillery-5A3E7F?logo=artillery&logoColor=white)                                                                                                                                                                                                                                                                             |
 | **Monorepo**       | ![Turborepo](https://img.shields.io/badge/Turborepo-EF4444?logo=turborepo&logoColor=white) ![pnpm](https://img.shields.io/badge/pnpm-F69220?logo=pnpm&logoColor=white)                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-
-<br />
-
-<h2>
-  <img width="1209" height="60" alt="image" src="https://github.com/user-attachments/assets/35be108e-5d39-4cac-9ee5-8ef439e14a95" />
-</h2>
-
-<h3>
-  <img width="2418" height="72" alt="image" src="https://github.com/user-attachments/assets/636ce89b-bec3-41a2-b608-d5fda7b9d1b7" />
-</h3>
-
-강의 시작 전에 투표와 Q&A를 미리 구성하고 발표 자료를 업로드하여 체계적인 강의 준비가 가능합니다.
-
-<br />
-
-<div align="center">
-  <img width="600" alt="image" src="https://github.com/user-attachments/assets/36e64870-a980-445a-aab7-a6b179c44b37" />
-</div>
-
-<br />
-<br />
-
-<h3>
-  <img width="2418" height="72" alt="image" src="https://github.com/user-attachments/assets/eabe2358-c212-4e4b-a184-91fc83a5df44" />
-</h3>
-
-카메라를 통해 손가락 제스처를 인식하여 말 없이도 의견을 표현할 수 있으며, 투표 참여도 손가락으로 간편하게 가능합니다.
-
-<br />
-
-<div align="center">
-  <img width="600" alt="image" src="https://github.com/user-attachments/assets/c5270713-bc34-4e68-8e92-88731ca7934a" />
-</div>
-
-<br />
-<br />
-
-<h3>
-  <img width="2418" height="72" alt="image" src="https://github.com/user-attachments/assets/ee4496af-d4b6-4547-a9e2-e851dfcbf9c5" />
-</h3>
-
-강의 중 즉석에서 투표를 생성하고 청중의 의견을 실시간으로 수집할 수 있으며, 제스처로도 참여할 수 있습니다.
-
-<br />
-
-<div align="center">
-  <img width="600" alt="image" src="https://github.com/user-attachments/assets/cad6614e-774c-4f98-b04a-95960fdf5b94" /><br />
-  <figcaption align="center">▲ 발표자 기준</figcaption>
-</div>
-
-<br />
-
-<div align="center">
-  <img width="600" alt="image" src="https://github.com/user-attachments/assets/91b03080-f9ab-4b6e-a070-19ffc30bd039" /><br />
-  <figcaption align="center">▲ 청중 기준</figcaption>
-</div>
-
-<br />
-<br />
-
-<h3>
-  <img width="2418" height="72" alt="image" src="https://github.com/user-attachments/assets/735a7d5d-2da9-4ced-b932-a6eff8918a54" />
-</h3>
-
-강의 중 질문을 던지고 청중의 답변을 실시간으로 받아볼 수 있습니다. 익명 답변 수집 기능을 통해 답변에 대한 심리적 부담감을 덜어줍니다.
-
-<br />
-
-<div align="center">
-  <img width="600" alt="image" src="https://github.com/user-attachments/assets/a39aab06-0e68-4401-9b5f-15cbc37005e0" /><br />
-  <figcaption align="center">▲ 발표자 기준</figcaption>
-</div>
-
-<br />
-
-<div align="center">
-  <img width="600" alt="image" src="https://github.com/user-attachments/assets/45abc02b-bf4c-4ba8-8600-3344e500cae0" /><br />
-  <figcaption align="center">▲ 청중 기준</figcaption>
-</div>
-
-<br />
-<br />
-
-<h3>
-  <img width="2418" height="72" alt="image" src="https://github.com/user-attachments/assets/899f7dc4-0bc1-4a69-b0d5-acadac0b3805" />
-</h3>
-
-강의 중 텍스트 기반 채팅으로 자유롭게 소통하고 질문을 주고받을 수 있습니다.
-
-<br />
-
-<div align="center">
-  <img width="600" alt="스크린샷 2026-02-04 오후 12 27 13" src="https://github.com/user-attachments/assets/1bcb6ce7-194a-4e65-8a59-92c804704f78" />
-</div>
-
-<br />
-<br />
-
-<h3>
-  <img width="2418" height="72" alt="image" src="https://github.com/user-attachments/assets/491027a2-09ea-4ed6-9fa0-cd6f51e51c39" />
-</h3>
-
-제스처, 투표, Q&A 참여 등을 기반으로 실시간 참여도 점수와 순위를 확인할 수 있어 수강생의 능동적 참여를 유도합니다.
-
-<br />
-
-<div align="center">
-  <img width="600" alt="스크린샷 2026-02-04 오후 12 27 21" src="https://github.com/user-attachments/assets/2cfa51ee-f69b-408d-b8c9-e8133157957c" />
-</div>
 
 <br />
 
