@@ -69,13 +69,21 @@ interface MyVideoProps {
   onModeChange: (mode: VideoDisplayMode) => void;
   stream: MediaStream | null;
   isAudioMuted: boolean;
+  isSpeaking: boolean;
 }
 
 /**
  * 내 비디오 컴포넌트
  * 비디오 모드가 'pip' 또는 'minimize'일 때만 렌더링
  */
-function MyVideo({ currentUser, videoMode, onModeChange, stream, isAudioMuted }: MyVideoProps) {
+function MyVideo({
+  currentUser,
+  videoMode,
+  onModeChange,
+  stream,
+  isAudioMuted,
+  isSpeaking,
+}: MyVideoProps) {
   const isCameraOn = useMediaStore((state) => state.isCameraOn);
 
   if (videoMode !== 'pip' && videoMode !== 'minimize') return null;
@@ -91,6 +99,7 @@ function MyVideo({ currentUser, videoMode, onModeChange, stream, isAudioMuted }:
         stream={stream}
         isCameraOn={isCameraOn}
         isAudioMuted={isAudioMuted}
+        isSpeaking={isSpeaking}
       />
     </Draggable>
   );
@@ -111,6 +120,7 @@ export function RoomMainSection({ onDisableScreenShare }: RoomMainSectionProps) 
   const isMicOn = useMediaStore((state) => state.isMicOn);
   const localStream = useStreamStore((state) => state.localStream);
   const processedStream = useBackgroundEffectStore((state) => state.processedStream);
+  const activeSpeakerIds = useRoomStore((state) => state.activeSpeakerIds);
 
   const myInfo = useRoomStore((state) => state.myInfo);
   const currentUser = myInfo ?? { id: '', name: '', role: 'audience' };
@@ -164,6 +174,7 @@ export function RoomMainSection({ onDisableScreenShare }: RoomMainSectionProps) 
             onModeChange={setUserVideoMode}
             stream={displayStream}
             isAudioMuted={!isMicOn}
+            isSpeaking={activeSpeakerIds.has(currentUser.id)}
           />
         </motion.div>
 

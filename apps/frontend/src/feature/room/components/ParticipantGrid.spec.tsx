@@ -123,6 +123,7 @@ describe('ParticipantGrid', () => {
       selector({
         actions: { getParticipantList: () => participants },
         participantAudioMuted: new Map(),
+        activeSpeakerIds: new Set(),
       } as Parameters<typeof selector>[0]),
     );
     vi.mocked(useStreamStore).mockImplementation((selector) =>

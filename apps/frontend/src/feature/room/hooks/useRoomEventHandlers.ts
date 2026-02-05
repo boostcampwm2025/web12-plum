@@ -82,6 +82,15 @@ export function useRoomEventHandlers() {
           mediaActions.removeRemoteStreamByParticipant(data.id, 'audio');
           mediaActions.removeRemoteStreamByParticipant(data.id, 'screen');
         },
+        onSpeakerDetected: (data) => {
+          // cooldown(2초)보다 길게 설정해야 깜빡임 방지
+          const ACTIVE_SPEAKER_TTL_MS = 3000;
+          const myInfo = useRoomStore.getState().myInfo;
+          if (!myInfo || data.participantId !== myInfo.id) {
+            roomActions.addSpeakerToOrder(data.participantId);
+          }
+          roomActions.setActiveSpeaker(data.participantId, ACTIVE_SPEAKER_TTL_MS);
+        },
       });
 
       // MediaConnectionService 이벤트 핸들러
