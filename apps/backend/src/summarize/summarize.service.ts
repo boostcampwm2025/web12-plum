@@ -132,19 +132,17 @@ export class SummarizeService {
       await this.aiSummaryManagerService.setSummaryStatus(roomId, 'PROCESSING');
       const modelConfig = this.getModelConfig(chatLog);
 
-      this.logger.log(chatLog);
       const response = await this.client.models.generateContent(modelConfig);
       const functionCall = response.functionCalls?.[0];
       if (!functionCall) {
         throw new Error('AI 응답 형식이 올바르지 않습니다.');
       }
 
-      this.logger.log(JSON.stringify(functionCall, null, 2));
       const result = functionCall.args as unknown as AiSummary;
 
       await this.aiSummaryManagerService.setSummaryStatus(roomId, 'COMPLETED');
       await this.aiSummaryManagerService.saveAiSummary(roomId, result);
-      this.logger.log(`✅ [${roomId}] 요약 저장 완료`);
+      this.logger.log(`✅ [${roomId}] 요약 저장 완료: ${result.summary.substring(0, 10)}`);
     } catch (error) {
       const errorString = JSON.stringify(error);
       const isQuotaError =
