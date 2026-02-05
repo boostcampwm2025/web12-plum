@@ -82,7 +82,7 @@ const activeSpeakerTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
 const speakerOrderTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
 
 // 발화 종료 후 speakerOrder에서 제거되기까지의 시간 (ms)
-const SPEAKER_ORDER_TTL_MS = 60000;
+const SPEAKER_ORDER_TTL_MS = 20000;
 
 export const useRoomStore = create<RoomState>()(
   persist(
