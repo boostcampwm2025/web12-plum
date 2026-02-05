@@ -1,6 +1,6 @@
 import type { Poll, PollOption } from '@plum/shared-interfaces';
 
-import { useSummaryStore } from '@/store/useSummaryStore';
+import { useSummaryStore } from '../store/useSummaryStore';
 
 import { calculatePercentage } from '../utils';
 

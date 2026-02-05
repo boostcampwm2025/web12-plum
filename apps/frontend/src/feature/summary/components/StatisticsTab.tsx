@@ -1,5 +1,5 @@
 import { Icon } from '@/shared/components/icon/Icon';
-import { useSummaryStore } from '@/store/useSummaryStore';
+import { useSummaryStore } from '../store/useSummaryStore';
 
 import { ParticipationRankingBoard } from './ParticipationRankingBoard';
 

@@ -1,6 +1,6 @@
 import type { Timelines } from '@plum/shared-interfaces';
 
-import { useSummaryStore } from '@/store/useSummaryStore';
+import { useSummaryStore, selectRelativeTimelines } from '../store/useSummaryStore';
 
 import { formatTime } from '../utils';
 
@@ -48,15 +48,11 @@ function TimelineItem({ content, startedAt, endedAt }: Timelines) {
 }
 
 /**
- * 전체 타임라인 데이터를 순회하며 리스트를 렌더링하고, 상대 시간 계산 로직 관리
- *
- * - 서버 데이터의 `startedAt`은 실제 기록 시점.
- * - 사용자에게 '강의 시작 후 경과 시간'을 보여주어야 함.
- * - 첫 번째 타임라인의 시작 시간을 기준점(baseTime)으로 삼아 차감 계산.
+ * 전체 타임라인 데이터를 순회하며 리스트를 렌더링
+ * selectRelativeTimelines selector를 통해 상대 시간으로 가공된 데이터 사용
  */
 function TimelineList() {
-  const timelines = useSummaryStore((state) => state.summaryData?.timelines ?? []);
-  const baseTime = timelines.length > 0 ? timelines[0].startedAt : 0;
+  const timelines = useSummaryStore(selectRelativeTimelines);
 
   if (timelines.length === 0) {
     return <p className="text-subtext-light py-4 text-center">시간대별 요약이 없습니다.</p>;
@@ -68,8 +64,8 @@ function TimelineList() {
         <TimelineItem
           key={index}
           content={timeline.content}
-          startedAt={timeline.startedAt - baseTime}
-          endedAt={timeline.endedAt - baseTime}
+          startedAt={timeline.startedAt}
+          endedAt={timeline.endedAt}
         />
       ))}
     </div>
