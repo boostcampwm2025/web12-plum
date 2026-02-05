@@ -37,7 +37,6 @@
 
 > _**"카메라 너머 수강생들은 지금 제 수업을 잘 따라오고 있을까요?"**_
 
-
 **1. 비대면 교육의 확산과 도구의 한계**
 
 실시간 비대면 교육은 급격히 증가하고 있지만, 정작 교육 현장에서는 교육 특화 도구가 부족하여 일반 회의용 솔루션(Zoom, Google Meet 등)에 의존하고 있습니다. 이러한 범용 도구들은 화상회의 기능에는 충실하지만, 교육에 필수적인 상호작용 레이어는 부족한 실정입니다.
@@ -95,121 +94,6 @@
 - 강의 종료 후 LLM 기반 자동 요약과 참여 분석 리포트를 제공합니다.
 
 - 수업 중 발생한 유의미한 데이터를 분석하여 강의의 질을 개선하고 더 나은 학습 커리큘럼을 설계할 수 있는 기반을 마련합니다.
-
-<br />
-
-<h2>
-  <img width="1209" height="60" alt="image" src="https://github.com/user-attachments/assets/d00c648b-cf55-41d8-8d17-9b7e4cde2ebd" />
-</h2>
-
-### ⚙️ Installation & Run
-
-프로젝트를 클론한 후, 다음 명령어를 순서대로 실행하여 개발 환경을 설정하고 애플리케이션을 실행합니다.
-
-```bash
-# 의존성 설치
-pnpm install
-
-# 환경 변수 파일 생성
-cp apps/backend/.env.local.example apps/backend/.env
-cp apps/frontend/.env.local.example apps/frontend/.env
-
-# 로컬 인프라 (Redis, Prometheus 등) 실행
-docker-compose -f docker-compose.local.yml up -d
-
-# 공통 패키지 빌드 (백엔드/프론트엔드에서 사용)
-pnpm --filter @plum/shared-interfaces build
-
-# ffmpeg 설치
-## macOS
-brew install ffmpeg
-## Windows (PowerShell 관리자 권한)
-winget install Gyan.FFmpeg
-## Linux (Debian/Ubuntu)
-sudo apt update && sudo apt install ffmpeg
-
-# 백엔드 및 프론트엔드 애플리케이션 실행
-pnpm dev
-```
-
-- 서비스 접속하기: `http://localhost:5173`
-- Grafana 대시보드 접속: `http://localhost:3001` (ID / PW: admin / admin)
-
-<br />
-
-### 🖥️ System Requirements
-
-- Runtime
-  - Node.js 18.0.0+
-  - pnpm 9.15.0+
-- Media Processing
-  - FFmpeg: `segment` 뮤서 및 `concat` 필터 지원 버전 (시스템 PATH 등록 필수)
-- Infrastructure
-  - Docker & Docker Compose (for local infrastructure)
-- Build Tools (for Mediasoup)
-  - Windows: Visual Studio Build Tools (C++ Desktop development) & Python 3
-  - macOS: Xcode Command Line Tools (xcode-select --install)
-  - Linux: build-essential, python3, make, g+
-
-<br />
-
-<h2>
-  <img width="1209" height="60" alt="image" src="https://github.com/user-attachments/assets/307f0ab9-ec1f-4147-ac8c-7e9b3ce95774" />
-</h2>
-
-### Infrastructure Architecture
-
-<div align="center">
-  <img width="100%" alt="PLUM Infrastructure Diagram" src="https://github.com/user-attachments/assets/0dbae0d3-93e3-4d48-af7d-56b4abb4710c" />
-</div>
-
-### Monitoring & Observability
-
-<div align="center">
-  <img width="100%" alt="PLUM Monitoring Diagram" src="https://github.com/user-attachments/assets/0c3170a6-dd7c-45eb-8a9c-5ac76b60943d" />
-</div>
-
-### Project Structure
-
-```
-├── apps/
-│   ├── backend/
-│   │   └── src/
-│   │       ├── common/       # 공통 모듈 (Filter, Interceptor 등)
-│   │       ├── interaction/  # 채팅 및 인터랙션 (Socket.IO)
-│   │       ├── mediasoup/    # MediaSoup SFU 설정 및 로직
-│   │       ├── redis/        # Redis 상태 관리 (Adapter)
-│   │       └── room/         # 강의실 관리
-│   ├── frontend/
-│   │   └── src/
-│   │       ├── app/          # 앱 설정 (라우팅, 스타일)
-│   │       ├── feature/      # 기능 단위 컴포넌트 (create-lecture, enter-lecture, room, summary)
-│   │       ├── pages/        # 라우트 페이지
-│   │       ├── shared/       # 공용 컴포넌트, API 클라이언트, 훅, 유틸리티
-│   │       ├── store/        # 전역 상태 관리 (Zustand)
-│   │       ├── mediasoup/    # MediaSoup WebRTC 클라이언트 설정
-│   │       ├── assets/       # 이미지, 폰트 등 정적 자산
-│   │       ├── types/        # TypeScript 타입 정의
-│   │       ├── mocks/        # 테스트용 Mock 데이터
-│   │       ├── App.tsx       # 루트 컴포넌트
-│   │       └── main.tsx      # 앱 진입점
-│   └── load-test/            # 성능 테스트 (K6, Artillery)
-├── packages/
-│   └── shared-interfaces/    # 공용 타입 및 DTO 정의
-├── .github/                  # CI/CD Workflows
-└── docker-compose.yml        # 인프라 설정
-```
-
-### Technology Stack
-
-| Category           | Technology                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Frontend**       | ![React](https://img.shields.io/badge/React-20232A?logo=react&logoColor=61DAFB) ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white) ![Vite](https://img.shields.io/badge/Vite-646CFF?logo=vite&logoColor=white) ![Zustand](https://img.shields.io/badge/Zustand-443E38?logo=react&logoColor=white) ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?logo=tailwind-css&logoColor=white)          |
-| **Backend**        | ![NestJS](https://img.shields.io/badge/NestJS-E0234E?logo=nestjs&logoColor=white) ![Socket.io](https://img.shields.io/badge/Socket.io-010101?logo=socket.io&logoColor=white) ![Mediasoup](https://img.shields.io/badge/Mediasoup-darkred?logo=webrtc&logoColor=white) ![Redis](https://img.shields.io/badge/Redis-DC382D?logo=redis&logoColor=white)                                                                                                      |
-| **Infra & DevOps** | ![NCP Cloud](https://img.shields.io/badge/NCP_Cloud-03C75A?logo=naver&logoColor=white) ![Vercel](https://img.shields.io/badge/Vercel-000000?logo=vercel&logoColor=white) ![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white) ![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?logo=github-actions&logoColor=white) ![AWS S3](https://img.shields.io/badge/AWS_S3-569A31?logo=amazon-s3&logoColor=white) |
-| **Monitoring**     | ![Prometheus](https://img.shields.io/badge/Prometheus-E6522C?logo=prometheus&logoColor=white) ![Grafana](https://img.shields.io/badge/Grafana-F46800?logo=grafana&logoColor=white) ![Loki](https://img.shields.io/badge/Loki-F46800?logo=grafana&logoColor=white) ![Sentry](https://img.shields.io/badge/Sentry-362D59?logo=sentry&logoColor=white)                                                                                                       |
-| **Testing**        | ![Vitest](https://img.shields.io/badge/Vitest-6E9F18?logo=vitest&logoColor=white) ![Playwright](https://img.shields.io/badge/Playwright-2EAD33?logo=playwright&logoColor=white) ![k6](https://img.shields.io/badge/k6-7D64FF?logo=k6&logoColor=white) ![Artillery](https://img.shields.io/badge/Artillery-5A3E7F?logo=artillery&logoColor=white)                                                                                                          |
-| **Monorepo**       | ![Turborepo](https://img.shields.io/badge/Turborepo-EF4444?logo=turborepo&logoColor=white) ![pnpm](https://img.shields.io/badge/pnpm-F69220?logo=pnpm&logoColor=white)                                                                                                                                                                                                                                                                                    |
 
 <br />
 
@@ -323,6 +207,127 @@ pnpm dev
 <br />
 
 <h2>
+  <img width="1209" height="60" alt="image" src="https://github.com/user-attachments/assets/d00c648b-cf55-41d8-8d17-9b7e4cde2ebd" />
+</h2>
+
+### ⚙️ Installation & Run
+
+프로젝트를 클론한 후, 다음 명령어를 순서대로 실행하여 개발 환경을 설정하고 애플리케이션을 실행합니다.
+
+```bash
+# 의존성 설치
+pnpm install
+
+# 환경 변수 파일 생성
+cp apps/backend/.env.local.example apps/backend/.env
+cp apps/frontend/.env.local.example apps/frontend/.env
+
+# 로컬 인프라 (Redis, Prometheus 등) 실행
+docker-compose -f docker-compose.local.yml up -d
+
+# 공통 패키지 빌드 (백엔드/프론트엔드에서 사용)
+pnpm --filter @plum/shared-interfaces build
+
+# ffmpeg 설치
+## macOS
+brew install ffmpeg
+## Windows (PowerShell 관리자 권한)
+winget install Gyan.FFmpeg
+## Linux (Debian/Ubuntu)
+sudo apt update && sudo apt install ffmpeg
+
+# 백엔드 및 프론트엔드 애플리케이션 실행
+pnpm dev
+```
+
+- 서비스 접속하기: `http://localhost:5173`
+- Grafana 대시보드 접속: `http://localhost:3001` (ID / PW: admin / admin)
+
+<br />
+
+### 🖥️ System Requirements
+
+- Runtime
+  - Node.js 18.0.0+
+  - Python 3.9+ (for AI Worker)
+  - pnpm 9.15.0+
+- Media Processing
+  - FFmpeg: `segment` 뮤서 및 `concat` 필터 지원 버전 (시스템 PATH 등록 필수)
+- Infrastructure
+  - Docker & Docker Compose (for local infrastructure)
+- Build Tools
+  - Windows: Visual Studio Build Tools (C++ Desktop development)
+  - macOS: Xcode Command Line Tools (xcode-select --install)
+  - Linux: build-essential, make, g++
+
+<br />
+
+<h2>
+  <img width="1209" height="60" alt="image" src="https://github.com/user-attachments/assets/307f0ab9-ec1f-4147-ac8c-7e9b3ce95774" />
+</h2>
+
+### Infrastructure Architecture
+
+<div align="center">
+  <img width="100%" alt="PLUM Infrastructure Diagram" src="https://github.com/user-attachments/assets/fd33c89e-39c3-4383-b5c3-3ad0960e8bf6" />
+</div>
+
+### Monitoring & Observability
+
+<div align="center">
+  <img width="100%" alt="PLUM Monitoring Diagram" src="https://github.com/user-attachments/assets/00d9f43c-d1e1-4cdd-a51e-e26b40f9564f" />
+</div>
+
+### Project Structure
+
+```yaml
+├── apps/
+│   ├── ai-worker/
+│   │   └── main.py           # STT 용 FastApi Application
+│   ├── backend/
+│   │   └── src/
+│   │       ├── chat/         # 채팅 관리 모듈
+│   │       ├── common/       # 공통 모듈 (Filter, Interceptor 등)
+│   │       ├── interaction/  # 인터랙션 (제스처, 질문, 투표) 관리 모듈
+│   │       ├── mediasoup/    # MediaSoup SFU 설정 및 로직
+│   │       ├── redis/        # Redis 상태 관리 (Adapter)
+│   │       ├── records/      # 강의실 음성 녹음 관리 및 STT 요청
+│   │       ├── room/         # 강의실 관리
+│   │       └── summarize/    # AI 요약 관리
+│   ├── frontend/
+│   │   └── src/
+│   │       ├── app/          # 앱 설정 (라우팅, 스타일)
+│   │       ├── assets/       # 이미지, 폰트 등 정적 자산
+│   │       ├── feature/      # 기능 단위 컴포넌트
+│   │       ├── mediasoup/    # MediaSoup WebRTC 클라이언트 설정
+│   │       ├── pages/        # 라우트 페이지
+│   │       ├── shared/       # 공용 컴포넌트, API 클라이언트, 훅, 유틸리티
+│   │       ├── store/        # 전역 상태 관리 (Zustand)
+│   │       ├── types/        # TypeScript 타입 정의
+│   │       ├── App.tsx       # 루트 컴포넌트
+│   │       └── main.tsx      # 앱 진입점
+│   └── load-test/            # 성능 테스트 (K6, Artillery)
+├── packages/
+│   └── shared-interfaces/    # 공용 타입 및 DTO 정의
+├── .github/                  # CI/CD Workflows
+└── docker-compose.yml        # 인프라 설정
+```
+
+### Technology Stack
+
+| Category           | Technology                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Frontend**       | ![React](https://img.shields.io/badge/React-20232A?logo=react&logoColor=61DAFB) ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white) ![Vite](https://img.shields.io/badge/Vite-646CFF?logo=vite&logoColor=white) ![Zustand](https://img.shields.io/badge/Zustand-443E38?logo=react&logoColor=white) ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?logo=tailwind-css&logoColor=white)                                                                                                                                                                             |
+| **Backend**        | ![NestJS](https://img.shields.io/badge/NestJS-E0234E?logo=nestjs&logoColor=white) ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white) ![Socket.io](https://img.shields.io/badge/Socket.io-010101?logo=socket.io&logoColor=white) ![Mediasoup](https://img.shields.io/badge/Mediasoup-darkred?logo=webrtc&logoColor=white) ![Redis](https://img.shields.io/badge/Redis-DC382D?logo=redis&logoColor=white) ![FFmpeg](https://img.shields.io/badge/FFmpeg-007808?logo=ffmpeg&logoColor=white) ![Gemini](https://img.shields.io/badge/Gemini-8E75B2?logo=googlegemini&logoColor=white) |
+| **Ai Worker**      | ![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white) ![Python](https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=white) ![Faster_Whisper](https://img.shields.io/badge/Faster_Whisper-000000?logo=openai&logoColor=white)                                                                                                                                                                                                                                                                                                                                                     |
+| **Infra & DevOps** | ![NCP Cloud](https://img.shields.io/badge/NCP_Cloud-03C75A?logo=naver&logoColor=white) ![Vercel](https://img.shields.io/badge/Vercel-000000?logo=vercel&logoColor=white) ![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white) ![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?logo=github-actions&logoColor=white) ![AWS S3](https://img.shields.io/badge/AWS_S3-569A31?logo=amazon-s3&logoColor=white)                                                                                                                                                                    |
+| **Monitoring**     | ![Prometheus](https://img.shields.io/badge/Prometheus-E6522C?logo=prometheus&logoColor=white) ![Grafana](https://img.shields.io/badge/Grafana-F46800?logo=grafana&logoColor=white) ![Loki](https://img.shields.io/badge/Loki-F46800?logo=grafana&logoColor=white) ![Sentry](https://img.shields.io/badge/Sentry-362D59?logo=sentry&logoColor=white)                                                                                                                                                                                                                                                                          |
+| **Testing**        | ![Vitest](https://img.shields.io/badge/Vitest-6E9F18?logo=vitest&logoColor=white) ![Playwright](https://img.shields.io/badge/Playwright-2EAD33?logo=playwright&logoColor=white) ![k6](https://img.shields.io/badge/k6-7D64FF?logo=k6&logoColor=white) ![Artillery](https://img.shields.io/badge/Artillery-5A3E7F?logo=artillery&logoColor=white)                                                                                                                                                                                                                                                                             |
+| **Monorepo**       | ![Turborepo](https://img.shields.io/badge/Turborepo-EF4444?logo=turborepo&logoColor=white) ![pnpm](https://img.shields.io/badge/pnpm-F69220?logo=pnpm&logoColor=white)                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+
+<br />
+
+<h2>
   <img width="1209" height="60" alt="image" src="https://github.com/user-attachments/assets/f64085d5-15ee-4da5-bd85-b086dac8ed39" />
 </h2>
 
@@ -344,7 +349,7 @@ pnpm dev
   
   <br />
 
-**[ 📖 프로젝트 위키 바로가기 ](https://github.com/boostcampwm2025/web12-plum/wiki) &nbsp; | &nbsp; [ 🚀 라이브 데모 체험하기 ](https://web12-plum.vercel.app/)**
+**[ 📖 프로젝트 위키 바로가기 ](https://github.com/boostcampwm2025/web12-plum/wiki) &nbsp; | &nbsp; [ 🚀 라이브 데모 체험하기 ](https://web12-plum-dev.vercel.app/)**
 
   <br />
   
