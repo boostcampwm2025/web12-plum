@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 
 import { Button } from '@/shared/components/Button';
 import { Icon } from '@/shared/components/icon/Icon';
 import { useToastStore } from '@/store/useToastStore';
-import { useSummaryStore, selectRelativeTimelines } from '../store/useSummaryStore';
+import { useSummaryStore } from '../store/useSummaryStore';
 import { downloadSummaryReport } from '../pdf/useSummaryReportDownload';
+import { getRelativeTimelines } from '../utils';
 
 /**
  * 강의 요약 리포트 다운로드 컴포넌트
@@ -14,7 +15,8 @@ export function ReportDownload() {
   const [isLoading, setIsLoading] = useState(false);
 
   const summaryData = useSummaryStore((state) => state.summaryData);
-  const relativeTimelines = useSummaryStore(selectRelativeTimelines);
+  const timelines = summaryData?.timelines ?? [];
+  const relativeTimelines = useMemo(() => getRelativeTimelines(timelines), [timelines]);
   const date = new Date().toLocaleDateString('ko-KR', {
     year: 'numeric',
     month: 'long',

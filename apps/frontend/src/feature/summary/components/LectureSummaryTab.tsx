@@ -1,8 +1,8 @@
+import { useMemo } from 'react';
 import type { Timelines } from '@plum/shared-interfaces';
 
-import { useSummaryStore, selectRelativeTimelines } from '../store/useSummaryStore';
-
-import { formatTime } from '../utils';
+import { useSummaryStore } from '../store/useSummaryStore';
+import { formatTime, getRelativeTimelines } from '../utils';
 
 /**
  * AI가 추출한 강의의 핵심 키워드를 해시태그 형식의 뱃지로 렌더링
@@ -49,10 +49,11 @@ function TimelineItem({ content, startedAt, endedAt }: Timelines) {
 
 /**
  * 전체 타임라인 데이터를 순회하며 리스트를 렌더링
- * selectRelativeTimelines selector를 통해 상대 시간으로 가공된 데이터 사용
+ * getRelativeTimelines 유틸로 상대 시간으로 가공된 데이터 사용
  */
 function TimelineList() {
-  const timelines = useSummaryStore(selectRelativeTimelines);
+  const rawTimelines = useSummaryStore((state) => state.summaryData?.timelines ?? []);
+  const timelines = useMemo(() => getRelativeTimelines(rawTimelines), [rawTimelines]);
 
   if (timelines.length === 0) {
     return <p className="text-subtext-light py-4 text-center">시간대별 요약이 없습니다.</p>;

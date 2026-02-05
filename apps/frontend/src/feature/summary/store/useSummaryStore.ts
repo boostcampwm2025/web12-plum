@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { RoomSummary, Timelines } from '@plum/shared-interfaces';
+import type { RoomSummary } from '@plum/shared-interfaces';
 
 interface SummaryStoreState {
   summaryData: RoomSummary | null;
@@ -8,24 +8,6 @@ interface SummaryStoreState {
     clearSummaryData: () => void;
   };
 }
-
-/**
- * 첫 번째 타임라인 시작 시점을 기준(0초)으로 상대 시간 계산된 timelines 반환
- * UI 표시용으로 '강의 시작 후 경과 시간' 형태로 가공
- */
-export const selectRelativeTimelines = (state: SummaryStoreState): Timelines[] => {
-  const timelines = state.summaryData?.timelines ?? [];
-  if (timelines.length === 0) return [];
-
-  const baseTime = timelines[0].startedAt;
-  const relativeTimelines = timelines.map((t) => ({
-    ...t,
-    startedAt: t.startedAt - baseTime,
-    endedAt: t.endedAt - baseTime,
-  }));
-
-  return relativeTimelines;
-};
 
 /**
  * 강의 종료 후 생성된 요약 리포트 데이터를 관리
