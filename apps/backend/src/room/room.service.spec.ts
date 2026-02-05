@@ -4,7 +4,6 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { CreateRoomRequest, EnterLectureRequestBody, Room } from '@plum/shared-interfaces';
 
 import { RoomService } from './room.service.js';
-import { InteractionService } from '../interaction/interaction.service.js';
 import {
   ActivityScoreManagerService,
   AiSummaryManagerService,
@@ -12,6 +11,7 @@ import {
   RoomManagerService,
 } from '../redis/repository-manager/index.js'; // 경로 수정
 import { MediasoupService } from '../mediasoup/mediasoup.service.js';
+import { PollService, QnaService } from '../interaction/service/index.js';
 
 // S3 업로드 모킹
 jest.mock('@aws-sdk/lib-storage', () => ({
@@ -59,9 +59,14 @@ describe('RoomService', () => {
           },
         },
         {
-          provide: InteractionService,
+          provide: PollService,
           useValue: {
             createMultiplePoll: jest.fn().mockResolvedValue([{ id: 'poll-1' }]),
+          },
+        },
+        {
+          provide: QnaService,
+          useValue: {
             createMultipleQna: jest.fn().mockResolvedValue([{ id: 'qna-1' }]),
           },
         },

@@ -24,7 +24,6 @@ import {
   RoomSummary,
   RoomValidationResponse,
 } from '@plum/shared-interfaces';
-import { InteractionService } from '../interaction/interaction.service.js';
 import {
   ActivityScoreManagerService,
   AiSummaryManagerService,
@@ -33,6 +32,7 @@ import {
 import { MediasoupService } from '../mediasoup/mediasoup.service.js';
 import { RoomType } from '../mediasoup/mediasoup.type.js';
 import { SESSION_TTL, SOCKET_NAMESPACE } from '../common/constants/socket.constants.js';
+import { PollService, QnaService } from '../interaction/service/index.js';
 
 @Injectable()
 export class RoomService {
@@ -42,7 +42,8 @@ export class RoomService {
 
   constructor(
     private readonly configService: ConfigService,
-    private readonly interactionService: InteractionService,
+    private readonly qnaService: QnaService,
+    private readonly pollService: PollService,
     private readonly roomManagerService: RoomManagerService,
     private readonly activityScoreManagerService: ActivityScoreManagerService,
     private readonly aiSummaryManagerService: AiSummaryManagerService,
@@ -191,8 +192,8 @@ export class RoomService {
 
     const [uploadFilesUrl] = await Promise.all([
       this.multipleFileUpload(files),
-      this.interactionService.createMultiplePoll(roomId, body.polls),
-      this.interactionService.createMultipleQna(roomId, body.qnas),
+      this.pollService.createMultiplePoll(roomId, body.polls),
+      this.qnaService.createMultipleQna(roomId, body.qnas),
       this.mediasoupService.createRoutersWithStrategy(roomId, RoomType.LECTURE),
     ]);
 
@@ -285,13 +286,14 @@ export class RoomService {
 
     if (!serverUrl) throw new NotFoundException(`Room with ID ${roomId} not found`);
 
-    return serverUrl;
+    // roomId를 쿼리 파라미터로 추가 (nginx hash 라우팅용)
+    return `${serverUrl}?roomId=${roomId}`;
   }
 
   async finalizeRoom(roomId: string): Promise<void> {
     await Promise.all([
-      this.interactionService.stopAllActivePoll(roomId),
-      this.interactionService.stopAllActiveQna(roomId),
+      this.pollService.stopAllActivePoll(roomId),
+      this.qnaService.stopAllActiveQna(roomId),
     ]);
   }
 
@@ -301,8 +303,8 @@ export class RoomService {
     if (room.status !== 'ended') throw new ForbiddenException(`강의실이 아직 진행중입니다.`);
 
     const [polls, qnas, activityStatistics, status] = await Promise.all([
-      this.interactionService.getEndedPolls(roomId),
-      this.interactionService.getEndedQnas(roomId),
+      this.pollService.getEndedPolls(roomId),
+      this.qnaService.getEndedQnas(roomId),
       this.activityScoreManagerService.getActivityStatistics(roomId),
       this.aiSummaryManagerService.getSummaryStatus(roomId),
     ]);

@@ -16,12 +16,12 @@ const menuItems: {
   icon: IconName;
   guideTarget?: string;
 }[] = [
-  {
-    id: 'breakroom',
-    label: '소강의실 관리',
-    description: '소강의실 생성 및 관리',
-    icon: 'breakdown-room',
-  },
+  // {
+  //   id: 'breakroom',
+  //   label: '소강의실 관리',
+  //   description: '소강의실 생성 및 관리',
+  //   icon: 'breakdown-room',
+  // },
   {
     id: 'vote',
     label: '투표 관리',
@@ -43,12 +43,12 @@ const menuItems: {
     icon: 'download',
     guideTarget: 'menu-material',
   },
-  {
-    id: 'participant',
-    label: '참가자 관리',
-    description: '참가자 권한 관리 및 강퇴',
-    icon: 'users',
-  },
+  // {
+  //   id: 'participant',
+  //   label: '참가자 관리',
+  //   description: '참가자 권한 관리 및 강퇴',
+  //   icon: 'users',
+  // },
 ];
 
 interface MenuPanelProps {

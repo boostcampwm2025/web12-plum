@@ -95,7 +95,7 @@ jobs:
             
             update_env "FE_URL" "${FE_URL}"
             update_env "STT_WORKER_URL" "http://localhost:8000"
-            update_end "LLM_WORKER_KEY" "${{ secrets.LLM_WORKER_KEY }}"
+            update_env "LLM_WORKER_KEY" "${{ secrets.LLM_WORKER_KEY }}"
             update_env "AWS_S3_REGION" "${AWS_REGION}"
             update_env "AWS_S3_ACCESS_KEY" "${AWS_KEY}"
             update_env "AWS_S3_SECRET_KEY" "${AWS_SECRET}"
@@ -201,7 +201,7 @@ jobs:
             
             update_env "FE_URL" "${FE_URL}"
             update_env "STT_WORKER_URL" "http://localhost:8000"
-            update_end "LLM_WORKER_KEY" "${{ secrets.LLM_WORKER_KEY }}"
+            update_env "LLM_WORKER_KEY" "${{ secrets.LLM_WORKER_KEY }}"
             update_env "AWS_S3_REGION" "${AWS_REGION}"
             update_env "AWS_S3_ACCESS_KEY" "${AWS_KEY}"
             update_env "AWS_S3_SECRET_KEY" "${AWS_SECRET}"
@@ -403,6 +403,9 @@ jobs:
             chown -R 472:472 grafana/data
             chmod -R 755 prometheus/data loki/data
 
+            # Prometheus 타겟 디렉토리 생성 (오토스케일링 서버 자동 등록용)
+            mkdir -p /opt/prometheus/targets
+
             # 컨테이너 재시작
             docker compose pull
             docker compose up -d
@@ -558,6 +561,9 @@ jobs:
             mkdir -p prometheus/data loki/data grafana/data
             chown -R 472:472 grafana/data
             chmod -R 755 prometheus/data loki/data
+
+            # Prometheus 타겟 디렉토리 생성 (오토스케일링 서버 자동 등록용)
+            mkdir -p /opt/prometheus/targets
 
             docker compose pull
             docker compose up -d
