@@ -314,7 +314,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       if (isAudio) {
         this.recordService
-          .startRecording(metadata.roomId, producer.id, isPresenter)
+          .startRecording(metadata.roomId, participant.id, producer.id, isPresenter)
           .catch((err) => this.logger.error(`녹음 시작 실패: ${err.message}`));
       }
 
@@ -392,7 +392,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
             await this.recordService.stopParticipantRecording(
               metadata.roomId,
               participant.role,
-              data.producerId,
+              participant.id,
             );
           }
 
@@ -615,22 +615,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     try {
-      await this.roomManagerService.updatePartial(room.id, { status: 'ended' });
-      this.server.to(room.id).emit('room_end');
-      // 해당 방의 모든 녹음(강사+학생) 중단 및 파일 닫기
-      await this.recordService.stopAllRecording(metadata.roomId);
-
-      // Multi-Router 정리 (모든 Router + PipeProducer)
-      await this.mediasoupService.closeRoutersWithStrategy(room.id);
-
-      this.logger.log(`[beak_room] 강의실 리소스를 정리합니다. ${room.id}`);
-      await this.roomService.finalizeRoom(room.id);
-
-      // 강의실 내부에 있는 모든 참가자 퇴장 처리
-      this.logger.log(`🚨 [break_room] 발표자 ${participant.name}에 의해 강의실 ${room.id} 종료`);
-
-      this.server.in(room.id).socketsLeave(room.id);
-      this.server.in(room.id).disconnectSockets(true);
+      await this.terminateRoom(metadata.roomId, `발표자(${participant.name})의 수동 종료`);
       return { success: true };
     } catch (error) {
       this.logger.error(`[break_room] 실패: ${error.message}`);
@@ -682,14 +667,36 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     const participantId = key.split(':').pop();
     const metadata = await this.participantManagerService.popReconnectMetadata(participantId!);
+    if (!metadata) return;
+    const { roomId } = metadata;
 
-    if (metadata)
-      await this.cleanup(
-        'reconnect expired',
-        metadata.roomId,
-        participantId!,
-        metadata.transportIds,
-      );
+    try {
+      const participant = await this.participantManagerService.findOne(participantId!);
+      const room = await this.roomManagerService.findOne(roomId);
+
+      // 발표자가 미복귀한 경우에만 방 전체 종료
+      if (
+        participant &&
+        room &&
+        participant.role === 'presenter' &&
+        room.presenter === participantId
+      ) {
+        await this.terminateRoom(
+          metadata.roomId,
+          `발표자(${participant.name}) 미복귀로 인한 자동 종료`,
+        );
+      } else {
+        // 일반 유저면 기존처럼 해당 유저만 정리
+        await this.cleanup(
+          'reconnect expired',
+          metadata.roomId,
+          participantId!,
+          metadata.transportIds,
+        );
+      }
+    } catch (error) {
+      this.logger.error(`❌ [reconnect expired] 처리 중 오류: ${error.message}`);
+    }
   }
 
   @OnEvent('consumer.closed')
@@ -725,6 +732,32 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
       Object.values(participant.producers),
       participant.consumers,
     );
+  }
+
+  private async terminateRoom(roomId: string, reason: string) {
+    const room = await this.roomManagerService.findOne(roomId);
+    if (!room || room.status !== 'active') return;
+
+    // 1. 상태 변경 (가장 먼저 수행하여 중복 실행 방지)
+    await this.roomManagerService.updatePartial(roomId, { status: 'ended' });
+
+    // 2. 모든 참가자에게 종료 알림
+    this.server.to(roomId).emit('room_end');
+
+    // 3. 녹음 중단 (이 시점에서 STT 요약이 트리거됨)
+    await this.recordService.stopAllRecording(roomId);
+
+    // 4. Mediasoup 리소스 정리
+    await this.mediasoupService.closeRoutersWithStrategy(roomId);
+
+    // 5. 방 데이터 최종 정리 (파일 처리 등)
+    await this.roomService.finalizeRoom(roomId);
+
+    // 6. 소켓 연결 해제
+    this.server.in(roomId).socketsLeave(roomId);
+    this.server.in(roomId).disconnectSockets(true);
+
+    this.logger.log(`🏁 [Room Terminated] 사유: ${reason}, ID: ${roomId}`);
   }
 
   /**

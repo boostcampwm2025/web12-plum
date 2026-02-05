@@ -6,6 +6,7 @@ import { CreateRoomRequest, EnterLectureRequestBody, Room } from '@plum/shared-i
 import { RoomService } from './room.service.js';
 import {
   ActivityScoreManagerService,
+  AiSummaryManagerService,
   ParticipantManagerService,
   RoomManagerService,
 } from '../redis/repository-manager/index.js'; // 경로 수정
@@ -90,6 +91,13 @@ describe('RoomService', () => {
           provide: ParticipantManagerService,
           useValue: {
             findOne: jest.fn(),
+          },
+        },
+        {
+          provide: AiSummaryManagerService,
+          useValue: {
+            getSummaryStatus: jest.fn(),
+            getAiSummary: jest.fn(),
           },
         },
         {

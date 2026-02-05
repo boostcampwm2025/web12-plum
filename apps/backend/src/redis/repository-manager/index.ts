@@ -5,3 +5,4 @@ export * from './qna-manager.service.js';
 export * from './chat-manager.service.js';
 export * from './activity-score-manager.service.js';
 export * from './recording-manager.service.js';
+export * from './ai-summary-manager.service.js';

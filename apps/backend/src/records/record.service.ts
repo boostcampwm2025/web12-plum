@@ -33,11 +33,8 @@ export class RecordService implements OnModuleInit {
 
   // 강사 전용 리코더: Map<roomId, RecorderContext>
   private teacherRecorders: Map<string, RecorderContext> = new Map();
-  // 학생용 리코더: Map<roomId, Map<producerId, RecorderContext>>
+  // 학생용 리코더: Map<roomId, Map<participantId, RecorderContext>>
   private studentRecorders: Map<string, Map<string, RecorderContext>> = new Map();
-
-  // 인덱스 추적을 위한 Map 추가
-  private chunkIndices: Map<string, number> = new Map();
 
   constructor(
     private readonly mediasoupService: MediasoupService,
@@ -66,7 +63,6 @@ export class RecordService implements OnModuleInit {
     const { port, timestamp, payloadType } = options;
     const key = `${roomId}_${rolePrefix}_${timestamp}`;
     const outputPath = join(RECORD_DIR, `${key}_%03d.wav`);
-    this.chunkIndices.set(key, 0);
 
     const sdpString = `v=0
 o=- 0 0 IN IP4 127.0.0.1
@@ -160,7 +156,20 @@ a=fmtp:${payloadType} sprop-stereo=1`;
   /**
    * 녹음 시작 (역할에 따라 분기)
    */
-  async startRecording(roomId: string, producerId: string, isPresenter: boolean) {
+  async startRecording(
+    roomId: string,
+    participantId: string,
+    producerId: string,
+    isPresenter: boolean,
+  ) {
+    if (isPresenter) {
+      const existing = this.teacherRecorders.get(roomId);
+      if (existing) await this.terminateRecorder(roomId, 'presenter', existing);
+    } else {
+      const existing = this.studentRecorders.get(roomId)?.get(participantId);
+      if (existing) await this.terminateRecorder(roomId, `participant_${participantId}`, existing);
+    }
+
     const transport = await this.mediasoupService.createPlainTransport(roomId);
     const remoteRtpPort = await this.getFreePort();
     const rtpCapabilities = this.mediasoupService.getRouterRtpCapabilities(roomId);
@@ -171,7 +180,7 @@ a=fmtp:${payloadType} sprop-stereo=1`;
       rtpCapabilities,
     );
 
-    const rolePrefix = isPresenter ? 'presenter' : `participant_${producerId}`;
+    const rolePrefix = isPresenter ? 'presenter' : `participant_${participantId}`;
     const timestamp = Date.now();
     const options: FFmpegOption = {
       port: remoteRtpPort,
@@ -188,13 +197,13 @@ a=fmtp:${payloadType} sprop-stereo=1`;
 
     if (isPresenter) {
       this.teacherRecorders.set(roomId, context);
-      this.logger.log(`🔴 [${roomId}] 강사 녹음 시작 - Producer: ${producerId}`);
+      this.logger.log(`🔴 [${roomId}] 강사 녹음 시작 - Producer: ${participantId}`);
     } else {
       if (!this.studentRecorders.has(roomId)) {
         this.studentRecorders.set(roomId, new Map());
       }
-      this.studentRecorders.get(roomId)!.set(producerId, context);
-      this.logger.log(`🎤 [${roomId}] 학생 질문 녹음 시작 - Producer: ${producerId}`);
+      this.studentRecorders.get(roomId)!.set(participantId, context);
+      this.logger.log(`🎤 [${roomId}] 학생 질문 녹음 시작 - Producer: ${participantId}`);
     }
     setTimeout(async () => await consume.resume(), 1000);
   }
@@ -225,14 +234,14 @@ a=fmtp:${payloadType} sprop-stereo=1`;
   /**
    * 특정 유저 녹음만 중단
    */
-  async stopParticipantRecording(roomId: string, role: string, producerId: string) {
+  async stopParticipantRecording(roomId: string, role: string, participantId: string) {
     const roomStudents = this.studentRecorders.get(roomId);
-    if (roomStudents && roomStudents.has(producerId)) {
-      const context = roomStudents.get(producerId)!;
-      const rolePrefix = role === 'presenter' ? role : `participant_${producerId}`;
+    if (roomStudents && roomStudents.has(participantId)) {
+      const context = roomStudents.get(participantId)!;
+      const rolePrefix = role === 'presenter' ? role : `participant_${participantId}`;
       await this.terminateRecorder(roomId, rolePrefix, context);
-      roomStudents.delete(producerId);
-      this.logger.log(`⏹️ [${roomId}] 청중 ${producerId} 녹음 중단`);
+      roomStudents.delete(participantId);
+      this.logger.log(`⏹️ [${roomId}] 청중 ${participantId} 녹음 중단`);
     }
   }
 
@@ -250,8 +259,8 @@ a=fmtp:${payloadType} sprop-stereo=1`;
     // 해당 방의 모든 학생 중단
     const roomStudents = this.studentRecorders.get(roomId);
     if (roomStudents) {
-      for (const [producerId, context] of roomStudents) {
-        await this.terminateRecorder(roomId, `participant_${producerId}`, context);
+      for (const [participantId, context] of roomStudents) {
+        await this.terminateRecorder(roomId, `participant_${participantId}`, context);
       }
       this.studentRecorders.delete(roomId);
     }

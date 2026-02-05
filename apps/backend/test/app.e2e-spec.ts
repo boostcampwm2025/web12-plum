@@ -7,6 +7,7 @@ import { SOCKET_CONFIG } from '../src/common/constants/socket.constants.js';
 import { RedisModule } from '../src/redis/redis.module.js';
 import { RedisService } from '../src/redis/redis.service.js';
 import * as Managers from '../src/redis/repository-manager/index.js';
+import { ConfigService } from '@nestjs/config';
 
 jest.mock('chokidar', () => ({
   watch: jest.fn().mockReturnValue({
@@ -39,6 +40,7 @@ const mockManagers = {
   ChatManagerService: {},
   ActivityScoreManagerService: {},
   RecordingManagerService: {},
+  AiSummaryManagerService: {},
 };
 
 describe('AppController (e2e)', () => {
@@ -67,6 +69,10 @@ describe('AppController (e2e)', () => {
           provide: Managers.RecordingManagerService,
           useValue: mockManagers.RecordingManagerService,
         },
+        {
+          provide: Managers.AiSummaryManagerService,
+          useValue: mockManagers.AiSummaryManagerService,
+        },
       ],
       exports: [RedisService, ...Object.values(Managers)],
     })
@@ -77,6 +83,13 @@ describe('AppController (e2e)', () => {
     })
       .overrideModule(RedisModule)
       .useModule(FakeRedisModule)
+      .overrideProvider(ConfigService)
+      .useValue({
+        get: jest.fn((key: string) => {
+          if (key === 'LLM_WORKER_KEY') return 'mock-api-key';
+          return process.env[key] || null;
+        }),
+      })
       .compile();
 
     app = moduleFixture.createNestApplication();

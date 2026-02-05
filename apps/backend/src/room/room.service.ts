@@ -26,6 +26,7 @@ import {
 } from '@plum/shared-interfaces';
 import {
   ActivityScoreManagerService,
+  AiSummaryManagerService,
   RoomManagerService,
 } from '../redis/repository-manager/index.js';
 import { MediasoupService } from '../mediasoup/mediasoup.service.js';
@@ -45,6 +46,7 @@ export class RoomService {
     private readonly pollService: PollService,
     private readonly roomManagerService: RoomManagerService,
     private readonly activityScoreManagerService: ActivityScoreManagerService,
+    private readonly aiSummaryManagerService: AiSummaryManagerService,
     private readonly mediasoupService: MediasoupService,
   ) {
     this.region = configService.get<string>('AWS_S3_REGION') || '';
@@ -300,17 +302,31 @@ export class RoomService {
     if (!room) throw new NotFoundException(`Room with ID ${roomId} not found`);
     if (room.status !== 'ended') throw new ForbiddenException(`강의실이 아직 진행중입니다.`);
 
-    const [polls, qnas, activityStatistics] = await Promise.all([
+    const [polls, qnas, activityStatistics, status] = await Promise.all([
       this.pollService.getEndedPolls(roomId),
       this.qnaService.getEndedQnas(roomId),
       this.activityScoreManagerService.getActivityStatistics(roomId),
+      this.aiSummaryManagerService.getSummaryStatus(roomId),
     ]);
 
+    if (status !== 'COMPLETED') {
+      return {
+        name: room.name,
+        roomId: room.id,
+        polls,
+        qnas,
+        activityStatistics,
+        summary: '',
+        timelines: [],
+        tags: [],
+      };
+    }
+
+    const aiSummary = (await this.aiSummaryManagerService.getAiSummary(roomId))!;
     return {
       name: room.name,
       roomId: room.id,
-      summary: '', // TODO: add real summary
-      timelines: '', // TODO: add real timeline
+      ...aiSummary,
       polls,
       qnas,
       activityStatistics,
