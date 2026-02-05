@@ -46,6 +46,6 @@ export class AiSummaryManagerService {
     const client = this.redisService.getClient();
 
     const data = await client.get(key);
-    return data ? (JSON.stringify(data) as unknown as AiSummary) : null;
+    return data ? JSON.parse(data) : null;
   }
 }
