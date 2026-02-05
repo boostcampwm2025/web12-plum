@@ -5,8 +5,8 @@ import { useSafeRoomId } from '@/shared/hooks/useSafeRoomId';
 import { roomApi } from '@/shared/api/endpoints/room';
 import { logger } from '@/shared/lib/logger';
 
-// 폴링 간격 (5초)
-const POLLING_INTERVAL = 5000;
+// 폴링 간격 (10초)
+const POLLING_INTERVAL = 10000;
 
 /**
  * 강의 종료 후 AI 요약 결과가 아직 생성 중인 경우, 서버에 주기적으로 데이터를 요청하여 업데이트
