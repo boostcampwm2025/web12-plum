@@ -157,7 +157,6 @@ export class AudioLevelObserverService {
             detectedAt: now,
           });
           emitMap.set(participantId, now);
-          this.logger.log(`🗣️ 발화 감지: ${participantId} (Room: ${roomId})`);
         }
       }
     }
