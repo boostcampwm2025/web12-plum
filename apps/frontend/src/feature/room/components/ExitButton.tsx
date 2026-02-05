@@ -109,7 +109,9 @@ export function ExitConfirmModal({ isModalOpen, setIsModalOpen }: ExitConfirmMod
       className="max-w-sm"
     >
       <Modal.Title>
-        {isPresenter ? '정말 강의를 종료하시겠어요?' : '정말 나가시겠어요?'}
+        <span className="inline-block pt-3">
+          {isPresenter ? '정말 강의를 종료하시겠어요?' : '정말 나가시겠어요?'}
+        </span>
       </Modal.Title>
       <div className="mt-10 flex flex-col gap-3">
         <p className="text-primary text-sm font-bold">강의 요약 링크</p>
