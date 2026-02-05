@@ -3,7 +3,7 @@ import { BaseWsExceptionFilter, WsException } from '@nestjs/websockets';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Socket } from 'socket.io';
 
-@Catch()
+@Catch(WsException)
 export class WsExceptionFilter extends BaseWsExceptionFilter {
   constructor(@Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService) {
     super();
