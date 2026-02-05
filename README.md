@@ -269,13 +269,13 @@ pnpm dev
 ### Infrastructure Architecture
 
 <div align="center">
-  <img width="100%" alt="PLUM Infrastructure Diagram" src="https://github.com/user-attachments/assets/0dbae0d3-93e3-4d48-af7d-56b4abb4710c" />
+  <img width="100%" alt="PLUM Infrastructure Diagram" src="https://github.com/user-attachments/assets/fd33c89e-39c3-4383-b5c3-3ad0960e8bf6" />
 </div>
 
 ### Monitoring & Observability
 
 <div align="center">
-  <img width="100%" alt="PLUM Monitoring Diagram" src="https://github.com/user-attachments/assets/0c3170a6-dd7c-45eb-8a9c-5ac76b60943d" />
+  <img width="100%" alt="PLUM Monitoring Diagram" src="https://github.com/user-attachments/assets/00d9f43c-d1e1-4cdd-a51e-e26b40f9564f" />
 </div>
 
 ### Project Structure
