@@ -12,14 +12,17 @@ const MAX_ITEMS = 5;
  * 2. 발화자 순서 (speakerOrder에 있는 참가자들, 먼저 말한 순)
  * 3. 나머지는 입장 시간순 (joinedAt)
  */
-function sortParticipants(participants: Participant[], speakerOrder: string[]): Participant[] {
+function sortParticipants(
+  participants: Participant[],
+  speakerIndexMap: Map<string, number>,
+): Participant[] {
   const presenter = participants.find((p) => p.role === 'presenter');
   const others = participants.filter((p) => p.role !== 'presenter');
 
   const sortedOthers = [...others].sort((a, b) => {
     // 1. 발화자 순서 (speakerOrder)
-    const aIndex = speakerOrder.indexOf(a.id);
-    const bIndex = speakerOrder.indexOf(b.id);
+    const aIndex = speakerIndexMap.get(a.id) ?? -1;
+    const bIndex = speakerIndexMap.get(b.id) ?? -1;
 
     // 둘 다 speakerOrder에 있으면 순서대로
     if (aIndex !== -1 && bIndex !== -1) {
@@ -43,11 +46,16 @@ export function useParticipantPagination(dynamicItemsPerPage: number | null) {
   const participantsMap = useRoomStore(useShallow((state) => state.participants));
   const speakerOrder = useRoomStore(useShallow((state) => state.speakerOrder));
 
+  const speakerIndexMap = useMemo(
+    () => new Map(speakerOrder.map((id, idx) => [id, idx])),
+    [speakerOrder],
+  );
+
   // 정렬된 참가자 목록
   const participants = useMemo(() => {
     const allParticipants = Array.from(participantsMap.values());
-    return sortParticipants(allParticipants, speakerOrder);
-  }, [participantsMap, speakerOrder]);
+    return sortParticipants(allParticipants, speakerIndexMap);
+  }, [participantsMap, speakerIndexMap]);
 
   // 아직 측정되지 않았으면 0으로 처리 (빈 윈도우)
   const itemsPerPage =
