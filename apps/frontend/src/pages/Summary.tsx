@@ -18,7 +18,7 @@ import { ErrorFallback } from '@/shared/components/ErrorFallback';
 import { roomApi } from '@/shared/api/endpoints/room';
 import { formatSummaryAvailableUntil } from '@/shared/lib/date';
 import { useToastStore } from '@/store/useToastStore';
-import { useSummaryStore } from '@/store/useSummaryStore';
+import { useSummaryStore } from '@/feature/summary/store/useSummaryStore';
 import { useAiSummaryPolling } from '@/feature/summary/hooks/useAiSummaryPolling';
 import { ROUTES } from '@/app/routes/routes';
 import { useSafeRoomId } from '@/shared/hooks/useSafeRoomId';
@@ -121,15 +121,7 @@ export function Summary() {
             title="강의 요약"
             description="AI가 자동으로 생성한 회의 요약 내용입니다."
           />
-          <ReportDownload
-            roomTitle={summaryData?.name || ''}
-            date={new Date().toLocaleDateString('ko-KR', {
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
-            })}
-            summaryData={summaryData!}
-          />
+          <ReportDownload />
           {fetchedAt && (
             <section className="mt-3 px-1 text-right">
               <p className="text-subtext-light text-xs">

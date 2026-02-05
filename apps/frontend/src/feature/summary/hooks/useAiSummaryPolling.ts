@@ -1,9 +1,10 @@
 import { useEffect } from 'react';
 
-import { useSummaryStore } from '@/store/useSummaryStore';
 import { useSafeRoomId } from '@/shared/hooks/useSafeRoomId';
 import { roomApi } from '@/shared/api/endpoints/room';
 import { logger } from '@/shared/lib/logger';
+
+import { useSummaryStore } from '../store/useSummaryStore';
 
 // 폴링 간격 (10초)
 const POLLING_INTERVAL = 10000;
