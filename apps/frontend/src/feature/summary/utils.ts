@@ -16,3 +16,15 @@ export const calculatePercentage = (
   const roundedPercentage = Number(percentage.toFixed(precision));
   return roundedPercentage;
 };
+
+/**
+ * 초 단위 시간을 MM:SS 형식으로 변환
+ * @param seconds 초 단위 시간
+ * @returns MM:SS 형식의 시간 문자열
+ */
+export function formatTime(seconds: number): string {
+  const totalSeconds = Math.floor(seconds);
+  const mins = Math.floor(totalSeconds / 60);
+  const secs = totalSeconds % 60;
+  return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+}
