@@ -1,6 +1,5 @@
-import type { ActivityStatistics } from '@plum/shared-interfaces';
-
 import { Icon } from '@/shared/components/icon/Icon';
+import { useSummaryStore } from '@/store/useSummaryStore';
 
 import { ParticipationRankingBoard } from './ParticipationRankingBoard';
 
@@ -79,14 +78,13 @@ function InteractionAnalysis({ interactions }: InteractionAnalysisProps) {
   );
 }
 
-interface StatisticsTabProps {
-  activityStatistics: ActivityStatistics;
-}
-
 /**
  * 참여도 통계 탭 컴포넌트
  */
-export function StatisticsTab({ activityStatistics }: StatisticsTabProps) {
+export function StatisticsTab() {
+  const activityStatistics = useSummaryStore((state) => state.summaryData?.activityStatistics);
+  if (!activityStatistics) return null;
+
   const { averageScore, ranks, interactions } = activityStatistics;
 
   const totalInteractions =
