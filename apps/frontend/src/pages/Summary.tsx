@@ -115,6 +115,7 @@ export function Summary() {
               month: 'long',
               day: 'numeric',
             })}
+            summaryData={summaryData!}
           />
           {fetchedAt && (
             <section className="mt-3 px-1 text-right">
