@@ -18,17 +18,19 @@ The input data follows this custom structure:
   - 'Base' is the absolute starting time (in seconds) for the segments below it.
 - **Body**: Start-End:Text
   - 'Start' and 'End' are relative offsets (in seconds) from the 'Base' timestamp.
-  - Example: If Base is 1000 and segment is 10-20, the absolute time is 1010 to 1020.
 
 [Instruction]
 - **No Content Omission**: Ensure that all technical topics discussed are reflected.
 - **Lecture Context**: Focus on the instructor's technical explanations and workflow.
 - **Tone**: Use a polite and educational Korean tone.
 - **Timestamp Calculation**: **CRITICAL!** Convert all relative times into **absolute Unix timestamps** for the 'timelines' field using the (Base + Offset) formula.
-- **Noise Handling**: STT may contain errors or repetitive filler words. Focus on meaningful content.
+- **Detailed Summary**: The 'summary' field must be comprehensive and consist of **at least 5 sentences**, covering the overall context, key technical points, and conclusions.
+- **Topic Chunking**: Group closely related short segments into a single, cohesive timeline entry if they share the same technical context.
+- **Timeline Detail**: Each timeline 'content' must be **at least 2-3 sentences** long, describing the technical background, the discussion process, and the final decision.
+- **Strategic Granularity**: Aim for a balanced number of timeline entries (approximately 4–6 for a 10-minute session) to ensure readability.
 
 [Output Fields (Korean)]
-1. 'summary': Comprehensive overview.
+1. 'summary': Comprehensive overview (at least 5 sentences).
 2. 'tags': 3-5 technical keywords.
 3. 'timelines': { startedAt: number, endedAt: number, content: string }[] (using absolute timestamps).
 
@@ -122,9 +124,15 @@ export class SummarizeService {
   }
 
   async summarizeRoom(roomId: string, chatLog: string, retryCount = 0) {
+    if (chatLog.length === 0) {
+      await this.aiSummaryManagerService.setSummaryStatus(roomId, 'NONE');
+      this.logger.log('[AI Summarize] 음성 데이터가 없어 요약을 진행하지 않습니다.');
+      return;
+    }
+
     const status = await this.aiSummaryManagerService.getSummaryStatus(roomId);
     if (retryCount === 0 && status !== 'YET') {
-      this.logger.log('요약이 진행중이거나 완료되었습니다.');
+      this.logger.log('[AI Summarize] 요약이 진행중이거나 완료되었습니다.');
       return;
     }
 
@@ -135,7 +143,7 @@ export class SummarizeService {
       const response = await this.client.models.generateContent(modelConfig);
       const functionCall = response.functionCalls?.[0];
       if (!functionCall) {
-        throw new Error('AI 응답 형식이 올바르지 않습니다.');
+        throw new Error('[AI Summarize] AI 응답 형식이 올바르지 않습니다.');
       }
 
       const result = functionCall.args as unknown as AiSummary;

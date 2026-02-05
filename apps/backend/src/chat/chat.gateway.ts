@@ -101,7 +101,10 @@ export class ChatGateway {
     );
     if (!allowed) {
       if (participant.role === 'audience') {
-        await this.activityScoreManagerService.applyPenalty(metadata.roomId, metadata.participantId);
+        await this.activityScoreManagerService.applyPenalty(
+          metadata.roomId,
+          metadata.participantId,
+        );
       }
 
       const timeLimit = Math.ceil(CHAT_POLICY.LIMIT.WINDOW_MS / 1000);

@@ -69,6 +69,23 @@ export class FileWatcherService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  async checkAllProcessingFinished(roomId: string) {
+    const room = await this.roomManagerService.findOne(roomId);
+    if (!room || room.status !== 'ended') {
+      this.logger.debug(`⏳ 아직 강의실이 종료되지 않았습니다. 요약 프로세스를 스킵합니다.`);
+      return;
+    }
+
+    const pendingCount = await this.recordingManager.getPendingCount(roomId);
+    if (pendingCount === 0) {
+      this.logger.log(`🎊 [${roomId}] 모든 STT 작업 완료. 요약 프로세스를 시작할 수 있습니다.`);
+      const allLogs = await this.recordingManager.getFullTranscript(roomId);
+      await this.summarizeService.summarizeRoom(roomId, allLogs);
+    } else {
+      this.logger.log(`⏳ 아직 처리 중인 작업이 남았습니다 (남은 개수: ${pendingCount})`);
+    }
+  }
+
   private getParseFileName(filePath: string): STTData | undefined {
     const { name, base } = parse(filePath);
     const match = name.match(/^(.+?)_(.+?)_(\d+)_(\d+)$/);
@@ -118,11 +135,8 @@ export class FileWatcherService implements OnModuleInit, OnModuleDestroy {
 
     this.isMerging.set(batchKey, true);
     try {
-      const last = currentBatch.pop();
-      const filesToMerge = [...currentBatch];
+      const filesToMerge = currentBatch.splice(0, BATCH_SIZE);
       const batchLast = this.getParseFileName(filesToMerge[filesToMerge.length - 1]);
-
-      this.fileBatches.set(batchKey, [last!]);
 
       this.logger.log(`🛡️ 배치 수집 완료 (${filesToMerge.length}개), 병합 프로세스 진입`);
       await this.mergeAndRunSTT(filesToMerge, batchLast!);
@@ -260,20 +274,6 @@ export class FileWatcherService implements OnModuleInit, OnModuleDestroy {
     } catch (error) {
       this.logger.error(`❌ STT 분석 실패 (${fileName}): ${error.message}`);
       throw error;
-    }
-  }
-
-  private async checkAllProcessingFinished(roomId: string) {
-    const room = await this.roomManagerService.findOne(roomId);
-    if (!room || room.status !== 'ended') return;
-
-    const pendingCount = await this.recordingManager.getPendingCount(roomId);
-    if (pendingCount === 0) {
-      this.logger.log(`🎊 [${roomId}] 모든 STT 작업 완료. 요약 프로세스를 시작할 수 있습니다.`);
-      const allLogs = await this.recordingManager.getFullTranscript(roomId);
-      await this.summarizeService.summarizeRoom(roomId, allLogs);
-    } else {
-      this.logger.debug(`⏳ 아직 처리 중인 작업이 남았습니다 (남은 개수: ${pendingCount})`);
     }
   }
 

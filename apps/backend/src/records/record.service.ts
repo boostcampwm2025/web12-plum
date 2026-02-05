@@ -4,6 +4,8 @@ import { ChildProcess, spawn } from 'child_process';
 import { join } from 'path';
 import * as net from 'node:net';
 import { MediasoupService } from '../mediasoup/mediasoup.service.js';
+import { AiSummaryManagerService } from '../redis/repository-manager/index.js';
+
 import { FileWatcherService } from './file-watcher.service.js';
 import { RECORD_DIR, SEGMENT_TIME } from './record.constant.js';
 
@@ -38,6 +40,7 @@ export class RecordService implements OnModuleInit {
 
   constructor(
     private readonly mediasoupService: MediasoupService,
+    private readonly aiSummaryManagerService: AiSummaryManagerService,
     private readonly fileWatcherService: FileWatcherService,
   ) {}
 
@@ -251,13 +254,20 @@ a=fmtp:${payloadType} sprop-stereo=1`;
   async stopAllRecording(roomId: string) {
     // 강사 중단
     const context = this.teacherRecorders.get(roomId);
+    const roomStudents = this.studentRecorders.get(roomId);
+
+    if (!context && !roomStudents) {
+      await this.aiSummaryManagerService.setSummaryStatus(roomId, 'NONE');
+      this.logger.log(`🏁 [${roomId}]에는 종료될 녹음 프로세스가 없습니다.`);
+      return;
+    }
+
     if (context) {
       this.teacherRecorders.delete(roomId);
       await this.terminateRecorder(roomId, `presenter`, context);
     }
 
     // 해당 방의 모든 학생 중단
-    const roomStudents = this.studentRecorders.get(roomId);
     if (roomStudents) {
       for (const [participantId, context] of roomStudents) {
         await this.terminateRecorder(roomId, `participant_${participantId}`, context);
