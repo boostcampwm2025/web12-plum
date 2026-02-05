@@ -19,6 +19,7 @@ interface PollState {
     updatePollDetail: (data: UpdatePollStatusFullPayload) => void;
     setCompletedFromEndDetail: (data: EndPollDetailPayload) => void;
     setAudienceVotedOption: (pollId: string, optionId: number | null) => void;
+    clear: () => void;
   };
 }
 
@@ -162,6 +163,9 @@ export const usePollStore = create<PollState>((set) => ({
           [pollId]: optionId,
         },
       }));
+    },
+    clear: () => {
+      set({ polls: [], audienceVotedOptionByPollId: {} });
     },
   },
 }));
