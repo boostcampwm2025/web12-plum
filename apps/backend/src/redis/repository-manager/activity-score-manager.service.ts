@@ -169,7 +169,7 @@ export class ActivityScoreManagerService {
 
         // Redis 업데이트
         pipeline.zadd(zsetKey, finalScore, participantId);
-        pipeline.hincrby(statsKey, 'participationScore', -penaltyScore);
+        pipeline.hset(statsKey, 'participationScore', finalScore);
         this.logger.log(
           `[PENALTY] ${participantId} -${penaltyScore}점 (누적: ${newPenaltyCount}회)`,
         );

@@ -100,7 +100,10 @@ export class ChatGateway {
       metadata.participantId,
     );
     if (!allowed) {
-      await this.activityScoreManagerService.applyPenalty(metadata.roomId, metadata.participantId);
+      if (participant.role === 'audience') {
+        await this.activityScoreManagerService.applyPenalty(metadata.roomId, metadata.participantId);
+      }
+
       const timeLimit = Math.ceil(CHAT_POLICY.LIMIT.WINDOW_MS / 1000);
       return {
         success: false,
