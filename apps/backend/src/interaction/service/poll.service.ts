@@ -16,6 +16,12 @@ import { BusinessException } from '../../common/types/index.js';
 export class PollService {
   constructor(private readonly pollManagerService: PollManagerService) {}
 
+  /**
+   * 투표 객체 생성 로직
+   * @param roomId 속한 강의실 id
+   * @param dto 유저가 입력한 투표 Raw 데이터
+   * @private
+   */
   private preparePoll(roomId: string, dto: CreatePollRequest): Poll {
     const id = ulid();
     const now = new Date().toISOString();
@@ -37,12 +43,22 @@ export class PollService {
     };
   }
 
+  /**
+   * 투표 생성 로직
+   * @param roomId 속한 강의실 id
+   * @param dto 유저가 입력한 투표 Raw 데이터
+   */
   async createPoll(roomId: string, dto: CreatePollRequest): Promise<Poll> {
     const poll = this.preparePoll(roomId, dto);
     await this.pollManagerService.addPollToRoom(roomId, [poll]);
     return poll;
   }
 
+  /**
+   * 투표 배열 생성 로직
+   * @param roomId 속한 강의실 id
+   * @param data 유저가 입력한 투표 Raw 데이터들
+   */
   async createMultiplePoll(roomId: string, data: CreatePollRequest[]): Promise<Poll[]> {
     if (!data || data.length === 0) return [];
 
@@ -51,6 +67,10 @@ export class PollService {
     return polls;
   }
 
+  /**
+   * 투표 조회 로직
+   * @param pollId 조회할 투표 id
+   */
   async getPoll(pollId: string): Promise<Poll> {
     const poll = await this.pollManagerService.findOne(pollId);
     if (!poll) throw new Error('Could not find poll');
@@ -58,6 +78,10 @@ export class PollService {
     return poll;
   }
 
+  /**
+   * 강의실 투표 조회 로직
+   * @param roomId 조회할 강의실 id
+   */
   async getPolls(roomId: string): Promise<Poll[]> {
     const polls = await this.pollManagerService.getPollsInRoom(roomId);
     const activePollIds = polls.filter((poll) => poll.status === 'active').map((poll) => poll.id);
@@ -92,6 +116,11 @@ export class PollService {
     });
   }
 
+  /**
+   * 활성화된 투표 조회 로직
+   * @param roomId 조회할 강의실 id
+   * @param participantId 조회할 참여자 id
+   */
   async getActivePoll(
     roomId: string,
     participantId: string,
@@ -127,6 +156,10 @@ export class PollService {
     return { poll: pollPayload, votedOptionId };
   }
 
+  /**
+   * 종료된 투표 조회 로직
+   * @param roomId 조회할 강의실 id
+   */
   async getEndedPolls(roomId: string): Promise<Poll[]> {
     const polls = await this.pollManagerService.getPollsInRoom(roomId);
     return polls.filter((poll) => poll.status === 'ended');
@@ -149,6 +182,13 @@ export class PollService {
     };
   }
 
+  /**
+   * 투표 제출 로직
+   * @param pollId 제출할 투표 id
+   * @param participantId 제출한 참여자 id
+   * @param participantName 제출한 참여자 이름
+   * @param optionId 제출한 선택지 id
+   */
   async vote(
     pollId: string,
     participantId: string,
@@ -171,6 +211,10 @@ export class PollService {
     return { ...result };
   }
 
+  /**
+   * 종료된 투표 조회 로직
+   * @param pollId 종료할 투표 id
+   */
   async stopPoll(pollId: string): Promise<{ title: string; options: PollOption[] }> {
     const poll = await this.pollManagerService.findOne(pollId);
     if (!poll) throw new BusinessException('존재하지 않는 투표입니다.');

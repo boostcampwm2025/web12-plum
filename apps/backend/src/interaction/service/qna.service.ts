@@ -17,6 +17,12 @@ import { BusinessException } from '../../common/types/index.js';
 export class QnaService {
   constructor(private readonly qnaManagerService: QnaManagerService) {}
 
+  /**
+   * 질문 객체 생성 로직
+   * @param roomId 속한 강의실 id
+   * @param dto 유저가 입력한 질문 Raw 데이터
+   * @private
+   */
   private prepareQna(roomId: string, dto: CreateQnaRequest): Qna {
     const id = ulid();
     const now = new Date().toISOString();
@@ -33,12 +39,22 @@ export class QnaService {
     };
   }
 
+  /**
+   * 질문 생성 로직
+   * @param roomId 속한 강의실 id
+   * @param dto 유저가 입력한 질문 Raw 데이터
+   */
   async createQna(roomId: string, dto: CreateQnaRequest): Promise<Qna> {
     const qna = this.prepareQna(roomId, dto);
     await this.qnaManagerService.addQnaToRoom(roomId, [qna]);
     return qna;
   }
 
+  /**
+   * 질문 배열 생성 로직
+   * @param roomId 속한 강의실 id
+   * @param data 유저가 입력한 질문 Raw 데이터들
+   */
   async createMultipleQna(roomId: string, data: CreateQnaRequest[]): Promise<Qna[]> {
     if (!data || data.length === 0) return [];
 
@@ -47,6 +63,10 @@ export class QnaService {
     return qnas;
   }
 
+  /**
+   * 질문 조회 로직
+   * @param qnaId 조회할 질문 id
+   */
   async getQna(qnaId: string): Promise<Qna> {
     const poll = await this.qnaManagerService.findOne(qnaId);
     if (!poll) throw new Error('Could not find qna');
@@ -54,6 +74,10 @@ export class QnaService {
     return poll;
   }
 
+  /**
+   * 강의실 질문 조회 로직
+   * @param roomId 조회할 강의실 id
+   */
   async getQnas(roomId: string): Promise<Qna[]> {
     const qnas = await this.qnaManagerService.getQnasInRoom(roomId);
 
@@ -81,6 +105,11 @@ export class QnaService {
     });
   }
 
+  /**
+   * 활성화된 질문 조회 로직
+   * @param roomId 조회할 강의실 id
+   * @param participantId 조회할 참여자 id
+   */
   async getActiveQna(
     roomId: string,
     participantId: string,
@@ -103,6 +132,10 @@ export class QnaService {
     return { qna: qnaPayload, answered };
   }
 
+  /**
+   * 질문 시작 로직
+   * @param qnaId 시작할 질문 id
+   */
   async startQna(qnaId: string): Promise<QnaPayload> {
     const qna = await this.qnaManagerService.findOne(qnaId);
     if (!qna) throw new BusinessException('존재하지 않는 질문입니다.');
@@ -118,11 +151,22 @@ export class QnaService {
     };
   }
 
+  /**
+   * 종료된 질문 조회 로직
+   * @param roomId 조회할 강의실 id
+   */
   async getEndedQnas(roomId: string): Promise<Qna[]> {
     const qnas = await this.qnaManagerService.getQnasInRoom(roomId);
     return qnas.filter((qna) => qna.status === 'ended');
   }
 
+  /**
+   * 질문 제출 로직
+   * @param qnaId 제출할 질문 id
+   * @param participantId 제출한 참여자 id
+   * @param participantName 제출한 참여자 이름
+   * @param text 제출한 답변
+   */
   async answer(
     qnaId: string,
     participantId: string,
@@ -166,6 +210,10 @@ export class QnaService {
     }
   }
 
+  /**
+   * 종료된 질문 조회 로직
+   * @param qnaId 종료할 질문 id
+   */
   async stopQna(
     qnaId: string,
   ): Promise<{ audience: EndQnaPayload; presenter: EndQnaDetailPayload }> {
@@ -202,6 +250,7 @@ export class QnaService {
 
   /**
    * 강의실 종료 시 활성화되어 있는 질문을 종료하는 로직
+   * @param roomId 종료할 강의실 id
    */
   async stopAllActiveQna(roomId: string): Promise<void> {
     const qnas = await this.qnaManagerService.getQnasInRoom(roomId);
