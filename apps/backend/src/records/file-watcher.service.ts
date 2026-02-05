@@ -216,12 +216,12 @@ export class FileWatcherService implements OnModuleInit, OnModuleDestroy {
   private async runSTT(data: Omit<STTData, 'timestamp'> & { startTime: number }): Promise<ChatLog> {
     const { fileName, roomId, role, index, startTime } = data;
     const containerPath = `/app/apps/backend/record/${data.fileName}`;
+    const workerUrl = process.env.STT_WORKER_URL || 'http://127.0.0.1:8000';
 
     try {
       this.logger.log(`[File watcher] STT 분석 시작: ${fileName} (Timeline: ${startTime}s)`);
 
       const localPath = join(RECORD_DIR, fileName);
-      const workerUrl = process.env.STT_WORKER_URL || 'http://127.0.0.1:8000';
       const response = await fetch(`${workerUrl}/transcribe`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
