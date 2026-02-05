@@ -112,7 +112,7 @@ services:
 
   # Promtail - 로그 수집 (백엔드 로그 → Loki)
   promtail:
-    image: grafana/promtail:2.9.0
+    image: grafana/promtail:3.0.0
     container_name: promtail-local
     volumes:
       - ./apps/backend/logs:/app/logs:ro

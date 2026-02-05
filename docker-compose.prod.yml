@@ -68,7 +68,7 @@ services:
 
   # Promtail - 로그 수집 및 Loki로 전송
   promtail:
-    image: grafana/promtail:2.9.0
+    image: grafana/promtail:3.0.0
     container_name: plum-backend-prod-promtail
     restart: always
     volumes:
