@@ -309,27 +309,36 @@ export class RoomService {
       this.aiSummaryManagerService.getSummaryStatus(roomId),
     ]);
 
-    if (status !== 'COMPLETED') {
-      return {
-        name: room.name,
-        roomId: room.id,
-        polls,
-        qnas,
-        activityStatistics,
-        summary: '',
-        timelines: [],
-        tags: [],
-      };
-    }
-
-    const aiSummary = (await this.aiSummaryManagerService.getAiSummary(roomId))!;
-    return {
+    let payload: RoomSummary = {
       name: room.name,
       roomId: room.id,
-      ...aiSummary,
       polls,
       qnas,
       activityStatistics,
+      summary: '',
+      timelines: [],
+      tags: [],
+      status: 'pending',
     };
+
+    if (status === 'NONE') {
+      payload.status = 'none';
+    } else if (status === 'YET') {
+      payload.status = 'pending';
+    } else if (status === 'PROCESSING') {
+      payload.status = 'active';
+    } else {
+      const aiSummary = (await this.aiSummaryManagerService.getAiSummary(roomId))!;
+      const { summary, timelines, tags } = aiSummary;
+      payload = {
+        ...payload,
+        status: 'ended',
+        summary,
+        timelines,
+        tags,
+      };
+    }
+
+    return payload;
   }
 }

@@ -87,6 +87,7 @@ export interface RoomSummary extends AiSummary {
   polls: Poll[];
   qnas: Qna[];
   activityStatistics: ActivityStatistics;
+  status: Status | 'none';
 }
 
 export interface AiSummary {

@@ -77,6 +77,23 @@ function TimelineList() {
 }
 
 /**
+ * AI 분석 프로세스가 진행되지 않는 데이터인 경우 표시
+ *
+ * 데이터가 없음을 시각적 피드백 제공
+ */
+function SummaryEmptyFallback() {
+  return (
+    <section className="mt-10 flex flex-col items-center gap-4 rounded-2xl bg-gray-600 p-10">
+      <p className="text-subtext-light text-center">
+        이 강의는 AI 요약이 제공되지 않습니다.
+        <br />
+        강의 내용이 너무 짧거나 분석할 수 있는 음성이 없습니다.
+      </p>
+    </section>
+  );
+}
+
+/**
  * AI 분석 프로세스가 아직 진행 중이거나 서버 응답을 대기 중일 때 표시
  *
  * `useAiSummaryPolling` 훅이 데이터를 성공적으로 가져오기 전까지 사용자에게 시각적 피드백 제공
@@ -101,8 +118,14 @@ function SummaryPendingSection() {
  * Zustand 스토어의 `summary` 필드 존재 여부를 분석 완료의 기준으로 판단
  */
 export function LectureSummaryTab() {
-  const summary = useSummaryStore((state) => state.summaryData?.summary);
-  const isAiSummaryPending = !summary;
+  const summaryData = useSummaryStore((state) => state.summaryData)!;
+  const summary = summaryData.summary;
+  const status = summaryData.status;
+  const isAiSummaryPending = status !== 'ended' && !summary;
+
+  if (status === 'none') {
+    return <SummaryEmptyFallback />;
+  }
 
   if (isAiSummaryPending) {
     return <SummaryPendingSection />;

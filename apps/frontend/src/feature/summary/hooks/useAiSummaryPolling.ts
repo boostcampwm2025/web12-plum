@@ -27,7 +27,8 @@ export function useAiSummaryPolling() {
    * 데이터가 수신되면 폴링 중지
    */
   useEffect(() => {
-    const isAiSummaryPending = summaryData && !summaryData.summary;
+    const isAiSummaryPending =
+      summaryData && summaryData.status !== 'none' && summaryData.status !== 'ended';
     if (!isAiSummaryPending) return;
 
     /**
@@ -39,7 +40,7 @@ export function useAiSummaryPolling() {
         setSummaryData(response.data);
 
         // 데이터가 생성 완료되었다면 타이머 종료
-        if (response.data.summary) {
+        if (response.data.summary || response.data.status === 'ended') {
           clearInterval(intervalId);
           logger.info('[useAiSummaryPolling] AI 요약 데이터 수신 성공 및 타이머 종료');
         }
@@ -50,5 +51,5 @@ export function useAiSummaryPolling() {
 
     // 컴포넌트 언마운트 시 인터벌 제거
     return () => clearInterval(intervalId);
-  }, [summaryData?.summary, roomId, setSummaryData]);
+  }, [summaryData?.status, summaryData?.summary, roomId, setSummaryData]);
 }
