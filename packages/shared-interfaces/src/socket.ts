@@ -352,6 +352,13 @@ export interface PresenterScoreInfoPayload {
   lowest: RankItem | null;
 }
 
+// 발화 감지 이벤트 페이로드
+export interface SpeakerDetectedPayload {
+  participantId: string;
+  participantName: string;
+  detectedAt: number;
+}
+
 /**
  * 서버 -> 클라이언트 이벤트
  */
@@ -399,6 +406,8 @@ export interface ServerToClientEvents {
   rank_update: (data: RankUpdatePayload) => void;
 
   presenter_rank_update: (data: PresenterScoreInfoPayload) => void;
+
+  speaker_detected: (data: SpeakerDetectedPayload) => void;
 }
 
 /**

@@ -11,6 +11,7 @@ const managers = [
   Managers.ChatManagerService,
   Managers.ActivityScoreManagerService,
   Managers.RecordingManagerService,
+  Managers.AiSummaryManagerService,
 ];
 @Global()
 @Module({

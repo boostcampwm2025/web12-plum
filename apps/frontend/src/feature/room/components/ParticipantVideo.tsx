@@ -93,6 +93,7 @@ export interface ParticipantVideoProps {
   participantRole?: ParticipantRole;
   isActive?: boolean;
   isCurrentlyVisible?: boolean;
+  isSpeaking?: boolean;
 }
 
 function ParticipantVideoComponent({
@@ -108,6 +109,7 @@ function ParticipantVideoComponent({
   participantRole,
   isActive = true,
   isCurrentlyVisible = true,
+  isSpeaking = false,
 }: ParticipantVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [showOverlay, setShowOverlay] = useState(true);
@@ -220,10 +222,11 @@ function ParticipantVideoComponent({
         },
       }}
       className={cn(
-        'relative z-25 w-50.5 overflow-hidden rounded-lg',
+        'relative z-25 m-0.5 w-50.5 overflow-hidden rounded-lg',
         isCurrentUser && 'group',
         mode === 'minimize' && 'flex h-9 items-center justify-between bg-gray-500 px-2 shadow-md',
         mode === 'pip' && 'shadow-md',
+        isSpeaking && 'ring-success ring-2',
       )}
     >
       {/* 비디오 영역 */}
@@ -356,6 +359,7 @@ export const ParticipantVideo = memo(ParticipantVideoComponent, (prev, next) => 
     prev.mode === next.mode &&
     prev.isCurrentUser === next.isCurrentUser &&
     prev.videoProducerId === next.videoProducerId &&
-    prev.isCurrentlyVisible === next.isCurrentlyVisible
+    prev.isCurrentlyVisible === next.isCurrentlyVisible &&
+    prev.isSpeaking === next.isSpeaking
   );
 });

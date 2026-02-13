@@ -28,15 +28,16 @@ scrape_configs:
     # 오토스케일링 서버 자동 발견
     file_sd_configs:
       - files:
-          - '/opt/prometheus/targets/*.json'
+          - '/etc/prometheus/targets/*.json'
         refresh_interval: 30s
 
   # 백엔드 애플리케이션 메트릭 (prom-client)
   - job_name: 'backend-app'
     static_configs:
-      - targets: ['BACKEND_HOST_PLACEHOLDER:3000']
+      - targets:
+BACKEND_TARGETS_PLACEHOLDER
         labels:
-          server: 'plum-dev'
+          server: 'plum-backend'
     metrics_path: '/metrics'
 
   # Redis 서버 시스템 메트릭 (Node Exporter)

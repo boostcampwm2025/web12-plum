@@ -44,6 +44,8 @@ export interface RoomActions {
     participantId: string | null;
     type: MediaType | null;
   };
+  addSpeakerToOrder: (participantId: string) => void;
+  setActiveSpeaker: (participantId: string, ttlMs: number) => void;
 
   reset: () => void;
 }
@@ -59,6 +61,10 @@ interface RoomState {
   // 참가자 목록
   participants: Map<string, Participant>; // id -> Participant
   participantAudioMuted: Map<string, boolean>; // id -> muted
+
+  // 발화자 정렬 순서 (participantId 배열, 먼저 말한 사람이 앞)
+  speakerOrder: string[];
+  activeSpeakerIds: Set<string>;
 }
 
 const initialState: Omit<RoomState, 'actions'> = {
@@ -68,7 +74,15 @@ const initialState: Omit<RoomState, 'actions'> = {
   isRoomEnded: false,
   participants: new Map(),
   participantAudioMuted: new Map(),
+  speakerOrder: [],
+  activeSpeakerIds: new Set(),
 };
+
+const activeSpeakerTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
+const speakerOrderTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
+
+// 발화 종료 후 speakerOrder에서 제거되기까지의 시간 (ms)
+const SPEAKER_ORDER_TTL_MS = 20000;
 
 export const useRoomStore = create<RoomState>()(
   persist(
@@ -160,7 +174,28 @@ export const useRoomStore = create<RoomState>()(
             newParticipants.delete(participantId);
             const nextAudioMuted = new Map(state.participantAudioMuted);
             nextAudioMuted.delete(participantId);
-            return { participants: newParticipants, participantAudioMuted: nextAudioMuted };
+            const newSpeakerOrder = state.speakerOrder.filter((id) => id !== participantId);
+            const nextActiveSpeakerIds = new Set(state.activeSpeakerIds);
+            nextActiveSpeakerIds.delete(participantId);
+
+            const existingActiveSpeakerTimeout = activeSpeakerTimeouts.get(participantId);
+            if (existingActiveSpeakerTimeout) {
+              clearTimeout(existingActiveSpeakerTimeout);
+              activeSpeakerTimeouts.delete(participantId);
+            }
+
+            const existingSpeakerOrderTimeout = speakerOrderTimeouts.get(participantId);
+            if (existingSpeakerOrderTimeout) {
+              clearTimeout(existingSpeakerOrderTimeout);
+              speakerOrderTimeouts.delete(participantId);
+            }
+
+            return {
+              participants: newParticipants,
+              participantAudioMuted: nextAudioMuted,
+              speakerOrder: newSpeakerOrder,
+              activeSpeakerIds: nextActiveSpeakerIds,
+            };
           });
         },
 
@@ -241,9 +276,82 @@ export const useRoomStore = create<RoomState>()(
           return { participantId: null, type: null };
         },
 
+        /** 발화자를 정렬 순서에 추가 (이미 있으면 제거 타이머만 취소) */
+        addSpeakerToOrder: (participantId: string) => {
+          // 제거 타이머가 있으면 취소 (발화 재개)
+          const existingOrderTimeout = speakerOrderTimeouts.get(participantId);
+          if (existingOrderTimeout) {
+            clearTimeout(existingOrderTimeout);
+            speakerOrderTimeouts.delete(participantId);
+          }
+
+          set((state) => {
+            if (state.speakerOrder.includes(participantId)) {
+              // 이미 있으면 위치 유지
+              return state;
+            }
+            // 새로운 발화자는 맨 앞에 추가
+            return { speakerOrder: [participantId, ...state.speakerOrder] };
+          });
+        },
+
+        /** 현재 발화자 표시 (TTL 후 자동 해제 + speakerOrder 제거 타이머 시작) */
+        setActiveSpeaker: (participantId: string, ttlMs: number) => {
+          const existingTimeout = activeSpeakerTimeouts.get(participantId);
+          if (existingTimeout) {
+            clearTimeout(existingTimeout);
+          }
+
+          set((state) => {
+            const nextActiveSpeakerIds = new Set(state.activeSpeakerIds);
+            nextActiveSpeakerIds.add(participantId);
+            return { activeSpeakerIds: nextActiveSpeakerIds };
+          });
+
+          const timeout = setTimeout(() => {
+            activeSpeakerTimeouts.delete(participantId);
+            set((state) => {
+              const nextActiveSpeakerIds = new Set(state.activeSpeakerIds);
+              nextActiveSpeakerIds.delete(participantId);
+              return { activeSpeakerIds: nextActiveSpeakerIds };
+            });
+
+            // 발화 종료 후 speakerOrder 제거 타이머 시작
+            const orderTimeout = setTimeout(() => {
+              speakerOrderTimeouts.delete(participantId);
+              set((state) => {
+                const newSpeakerOrder = state.speakerOrder.filter((id) => id !== participantId);
+                return { speakerOrder: newSpeakerOrder };
+              });
+            }, SPEAKER_ORDER_TTL_MS);
+
+            speakerOrderTimeouts.set(participantId, orderTimeout);
+          }, ttlMs);
+
+          activeSpeakerTimeouts.set(participantId, timeout);
+        },
+
         /** 스토어 초기화 */
         reset: () =>
-          set({ ...initialState, participants: new Map(), participantAudioMuted: new Map() }),
+          set(() => {
+            for (const timeout of activeSpeakerTimeouts.values()) {
+              clearTimeout(timeout);
+            }
+            activeSpeakerTimeouts.clear();
+
+            for (const timeout of speakerOrderTimeouts.values()) {
+              clearTimeout(timeout);
+            }
+            speakerOrderTimeouts.clear();
+
+            return {
+              ...initialState,
+              participants: new Map(),
+              participantAudioMuted: new Map(),
+              speakerOrder: [],
+              activeSpeakerIds: new Set(),
+            };
+          }),
       },
     }),
     {

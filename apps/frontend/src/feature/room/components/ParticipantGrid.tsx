@@ -8,6 +8,7 @@ import { useMediaStore } from '../stores/useMediaStore';
 import { useStreamStore } from '@/store/useLocalStreamStore';
 import { MyInfo } from '../stores/useRoomStore';
 import { useBackgroundEffectStore } from '../stores/useBackgroundEffectStore';
+import { useRoomStore } from '../stores/useRoomStore';
 
 interface ParticipantGridProps {
   videoMode: VideoDisplayMode;
@@ -22,6 +23,7 @@ export function ParticipantGrid({ videoMode, currentUser, onModeChange }: Partic
   const isMicOn = useMediaStore((state) => state.isMicOn);
   const localStream = useStreamStore((state) => state.localStream);
   const processedStream = useBackgroundEffectStore((state) => state.processedStream);
+  const activeSpeakerIds = useRoomStore((state) => state.activeSpeakerIds);
 
   const dynamicItemsPerPage = useItemsPerPage(containerRef, {
     buttonHeight: 24,
@@ -58,6 +60,7 @@ export function ParticipantGrid({ videoMode, currentUser, onModeChange }: Partic
           stream={processedStream ?? localStream}
           isCameraOn={isCameraOn}
           isAudioMuted={!isMicOn}
+          isSpeaking={activeSpeakerIds.has(currentUser.id)}
         />
 
         {/* 이전 페이지 버튼 */}
@@ -93,6 +96,7 @@ export function ParticipantGrid({ videoMode, currentUser, onModeChange }: Partic
                 participantRole={participant.role}
                 isActive={true}
                 isCurrentlyVisible={isCurrentlyVisible}
+                isSpeaking={activeSpeakerIds.has(participant.id)}
               />
             );
           })}

@@ -39,10 +39,12 @@ const sortChatItems = (items: ChatItem[]) => {
 interface ChatState {
   items: ChatItem[];
   lastMessageId: string | null;
+  lastReadMessageId: string | null;
   actions: {
     addQnaResult: (payload: EndQnaPayload) => void;
     addChat: (payload: ChatMessage) => void;
     getLastMessageId: () => string | null;
+    markRead: (messageId?: string | null) => void;
     clear: () => void;
   };
 }
@@ -52,6 +54,7 @@ export const useChatStore = create<ChatState>()(
     (set, get) => ({
       items: [],
       lastMessageId: null,
+      lastReadMessageId: null,
       actions: {
         addQnaResult: (payload) => {
           set((state) => ({
@@ -90,7 +93,12 @@ export const useChatStore = create<ChatState>()(
           });
         },
         getLastMessageId: () => get().lastMessageId,
-        clear: () => set({ items: [], lastMessageId: null }),
+        markRead: (messageId) => {
+          set(() => ({
+            lastReadMessageId: messageId ?? get().lastMessageId,
+          }));
+        },
+        clear: () => set({ items: [], lastMessageId: null, lastReadMessageId: null }),
       },
     }),
     {

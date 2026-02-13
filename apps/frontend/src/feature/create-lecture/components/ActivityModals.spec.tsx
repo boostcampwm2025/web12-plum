@@ -1,56 +1,87 @@
 import { render } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ActivityModals } from './ActivityModals';
-import { useActivityActionContext } from '../hooks/useActivityActionContext';
-import { useActivityModalContext } from '../hooks/useActivityModalContext';
+import { useActivityDataStore } from '../store/useActivityDataStore';
+import { useActivityModalStore } from '../store/useActivityModalStore';
 import { PollModal } from '../../../shared/components/PollModal';
 import { QnAModal } from '../../../shared/components/QnAModal';
+import { PollFormValues } from '../../../shared/constants/poll';
+import { QnAFormValues } from '../../../shared/constants/qna';
 import '@testing-library/jest-dom';
 
-vi.mock('../hooks/useActivityActionContext');
-vi.mock('../hooks/useActivityModalContext');
-vi.mock('../../../shared/components/PollModal', () => ({
+vi.mock('../store/useActivityDataStore');
+vi.mock('../store/useActivityModalStore');
+vi.mock('@/shared/components/PollModal', () => ({
   PollModal: vi.fn(() => null),
 }));
-vi.mock('../../../shared/components/QnAModal', () => ({
+vi.mock('@/shared/components/QnAModal', () => ({
   QnAModal: vi.fn(() => null),
 }));
 
-describe('ActivityModals 테스트', () => {
-  const mockCloseModal = vi.fn();
-  const mockAddPoll = vi.fn();
-  const mockEditPoll = vi.fn();
-  const mockAddQna = vi.fn();
-  const mockEditQna = vi.fn();
+const mockCloseModal = vi.fn();
+const mockAppendPoll = vi.fn();
+const mockUpdatePoll = vi.fn();
+const mockRemovePoll = vi.fn();
+const mockAppendQna = vi.fn();
+const mockUpdateQna = vi.fn();
+const mockRemoveQna = vi.fn();
+const mockReset = vi.fn();
 
-  const mockPolls = [{ title: '투표 1', options: ['옵션1', '옵션2'] }];
-  const mockQnas = [{ title: 'Q&A 1', description: '설명' }];
+const mockPolls = [
+  { id: 'poll-1', title: '투표 1', options: [{ value: 'A' }, { value: 'B' }], timeLimit: 0 },
+];
+const mockQnas = [{ id: 'qna-1', title: 'Q&A 1', timeLimit: 0, isPublic: false }];
 
+describe('ActivityModals', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    vi.mocked(useActivityActionContext).mockReturnValue({
-      polls: mockPolls,
-      qnas: mockQnas,
-      actions: {
-        addPoll: mockAddPoll,
-        editPoll: mockEditPoll,
-        deletePoll: vi.fn(),
-        addQna: mockAddQna,
-        editQna: mockEditQna,
-        deleteQna: vi.fn(),
-      },
+    vi.mocked(useActivityDataStore).mockImplementation((selector) => {
+      const state = {
+        polls: mockPolls,
+        qnas: mockQnas,
+        actions: {
+          appendPoll: mockAppendPoll,
+          updatePoll: mockUpdatePoll,
+          removePoll: mockRemovePoll,
+          appendQna: mockAppendQna,
+          updateQna: mockUpdateQna,
+          removeQna: mockRemoveQna,
+          reset: mockReset,
+        },
+      };
+      return selector(state);
     });
   });
 
-  it('투표 생성 모달이 올바르게 렌더링되어야 한다.', () => {
-    vi.mocked(useActivityModalContext).mockReturnValue({
-      modalState: { type: 'create-poll' },
-      openCreatePollModal: vi.fn(),
-      openCreateQnaModal: vi.fn(),
-      openEditPollModal: vi.fn(),
-      openEditQnaModal: vi.fn(),
-      closeModal: mockCloseModal,
+  it('모달 상태가 none일 때 PollModal과 QnAModal이 닫힌 상태로 렌더링된다', () => {
+    vi.mocked(useActivityModalStore).mockImplementation((selector) => {
+      const state = {
+        modalState: { type: 'none' as const },
+        actions: { close: mockCloseModal, open: vi.fn() },
+      };
+      return selector(state);
+    });
+
+    render(<ActivityModals />);
+
+    expect(PollModal).toHaveBeenCalledWith(
+      expect.objectContaining({ isOpen: false }),
+      expect.anything(),
+    );
+    expect(QnAModal).toHaveBeenCalledWith(
+      expect.objectContaining({ isOpen: false }),
+      expect.anything(),
+    );
+  });
+
+  it('투표 생성 모달이 열리면 isEditMode가 false이고 initialData가 undefined이다', () => {
+    vi.mocked(useActivityModalStore).mockImplementation((selector) => {
+      const state = {
+        modalState: { type: 'create-poll' as const },
+        actions: { close: mockCloseModal, open: vi.fn() },
+      };
+      return selector(state);
     });
 
     render(<ActivityModals />);
@@ -66,14 +97,13 @@ describe('ActivityModals 테스트', () => {
     );
   });
 
-  it('투표 수정 모달이 올바르게 렌더링되어야 한다.', () => {
-    vi.mocked(useActivityModalContext).mockReturnValue({
-      modalState: { type: 'edit-poll', index: 0 },
-      openCreatePollModal: vi.fn(),
-      openCreateQnaModal: vi.fn(),
-      openEditPollModal: vi.fn(),
-      openEditQnaModal: vi.fn(),
-      closeModal: mockCloseModal,
+  it('투표 수정 모달이 열리면 해당 ID의 투표 데이터를 initialData로 전달한다', () => {
+    vi.mocked(useActivityModalStore).mockImplementation((selector) => {
+      const state = {
+        modalState: { type: 'edit-poll' as const, id: 'poll-1' },
+        actions: { close: mockCloseModal, open: vi.fn() },
+      };
+      return selector(state);
     });
 
     render(<ActivityModals />);
@@ -89,14 +119,13 @@ describe('ActivityModals 테스트', () => {
     );
   });
 
-  it('Q&A 생성 모달이 올바르게 렌더링되어야 한다.', () => {
-    vi.mocked(useActivityModalContext).mockReturnValue({
-      modalState: { type: 'create-qna' },
-      openCreatePollModal: vi.fn(),
-      openCreateQnaModal: vi.fn(),
-      openEditPollModal: vi.fn(),
-      openEditQnaModal: vi.fn(),
-      closeModal: mockCloseModal,
+  it('Q&A 생성 모달이 열리면 isEditMode가 false이고 initialData가 undefined이다', () => {
+    vi.mocked(useActivityModalStore).mockImplementation((selector) => {
+      const state = {
+        modalState: { type: 'create-qna' as const },
+        actions: { close: mockCloseModal, open: vi.fn() },
+      };
+      return selector(state);
     });
 
     render(<ActivityModals />);
@@ -112,14 +141,13 @@ describe('ActivityModals 테스트', () => {
     );
   });
 
-  it('Q&A 수정 모달이 올바르게 렌더링되어야 한다.', () => {
-    vi.mocked(useActivityModalContext).mockReturnValue({
-      modalState: { type: 'edit-qna', index: 0 },
-      openCreatePollModal: vi.fn(),
-      openCreateQnaModal: vi.fn(),
-      openEditPollModal: vi.fn(),
-      openEditQnaModal: vi.fn(),
-      closeModal: mockCloseModal,
+  it('Q&A 수정 모달이 열리면 해당 ID의 Q&A 데이터를 initialData로 전달한다', () => {
+    vi.mocked(useActivityModalStore).mockImplementation((selector) => {
+      const state = {
+        modalState: { type: 'edit-qna' as const, id: 'qna-1' },
+        actions: { close: mockCloseModal, open: vi.fn() },
+      };
+      return selector(state);
     });
 
     render(<ActivityModals />);
@@ -135,113 +163,95 @@ describe('ActivityModals 테스트', () => {
     );
   });
 
-  it('모달이 닫혀있을 때 isOpen이 false여야 한다.', () => {
-    vi.mocked(useActivityModalContext).mockReturnValue({
-      modalState: { type: 'none' },
-      openCreatePollModal: vi.fn(),
-      openCreateQnaModal: vi.fn(),
-      openEditPollModal: vi.fn(),
-      openEditQnaModal: vi.fn(),
-      closeModal: mockCloseModal,
+  it('투표 생성 모달에서 제출하면 appendPoll이 호출되고 모달이 닫힌다', () => {
+    vi.mocked(useActivityModalStore).mockImplementation((selector) => {
+      const state = {
+        modalState: { type: 'create-poll' as const },
+        actions: { close: mockCloseModal, open: vi.fn() },
+      };
+      return selector(state);
     });
 
     render(<ActivityModals />);
+    const pollSubmit = vi.mocked(PollModal).mock.calls[0][0].onSubmit as (
+      data: PollFormValues,
+    ) => void;
+    const testData: PollFormValues = {
+      title: '테스트 투표',
+      options: [{ value: 'A' }, { value: 'B' }],
+      timeLimit: 0,
+    };
 
-    expect(PollModal).toHaveBeenCalledWith(
-      expect.objectContaining({ isOpen: false }),
-      expect.anything(),
-    );
-    expect(QnAModal).toHaveBeenCalledWith(
-      expect.objectContaining({ isOpen: false }),
-      expect.anything(),
-    );
-  });
+    pollSubmit(testData);
 
-  it('투표 생성 시 addPoll이 호출되고 모달이 닫혀야 한다.', () => {
-    vi.mocked(useActivityModalContext).mockReturnValue({
-      modalState: { type: 'create-poll' },
-      openCreatePollModal: vi.fn(),
-      openCreateQnaModal: vi.fn(),
-      openEditPollModal: vi.fn(),
-      openEditQnaModal: vi.fn(),
-      closeModal: mockCloseModal,
-    });
-
-    render(<ActivityModals />);
-
-    const mockedPollModal = vi.mocked(PollModal);
-    const onSubmit = mockedPollModal.mock.calls[0][0].onSubmit;
-    const testData = { title: '새 투표', options: ['A', 'B'] };
-
-    onSubmit(testData);
-
-    expect(mockAddPoll).toHaveBeenCalledWith(testData);
+    expect(mockAppendPoll).toHaveBeenCalledWith(testData);
     expect(mockCloseModal).toHaveBeenCalled();
   });
 
-  it('투표 수정 시 editPoll이 호출되고 모달이 닫혀야 한다.', () => {
-    vi.mocked(useActivityModalContext).mockReturnValue({
-      modalState: { type: 'edit-poll', index: 0 },
-      openCreatePollModal: vi.fn(),
-      openCreateQnaModal: vi.fn(),
-      openEditPollModal: vi.fn(),
-      openEditQnaModal: vi.fn(),
-      closeModal: mockCloseModal,
+  it('투표 수정 모달에서 제출하면 updatePoll이 ID와 함께 호출되고 모달이 닫힌다', () => {
+    vi.mocked(useActivityModalStore).mockImplementation((selector) => {
+      const state = {
+        modalState: { type: 'edit-poll' as const, id: 'poll-1' },
+        actions: { close: mockCloseModal, open: vi.fn() },
+      };
+      return selector(state);
     });
 
     render(<ActivityModals />);
+    const pollSubmit = vi.mocked(PollModal).mock.calls[0][0].onSubmit as (
+      data: PollFormValues,
+    ) => void;
+    const testData: PollFormValues = {
+      title: '수정 투표',
+      options: [{ value: 'X' }, { value: 'Y' }],
+      timeLimit: 0,
+    };
 
-    const mockedPollModal = vi.mocked(PollModal);
-    const onSubmit = mockedPollModal.mock.calls[0][0].onSubmit;
-    const testData = { title: '수정된 투표', options: ['A', 'B'] };
+    pollSubmit(testData);
 
-    onSubmit(testData);
-
-    expect(mockEditPoll).toHaveBeenCalledWith(0, testData);
+    expect(mockUpdatePoll).toHaveBeenCalledWith('poll-1', testData);
     expect(mockCloseModal).toHaveBeenCalled();
   });
 
-  it('Q&A 생성 시 addQna가 호출되고 모달이 닫혀야 한다.', () => {
-    vi.mocked(useActivityModalContext).mockReturnValue({
-      modalState: { type: 'create-qna' },
-      openCreatePollModal: vi.fn(),
-      openCreateQnaModal: vi.fn(),
-      openEditPollModal: vi.fn(),
-      openEditQnaModal: vi.fn(),
-      closeModal: mockCloseModal,
+  it('Q&A 생성 모달에서 제출하면 appendQna가 호출되고 모달이 닫힌다', () => {
+    vi.mocked(useActivityModalStore).mockImplementation((selector) => {
+      const state = {
+        modalState: { type: 'create-qna' as const },
+        actions: { close: mockCloseModal, open: vi.fn() },
+      };
+      return selector(state);
     });
 
     render(<ActivityModals />);
+    const qnaSubmit = vi.mocked(QnAModal).mock.calls[0][0].onSubmit as (
+      data: QnAFormValues,
+    ) => void;
+    const testData: QnAFormValues = { title: '테스트 Q&A', timeLimit: 0, isPublic: false };
 
-    const mockedQnAModal = vi.mocked(QnAModal);
-    const onSubmit = mockedQnAModal.mock.calls[0][0].onSubmit;
-    const testData = { title: '새 Q&A', description: '설명' };
+    qnaSubmit(testData);
 
-    onSubmit(testData);
-
-    expect(mockAddQna).toHaveBeenCalledWith(testData);
+    expect(mockAppendQna).toHaveBeenCalledWith(testData);
     expect(mockCloseModal).toHaveBeenCalled();
   });
 
-  it('Q&A 수정 시 editQna가 호출되고 모달이 닫혀야 한다.', () => {
-    vi.mocked(useActivityModalContext).mockReturnValue({
-      modalState: { type: 'edit-qna', index: 0 },
-      openCreatePollModal: vi.fn(),
-      openCreateQnaModal: vi.fn(),
-      openEditPollModal: vi.fn(),
-      openEditQnaModal: vi.fn(),
-      closeModal: mockCloseModal,
+  it('Q&A 수정 모달에서 제출하면 updateQna가 ID와 함께 호출되고 모달이 닫힌다', () => {
+    vi.mocked(useActivityModalStore).mockImplementation((selector) => {
+      const state = {
+        modalState: { type: 'edit-qna' as const, id: 'qna-1' },
+        actions: { close: mockCloseModal, open: vi.fn() },
+      };
+      return selector(state);
     });
 
     render(<ActivityModals />);
+    const qnaSubmit = vi.mocked(QnAModal).mock.calls[0][0].onSubmit as (
+      data: QnAFormValues,
+    ) => void;
+    const testData: QnAFormValues = { title: '수정 Q&A', timeLimit: 30, isPublic: true };
 
-    const mockedQnAModal = vi.mocked(QnAModal);
-    const onSubmit = mockedQnAModal.mock.calls[0][0].onSubmit;
-    const testData = { title: '수정된 Q&A', description: '새 설명' };
+    qnaSubmit(testData);
 
-    onSubmit(testData);
-
-    expect(mockEditQna).toHaveBeenCalledWith(0, testData);
+    expect(mockUpdateQna).toHaveBeenCalledWith('qna-1', testData);
     expect(mockCloseModal).toHaveBeenCalled();
   });
 });

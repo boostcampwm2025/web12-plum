@@ -13,6 +13,7 @@ import {
 import { RedisService } from '../redis.service.js';
 import { ParticipantManagerService } from './participant-manager.service.js';
 import { ChainableCommander } from 'ioredis';
+import { MAX_TTL_BOUNDS } from '../redis.constants.js';
 
 @Injectable()
 export class ActivityScoreManagerService {
@@ -168,7 +169,7 @@ export class ActivityScoreManagerService {
 
         // Redis 업데이트
         pipeline.zadd(zsetKey, finalScore, participantId);
-        pipeline.hincrby(statsKey, 'participationScore', -penaltyScore);
+        pipeline.hset(statsKey, 'participationScore', finalScore);
         this.logger.log(
           `[PENALTY] ${participantId} -${penaltyScore}점 (누적: ${newPenaltyCount}회)`,
         );
@@ -279,7 +280,7 @@ export class ActivityScoreManagerService {
     if (cached) return JSON.parse(cached);
 
     const result = await this.createActivityStatics(roomId);
-    await client.set(snapshotKey, JSON.stringify(result), 'EX', 60 * 60 * 24); // 1일 유지
+    await client.set(snapshotKey, JSON.stringify(result), 'EX', MAX_TTL_BOUNDS); // 1일 유지
     return result;
   }
 

@@ -37,7 +37,7 @@ export function PollResultModal() {
         <Modal.CloseButton onClose={handleClose} />
       </div>
 
-      <div>
+      <div className="px-2">
         <h3 className="text-text mb-4 text-lg font-bold">{pollResult.title}</h3>
 
         <div className="space-y-6">

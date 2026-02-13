@@ -11,6 +11,7 @@ interface RoomUIState {
   setActiveDialog: (dialog: Dialog) => void;
   setActiveSidePanel: (panel: SidePanel) => void;
   setPollResult: (result: EndPollPayload | null) => void;
+  reset: () => void;
 }
 
 const initialState: Pick<RoomUIState, 'activeDialog' | 'activeSidePanel' | 'pollResult'> = {
@@ -30,4 +31,5 @@ export const useRoomUIStore = create<RoomUIState>((set) => ({
       activeSidePanel: state.activeSidePanel === panel ? null : panel,
     })),
   setPollResult: (result) => set({ pollResult: result }),
+  reset: () => set({ ...initialState }),
 }));

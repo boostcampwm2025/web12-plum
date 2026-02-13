@@ -1,8 +1,9 @@
-import type { Answer, Qna } from '@plum/shared-interfaces';
+import type { Answer } from '@plum/shared-interfaces';
 import { useState } from 'react';
 
 import { Icon } from '@/shared/components/icon/Icon';
 import { cn } from '@/shared/lib/utils';
+import { useSummaryStore } from '../store/useSummaryStore';
 
 interface QnaAnswerItemProps {
   name: string;
@@ -95,7 +96,9 @@ function QnaAccordionCard({ title, answers }: QnaResultCardProps) {
 /**
  * QnA 결과 탭 컴포넌트
  */
-export function QnAResultsTab({ qnas }: { qnas: Qna[] }) {
+export function QnAResultsTab() {
+  const qnas = useSummaryStore((state) => state.summaryData?.qnas ?? []);
+
   if (qnas.length === 0) {
     return (
       <section className="mt-10 flex flex-col gap-4 rounded-2xl bg-gray-600 p-6">

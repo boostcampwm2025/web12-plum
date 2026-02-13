@@ -4,9 +4,10 @@ import { join, parse } from 'path';
 import { writeFile, unlink } from 'fs/promises';
 import { spawn } from 'child_process';
 
-import { RecordingManagerService } from '../redis/repository-manager/index.js';
+import { RecordingManagerService, RoomManagerService } from '../redis/repository-manager/index.js';
 import { BATCH_SIZE, RECORD_DIR, SEGMENT_TIME } from './record.constant.js';
 import { ChatLog, STTWorkerResponse } from './record.types.js';
+import { SummarizeService } from '../summarize/summarize.service.js';
 
 interface STTData {
   fileName: string;
@@ -25,7 +26,11 @@ export class FileWatcherService implements OnModuleInit, OnModuleDestroy {
   private isMerging = new Map<string, boolean>();
   private lastedChanged = new Map<string, number>();
 
-  constructor(private readonly recordingManager: RecordingManagerService) {}
+  constructor(
+    private readonly recordingManager: RecordingManagerService,
+    private readonly roomManagerService: RoomManagerService,
+    private readonly summarizeService: SummarizeService,
+  ) {}
 
   onModuleInit() {
     // 1. record 폴더 감시 시작
@@ -45,7 +50,11 @@ export class FileWatcherService implements OnModuleInit, OnModuleDestroy {
     const batchKey = `${roomId}_${role}_${timestamp}`;
     const remaining = this.fileBatches.get(batchKey);
     const index = this.lastedChanged.get(batchKey) ?? 0;
-    if (!remaining || remaining.length === 0) return;
+
+    if (!remaining || remaining.length === 0) {
+      await this.checkAllProcessingFinished(roomId);
+      return;
+    }
 
     this.logger.log(`🔔 종료 신호 감지: 남은 ${remaining.length}개 조각 강제 병합 시작`);
 
@@ -54,8 +63,26 @@ export class FileWatcherService implements OnModuleInit, OnModuleDestroy {
 
     try {
       await this.mergeAndRunSTT(filesToMerge, { roomId, role, timestamp, index });
+      await this.checkAllProcessingFinished(roomId);
     } catch (error) {
       this.logger.error(`❌ 종료 중 강제 병합 실패: ${error.message}`);
+    }
+  }
+
+  async checkAllProcessingFinished(roomId: string) {
+    const room = await this.roomManagerService.findOne(roomId);
+    if (!room || room.status !== 'ended') {
+      this.logger.debug(`⏳ 아직 강의실이 종료되지 않았습니다. 요약 프로세스를 스킵합니다.`);
+      return;
+    }
+
+    const pendingCount = await this.recordingManager.getPendingCount(roomId);
+    if (pendingCount === 0) {
+      this.logger.log(`🎊 [${roomId}] 모든 STT 작업 완료. 요약 프로세스를 시작할 수 있습니다.`);
+      const allLogs = await this.recordingManager.getFullTranscript(roomId);
+      await this.summarizeService.summarizeRoom(roomId, allLogs);
+    } else {
+      this.logger.log(`⏳ 아직 처리 중인 작업이 남았습니다 (남은 개수: ${pendingCount})`);
     }
   }
 
@@ -108,11 +135,8 @@ export class FileWatcherService implements OnModuleInit, OnModuleDestroy {
 
     this.isMerging.set(batchKey, true);
     try {
-      const last = currentBatch.pop();
-      const filesToMerge = [...currentBatch];
+      const filesToMerge = currentBatch.splice(0, BATCH_SIZE);
       const batchLast = this.getParseFileName(filesToMerge[filesToMerge.length - 1]);
-
-      this.fileBatches.set(batchKey, [last!]);
 
       this.logger.log(`🛡️ 배치 수집 완료 (${filesToMerge.length}개), 병합 프로세스 진입`);
       await this.mergeAndRunSTT(filesToMerge, batchLast!);
@@ -125,6 +149,7 @@ export class FileWatcherService implements OnModuleInit, OnModuleDestroy {
 
   private async mergeAndRunSTT(filePaths: string[], metadata: Omit<STTData, 'fileName'>) {
     const { roomId, role, timestamp, index } = metadata;
+    await this.recordingManager.incrementPendingCount(roomId);
     filePaths.sort((a, b) => {
       const getIdx = (p: string) => {
         const match = parse(p).name.match(/_(\d+)$/);
@@ -197,18 +222,20 @@ export class FileWatcherService implements OnModuleInit, OnModuleDestroy {
       });
     } catch (error) {
       this.logger.error(`❌ 병합 실패: ${error.message}`);
+    } finally {
+      await this.recordingManager.decrementPendingCount(roomId);
     }
   }
 
   private async runSTT(data: Omit<STTData, 'timestamp'> & { startTime: number }): Promise<ChatLog> {
     const { fileName, roomId, role, index, startTime } = data;
     const containerPath = `/app/apps/backend/record/${data.fileName}`;
+    const workerUrl = process.env.STT_WORKER_URL || 'http://127.0.0.1:8000';
 
     try {
-      this.logger.log(`[File watcher] AI 분석 시작: ${fileName} (Timeline: ${startTime}s)`);
+      this.logger.log(`[File watcher] STT 분석 시작: ${fileName} (Timeline: ${startTime}s)`);
 
       const localPath = join(RECORD_DIR, fileName);
-      const workerUrl = process.env.STT_WORKER_URL || 'http://127.0.0.1:8000';
       const response = await fetch(`${workerUrl}/transcribe`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

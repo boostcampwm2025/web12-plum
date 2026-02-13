@@ -1,16 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+
 import { SocketClient } from '@/shared/socket/socket';
 import { MediaConnectionService } from '@/mediasoup/mediaConnection.service';
-import { useRoomJoin } from './useRoomJoin';
-import { useRoomEventHandlers } from './useRoomEventHandlers';
-import { useRemoteMedia } from './useRemoteMedia';
-import { useMediaCleanup } from './useMediaCleanup';
-import { useInteractionSync } from './useInteractionSync';
 import { useSafeRoomId } from '@/shared/hooks/useSafeRoomId';
 import { roomApi } from '@/shared/api';
-
-import { useRoomStore } from '../stores/useRoomStore';
 import { logger } from '@/shared/lib/logger';
+
+import { useChatStore } from '../stores/useChatStore';
+import { usePollStore } from '../stores/usePollStore';
+import { useRoomStore } from '../stores/useRoomStore';
+import { useRoomEventHandlers } from './useRoomEventHandlers';
+import { useInteractionSync } from './useInteractionSync';
+import { useRemoteMedia } from './useRemoteMedia';
+import { useMediaCleanup } from './useMediaCleanup';
+import { useRoomJoin } from './useRoomJoin';
+import { useRoomUIStore } from '../stores/useRoomUIStore';
 
 /**
  * 방 입장 시 전체 초기화 파이프라인을 실행하는 훅
@@ -35,13 +39,18 @@ import { logger } from '@/shared/lib/logger';
  * - isError: 초기화 실패 여부 (에러 토스트 표시용)
  */
 export function useRoomInit(handleInitialMedia: () => Promise<void>) {
+  const roomId = useSafeRoomId();
+  const hasStarted = useRef(false);
+
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [isError, setIsError] = useState(false);
 
-  const roomId = useSafeRoomId();
-  const hasStarted = useRef(false);
   const myInfo = useRoomStore((state) => state.myInfo);
+  const chatActions = useChatStore((state) => state.actions);
+  const pollActions = usePollStore((state) => state.actions);
+  const roomActions = useRoomStore((state) => state.actions);
+  const roomUIReset = useRoomUIStore((state) => state.reset);
 
   const { joinRoom } = useRoomJoin();
   const { consumeExistingProducers } = useRemoteMedia();
@@ -126,8 +135,12 @@ export function useRoomInit(handleInitialMedia: () => Promise<void>) {
   useEffect(() => {
     return () => {
       cleanupMedia();
+      chatActions.clear();
+      pollActions.clear();
+      roomActions.reset();
+      roomUIReset();
     };
-  }, [cleanupMedia]);
+  }, [cleanupMedia, chatActions, pollActions, roomActions, roomUIReset]);
 
   return { isLoading, isSuccess, isError };
 }

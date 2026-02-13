@@ -10,6 +10,7 @@ import { usePollStore } from '../stores/usePollStore';
 import { useQnaStore } from '../stores/useQnaStore';
 import { useRoomStore } from '../stores/useRoomStore';
 import { useRankStore } from '../stores/useRankStore';
+import { useChatStore } from '../stores/useChatStore';
 import { ExitButton } from './ExitButton';
 
 interface MenuButton {
@@ -178,11 +179,25 @@ function SideMenu() {
   const { activeSidePanel, setActiveSidePanel } = useRoomUIStore();
   const myRole = useRoomStore((state) => state.myInfo?.role);
 
+  const lastMessageId = useChatStore((state) => state.lastMessageId);
+  const lastReadMessageId = useChatStore((state) => state.lastReadMessageId);
+  const markRead = useChatStore((state) => state.actions.markRead);
+
+  useEffect(() => {
+    if (activeSidePanel !== 'chat' || !lastMessageId) return;
+    if (lastMessageId === lastReadMessageId) return;
+    markRead(lastMessageId);
+  }, [activeSidePanel, lastMessageId, lastReadMessageId, markRead]);
+
+  const hasUnreadChat =
+    activeSidePanel !== 'chat' && !!lastMessageId && lastMessageId !== lastReadMessageId;
+
   const sideMenuButtons: MenuButton[] = [
     {
       icon: 'chat',
       tooltip: '채팅',
       isActive: activeSidePanel === 'chat',
+      hasAlarm: hasUnreadChat,
       onClick: () => setActiveSidePanel('chat'),
       guideTarget: 'chat',
     },
@@ -218,6 +233,7 @@ function SideMenu() {
             variant="ghost"
             tooltip={button.tooltip}
             isActive={button.isActive}
+            hasAlarm={button.hasAlarm}
             onClick={button.onClick}
           />
         </div>
@@ -242,7 +258,7 @@ export function RoomMenuBar({
 }: RoomMenuBarProps) {
   const roomTitle = useRoomStore((state) => state.roomTitle) || '강의실';
   const myRole = useRoomStore((state) => state.myInfo?.role);
-  const participantCount = useRoomStore((state) => state.participants.size);
+  const participantCount = useRoomStore((state) => state.participants.size) + 1; // 본인 포함
 
   return (
     <nav
