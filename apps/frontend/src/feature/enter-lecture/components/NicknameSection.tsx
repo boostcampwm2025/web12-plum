@@ -23,7 +23,8 @@ export function NicknameSection() {
     handleCheckNickname,
   } = useNicknameValidation();
 
-  const successMessage = isNicknameAvailable ? '사용 가능한 닉네임입니다.' : '';
+  // 중복 확인 결과 메시지: 에러 메시지 우선, 성공 시 안내 메시지 표시
+  const checkMessage = errorMessage ?? (isNicknameAvailable ? '사용 가능한 닉네임입니다.' : '');
   const isCheckDisabled = !nicknameValue.trim() || isChecking;
 
   return (
@@ -51,7 +52,7 @@ export function NicknameSection() {
           중복 확인
         </Button>
       </div>
-      <FormField.HelpText variant={checkVariant}>{successMessage}</FormField.HelpText>
+      <FormField.HelpText variant={checkVariant}>{checkMessage}</FormField.HelpText>
     </FormField>
   );
 }
