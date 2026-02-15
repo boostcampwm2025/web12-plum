@@ -91,7 +91,7 @@ export class QnaService {
   }
 
   /** 특정 그룹의 이벤트 핸들러만 해제 */
-  private static removeEventHandlersByGroup(group: 'presenter' | 'audience') {
+  static removeEventHandlersByGroup(group: 'presenter' | 'audience') {
     const list = this.unsubscribers.get(group);
 
     if (list) {
