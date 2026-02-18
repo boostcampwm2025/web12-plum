@@ -96,7 +96,7 @@ interface ModalTitleProps {
  * @returns 모달 헤더 JSX 요소
  */
 function ModalTitle({ children }: ModalTitleProps) {
-  return <h2 className="text-text text-base font-extrabold">{children}</h2>;
+  return <h2 className="text-text text-center text-base font-extrabold">{children}</h2>;
 }
 
 interface ModalCloseButtonProps {

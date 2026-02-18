@@ -94,6 +94,8 @@ jobs:
             }
             
             update_env "FE_URL" "${FE_URL}"
+            update_env "STT_WORKER_URL" "http://localhost:8000"
+            update_env "LLM_WORKER_KEY" "${{ secrets.LLM_WORKER_KEY }}"
             update_env "AWS_S3_REGION" "${AWS_REGION}"
             update_env "AWS_S3_ACCESS_KEY" "${AWS_KEY}"
             update_env "AWS_S3_SECRET_KEY" "${AWS_SECRET}"
@@ -106,12 +108,17 @@ jobs:
             update_env "REDIS_PORT" "${{ secrets.NCP_DEV_REDIS_PORT }}"
             update_env "ANNOUNCED_IP" "${{ secrets.NCP_DEV_HOST }}"
             update_env "REDIS_PASSWORD" "${REDIS_PASSWORD}"
+            update_env "SERVER_WS_URL" "wss://${{ secrets.NCP_DEV_DOMAIN }}"
 
             # 기존 컨테이너 중지 및 제거 (포트 충돌 방지)
             docker compose -f docker-compose.yml -f docker-compose.develop.yml down || true
 
             docker compose -f docker-compose.yml -f docker-compose.develop.yml pull
             docker compose -f docker-compose.yml -f docker-compose.develop.yml up -d
+            
+            # record 폴더 생성
+            mkdir -p apps/backend/record
+            chmod -R 777 apps/backend/record
 
             # 헬스체크 (30초 타임아웃)
             echo "헬스체크 중..."
@@ -119,6 +126,14 @@ jobs:
               echo "✅ 헬스체크 성공"
             else
               echo "⚠️  헬스체크 타임아웃"
+            fi
+            
+            # 헬스체크 (ai-worker 헬스체크 추가 권장)
+            echo "AI Worker 체크 중..."
+            if timeout 20 bash -c 'until curl -f http://localhost:8000/docs 2>/dev/null; do sleep 2; done'; then
+              echo "✅ AI Worker 준비 완료"
+            else
+              echo "⚠️ AI Worker 응답 없음 (하지만 진행)"
             fi
 
             # 사용하지 않는 이미지 정리
@@ -185,6 +200,8 @@ jobs:
             }
             
             update_env "FE_URL" "${FE_URL}"
+            update_env "STT_WORKER_URL" "http://localhost:8000"
+            update_env "LLM_WORKER_KEY" "${{ secrets.LLM_WORKER_KEY }}"
             update_env "AWS_S3_REGION" "${AWS_REGION}"
             update_env "AWS_S3_ACCESS_KEY" "${AWS_KEY}"
             update_env "AWS_S3_SECRET_KEY" "${AWS_SECRET}"
@@ -197,12 +214,17 @@ jobs:
             update_env "REDIS_PORT" "${{ secrets.NCP_PROD_REDIS_PORT }}"
             update_env "ANNOUNCED_IP" "${{ secrets.NCP_PROD_HOST }}"
             update_env "REDIS_PASSWORD" "${REDIS_PASSWORD}"
+            update_env "SERVER_WS_URL" "wss://${{ secrets.NCP_PROD_DOMAIN }}"
 
             # 기존 컨테이너 중지 및 제거 (포트 충돌 방지)
             docker compose -f docker-compose.yml -f docker-compose.prod.yml down || true
 
             docker compose -f docker-compose.yml -f docker-compose.prod.yml pull
             docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+            
+            # record 폴더 생성
+            mkdir -p apps/backend/record
+            chmod -R 777 apps/backend/record
 
             # 헬스체크 (60초 타임아웃, 운영 환경은 더 긴 시간)
             echo "헬스체크 중..."
@@ -213,6 +235,14 @@ jobs:
               echo "컨테이너 로그:"
               docker logs --tail 50 plum-backend-prod
               exit 1
+            fi
+            
+            # 헬스체크 (ai-worker 헬스체크 추가 권장)
+            echo "AI Worker 체크 중..."
+            if timeout 20 bash -c 'until curl -f http://localhost:8000/docs 2>/dev/null; do sleep 2; done'; then
+              echo "✅ AI Worker 준비 완료"
+            else
+              echo "⚠️ AI Worker 응답 없음 (하지만 진행)"
             fi
 
             # 사용하지 않는 이미지 정리
@@ -348,7 +378,25 @@ jobs:
             cp .github/deployments/monitoring/grafana/provisioning/alerting/policies.yml ./grafana/provisioning/alerting/policies.yml
 
             # Prometheus 설정 파일의 IP 플레이스홀더 치환
-            sed -i "s/BACKEND_HOST_PLACEHOLDER/${{ secrets.NCP_DEV_HOST }}/g" ./prometheus/prometheus.yml
+            # 백엔드 애플리케이션 타겟 생성
+            BACKEND_TARGETS=""
+            IFS=',' read -ra BACKEND_IPS <<< "${{ secrets.NCP_BACKEND_TARGETS }}"
+            for ip in "${BACKEND_IPS[@]}"; do
+              BACKEND_TARGETS="${BACKEND_TARGETS}          - '${ip}:3000'\n"
+            done
+            # 마지막 개행 제거, 앞에 공백 추가없게
+            BACKEND_TARGETS=$(echo -e "$BACKEND_TARGETS" | sed '$ s/\\n$//')
+
+            # 플레이스홀더를 targets 배열로 치환
+            awk -v targets="$BACKEND_TARGETS" '
+              /BACKEND_TARGETS_PLACEHOLDER/ {
+                print targets
+                next
+              }
+              { print }
+            ' ./prometheus/prometheus.yml > ./prometheus/prometheus.yml.tmp
+            mv ./prometheus/prometheus.yml.tmp ./prometheus/prometheus.yml
+
             sed -i "s/REDIS_HOST_PLACEHOLDER/${{ secrets.NCP_DEV_REDIS_HOST }}/g" ./prometheus/prometheus.yml
 
             # 환경 변수 설정
@@ -372,6 +420,30 @@ jobs:
             mkdir -p prometheus/data loki/data grafana/data
             chown -R 472:472 grafana/data
             chmod -R 755 prometheus/data loki/data
+
+            # Prometheus 타겟 디렉토리 생성 /백엔드 서버 등록 (오토스케일링 - 환경변수로 관리)
+            mkdir -p /opt/prometheus/targets
+
+            # 환경변수에서 IP 목록을 읽어 JSON 생성
+            IFS=',' read -ra BACKEND_IPS <<< "${{ secrets.NCP_BACKEND_TARGETS }}"
+            echo "[" > /opt/prometheus/targets/backend.json
+            for i in "${!BACKEND_IPS[@]}"; do
+              ip="${BACKEND_IPS[$i]}"
+              echo "  {" >> /opt/prometheus/targets/backend.json
+              echo "    \"targets\": [\"${ip}:9100\"]," >> /opt/prometheus/targets/backend.json
+              echo "    \"labels\": {" >> /opt/prometheus/targets/backend.json
+              echo "      \"server\": \"plum-backend-$((i+1))\"," >> /opt/prometheus/targets/backend.json
+              echo "      \"ip\": \"${ip}\"" >> /opt/prometheus/targets/backend.json
+              echo "    }" >> /opt/prometheus/targets/backend.json
+              if [ $i -lt $((${#BACKEND_IPS[@]} - 1)) ]; then
+                echo "  }," >> /opt/prometheus/targets/backend.json
+              else
+                echo "  }" >> /opt/prometheus/targets/backend.json
+              fi
+            done
+            echo "]" >> /opt/prometheus/targets/backend.json
+
+            cat /opt/prometheus/targets/backend.json
 
             # 컨테이너 재시작
             docker compose pull
@@ -528,6 +600,9 @@ jobs:
             mkdir -p prometheus/data loki/data grafana/data
             chown -R 472:472 grafana/data
             chmod -R 755 prometheus/data loki/data
+
+            # Prometheus 타겟 디렉토리 생성 (오토스케일링 서버 자동 등록용)
+            mkdir -p /opt/prometheus/targets
 
             docker compose pull
             docker compose up -d

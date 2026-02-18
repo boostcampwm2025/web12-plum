@@ -1,353 +1,146 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { logger } from '@/shared/lib/logger';
-import { useStreamStore } from '@/store/useLocalStreamStore';
-import { useSocketStore } from '@/store/useSocketStore';
-import { useToastStore } from '@/store/useToastStore';
-import { useMediaInfra } from '@/mediasoup/useMediaInfra';
+import { SocketClient } from '@/shared/socket/socket';
+import { MediaConnectionService } from '@/mediasoup/mediaConnection.service';
 import { useSafeRoomId } from '@/shared/hooks/useSafeRoomId';
+import { roomApi } from '@/shared/api';
+import { logger } from '@/shared/lib/logger';
 
-import { InteractionSignaling } from '../mediasoup/InteractionSignaling';
-import { useMediaStore } from '../stores/useMediaStore';
-import { useRoomStore } from '../stores/useRoomStore';
-import { useRoomUIStore } from '../stores/useRoomUIStore';
-import { usePollStore } from '../stores/usePollStore';
-import { useQnaStore } from '../stores/useQnaStore';
 import { useChatStore } from '../stores/useChatStore';
-import { useRankStore } from '../stores/useRankStore';
-import { MediaRoomManager } from '../mediasoup/MediaRoomManager';
-import { useMediaControlContext } from './useMediaControlContext';
+import { usePollStore } from '../stores/usePollStore';
+import { useRoomStore } from '../stores/useRoomStore';
+import { useRoomEventHandlers } from './useRoomEventHandlers';
+import { useInteractionSync } from './useInteractionSync';
+import { useRemoteMedia } from './useRemoteMedia';
+import { useMediaCleanup } from './useMediaCleanup';
+import { useRoomJoin } from './useRoomJoin';
+import { useRoomUIStore } from '../stores/useRoomUIStore';
 
 /**
- * Room 초기화 통합 훅
- * 방 입장부터 미디어 설정, Socket 이벤트 리스닝까지의 초기화 파이프라인을 관리
+ * 방 입장 시 전체 초기화 파이프라인을 실행하는 훅
+ *
+ * 컴포넌트 마운트 시 자동으로 초기화를 시작하고, 언마운트 시 정리
+ *
+ * ## 초기화 순서 (runInitPipeline)
+ * 1. 서버 URL 조회 및 Socket 연결
+ * 2. 방 입장 (joinRoom) → RTP Capabilities 획득
+ * 3. mediasoup Device/Transport 초기화
+ * 4. 이벤트 핸들러 등록 (역할별)
+ * 5. 상호작용 상태 동기화 (투표/Q&A/랭킹)
+ * 6. 기존 참가자 미디어 수신 (consume)
+ * 7. 내 미디어 송출 시작 (대기실 설정 복원)
+ *
+ * ## 정리 (언마운트 시)
+ * - leaveAndCleanup으로 모든 미디어 자원 해제
+ *
+ * ## 반환값
+ * - isLoading: 초기화 진행 중 여부 (로딩 UI 표시용)
+ * - isSuccess: 초기화 성공 여부 (성공 UI 분기용)
+ * - isError: 초기화 실패 여부 (에러 토스트 표시용)
  */
-export function useRoomInit() {
+export function useRoomInit(handleInitialMedia: () => Promise<void>) {
+  const roomId = useSafeRoomId();
+  const hasStarted = useRef(false);
+
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
+  const [isError, setIsError] = useState(false);
 
-  /**
-   * 초기화 프로세스가 이미 시작되었는지 여부를 추적
-   * 상태 변경으로 인한 리렌더링을 피하고, 즉각적으로 잠금 상태를 반영하기 위함
-   */
-  const hasStartedInit = useRef(false);
-
-  /**
-   * MediaRoomManager 인스턴스 참조
-   */
-  const roomManagerRef = useRef<MediaRoomManager | null>(null);
-
-  const roomId = useSafeRoomId();
-  const infra = useMediaInfra();
-  const controls = useMediaControlContext();
-
-  // 전역 상태
-  const hasHydrated = useMediaStore((state) => state.hasHydrated);
-  const isReconnected = useSocketStore((state) => state.isReconnected);
-  const roomActions = useRoomStore((state) => state.actions);
-  const mediaActions = useMediaStore((state) => state.actions);
-  const streamActions = useStreamStore((state) => state.actions);
-  const socketActions = useSocketStore((state) => state.actions);
-  const pollActions = usePollStore((state) => state.actions);
-  const qnaActions = useQnaStore((state) => state.actions);
+  const myInfo = useRoomStore((state) => state.myInfo);
   const chatActions = useChatStore((state) => state.actions);
-  const rankActions = useRankStore((state) => state.actions);
-  const { addToast } = useToastStore((state) => state.actions);
+  const pollActions = usePollStore((state) => state.actions);
+  const roomActions = useRoomStore((state) => state.actions);
+  const roomUIReset = useRoomUIStore((state) => state.reset);
+
+  const { joinRoom } = useRoomJoin();
+  const { consumeExistingProducers } = useRemoteMedia();
+  const { setupAllHandlers } = useRoomEventHandlers();
+  const { cleanupMedia } = useMediaCleanup();
+  const { syncInteractionState } = useInteractionSync();
 
   /**
-   * 초기 미디어 장치 설정 및 송출 시작
-   */
-  const handleInitialMedia = async () => {
-    const isMicOn = useMediaStore.getState().isMicOn;
-    const isCameraOn = useMediaStore.getState().isCameraOn;
-    if (!isCameraOn && !isMicOn) return;
-
-    try {
-      // 1. 하드웨어 트랙 확보
-      await streamActions.ensureTracks({ video: isCameraOn, audio: isMicOn });
-
-      // 2. 애플리케이션 서비스를 통해 송출 시작
-      const tasks = [];
-      if (isMicOn) tasks.push(controls.enableMic());
-      if (isCameraOn) tasks.push(controls.enableCamera());
-
-      await Promise.all(tasks);
-    } catch (error) {
-      logger.custom.warn('[RoomInit] 초기 미디어 장치 연결 실패:', error);
-    }
-  };
-
-  /**
-   * 메인 초기화 파이프라인
+   * 초기화 파이프라인 실행
+   *
+   * 순서가 중요함 - 각 단계가 이전 단계의 결과에 의존
+   * 1. ensureConnected: Socket 연결 없으면 이후 단계 불가
+   * 2. joinRoom: RTP Capabilities 없으면 Device 초기화 불가
+   * 3. initialize: Transport 없으면 미디어 송수신 불가
+   * 4. setupAllHandlers: 이벤트 수신 준비
+   * 5. syncInteractionState: 투표/Q&A/랭킹 상태 동기화
+   * 6. consumeExistingProducers: 기존 참가자 미디어 수신
+   * 7. handleInitialMedia: 내 미디어 송출 시작
    */
   const runInitPipeline = useCallback(async () => {
     try {
-      if (!roomId) throw new Error('유효하지 않은 방 ID 입니다.');
-
-      const myInfo = useRoomStore.getState().myInfo;
-      if (!myInfo) throw new Error('내 참가자 정보가 존재하지 않습니다.');
-
-      // 로딩 시작
       setIsLoading(true);
-      setError(null);
 
-      // 1. 소켓 연결 및 이벤트 핸들러 등록
-      const socket = await socketActions.connect();
-      if (!socket) throw new Error('네트워크 연결에 실패했습니다.');
+      // 서버 URL 조회 및 소켓 연결
+      const { data: serverData } = await roomApi.getRoomServer(roomId!);
+      await SocketClient.ensureConnected(serverData.serverUrl);
 
-      const roomManager = new MediaRoomManager(socket, {
-        room: roomActions,
-        media: mediaActions,
-        controls: {
-          consumeRemoteProducer: controls.consumeRemoteProducer,
-          removeConsumer: infra.removeConsumer,
-        },
-      });
-      roomManagerRef.current = roomManager;
+      const rtpCapabilities = await joinRoom(roomId!, myInfo?.id || '');
 
-      // 2. 실시간 이벤트 핸들러 설정
-      roomManager.setupSystemHandlers();
+      // 전체 미디어 서비스 초기화
+      await MediaConnectionService.initialize(rtpCapabilities);
 
-      // 3. 방 입장 요청
-      const routerRtpCapabilities = await roomManager.join(roomId, myInfo.id);
-      const role = useRoomStore.getState().myInfo?.role ?? myInfo.role;
-      if (role === 'audience') {
-        socketActions.emit('get_active_poll', (response) => {
-          if (!response.success || !response.poll) return;
+      // 역할별 실시간 이벤트 핸들러 설정
+      await setupAllHandlers(myInfo?.role || 'participant');
+      await syncInteractionState(myInfo?.role ?? 'participant');
 
-          pollActions.setActivePoll(response.poll);
-          if (response.votedOptionId !== null) {
-            pollActions.setAudienceVotedOption(response.poll.id, response.votedOptionId);
-          }
+      // 기존 참가자 미디어 수신 및 내 미디어 송출 시작
+      await consumeExistingProducers();
 
-          const { activeDialog, setActiveDialog } = useRoomUIStore.getState();
-          if (activeDialog !== 'vote') setActiveDialog('vote');
-        });
-
-        socketActions.emit('get_active_qna', (response) => {
-          if (!response.success || !response.qna) return;
-
-          qnaActions.setActiveQna(response.qna);
-          if (response.answered) {
-            qnaActions.setAnswered(response.qna.id, true);
-          }
-          const { activeDialog, setActiveDialog } = useRoomUIStore.getState();
-          if (!activeDialog) setActiveDialog('qna');
-        });
-      }
-
-      socketActions.emit('get_activity_score_rank', (response) => {
-        if (!response.success) {
-          logger.socket.warn('[RoomInit] 랭킹 정보 조회 실패', response.error);
-          return;
-        }
-
-        logger.socket.info('[RoomInit] 랭킹 정보 수신', { role, response });
-
-        if (role === 'presenter') {
-          // 발표자: top + lowest
-          rankActions.initializeRank({
-            top: response.top,
-            lowest: 'lowest' in response ? response.lowest : null,
-          });
-        } else {
-          // 청중: top + 자신의 점수
-          rankActions.initializeRank({
-            top: response.top,
-            score: 'score' in response ? response.score : 0,
-          });
-        }
-      });
-
-      if (role === 'presenter') {
-        InteractionSignaling.setupPresenterHandlers(socket, {
-          handleUpdateGestureStatus: (data) => {
-            addToast({ type: 'gesture', title: data.participantName, gesture: data.gesture });
-          },
-          handleUpdatePollDetail: (data) => {
-            pollActions.updatePollDetail({
-              ...data,
-              voter: {
-                ...data.voter,
-                optionId: data.voter.optionId,
-              },
-            });
-          },
-          handlePollEndDetail: pollActions.setCompletedFromEndDetail,
-          handleUpdateQnaDetail: qnaActions.updateQnaDetail,
-          handleQnaEndDetail: qnaActions.setCompletedFromEndDetail,
-          handlePresenterRankUpdate: rankActions.updatePresenterRank,
-        });
-      } else {
-        InteractionSignaling.setupAudienceHandlers(socket, {
-          handleUpdateGestureStatus: (data) => {
-            addToast({ type: 'gesture', title: data.participantName, gesture: data.gesture });
-          },
-          handleStartPoll: (data) => {
-            pollActions.setActivePoll(data);
-
-            const { activeDialog, setActiveDialog } = useRoomUIStore.getState();
-            if (activeDialog !== 'vote') setActiveDialog('vote');
-          },
-          handleUpdatePoll: pollActions.updatePollOptions,
-          handlePollEnd: (data) => {
-            pollActions.clearActivePoll(data.pollId);
-            const { activeDialog, setActiveDialog, setPollResult } = useRoomUIStore.getState();
-            if (activeDialog === 'vote') setActiveDialog('vote');
-            setPollResult(data);
-          },
-          handleStartQna: (data) => {
-            qnaActions.setActiveQna(data);
-            const { activeDialog, setActiveDialog } = useRoomUIStore.getState();
-            if (activeDialog !== 'qna') setActiveDialog('qna');
-          },
-          handleUpdateQna: qnaActions.updateQnaSub,
-          handleQnaEnd: (data) => {
-            qnaActions.clearActiveQna(data.qnaId);
-            const { activeDialog, setActiveDialog } = useRoomUIStore.getState();
-            if (activeDialog === 'qna') setActiveDialog('qna');
-            addToast({
-              type: 'info',
-              title: 'Q&A가 종료되었습니다.',
-              description: 'Q&A 결과를 채팅창에서 확인하세요.',
-            });
-            if (data.text && data.text.length > 0) {
-              chatActions.addQnaResult(data);
-            }
-          },
-          handleScoreUpdate: rankActions.updateMyScore,
-          handleRankUpdate: rankActions.updateRank,
-        });
-      }
-
-      // 채팅 이벤트 설정 (발표자/참여자 공통)
-      InteractionSignaling.setupChatHandlers(socket, {
-        handleNewChat: (data) => {
-          chatActions.addChat(data);
-        },
-      });
-
-      // 4. Mediasoup Device 초기화
-      await infra.initDevice(routerRtpCapabilities);
-
-      // 5. 기존 참가자들의 오디오와 화면공유 즉시 수신
-      await controls.consumeExistingProducers();
-
-      // 6. 미디어 스트림 획득 및 송출 시작
+      // 대기실 설정에 따라 내 미디어 송출 시작
       await handleInitialMedia();
 
       setIsSuccess(true);
-      logger.custom.info('[RoomInit] 모든 초기화 시퀀스 완료');
     } catch (error) {
-      const errorObj = error instanceof Error ? error : new Error('알 수 없는 초기화 실패');
-      logger.custom.error('[RoomInit] 에러 발생:', errorObj);
-      setError(errorObj);
-
-      roomManagerRef.current = null;
-      hasStartedInit.current = false;
+      logger.custom.error('[useRoomInit] 초기화 실패', error);
+      setIsError(true);
     } finally {
       setIsLoading(false);
     }
   }, [
+    joinRoom,
+    setupAllHandlers,
+    consumeExistingProducers,
+    handleInitialMedia,
+    syncInteractionState,
+    myInfo,
     roomId,
-    roomActions,
-    mediaActions,
-    socketActions,
-    pollActions,
-    qnaActions,
-    rankActions,
-    chatActions,
-    controls,
-    infra,
-    addToast,
   ]);
 
   /**
-   * 재시도 핸들러
-   */
-  const retry = useCallback(() => {
-    hasStartedInit.current = false;
-    setIsSuccess(false);
-    setError(null);
-  }, []);
-
-  /**
-   * 초기화 트리거
+   * 마운트 시 초기화 실행 (1회만)
+   *
+   * hasStarted ref로 중복 실행 방지
+   * - deps 변경으로 인한 재실행 방지
    */
   useEffect(() => {
-    // 이미 완료되었거나 Hydration 전이면 대기
-    const shouldWait = hasStartedInit.current || !hasHydrated || isSuccess || isLoading;
+    const shouldWait = hasStarted.current || isSuccess || isLoading;
     if (shouldWait) return;
 
-    hasStartedInit.current = true;
+    hasStarted.current = true;
     runInitPipeline();
-  }, [hasHydrated, isSuccess, isLoading, runInitPipeline]);
+  }, [isSuccess, isLoading, runInitPipeline]);
 
   /**
-   * 재연결 시 누락 메시지 동기화
-   */
-  useEffect(() => {
-    if (!isReconnected) return;
-
-    const rejoinRoom = async () => {
-      const roomManager = roomManagerRef.current;
-      const myInfo = useRoomStore.getState().myInfo;
-      const socket = useSocketStore.getState().socket;
-
-      if (!roomManager || !roomId || !myInfo || !socket?.connected) return;
-
-      try {
-        await roomManager.join(roomId, myInfo.id);
-        logger.custom.info('[RoomInit] 재연결 후 재입장 완료');
-      } catch (error) {
-        logger.custom.error('[RoomInit] 재연결 후 재입장 실패:', error);
-      }
-    };
-
-    void rejoinRoom();
-
-    const lastMessageId = chatActions.getLastMessageId();
-    if (lastMessageId) {
-      socketActions.emit('sync_chat', { lastMessageId }, (response) => {
-        if (!response.success || !response.messages) return;
-        for (const msg of response.messages) {
-          chatActions.addChat(msg);
-        }
-      });
-    }
-
-    // 플래그 리셋
-    useSocketStore.setState({ isReconnected: false });
-  }, [isReconnected, chatActions, socketActions]);
-
-  /**
-   * 훅 언마운트 시 자동 정리
+   * 언마운트 시 정리
+   *
+   * 페이지 이탈, 라우팅 변경 시 모든 미디어 자원 해제
+   * - Producer/Consumer 종료
+   * - Transport/Device 정리
+   * - 로컬 트랙 중지
    */
   useEffect(() => {
     return () => {
-      // 소켓 이벤트 핸들러 해제
-      const socket = useSocketStore.getState().socket;
-      if (socket?.connected) {
-        InteractionSignaling.removeAllHandlers(socket);
-      }
-
-      // MediaRoomManager 정리
-      if (roomManagerRef.current) {
-        roomManagerRef.current.cleanup();
-        roomManagerRef.current = null;
-      }
-
-      // 미디어 자원 정리
-      controls.cleanup();
-      roomActions.setRoomEnded(false);
-
-      if (socket?.connected) socketActions.disconnect();
-
-      hasStartedInit.current = false;
-      logger.custom.info('[RoomInit] 미디어 연결 자원 정리 완료');
+      cleanupMedia();
+      chatActions.clear();
+      pollActions.clear();
+      roomActions.reset();
+      roomUIReset();
     };
-  }, []);
+  }, [cleanupMedia, chatActions, pollActions, roomActions, roomUIReset]);
 
-  return { isLoading, isSuccess, error, retry };
+  return { isLoading, isSuccess, isError };
 }

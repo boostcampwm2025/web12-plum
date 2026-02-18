@@ -15,7 +15,8 @@ import { FormField } from '@/shared/components/FormField';
 import { Button } from '@/shared/components/Button';
 import { Input } from '@/shared/components/Input';
 import { Icon } from '@/shared/components/icon/Icon';
-import { TimeLimitDropdown } from '@/shared/components/TimeLimitDropdown';
+import { Select } from '@/shared/components/Select';
+import { TIME_LIMIT_OPTIONS } from '@/shared/constants/timeLimit';
 import { logger } from '@/shared/lib/logger';
 import {
   MAX_POLL_OPTIONS,
@@ -156,14 +157,14 @@ export function PollModal({
       onClose={onClose}
       className="max-w-181.5"
     >
-      <header className="flex items-center justify-between pb-4">
+      <header className="flex items-center justify-between pb-4 pl-2">
         <Modal.Title>{title}</Modal.Title>
         <Modal.CloseButton onClose={onClose} />
       </header>
 
       <FormProvider {...formMethods}>
         <form
-          className="flex h-full min-h-0 flex-col gap-6 overflow-y-scroll"
+          className="flex h-full min-h-0 flex-col gap-6 overflow-y-auto px-2"
           onSubmit={handleSubmit(handleSubmitForm)}
         >
           {/* 투표 제목 섹션 */}
@@ -206,9 +207,11 @@ export function PollModal({
               control={control}
               name={POLL_FORM_KEYS.timeLimit}
               render={({ field: { onChange, value } }) => (
-                <TimeLimitDropdown
-                  selectedTime={value}
+                <Select
+                  value={value}
                   onChange={onChange}
+                  options={TIME_LIMIT_OPTIONS}
+                  aria-label="제한 시간 선택"
                 />
               )}
             />

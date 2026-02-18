@@ -24,12 +24,29 @@ services:
     restart: always # 운영에서는 항상 재시작 (unless-stopped보다 강함)
     volumes:
       - ./apps/backend/logs:/app/apps/backend/logs # Winston 로그 파일 (Promtail이 읽음)
+      - ./apps/backend/record:/app/apps/backend/record # 로컬의 ./recordings 폴더를 컨테이너 내부 /app/record와 연결
     healthcheck: # 헬스체크 추가하여 컨테이너 상태 모니터링 및 자동 재시작
       test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
       interval: 30s # 30초마다 체크
       timeout: 10s  # 10초 내 응답 없으면 실패
       retries: 3    # 3번 실패 시 unhealthy
       start_period: 5s # 컨테이너 시작 후 5초 동안은 실패해도 무시
+
+  ai-worker:
+    image: ${DOCKER_USERNAME}/plum-ai-worker:${TAG:-latest}
+    container_name: plum-ai-worker-develop
+    network_mode: host
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --log-level info
+    environment:
+      - STT_CPU_THREADS=1
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./apps/backend/record:/app/apps/backend/record
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: 1
 
   # Node Exporter - 시스템 메트릭 수집
   node-exporter:
@@ -51,7 +68,7 @@ services:
 
   # Promtail - 로그 수집 및 Loki로 전송
   promtail:
-    image: grafana/promtail:2.9.0
+    image: grafana/promtail:3.0.0
     container_name: plum-backend-prod-promtail
     restart: always
     volumes:

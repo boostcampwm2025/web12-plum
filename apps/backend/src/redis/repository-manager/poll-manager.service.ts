@@ -170,6 +170,30 @@ export class PollManagerService extends BaseRedisRepository<Poll> {
   }
 
   /**
+   * 특정 투표의 옵션별 투표자 목록 조회
+   */
+  async getVoteGroups(pollId: string): Promise<Record<number, Voter[]>> {
+    const client = this.redisService.getClient();
+    const voterKey = this.getVoterKey(pollId);
+    const votersRaw = await client.hgetall(voterKey);
+
+    const voterGroups: Record<number, Voter[]> = {};
+    Object.entries(votersRaw || {}).forEach(([pId, valueStr]) => {
+      const separatorIndex = valueStr.indexOf(':');
+      if (separatorIndex === -1) return;
+
+      const optionId = Number(valueStr.substring(0, separatorIndex));
+      if (Number.isNaN(optionId)) return;
+
+      const participantName = valueStr.substring(separatorIndex + 1);
+      if (!voterGroups[optionId]) voterGroups[optionId] = [];
+      voterGroups[optionId].push({ id: pId, name: participantName });
+    });
+
+    return voterGroups;
+  }
+
+  /**
    * 특정 참가자의 투표 선택지 조회
    */
   async getVotedOptionId(pollId: string, participantId: string): Promise<number | null> {
@@ -406,6 +430,13 @@ export class PollManagerService extends BaseRedisRepository<Poll> {
 
     // 마지막 요소가 active인 경우에만 처리 (Shadow Key 역할)
     if (parts[parts.length - 1] !== 'active') return;
+
+    // 분산 락 획득 시도
+    const acquired = await this.redisService.acquireLock(key);
+    if (!acquired) {
+      this.logger.debug(`[Poll AutoClose] 다른 서버가 이미 처리 중: ${key}`);
+      return;
+    }
 
     const pollId = parts[1];
 

@@ -13,6 +13,14 @@ import {
 import { SocketMetadataService } from '../common/services/index.js';
 import { RoomService } from './room.service.js';
 import { PrometheusService } from '../prometheus/prometheus.service.js';
+import { RecordService } from '../records/record.service.js';
+
+jest.mock('chokidar', () => ({
+  watch: jest.fn().mockReturnValue({
+    on: jest.fn().mockReturnThis(),
+    close: jest.fn().mockResolvedValue(undefined),
+  }),
+}));
 
 describe('RoomGateway', () => {
   let gateway: RoomGateway;
@@ -50,6 +58,7 @@ describe('RoomGateway', () => {
           useValue: {
             getClient: jest.fn(),
             getSubscriber: jest.fn(),
+            acquireLock: jest.fn().mockResolvedValue(true),
           },
         },
         {
@@ -92,6 +101,7 @@ describe('RoomGateway', () => {
             pipeProducerToAllRouters: jest.fn().mockResolvedValue(undefined),
             cleanupPipeProducers: jest.fn().mockResolvedValue(undefined),
             removeParticipantFromRouter: jest.fn(),
+            cleanupParticipantSpeakerState: jest.fn(),
             closeRoutersWithStrategy: jest.fn().mockResolvedValue(undefined),
           },
         },
@@ -127,6 +137,7 @@ describe('RoomGateway', () => {
             set: jest.fn(),
             delete: jest.fn(),
             has: jest.fn(),
+            addTransportId: jest.fn(),
           },
         },
         {
@@ -134,6 +145,14 @@ describe('RoomGateway', () => {
           useValue: {
             incrementSocketIOConnections: jest.fn(),
             decrementSocketIOConnections: jest.fn(),
+          },
+        },
+        {
+          provide: RecordService,
+          useValue: {
+            startRecording: jest.fn(),
+            stopParticipantRecording: jest.fn(),
+            stopAllRecording: jest.fn(),
           },
         },
       ],
@@ -202,7 +221,7 @@ describe('RoomGateway', () => {
     it('정상적으로 Transport 파라미터를 반환해야 함', async () => {
       const socket = createMockSocket();
       // 먼저 조인된 상태를 메타데이터에 주입
-      jest.spyOn(socketMetadataService, 'get').mockReturnValue({
+      jest.spyOn(socketMetadataService, 'get').mockResolvedValue({
         roomId: 'room-1',
         participantId: 'user-1',
         transportIds: [],
@@ -227,7 +246,7 @@ describe('RoomGateway', () => {
   describe('handleProduce', () => {
     it('Producer를 생성하고 새 프로듀서 알림을 브로드캐스트해야 함', async () => {
       const socket = createMockSocket();
-      jest.spyOn(socketMetadataService, 'get').mockReturnValue({
+      jest.spyOn(socketMetadataService, 'get').mockResolvedValue({
         roomId: 'room-1',
         participantId: 'user-1',
         transportIds: [],
@@ -251,7 +270,7 @@ describe('RoomGateway', () => {
 
     it('청중이 화면 공유 Producer를 생성하는 경우 오류를 반환해야 함', async () => {
       const socket = createMockSocket();
-      jest.spyOn(socketMetadataService, 'get').mockReturnValue({
+      jest.spyOn(socketMetadataService, 'get').mockResolvedValue({
         roomId: 'room-1',
         participantId: 'user-1',
         transportIds: [],
@@ -272,7 +291,7 @@ describe('RoomGateway', () => {
 
     it('발표자가 화면 공유 Producer를 생성하는 경우 오류를 반환해야 함', async () => {
       const socket = createMockSocket();
-      jest.spyOn(socketMetadataService, 'get').mockReturnValue({
+      jest.spyOn(socketMetadataService, 'get').mockResolvedValue({
         roomId: 'room-1',
         participantId: 'user-1',
         transportIds: [],
@@ -299,7 +318,7 @@ describe('RoomGateway', () => {
   describe('handleConsume', () => {
     it('Consumer 생성 시 필요한 RTP 파라미터를 반환해야 함', async () => {
       const socket = createMockSocket();
-      jest.spyOn(socketMetadataService, 'get').mockReturnValue({
+      jest.spyOn(socketMetadataService, 'get').mockResolvedValue({
         roomId: 'room-1',
         participantId: 'user-1',
         transportIds: [],
@@ -333,7 +352,7 @@ describe('RoomGateway', () => {
   describe('handleToggleMedia', () => {
     it('pause 액션 시 producer를 일시정지시켜야 함', async () => {
       const socket = createMockSocket();
-      jest.spyOn(socketMetadataService, 'get').mockReturnValue({
+      jest.spyOn(socketMetadataService, 'get').mockResolvedValue({
         roomId: 'room-1',
         participantId: 'user-1',
         transportIds: [],
@@ -365,7 +384,7 @@ describe('RoomGateway', () => {
         producers: { video: producerId },
       };
 
-      jest.spyOn(socketMetadataService, 'get').mockReturnValue(metadata);
+      jest.spyOn(socketMetadataService, 'get').mockResolvedValue(metadata);
       jest.spyOn(participantManager, 'findOne').mockResolvedValue(participant as any);
       const updateSpy = jest
         .spyOn(participantManager, 'updatePartial')
@@ -386,7 +405,7 @@ describe('RoomGateway', () => {
       const request = { producerId };
       const metadata = { roomId: 'room-1', participantId: 'user-1', transportIds: [] };
 
-      jest.spyOn(socketMetadataService, 'get').mockReturnValue(metadata);
+      jest.spyOn(socketMetadataService, 'get').mockResolvedValue(metadata);
       mediasoupService.closeProducer.mockImplementationOnce(() => {
         throw new Error('Test error');
       });
@@ -422,7 +441,7 @@ describe('RoomGateway', () => {
       const socket = createMockSocket();
       const metadata = { roomId: 'room-1', participantId: 'user-1', transportIds: ['t1'] };
 
-      jest.spyOn(socketMetadataService, 'get').mockReturnValue(metadata);
+      jest.spyOn(socketMetadataService, 'get').mockResolvedValue(metadata);
       const setPendingSpy = jest
         .spyOn(participantManager, 'setReconnectPending')
         .mockResolvedValue(undefined);
@@ -519,7 +538,7 @@ describe('RoomGateway', () => {
         consumers: [],
       };
 
-      jest.spyOn(socketMetadataService, 'get').mockReturnValue(metadata);
+      jest.spyOn(socketMetadataService, 'get').mockResolvedValue(metadata);
       jest.spyOn(participantManager, 'findOne').mockResolvedValue(mockParticipant as any);
       jest.spyOn(roomManager, 'removeParticipant').mockResolvedValue(undefined);
 
@@ -534,11 +553,11 @@ describe('RoomGateway', () => {
   describe('handleBreakRoom', () => {
     it('발표자가 요청 시 방을 종료하고 리소스를 정리해야 함', async () => {
       const socket = createMockSocket();
-      const roomId = 'room-123';
+      const roomId = 'room-1';
       const presenterId = 'presenter-456';
 
       // 1. 메타데이터 설정
-      jest.spyOn(socketMetadataService, 'get').mockReturnValue({
+      jest.spyOn(socketMetadataService, 'get').mockResolvedValue({
         roomId: 'room-1',
         participantId: presenterId,
         transportIds: [],
@@ -575,7 +594,7 @@ describe('RoomGateway', () => {
 
     it('발표자가 아닌 참가자가 요청할 경우 권한 에러를 반환해야 함', async () => {
       const socket = createMockSocket();
-      jest.spyOn(socketMetadataService, 'get').mockReturnValue({
+      jest.spyOn(socketMetadataService, 'get').mockResolvedValue({
         roomId: 'r1',
         participantId: 'u1',
         transportIds: [],
@@ -597,7 +616,7 @@ describe('RoomGateway', () => {
 
     it('이미 종료된 방인 경우 에러를 반환해야 함', async () => {
       const socket = createMockSocket();
-      jest.spyOn(socketMetadataService, 'get').mockReturnValue({
+      jest.spyOn(socketMetadataService, 'get').mockResolvedValue({
         roomId: 'r1',
         participantId: 'u1',
         transportIds: [],
@@ -639,7 +658,7 @@ describe('RoomGateway', () => {
     it('성공적으로 발표 자료 파일 목록을 반환해야 함', async () => {
       const socket = createMockSocket();
 
-      jest.spyOn(socketMetadataService, 'get').mockReturnValue({
+      jest.spyOn(socketMetadataService, 'get').mockResolvedValue({
         roomId: mockRoomId,
         participantId: mockParticipantId,
         transportIds: [],
@@ -656,7 +675,7 @@ describe('RoomGateway', () => {
     it('메타데이터가 없는 소켓인 경우 에러를 반환해야 함', async () => {
       const socket = createMockSocket('unregistered-socket');
 
-      jest.spyOn(socketMetadataService, 'get').mockReturnValue(undefined);
+      jest.spyOn(socketMetadataService, 'get').mockResolvedValue(null);
 
       const result = await gateway.handleGetPresentation(socket);
 
@@ -666,7 +685,7 @@ describe('RoomGateway', () => {
     it('RoomService에서 에러가 발생한 경우 실패 응답을 반환해야 함', async () => {
       const socket = createMockSocket();
 
-      jest.spyOn(socketMetadataService, 'get').mockReturnValue({
+      jest.spyOn(socketMetadataService, 'get').mockResolvedValue({
         roomId: mockRoomId,
         participantId: mockParticipantId,
         transportIds: [],

@@ -1,3 +1,5 @@
+import { Timelines } from '@plum/shared-interfaces';
+
 /**
  * 전체값 대비 부분값의 비율(백분율)을 계산 함수
  * @param value 부분값
@@ -16,3 +18,31 @@ export const calculatePercentage = (
   const roundedPercentage = Number(percentage.toFixed(precision));
   return roundedPercentage;
 };
+
+/**
+ * 초 단위 시간을 MM:SS 형식으로 변환
+ * @param seconds 초 단위 시간
+ * @returns MM:SS 형식의 시간 문자열
+ */
+export function formatTime(seconds: number): string {
+  const totalSeconds = Math.floor(seconds);
+  const mins = Math.floor(totalSeconds / 60);
+  const secs = totalSeconds % 60;
+  return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+}
+
+/**
+ * 첫 번째 타임라인 시작 시점을 기준(0초)으로 상대 시간 계산
+ * @param timelines 원본 타임라인 배열
+ * @returns 상대 시간으로 변환된 타임라인 배열
+ */
+export function getRelativeTimelines(timelines: Timelines[]): Timelines[] {
+  if (timelines.length === 0) return [];
+
+  const baseTime = timelines[0].startedAt;
+  return timelines.map((t) => ({
+    ...t,
+    startedAt: t.startedAt - baseTime,
+    endedAt: t.endedAt - baseTime,
+  }));
+}

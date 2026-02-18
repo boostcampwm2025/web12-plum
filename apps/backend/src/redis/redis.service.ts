@@ -80,6 +80,15 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
+   * 분산 락 획득 (SET NX EX 패턴)
+   * expired 이벤트 핸들러에서 중복 실행 방지용
+   */
+  async acquireLock(key: string, ttl = 5): Promise<boolean> {
+    const result = await this.client.set(`lock:cleanup:${key}`, '1', 'EX', ttl, 'NX');
+    return result === 'OK';
+  }
+
+  /**
    * 일반 Redis Pub
    * SET, GET, HSET
    */

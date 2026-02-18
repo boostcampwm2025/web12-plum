@@ -68,13 +68,22 @@ interface MyVideoProps {
   videoMode: VideoDisplayMode;
   onModeChange: (mode: VideoDisplayMode) => void;
   stream: MediaStream | null;
+  isAudioMuted: boolean;
+  isSpeaking: boolean;
 }
 
 /**
  * 내 비디오 컴포넌트
  * 비디오 모드가 'pip' 또는 'minimize'일 때만 렌더링
  */
-function MyVideo({ currentUser, videoMode, onModeChange, stream }: MyVideoProps) {
+function MyVideo({
+  currentUser,
+  videoMode,
+  onModeChange,
+  stream,
+  isAudioMuted,
+  isSpeaking,
+}: MyVideoProps) {
   const isCameraOn = useMediaStore((state) => state.isCameraOn);
 
   if (videoMode !== 'pip' && videoMode !== 'minimize') return null;
@@ -89,21 +98,29 @@ function MyVideo({ currentUser, videoMode, onModeChange, stream }: MyVideoProps)
         onModeChange={onModeChange}
         stream={stream}
         isCameraOn={isCameraOn}
+        isAudioMuted={isAudioMuted}
+        isSpeaking={isSpeaking}
       />
     </Draggable>
   );
+}
+
+interface RoomMainSectionProps {
+  onDisableScreenShare: () => void;
 }
 
 /**
  * 강의실 메인 섹션 컴포넌트
  * 강의 화면과 참가자 비디오를 포함
  */
-export function RoomMainSection() {
+export function RoomMainSection({ onDisableScreenShare }: RoomMainSectionProps) {
   const [userVideoMode, setUserVideoMode] = useState<VideoDisplayMode>('side');
   const [gestureVideoElement, setGestureVideoElement] = useState<HTMLVideoElement | null>(null);
   const isCameraOn = useMediaStore((state) => state.isCameraOn);
+  const isMicOn = useMediaStore((state) => state.isMicOn);
   const localStream = useStreamStore((state) => state.localStream);
   const processedStream = useBackgroundEffectStore((state) => state.processedStream);
+  const activeSpeakerIds = useRoomStore((state) => state.activeSpeakerIds);
 
   const myInfo = useRoomStore((state) => state.myInfo);
   const currentUser = myInfo ?? { id: '', name: '', role: 'audience' };
@@ -137,7 +154,10 @@ export function RoomMainSection() {
   return (
     <>
       <main className="relative flex grow flex-col text-sm">
-        <ScreenShareBanner userName={currentUser.name} />
+        <ScreenShareBanner
+          userName={currentUser.name}
+          onDisableScreenShare={onDisableScreenShare}
+        />
         <ToastStack />
         <motion.div
           layout
@@ -153,6 +173,8 @@ export function RoomMainSection() {
             videoMode={userVideoMode}
             onModeChange={setUserVideoMode}
             stream={displayStream}
+            isAudioMuted={!isMicOn}
+            isSpeaking={activeSpeakerIds.has(currentUser.id)}
           />
         </motion.div>
 

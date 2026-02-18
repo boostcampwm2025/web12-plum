@@ -10,12 +10,14 @@ import {
   Consumer,
   RtpParameters,
   RtpCapabilities,
+  PlainTransport,
 } from 'mediasoup/node/lib/types';
 import { MediaType } from '@plum/shared-interfaces';
 import { mediasoupConfig } from './mediasoup.config.js';
 import { ConsumerAppData, ProducerAppData, RoomType } from './mediasoup.type.js';
 import { PrometheusService } from '../prometheus/prometheus.service.js';
 import { MultiRouterManagerService } from './multi-router-manager.service.js';
+import { AudioLevelObserverService } from './audio-level-observer.service.js';
 
 /**
  * Mediasoup Worker 및 Router 관리 서비스
@@ -33,6 +35,7 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
   private workers: Worker[] = []; // CPU 코어 수만큼 생성되는 Worker 배열
   private routers: Map<string, Router> = new Map(); // 강의실별 Router 저장 (roomId -> Router)
   private transports: Map<string, WebRtcTransport> = new Map(); // Transport 저장 (transportId -> Transport)
+  private plainTransports: Map<string, PlainTransport> = new Map(); // 녹음용 Transport
   private producers: Map<string, Producer<ProducerAppData>> = new Map();
   private consumers: Map<string, Consumer<ConsumerAppData>> = new Map();
   private nextWorkerIdx = 0; // Round-robin Worker 선택 인덱스
@@ -40,6 +43,7 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
   constructor(
     private readonly prometheusService: PrometheusService,
     private readonly multiRouterManager: MultiRouterManagerService,
+    private readonly audioLevelObserverService: AudioLevelObserverService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
@@ -138,6 +142,9 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
 
       this.logger.log(`✅ Router이 ${roomId} 강의실에 생성되었습니다. (Worker PID: ${worker.pid})`);
 
+      // AudioLevelObserver 생성 (싱글 라우터)
+      await this.audioLevelObserverService.createObserver(roomId, 0, router);
+
       // Prometheus 메트릭 업데이트
       this.prometheusService.setMediasoupRouters(this.routers.size);
 
@@ -168,6 +175,11 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
       // 첫 번째 Router를 legacy Map에도 저장 (하위 호환성)
       if (routers.length > 0) {
         this.routers.set(roomId, routers[0]);
+      }
+
+      // AudioLevelObserver 생성 (모든 라우터)
+      for (let i = 0; i < routers.length; i++) {
+        await this.audioLevelObserverService.createObserver(roomId, i, routers[i]);
       }
 
       // Prometheus 메트릭 업데이트 - 실제 전체 Router 수 반영
@@ -231,6 +243,8 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
    * 모든 Router와 PipeProducer 정리
    */
   async closeRoutersWithStrategy(roomId: string): Promise<void> {
+    await this.audioLevelObserverService.cleanupRoom(roomId);
+
     await this.multiRouterManager.cleanupRoom(roomId);
     this.routers.delete(roomId);
 
@@ -285,6 +299,13 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
    */
   removeParticipantFromRouter(roomId: string, participantId: string): void {
     this.multiRouterManager.removeParticipant(roomId, participantId);
+  }
+
+  /**
+   * 발화 상태 정리 (참가자 퇴장 시)
+   */
+  cleanupParticipantSpeakerState(roomId: string, participantId: string): void {
+    this.audioLevelObserverService.removeParticipantState(roomId, participantId);
   }
 
   /**
@@ -490,6 +511,7 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
     participantId: string,
     source: MediaType,
     rtpParameters: RtpParameters,
+    roomId?: string,
   ): Promise<Producer<ProducerAppData>> {
     const transport = this.transports.get(transportId);
     if (!transport) throw new Error(`${transportId} Transport를 찾을 수 없습니다.`);
@@ -508,7 +530,29 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
     const producerKind: 'video' | 'audio' | 'screen' =
       source === 'screen' ? 'screen' : (kind as 'video' | 'audio');
 
+    // Audio producer를 AudioLevelObserver에 추가
+    if (kind === 'audio' && roomId) {
+      let routerIndex = 0;
+      try {
+        routerIndex = this.multiRouterManager.getParticipantRouterIndex(roomId, participantId);
+      } catch {
+        // 싱글 라우터 폴백
+        routerIndex = 0;
+      }
+      await this.audioLevelObserverService.addProducer(roomId, routerIndex, producer);
+    }
+
     producer.observer.on('close', () => {
+      if (kind === 'audio' && roomId) {
+        let routerIndex = 0;
+        try {
+          routerIndex = this.multiRouterManager.getParticipantRouterIndex(roomId, participantId);
+        } catch {
+          routerIndex = 0;
+        }
+        void this.audioLevelObserverService.removeProducer(roomId, routerIndex, producer.id);
+      }
+
       this.producers.delete(producer.id);
       this.logger.log(`Producer 닫힘 (id: ${producer.id})`);
 
@@ -644,5 +688,67 @@ export class MediasoupService implements OnModuleInit, OnModuleDestroy {
         this.logger.warn(`Consumer ${consumerId} 정리 중 오류: ${error.message}`);
       }
     });
+  }
+
+  /**
+   * STT 수집을 위한 PlainTransport 생성
+   */
+  async createPlainTransport(roomId: string): Promise<PlainTransport> {
+    const router = this.getRouter(roomId);
+    if (!router) throw new Error(`${roomId} Router를 찾을 수 없습니다.`);
+
+    const transport = await router.createPlainTransport({
+      listenInfo: { protocol: 'udp', ip: '127.0.0.1' },
+      rtcpMux: true,
+      comedia: false,
+    });
+
+    this.plainTransports.set(transport.id, transport);
+    return transport;
+  }
+
+  /**
+   * PlainTransport 닫기
+   */
+  closePlainTransport(transportId: string) {
+    const transport = this.plainTransports.get(transportId);
+
+    if (transport) {
+      transport.close();
+      this.plainTransports.delete(transportId);
+      this.logger.log(`🗑️ Transport 해제 완료 (ID: ${transportId})`);
+    }
+  }
+
+  async consumeAudioToPlain(
+    transport: PlainTransport,
+    producerId: string,
+    remotePort: number,
+    rtpCapabilities: RtpCapabilities,
+  ): Promise<Consumer> {
+    const audioCodec = rtpCapabilities.codecs?.find((c) => c.kind === 'audio');
+
+    if (!audioCodec) {
+      throw new Error('Router에 오디오 코덱 설정이 없습니다.');
+    }
+
+    const fixedCapabilities: RtpCapabilities = {
+      codecs: [audioCodec],
+      headerExtensions: rtpCapabilities.headerExtensions,
+    };
+
+    await transport.connect({
+      ip: '127.0.0.1',
+      port: remotePort,
+    });
+
+    const consumer = await transport.consume({
+      producerId,
+      rtpCapabilities: fixedCapabilities,
+      paused: true,
+    });
+
+    this.logger.log(`📢 STT용 오디오 분기 시작 (Consumer ID: ${consumer.id})`);
+    return consumer;
   }
 }

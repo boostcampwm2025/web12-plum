@@ -1,4 +1,5 @@
-import { FormProvider, useForm, useFormContext, useWatch } from 'react-hook-form';
+import { useEffect } from 'react';
+import { FormProvider, useForm, useFormContext } from 'react-hook-form';
 import { useNavigate } from 'react-router';
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { CreateRoomRequest } from '@plum/shared-interfaces';
@@ -9,176 +10,84 @@ import { useToastStore } from '@/store/useToastStore';
 import { Button } from '@/shared/components/Button';
 import { cn } from '@/shared/lib/utils';
 import { logger } from '@/shared/lib/logger';
-import { FormField } from '@/shared/components/FormField';
-import { Icon } from '@/shared/components/icon/Icon';
 import { getUserFriendlyError } from '@/shared/api';
-import { usePresentation } from '@/shared/hooks/usePresentation';
 
-import { LECTURE_FORM_KEYS, lectureFormDefaultValues } from '../schema';
-import { ActivityProvider } from '../hooks/useActivityActionContext';
-import { ActivityModalProvider, useActivityModalContext } from '../hooks/useActivityModalContext';
+import { lectureFormDefaultValues } from '../schema';
+import { useActivityModalStore } from '../store/useActivityModalStore';
+import { useActivityDataStore } from '../store/useActivityDataStore';
 import { useCreateRoom } from '../hooks/useCreateRoom';
 import { ActivityModals } from './ActivityModals';
-import { PresentationUploader } from './PresentationUploader';
-import { PresentationList } from './PresentationList';
-import { ActivityList } from './ActivityList';
+import { PresentationSection } from './PresentationSection';
+import { ActivitySection } from './ActivitySection';
+import { AgreementSection } from './AgreementSection';
+import { HostNameSection } from './HostNameSection';
+import { LectureNameSection } from './LectureNameSection';
 
 /**
- * 강의실 이름 섹션 컴포넌트
+ * 강의 생성 폼 제출 버튼 컴포넌트
+ *
+ * 폼 컨텍스트의 유효성 상태를 구독하여 버튼의 활성화 여부를 결정하고, 최종 데이터를 서버로 전송
+ *
+ * 1. `useFormContext`를 통해 폼의 유효성(`isValid`)과 제출 핸들러(`handleSubmit`)를 가져옴.
+ * 2. `useCreateRoom` 훅을 실행하여 서버 통신 로직 및 제출 중 상태(`isSubmitting`) 확보.
+ * 3. 클릭 시 Zod 스키마 검증을 통과한 데이터를 `onSubmit`으로 전달받아 서버 API 호출.
+ * 4. 생성 성공 시 해당 강의실 경로로 이동, 실패 시 사용자 친화적인 에러 토스트 노출.
  */
-function LectureNameSection() {
-  const { register } = useFormContext<CreateRoomRequest>();
+function SubmitButton() {
+  const navigate = useNavigate();
+  const polls = useActivityDataStore((state) => state.polls);
+  const qnas = useActivityDataStore((state) => state.qnas);
 
-  return (
-    <FormField
-      required
-      className="gap-3"
-    >
-      <div className="flex items-center gap-4">
-        <FormField.Legend className="m-0 text-xl font-bold">강의실 이름</FormField.Legend>
-        <FormField.HelpText className="m-0">5~30자 이내</FormField.HelpText>
-      </div>
-
-      <FormField.Input
-        {...register(LECTURE_FORM_KEYS.name)}
-        size="lg"
-        placeholder="예: 네이버부스트캠프 웹 풀스택"
-      />
-    </FormField>
-  );
-}
-
-/**
- * 호스트 이름 섹션 컴포넌트
- */
-export function HostNameSection() {
-  const { register } = useFormContext<CreateRoomRequest>();
-
-  return (
-    <FormField
-      required
-      className="gap-3"
-    >
-      <div className="flex items-center gap-4">
-        <FormField.Legend className="m-0 text-xl font-bold">호스트 이름</FormField.Legend>
-        <FormField.HelpText className="m-0">2~16자 이내</FormField.HelpText>
-      </div>
-
-      <FormField.Input
-        {...register(LECTURE_FORM_KEYS.hostName)}
-        size="lg"
-        placeholder="예: 호눅스"
-      />
-    </FormField>
-  );
-}
-
-/**
- * 데이터 수집 동의 섹션 컴포넌트
- */
-export function AgreementSection() {
-  const { register } = useFormContext<CreateRoomRequest>();
-  const isAgreed = useWatch({ name: LECTURE_FORM_KEYS.isAgreed });
-
-  return (
-    <FormField
-      required
-      className="gap-3"
-    >
-      <FormField.Legend className="mb-3 text-xl font-bold">데이터 수집 동의</FormField.Legend>
-      <ul className="text-text flex list-inside list-decimal flex-col gap-3 rounded-lg border-2 border-gray-300 p-4 text-base font-bold">
-        <li>참여도·발화 분석 데이터를 수집합니다.</li>
-        <li>투표·질문 응답 데이터를 수집합니다.</li>
-        <li>제스처·반응 데이터를 수집합니다.</li>
-      </ul>
-
-      <div className="flex items-center gap-3">
-        <FormField.CheckboxInput
-          {...register(LECTURE_FORM_KEYS.isAgreed)}
-          checked={isAgreed}
-        />
-        <FormField.Label className="text-text cursor-pointer text-base font-extrabold">
-          데이터 수집에 동의합니다.
-        </FormField.Label>
-      </div>
-    </FormField>
-  );
-}
-
-/**
- * 강의 활동 섹션 컴포넌트
- */
-export function ActivitySection() {
-  const { openCreatePollModal, openCreateQnaModal } = useActivityModalContext();
-
-  return (
-    <FormField className="gap-3">
-      <FormField.Legend className="mb-3 text-xl font-bold">강의 활동 구성</FormField.Legend>
-      <ActivityList />
-
-      <div className="ml-auto flex gap-3">
-        <Button
-          type="button"
-          className="text-text"
-          onClick={openCreatePollModal}
-        >
-          <Icon
-            name="plus"
-            size={20}
-            decorative
-          />
-          <span>투표 추가</span>
-        </Button>
-
-        <Button
-          type="button"
-          onClick={openCreateQnaModal}
-        >
-          <Icon
-            name="plus"
-            size={20}
-            decorative
-          />
-          <span>Q&A 추가</span>
-        </Button>
-      </div>
-    </FormField>
-  );
-}
-
-/**
- * 발표 자료 업로더 섹션 컴포넌트
- */
-export function PresentationSection() {
   const { addToast } = useToastStore((state) => state.actions);
-  const { presentationFiles, addFile, removeFile } = usePresentation<CreateRoomRequest>({
-    fieldName: LECTURE_FORM_KEYS.presentationFiles,
-  });
+  const { createRoom, isSubmitting } = useCreateRoom();
+  const { handleSubmit, formState } = useFormContext<CreateRoomRequest>();
 
-  const handleDelete = (index: number) => {
-    removeFile(index);
-    addToast({ type: 'success', title: '파일이 성공적으로 삭제되었습니다.' });
+  /**
+   * 폼 제출 최종 핸들러
+   *
+   * 1. 사용자가 제출 버튼 클릭 시 `handleSubmit`에 의해 1차 유효성 검사 수행.
+   * 2. 검증 통과 시 `onSubmit` 함수가 호출되며 정제된 `data`를 인자로 받음.
+   * 3. `createRoom` 비동기 함수를 호출하여 서버에 강의실 생성 요청.
+   * 4. 성공: 생성된 강의실 ID를 추출하여 해당 룸 경로로 사용자를 이동시킴(replace 모드).
+   * 5. 실패: 로깅 후 에러 객체를 사용자 메시지로 변환 후 토스트 알림 노출.
+   */
+  const onSubmit = async (data: CreateRoomRequest) => {
+    try {
+      // 스토어의 활동 데이터(투표/Q&A)를 폼 데이터에 병합
+      const requestData: CreateRoomRequest = { ...data, polls, qnas };
+      const response = await createRoom(requestData);
+      navigate(ROUTES.ROOM(response.roomId), { replace: true });
+    } catch (error) {
+      logger.ui.error('강의실 생성 실패:', error);
+      const { title, description } = getUserFriendlyError(error);
+      addToast({ type: 'error', title, description });
+    }
   };
 
   return (
-    <FormField className="gap-3">
-      <FormField.Legend className="mb-3 text-xl font-bold">발표 자료</FormField.Legend>
-      <PresentationUploader addFile={addFile} />
-      <PresentationList
-        files={presentationFiles}
-        onDelete={handleDelete}
-      />
-    </FormField>
+    <Button
+      disabled={!formState.isValid || isSubmitting}
+      className={cn((!formState.isValid || isSubmitting) && 'opacity-50', 'pt-4 text-xl')}
+      onClick={handleSubmit(onSubmit)}
+    >
+      {isSubmitting ? '생성 중...' : '강의실 생성하기'}
+    </Button>
   );
 }
 
 /**
  * 강의 생성 폼 컴포넌트
+ *
+ * 강의실 생성을 위한 모든 입력 섹션과 상태 관리 로직을 총괄하는 메인 폼 컨테이너
+ *
+ * 1. `useForm`을 초기화하고 Zod 스키마를 연동하여 강력한 타입 검증 환경 구축.
+ * 2. `useEffect`를 통해 컴포넌트 파기 시 전역 모달 및 활동 데이터 스토어 상태 초기화.
+ * 3. 각 입력 섹션(강의명, 호스트명, 동의항목 등)을 배치하고 `FormProvider`로 감싸 데이터 흐름 연결.
+ * 4. 활동 생성을 위한 `ActivityModals`를 폼 바깥 영역에 배치하여 레이아웃 간섭 방지.
  */
 export function CreateLectureForm() {
-  const navigate = useNavigate();
-  const { addToast } = useToastStore((state) => state.actions);
-  const { createRoom, isSubmitting } = useCreateRoom();
+  const { close: closeModal } = useActivityModalStore((state) => state.actions);
+  const { reset: resetActivityData } = useActivityDataStore((state) => state.actions);
 
   const formMethods = useForm<CreateRoomRequest>({
     resolver: zodResolver(createLectureSchema),
@@ -186,45 +95,25 @@ export function CreateLectureForm() {
     mode: 'onChange',
   });
 
-  const { handleSubmit, formState } = formMethods;
-
-  const onSubmit = async (data: CreateRoomRequest) => {
-    try {
-      const response = await createRoom(data);
-      navigate(ROUTES.ROOM(response.roomId));
-    } catch (error) {
-      logger.ui.error('강의실 생성 실패:', error);
-      const { title, description } = getUserFriendlyError(error);
-
-      addToast({ type: 'error', title, description });
-    }
-  };
+  // 컴포넌트 언마운트 시 스토어 상태 초기화
+  useEffect(() => {
+    return () => {
+      closeModal();
+      resetActivityData();
+    };
+  }, [closeModal, resetActivityData]);
 
   return (
     <FormProvider {...formMethods}>
-      <ActivityProvider>
-        <ActivityModalProvider>
-          <form
-            className="mt-10 flex flex-col gap-8 rounded-2xl bg-gray-600 p-6"
-            onSubmit={handleSubmit(onSubmit)}
-          >
-            <LectureNameSection />
-            <HostNameSection />
-            <AgreementSection />
-            <ActivitySection />
-            <PresentationSection />
-
-            <Button
-              type="submit"
-              disabled={!formState.isValid || isSubmitting}
-              className={cn((!formState.isValid || isSubmitting) && 'opacity-50', 'pt-4 text-xl')}
-            >
-              {isSubmitting ? '생성 중...' : '강의실 생성하기'}
-            </Button>
-          </form>
-          <ActivityModals />
-        </ActivityModalProvider>
-      </ActivityProvider>
+      <form className="mt-10 flex flex-col gap-8 rounded-2xl bg-gray-600 p-6">
+        <LectureNameSection />
+        <HostNameSection />
+        <AgreementSection />
+        <ActivitySection />
+        <PresentationSection />
+        <SubmitButton />
+      </form>
+      <ActivityModals />
     </FormProvider>
   );
 }

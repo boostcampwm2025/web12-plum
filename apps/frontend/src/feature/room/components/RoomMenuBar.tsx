@@ -6,11 +6,11 @@ import { GestureButton } from './GestureButton';
 import type { IconName } from '@/shared/components/icon/iconMap';
 import { useMediaStore } from '../stores/useMediaStore';
 import { useRoomUIStore } from '../stores/useRoomUIStore';
-import { useMediaControlContext } from '../hooks/useMediaControlContext';
 import { usePollStore } from '../stores/usePollStore';
 import { useQnaStore } from '../stores/useQnaStore';
 import { useRoomStore } from '../stores/useRoomStore';
 import { useRankStore } from '../stores/useRankStore';
+import { useChatStore } from '../stores/useChatStore';
 import { ExitButton } from './ExitButton';
 
 interface MenuButton {
@@ -19,6 +19,7 @@ interface MenuButton {
   isActive?: boolean;
   hasAlarm?: boolean;
   onClick?: () => void;
+  guideTarget?: string;
 }
 
 /**
@@ -70,11 +71,17 @@ function ScoreDeltaAnimation() {
   );
 }
 
+interface MainMenuProps {
+  onToggleCamera?: () => void;
+  onToggleMic?: () => void;
+  onToggleScreenShare?: () => void;
+}
+
 /**
  * 메인 메뉴 컴포넌트
  * 마이크, 카메라, 화면공유, 투표, Q&A, 랭킹 버튼
  */
-function MainMenu() {
+function MainMenu({ onToggleCamera, onToggleMic, onToggleScreenShare }: MainMenuProps) {
   const isMicOn = useMediaStore((state) => state.isMicOn);
   const isCameraOn = useMediaStore((state) => state.isCameraOn);
   const isScreenSharing = useMediaStore((state) => state.isScreenSharing);
@@ -85,33 +92,28 @@ function MainMenu() {
   );
   const hasActiveQna = useQnaStore((state) => state.qnas.some((qna) => qna.status === 'active'));
   const myRole = useRoomStore((state) => state.myInfo?.role);
-  const {
-    enableMic,
-    disableMic,
-    enableCamera,
-    disableCamera,
-    enableScreenShare,
-    disableScreenShare,
-  } = useMediaControlContext();
 
   const menuButtons: MenuButton[] = [
     {
       icon: isMicOn ? 'mic' : 'mic-disabled',
       tooltip: isMicOn ? '마이크 끄기' : '마이크 켜기',
       isActive: isMicOn,
-      onClick: isMicOn ? disableMic : enableMic,
+      onClick: onToggleMic,
+      guideTarget: 'mic',
     },
     {
       icon: isCameraOn ? 'cam' : 'cam-disabled',
       tooltip: isCameraOn ? '카메라 끄기' : '카메라 켜기',
       isActive: isCameraOn,
-      onClick: isCameraOn ? disableCamera : enableCamera,
+      onClick: onToggleCamera,
+      guideTarget: 'cam',
     },
     {
       icon: 'screen-share',
       tooltip: isScreenSharing ? '화면공유 중지' : '화면공유',
       isActive: isScreenSharing,
-      onClick: isScreenSharing ? disableScreenShare : enableScreenShare,
+      onClick: onToggleScreenShare,
+      guideTarget: 'screen-share',
     },
     {
       icon: 'vote',
@@ -119,6 +121,7 @@ function MainMenu() {
       isActive: activeDialog === 'vote',
       hasAlarm: hasActivePoll,
       onClick: () => setActiveDialog('vote'),
+      guideTarget: 'vote',
     },
     {
       icon: 'qna',
@@ -126,12 +129,14 @@ function MainMenu() {
       isActive: activeDialog === 'qna',
       hasAlarm: hasActiveQna,
       onClick: () => setActiveDialog('qna'),
+      guideTarget: 'qna',
     },
     {
       icon: 'ranking',
       tooltip: '랭킹',
       isActive: activeDialog === 'ranking',
       onClick: () => setActiveDialog('ranking'),
+      guideTarget: 'ranking',
     },
   ];
   const visibleButtons =
@@ -147,6 +152,7 @@ function MainMenu() {
         <div
           key={`${button.icon}-${index}`}
           className={cn(button.icon === 'ranking' && 'relative inline-block')}
+          data-guide={button.guideTarget}
         >
           <RoomButton
             icon={button.icon}
@@ -158,7 +164,9 @@ function MainMenu() {
           {button.icon === 'ranking' && <ScoreDeltaAnimation />}
         </div>
       ))}
-      <GestureButton />
+      <div data-guide="gesture">
+        <GestureButton />
+      </div>
     </>
   );
 }
@@ -171,24 +179,41 @@ function SideMenu() {
   const { activeSidePanel, setActiveSidePanel } = useRoomUIStore();
   const myRole = useRoomStore((state) => state.myInfo?.role);
 
+  const lastMessageId = useChatStore((state) => state.lastMessageId);
+  const lastReadMessageId = useChatStore((state) => state.lastReadMessageId);
+  const markRead = useChatStore((state) => state.actions.markRead);
+
+  useEffect(() => {
+    if (activeSidePanel !== 'chat' || !lastMessageId) return;
+    if (lastMessageId === lastReadMessageId) return;
+    markRead(lastMessageId);
+  }, [activeSidePanel, lastMessageId, lastReadMessageId, markRead]);
+
+  const hasUnreadChat =
+    activeSidePanel !== 'chat' && !!lastMessageId && lastMessageId !== lastReadMessageId;
+
   const sideMenuButtons: MenuButton[] = [
     {
       icon: 'chat',
       tooltip: '채팅',
       isActive: activeSidePanel === 'chat',
+      hasAlarm: hasUnreadChat,
       onClick: () => setActiveSidePanel('chat'),
+      guideTarget: 'chat',
     },
     {
       icon: 'info',
       tooltip: '정보',
       isActive: activeSidePanel === 'info',
       onClick: () => setActiveSidePanel('info'),
+      guideTarget: 'info',
     },
     {
       icon: 'menu',
       tooltip: '메뉴',
       isActive: activeSidePanel === 'menu',
       onClick: () => setActiveSidePanel('menu'),
+      guideTarget: 'menu',
     },
   ];
   const visibleSideButtons =
@@ -199,14 +224,19 @@ function SideMenu() {
   return (
     <div className="flex items-center gap-1 justify-self-end">
       {visibleSideButtons.map((button, index) => (
-        <RoomButton
+        <div
           key={`${button.icon}-${index}`}
-          icon={button.icon}
-          variant="ghost"
-          tooltip={button.tooltip}
-          isActive={button.isActive}
-          onClick={button.onClick}
-        />
+          data-guide={button.guideTarget}
+        >
+          <RoomButton
+            icon={button.icon}
+            variant="ghost"
+            tooltip={button.tooltip}
+            isActive={button.isActive}
+            hasAlarm={button.hasAlarm}
+            onClick={button.onClick}
+          />
+        </div>
       ))}
     </div>
   );
@@ -214,12 +244,21 @@ function SideMenu() {
 
 interface RoomMenuBarProps {
   className?: string;
-  roomTitle?: string;
+  onToggleCamera?: () => void;
+  onToggleMic?: () => void;
+  onToggleScreenShare?: () => void;
+  onDisableScreenShare?: () => void;
 }
 
-export function RoomMenuBar({ className, roomTitle = '강의실' }: RoomMenuBarProps) {
+export function RoomMenuBar({
+  className,
+  onToggleCamera,
+  onToggleMic,
+  onToggleScreenShare,
+}: RoomMenuBarProps) {
+  const roomTitle = useRoomStore((state) => state.roomTitle) || '강의실';
   const myRole = useRoomStore((state) => state.myInfo?.role);
-  const participantCount = useRoomStore((state) => state.participants.size);
+  const participantCount = useRoomStore((state) => state.participants.size) + 1; // 본인 포함
 
   return (
     <nav
@@ -236,7 +275,11 @@ export function RoomMenuBar({ className, roomTitle = '강의실' }: RoomMenuBarP
 
       <div className="flex items-center gap-3 justify-self-center">
         <>
-          <MainMenu />
+          <MainMenu
+            onToggleCamera={onToggleCamera}
+            onToggleMic={onToggleMic}
+            onToggleScreenShare={onToggleScreenShare}
+          />
           <div className="mx-2 h-8 w-px bg-gray-400" />
           <ExitButton />
         </>

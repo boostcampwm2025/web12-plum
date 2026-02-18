@@ -1,62 +1,8 @@
-import { PollOption, Voter } from '@plum/shared-interfaces';
-import { calculatePercentage } from '../utils';
+import type { Poll, PollOption } from '@plum/shared-interfaces';
 
-const mockPollData: Poll[] = [
-  {
-    id: 'poll1',
-    title: '오늘 강의 내용이 유익했나요?',
-    options: [
-      {
-        id: 1,
-        value: '네, 매우 유익했어요!',
-        count: 8,
-        voters: [
-          { id: 'u1', name: 'Alice' },
-          { id: 'u2', name: 'Bob' },
-        ],
-      },
-      {
-        id: 2,
-        value: '보통이에요.',
-        count: 3,
-        voters: [{ id: 'u3', name: 'Charlie' }],
-      },
-      {
-        id: 3,
-        value: '아니요, 별로였어요.',
-        count: 1,
-        voters: [{ id: 'u4', name: 'David' }],
-      },
-    ],
-  },
-  {
-    id: 'poll2',
-    title: '다음 강의 주제로 어떤 것이 좋을까요?',
-    options: [
-      {
-        id: 1,
-        value: '프론트엔드 개발',
-        count: 5,
-        voters: [
-          { id: 'u5', name: 'Eve' },
-          { id: 'u6', name: 'Frank' },
-        ],
-      },
-      {
-        id: 2,
-        value: '백엔드 개발',
-        count: 4,
-        voters: [{ id: 'u7', name: 'Grace' }],
-      },
-      {
-        id: 3,
-        value: '데브옵스',
-        count: 2,
-        voters: [{ id: 'u8', name: 'Heidi' }],
-      },
-    ],
-  },
-];
+import { useSummaryStore } from '../store/useSummaryStore';
+
+import { calculatePercentage } from '../utils';
 
 interface PollOptionItemProps {
   index: number;
@@ -70,7 +16,6 @@ interface PollOptionItemProps {
  * @param option 선택지 데이터
  * @param totalVotes 전체 투표 수
  */
-
 function PollOptionItem({ index, option, totalVotes }: PollOptionItemProps) {
   const percentage = calculatePercentage(option.count, totalVotes);
 
@@ -97,26 +42,11 @@ function PollOptionItem({ index, option, totalVotes }: PollOptionItemProps) {
   );
 }
 
-interface Poll {
-  id: string;
-  title: string;
-  options: {
-    id: number;
-    value: string;
-    count: number;
-    voters: Voter[];
-  }[];
-}
-
-interface PollResultCardProps {
-  poll: Poll;
-}
-
 /**
  * 단일 투표 결과를 보여주는 카드 컴포넌트
  * @param poll 투표 데이터
  */
-function PollResultCard({ poll }: PollResultCardProps) {
+function PollResultCard({ poll }: { poll: Poll }) {
   const totalPollVotes = poll.options.reduce((acc, option) => acc + option.count, 0);
 
   return (
@@ -144,9 +74,19 @@ function PollResultCard({ poll }: PollResultCardProps) {
  * 투표 결과 탭 컴포넌트
  */
 export function PollResultsTab() {
+  const polls = useSummaryStore((state) => state.summaryData?.polls ?? []);
+
+  if (polls.length === 0) {
+    return (
+      <section className="mt-10 flex flex-col gap-10 rounded-2xl bg-gray-600 p-6">
+        <p className="text-subtext-light py-4 text-center">등록된 투표가 없습니다.</p>
+      </section>
+    );
+  }
+
   return (
     <section className="mt-10 flex flex-col gap-10">
-      {mockPollData.map((poll) => (
+      {polls.map((poll) => (
         <PollResultCard
           key={poll.id}
           poll={poll}
