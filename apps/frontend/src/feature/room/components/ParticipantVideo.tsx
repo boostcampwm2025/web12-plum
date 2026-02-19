@@ -91,6 +91,7 @@ export const ParticipantVideo = memo(ParticipantVideoComponent, (prev, next) => 
     prev.id === next.id &&
     prev.mode === next.mode &&
     prev.isCurrentUser === next.isCurrentUser &&
+    prev.isActive === next.isActive &&
     prev.videoProducerId === next.videoProducerId &&
     prev.isCurrentlyVisible === next.isCurrentlyVisible &&
     prev.isSpeaking === next.isSpeaking

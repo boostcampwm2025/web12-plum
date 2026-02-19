@@ -1,4 +1,4 @@
-﻿import { useMediaStore } from '../stores/useMediaStore';
+import { selectRemoteVideoStreamByParticipant, useMediaStore } from '../stores/useMediaStore';
 import { useRoomStore } from '../stores/useRoomStore';
 
 interface UseParticipantMediaStateParams {
@@ -25,15 +25,7 @@ export function useParticipantMediaState({
   localCameraOn = false,
   localAudioMuted = false,
 }: UseParticipantMediaStateParams): UseParticipantMediaStateResult {
-  const remoteStream = useMediaStore((state) => {
-    for (const stream of state.remoteStreams.values()) {
-      if (stream.participantId === id && stream.type === 'video') {
-        return stream.stream;
-      }
-    }
-    return null;
-  });
-
+  const remoteStream = useMediaStore(selectRemoteVideoStreamByParticipant(id));
   const remoteAudioMuted = useRoomStore((state) => state.participantAudioMuted.get(id) ?? true);
 
   if (isCurrentUser) {

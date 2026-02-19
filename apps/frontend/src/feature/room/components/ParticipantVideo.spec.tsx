@@ -30,6 +30,16 @@ interface MockUseRemoteMediaReturn {
 
 vi.mock('../stores/useMediaStore', () => ({
   useMediaStore: vi.fn(),
+  selectRemoteVideoStreamByParticipant:
+    (participantId: string) =>
+    (state: MockMediaStoreState): MediaStream | null => {
+      for (const stream of state.remoteStreams.values()) {
+        if (stream.participantId === participantId && stream.type === 'video') {
+          return stream.stream;
+        }
+      }
+      return null;
+    },
 }));
 
 vi.mock('../stores/useGestureStore', () => ({
