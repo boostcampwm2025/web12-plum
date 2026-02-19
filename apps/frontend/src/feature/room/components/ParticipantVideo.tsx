@@ -1,73 +1,17 @@
-import { memo, useEffect, useRef, useState } from 'react';
-import { motion } from 'motion/react';
-import { cn } from '@/shared/lib/utils';
-import { Icon } from '@/shared/components/icon/Icon';
-import { Button } from '@/shared/components/Button';
-import { MediaType, ParticipantRole } from '@plum/shared-interfaces';
-import { logger } from '@/shared/lib/logger';
+﻿import { memo, useRef } from 'react';
+import type { ParticipantRole } from '@plum/shared-interfaces';
+
 import { useMediaStore } from '../stores/useMediaStore';
-import { useGestureStore } from '../stores/useGestureStore';
 import { useRoomStore } from '../stores/useRoomStore';
-import { GESTURE_ICON_MAP } from '@/shared/constants/gesture';
-import { useRemoteMedia } from '../hooks/useRemoteMedia';
+import { useParticipantVideoSubscription } from '../hooks/useParticipantVideoSubscription';
+import { useVideoElementBinding } from '../hooks/useVideoElementBinding';
+import { ParticipantVideoView } from './ParticipantVideoView';
 
 export type VideoDisplayMode = 'minimize' | 'pip' | 'side';
 
-function GestureProgressOverlay() {
-  const gestureProgress = useGestureStore((state) => state.gestureProgress);
-  const gesture = gestureProgress.gesture;
-  const progress = gestureProgress.progress;
-
-  if (!gesture || progress <= 0) {
-    return null;
-  }
-
-  const gestureIconName = GESTURE_ICON_MAP[gesture] ?? null;
-  const progressRatio = Math.min(1, Math.max(0, progress));
-  const progressPercent = Math.round(progressRatio * 100);
-
-  return (
-    <div className="pointer-events-none absolute right-2 bottom-2">
-      <div className="flex items-center gap-2 rounded-full bg-gray-700/80 p-2">
-        {gestureIconName && (
-          <div className="relative inline-flex items-center justify-center">
-            <Icon
-              name={gestureIconName}
-              size={24}
-              className="fill-current text-white/50"
-              decorative
-            />
-            <motion.div
-              className="absolute inset-0 overflow-hidden"
-              initial={{ clipPath: 'inset(0 100% 0 0)' }}
-              animate={{ clipPath: `inset(0 ${100 - progressPercent}% 0 0)` }}
-              transition={{
-                duration: 0.2,
-                ease: 'linear',
-              }}
-            >
-              <Icon
-                name={gestureIconName}
-                size={24}
-                className="text-primary fill-current"
-                decorative
-              />
-            </motion.div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-const VIDEO_HEIGHTS = {
-  MINIMIZED: 36,
-  NORMAL: 114,
-};
-
 /**
- * UI에서 특정 참가자의 비디오 스트림을 실시간으로 구독하기 위한 커스텀 셀렉터 훅
- * remoteStreams는 consumerId를 키로 사용하므로 participantId로 순회 검색
+ * UI에서 특정 참가자의 비디오 스트림을 실시간으로 조회하기 위한 셀렉터
+ * remoteStreams는 consumerId 기반 Map이라 participantId로 직접 조회한다.
  */
 function useRemoteVideoStream(participantId: string): MediaStream | null {
   return useMediaStore((state) => {
@@ -112,10 +56,7 @@ function ParticipantVideoComponent({
   isSpeaking = false,
 }: ParticipantVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [showOverlay, setShowOverlay] = useState(true);
-  const { consumeRemoteProducer, stopConsuming } = useRemoteMedia();
 
-  // 원격 스트림인 경우에만 스토어에서 비디오 스트림 구독
   const remoteStream = useRemoteVideoStream(isCurrentUser ? '' : id);
 
   const remoteAudioMuted = useRoomStore(
@@ -123,230 +64,39 @@ function ParticipantVideoComponent({
   );
   const isAudioMuted = isCurrentUser ? localAudioMuted : remoteAudioMuted;
 
-  // 최종적으로 화면에 띄울 스트림과 카메라 상태 결정
   const activeStream = isCurrentUser ? localStream : remoteStream;
   const isVideoEnabled = isCurrentUser ? localCameraOn : !!remoteStream;
 
-  /**
-   * 비디오 수신 제어 로직
-   * - isActive가 true이고 윈도우 내에 마운트되면 미리 수신
-   * - 컴포넌트가 언마운트(윈도우 밖으로 제외)될 때 자원을 정리
-   */
-  useEffect(() => {
-    if (isCurrentUser || !videoProducerId || !participantRole) return;
-    // 수신 시작 (윈도우 내에 마운트됨)
-    if (isActive) {
-      logger.ui.debug(`[Network] Consume 시작: ${name} (ID: ${id})`);
-      consumeRemoteProducer({
-        participantId: id,
-        producerId: videoProducerId,
-        type: 'video' as MediaType,
-        kind: 'video',
-        participantRole: participantRole,
-      });
-    } // 수신 중단 (마운트는 유지되나 윈도우에서 밀려남)
-    else {
-      logger.ui.debug(`[Network] 수신 중단(InActive): ${name} (ID: ${id})`);
-      stopConsuming(id, 'video');
-    }
-
-    // 언마운트 시 정리 (DOM에서 완전히 제거됨)
-    return () => {
-      if (videoProducerId) {
-        logger.ui.debug(`[Network] 수신 중단(언마운트): ${name} (ID: ${id})`);
-        stopConsuming(id, 'video');
-      }
-    };
-  }, [
-    isActive,
+  useParticipantVideoSubscription({
     id,
+    name,
+    isCurrentUser,
     videoProducerId,
     participantRole,
-    isCurrentUser,
-    consumeRemoteProducer,
-    stopConsuming,
-  ]);
+    isActive,
+  });
 
-  // 스트림 바뀌면 오버레이 리셋
-  useEffect(() => {
-    setShowOverlay(true);
-  }, [activeStream]);
-
-  // 스트림 연결 처리
-  useEffect(() => {
-    const videoElement = videoRef.current;
-    if (!videoElement || mode === 'minimize') return;
-
-    // 스트림 또는 비디오 비활성화 시 정리
-    if (!activeStream || !isVideoEnabled) {
-      if (videoElement?.srcObject) {
-        videoElement.pause();
-        videoElement.srcObject = null;
-      }
-      return;
-    }
-
-    // 이전 srcObject와 다르고 트랙 확인
-    if (videoElement.srcObject !== activeStream) {
-      const tracks = activeStream.getVideoTracks();
-
-      // 트랙 live 확인
-      if (tracks.length > 0 && tracks[0].readyState === 'live') {
-        logger.ui.debug(`[Video] 연결: 트랙 ${tracks.length}, readyState ${tracks[0].readyState}`);
-        videoElement.srcObject = activeStream;
-
-        // loadeddata 대기 후 play
-        const handleLoadedData = () => {
-          videoElement.removeEventListener('loadeddata', handleLoadedData);
-          videoElement.play().catch((error) => logger.ui.warn('[Video] 재생 실패', error));
-          setShowOverlay(false);
-        };
-        videoElement.addEventListener('loadeddata', handleLoadedData);
-      }
-    }
-  }, [activeStream, isVideoEnabled, mode]);
+  const { showOverlay } = useVideoElementBinding({
+    videoRef,
+    mode,
+    activeStream,
+    isVideoEnabled,
+  });
 
   return (
-    <motion.div
-      layout="position"
-      layoutId={isCurrentUser ? `participant-video-${id}` : undefined}
-      data-guide={isCurrentUser ? 'cam-layout' : undefined}
-      animate={{
-        height: mode === 'minimize' ? VIDEO_HEIGHTS.MINIMIZED : VIDEO_HEIGHTS.NORMAL,
-      }}
-      style={{ display: isCurrentlyVisible ? 'block' : 'none' }}
-      transition={{
-        layout: {
-          duration: 0.3,
-          ease: 'easeInOut',
-        },
-      }}
-      className={cn(
-        'relative z-25 m-0.5 w-50.5 overflow-hidden rounded-lg',
-        isCurrentUser && 'group',
-        mode === 'minimize' && 'flex h-9 items-center justify-between bg-gray-500 px-2 shadow-md',
-        mode === 'pip' && 'shadow-md',
-        isSpeaking && 'ring-success ring-2',
-      )}
-    >
-      {/* 비디오 영역 */}
-      {mode !== 'minimize' && (
-        <div className="relative h-full w-full">
-          <video
-            ref={videoRef}
-            autoPlay
-            muted={true} // 자동 재생 정책 준수를 위해 항상 음소거 (비디오 전용)
-            playsInline
-            preload="metadata"
-            className="h-full w-full object-cover"
-          />
-
-          {(showOverlay || !isVideoEnabled) && (
-            <div className="absolute inset-0 flex items-center justify-center bg-linear-to-br from-gray-200 to-gray-300 transition-all duration-300">
-              {showOverlay && isVideoEnabled ? (
-                <div className="border-primary h-6 w-6 animate-spin rounded-full border-4 border-t-transparent" />
-              ) : (
-                <Icon
-                  name="cam-disabled"
-                  size={32}
-                  className="text-text"
-                />
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* 제스처 인식 프로그레스바 */}
-      {mode !== 'minimize' && isCurrentUser && <GestureProgressOverlay />}
-
-      {/* 이름 표시 */}
-      <div
-        className={cn(
-          'text-text absolute bottom-2 left-2 flex items-center gap-1 rounded px-1 text-xs',
-          mode !== 'minimize' && 'bg-gray-700/40 py-1',
-        )}
-      >
-        {isAudioMuted && (
-          <Icon
-            name="mic-disabled"
-            size={12}
-            className="text-error"
-            decorative
-          />
-        )}
-        {name}
-      </div>
-
-      {/* minimize 모드 확대 버튼 */}
-      {mode === 'minimize' && isCurrentUser && (
-        <Button
-          variant="icon"
-          className="absolute top-1/2 right-2 -translate-y-1/2"
-          onClick={() => onModeChange?.('pip')}
-          aria-label="확대"
-        >
-          <Icon
-            name="maximize"
-            size={16}
-          />
-        </Button>
-      )}
-
-      {/* 호버 컨트롤 (pip, side 모드) */}
-      {mode !== 'minimize' && isCurrentUser && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          whileHover={{ opacity: 1 }}
-          transition={{ duration: 0.3 }}
-          className={cn(
-            'absolute inset-0 bg-gray-700/40',
-            'pointer-events-none group-hover:pointer-events-auto',
-          )}
-        >
-          {mode === 'pip' && (
-            <>
-              <Button
-                variant="icon"
-                className="absolute top-2 left-2"
-                onClick={() => onModeChange?.('minimize')}
-                aria-label="최소화"
-              >
-                <Icon
-                  name="minimize"
-                  size={20}
-                />
-              </Button>
-              <Button
-                variant="icon"
-                className="absolute top-2 right-2"
-                onClick={() => onModeChange?.('side')}
-                aria-label="사이드바로 이동"
-              >
-                <Icon
-                  name="side-open"
-                  size={20}
-                />
-              </Button>
-            </>
-          )}
-
-          {mode === 'side' && (
-            <Button
-              variant="icon"
-              className="absolute top-2 right-2"
-              onClick={() => onModeChange?.('pip')}
-              aria-label="PIP 모드로 전환"
-            >
-              <Icon
-                name="pip"
-                size={20}
-              />
-            </Button>
-          )}
-        </motion.div>
-      )}
-    </motion.div>
+    <ParticipantVideoView
+      id={id}
+      name={name}
+      mode={mode}
+      isCurrentUser={isCurrentUser}
+      onModeChange={onModeChange}
+      isAudioMuted={isAudioMuted}
+      isVideoEnabled={isVideoEnabled}
+      isCurrentlyVisible={isCurrentlyVisible}
+      isSpeaking={isSpeaking}
+      showOverlay={showOverlay}
+      videoRef={videoRef}
+    />
   );
 }
 
@@ -354,6 +104,7 @@ export const ParticipantVideo = memo(ParticipantVideoComponent, (prev, next) => 
   if (prev.isCurrentUser || next.isCurrentUser) {
     return false;
   }
+
   return (
     prev.id === next.id &&
     prev.mode === next.mode &&
