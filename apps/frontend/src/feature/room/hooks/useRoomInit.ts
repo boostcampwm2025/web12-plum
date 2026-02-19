@@ -84,7 +84,7 @@ export function useRoomInit(handleInitialMedia: () => Promise<void>) {
       await MediaConnectionService.initialize(rtpCapabilities);
 
       // 역할별 실시간 이벤트 핸들러 설정
-      await setupAllHandlers(myInfo?.role || 'participant');
+      await setupAllHandlers();
       await syncInteractionState(myInfo?.role ?? 'participant');
 
       // 기존 참가자 미디어 수신 및 내 미디어 송출 시작
