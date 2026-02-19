@@ -94,7 +94,7 @@ export function ParticipantGrid({ videoMode, currentUser, onModeChange }: Partic
                 mode="side"
                 videoProducerId={videoProducerId}
                 participantRole={participant.role}
-                isActive={isCurrentlyVisible}
+                shouldConsume={true}
                 isCurrentlyVisible={isCurrentlyVisible}
                 isSpeaking={activeSpeakerIds.has(participant.id)}
               />

@@ -83,7 +83,7 @@ describe('ParticipantVideo', () => {
     mode: 'side' as VideoDisplayMode,
     videoProducerId: 'prod-123',
     participantRole: 'audience' as ParticipantRole,
-    isActive: true,
+    shouldConsume: true,
     isCurrentlyVisible: true,
   };
 
@@ -106,7 +106,7 @@ describe('ParticipantVideo', () => {
   });
 
   describe('수신(Consume) 제어 로직', () => {
-    it('isActive가 true이면 consumeRemoteProducer 호출', async () => {
+    it('shouldConsume가 true이면 consumeRemoteProducer 호출', async () => {
       render(<ParticipantVideo {...defaultProps} />);
 
       await waitFor(() => {
@@ -122,11 +122,11 @@ describe('ParticipantVideo', () => {
       });
     });
 
-    it('isActive가 false이면 stopConsuming 호출', () => {
+    it('shouldConsume가 false이면 stopConsuming 호출', () => {
       render(
         <ParticipantVideo
           {...defaultProps}
-          isActive={false}
+          shouldConsume={false}
         />,
       );
 

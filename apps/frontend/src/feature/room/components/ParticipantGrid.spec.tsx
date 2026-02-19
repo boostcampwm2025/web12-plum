@@ -25,7 +25,7 @@ vi.mock('./ParticipantVideo', () => ({
     isCurrentUser,
     onModeChange,
     isCurrentlyVisible,
-    isActive,
+    shouldConsume,
   }: {
     id: string;
     name: string;
@@ -33,14 +33,14 @@ vi.mock('./ParticipantVideo', () => ({
     isCurrentUser?: boolean;
     onModeChange?: (mode: string) => void;
     isCurrentlyVisible?: boolean;
-    isActive?: boolean;
+    shouldConsume?: boolean;
   }) => (
     <div
       data-testid={`participant-video-${id}`}
       data-mode={mode}
       data-is-current-user={isCurrentUser}
       data-visible={isCurrentlyVisible}
-      data-is-active={isActive}
+      data-should-consume={shouldConsume}
       onClick={() => isCurrentUser && onModeChange?.('pip')}
     >
       {name}
@@ -170,9 +170,9 @@ describe('ParticipantGrid', () => {
     expect(p1).toHaveAttribute('data-visible', 'true');
     expect(p2).toHaveAttribute('data-visible', 'true');
     expect(p3).toHaveAttribute('data-visible', 'false');
-    expect(p1).toHaveAttribute('data-is-active', 'true');
-    expect(p2).toHaveAttribute('data-is-active', 'true');
-    expect(p3).toHaveAttribute('data-is-active', 'false');
+    expect(p1).toHaveAttribute('data-should-consume', 'true');
+    expect(p2).toHaveAttribute('data-should-consume', 'true');
+    expect(p3).toHaveAttribute('data-should-consume', 'true');
   });
 
   it('페이지네이션 버튼 활성화/비활성화 상태가 반영된다', () => {

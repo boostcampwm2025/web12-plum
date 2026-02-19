@@ -11,7 +11,7 @@ interface UseParticipantVideoSubscriptionParams {
   isCurrentUser: boolean;
   videoProducerId?: string;
   participantRole?: ParticipantRole;
-  isActive: boolean;
+  shouldConsume: boolean;
 }
 
 export function useParticipantVideoSubscription({
@@ -20,14 +20,14 @@ export function useParticipantVideoSubscription({
   isCurrentUser,
   videoProducerId,
   participantRole,
-  isActive,
+  shouldConsume,
 }: UseParticipantVideoSubscriptionParams) {
   const { consumeRemoteProducer, stopConsuming } = useRemoteMedia();
 
   useEffect(() => {
     if (isCurrentUser || !videoProducerId || !participantRole) return;
 
-    if (isActive) {
+    if (shouldConsume) {
       logger.ui.debug(`[Network] Consume 시작: ${name} (ID: ${id})`);
       const payload: NewProducerPayload = {
         participantId: id,
@@ -51,7 +51,7 @@ export function useParticipantVideoSubscription({
       }
     };
   }, [
-    isActive,
+    shouldConsume,
     id,
     name,
     videoProducerId,

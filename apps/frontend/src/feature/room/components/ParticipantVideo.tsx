@@ -19,7 +19,7 @@ export interface ParticipantVideoProps {
   isAudioMuted?: boolean;
   videoProducerId?: string;
   participantRole?: ParticipantRole;
-  isActive?: boolean;
+  shouldConsume?: boolean;
   isCurrentlyVisible?: boolean;
   isSpeaking?: boolean;
 }
@@ -35,7 +35,7 @@ function ParticipantVideoComponent({
   isAudioMuted: localAudioMuted = false,
   videoProducerId,
   participantRole,
-  isActive = true,
+  shouldConsume = true,
   isCurrentlyVisible = true,
   isSpeaking = false,
 }: ParticipantVideoProps) {
@@ -55,7 +55,7 @@ function ParticipantVideoComponent({
     isCurrentUser,
     videoProducerId,
     participantRole,
-    isActive,
+    shouldConsume,
   });
 
   const { showOverlay } = useVideoElementBinding({
@@ -91,7 +91,7 @@ export const ParticipantVideo = memo(ParticipantVideoComponent, (prev, next) => 
     prev.id === next.id &&
     prev.mode === next.mode &&
     prev.isCurrentUser === next.isCurrentUser &&
-    prev.isActive === next.isActive &&
+    prev.shouldConsume === next.shouldConsume &&
     prev.videoProducerId === next.videoProducerId &&
     prev.isCurrentlyVisible === next.isCurrentlyVisible &&
     prev.isSpeaking === next.isSpeaking
