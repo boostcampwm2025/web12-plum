@@ -1,5 +1,5 @@
 ﻿import { useEffect } from 'react';
-import type { MediaType, ParticipantRole } from '@plum/shared-interfaces';
+import type { NewProducerPayload, ParticipantRole } from '@plum/shared-interfaces';
 
 import { logger } from '@/shared/lib/logger';
 
@@ -29,12 +29,15 @@ export function useParticipantVideoSubscription({
 
     if (isActive) {
       logger.ui.debug(`[Network] Consume 시작: ${name} (ID: ${id})`);
-      void consumeRemoteProducer({
+      const payload: NewProducerPayload = {
         participantId: id,
         producerId: videoProducerId,
-        type: 'video' as MediaType,
+        type: 'video',
         kind: 'video',
         participantRole,
+      };
+      void consumeRemoteProducer(payload).catch((error) => {
+        logger.ui.warn(`[Network] Consume 실패: ${name} (ID: ${id})`, error);
       });
     } else {
       logger.ui.debug(`[Network] 수신 중단(InActive): ${name} (ID: ${id})`);

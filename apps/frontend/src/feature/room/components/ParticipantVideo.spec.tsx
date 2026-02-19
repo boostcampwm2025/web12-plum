@@ -1,16 +1,14 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+﻿import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { fireEvent } from '@testing-library/react';
 
 import { ParticipantVideo } from './ParticipantVideo';
-import { useMediaStore, RemoteStream } from '../stores/useMediaStore';
+import { useMediaStore, type RemoteStream } from '../stores/useMediaStore';
 import { useGestureStore } from '../stores/useGestureStore';
 import { useRemoteMedia } from '../hooks/useRemoteMedia';
 import type { MediaType, ParticipantRole } from '@plum/shared-interfaces';
 import type { VideoDisplayMode } from './ParticipantVideo';
 
-// 타입 정의
 interface MockMediaStoreState {
   remoteStreams: Map<string, RemoteStream>;
 }
@@ -110,6 +108,7 @@ describe('ParticipantVideo', () => {
   describe('수신(Consume) 제어 로직', () => {
     it('isActive가 true이면 consumeRemoteProducer 호출', async () => {
       render(<ParticipantVideo {...defaultProps} />);
+
       await waitFor(() => {
         expect(mockConsumeRemoteProducer).toHaveBeenCalledWith(
           expect.objectContaining({
@@ -130,12 +129,14 @@ describe('ParticipantVideo', () => {
           isActive={false}
         />,
       );
+
       expect(mockStopConsuming).toHaveBeenCalledWith(defaultProps.id, 'video');
     });
 
     it('언마운트 시 stopConsuming 호출', () => {
       const { unmount } = render(<ParticipantVideo {...defaultProps} />);
       unmount();
+
       expect(mockStopConsuming).toHaveBeenCalledWith(defaultProps.id, 'video');
     });
   });
@@ -143,6 +144,7 @@ describe('ParticipantVideo', () => {
   describe('비디오 스트림 연결 및 렌더링', () => {
     it('video 요소가 항상 렌더링된다 (side 모드)', () => {
       render(<ParticipantVideo {...defaultProps} />);
+
       const videoElement = document.querySelector('video') as HTMLVideoElement;
       expect(videoElement).toBeInTheDocument();
       expect(videoElement.autoplay).toBe(true);
@@ -182,6 +184,77 @@ describe('ParticipantVideo', () => {
       expect(screen.getByTestId('icon-cam-disabled')).toBeInTheDocument();
     });
 
+    it('카메라 OFF 시 srcObject 정리', async () => {
+      const { rerender } = render(
+        <ParticipantVideo
+          {...defaultProps}
+          isCurrentUser={true}
+          stream={mockStream}
+          isCameraOn={true}
+        />,
+      );
+
+      const videoElement = document.querySelector('video') as HTMLVideoElement;
+      await waitFor(() => {
+        expect(videoElement.srcObject).toBe(mockStream);
+      });
+
+      rerender(
+        <ParticipantVideo
+          {...defaultProps}
+          isCurrentUser={true}
+          stream={mockStream}
+          isCameraOn={false}
+        />,
+      );
+
+      await waitFor(() => {
+        expect(videoElement.srcObject).toBeNull();
+      });
+    });
+
+    it('모드 변경 시 이벤트 리스너 정리', async () => {
+      const addSpy = vi.spyOn(HTMLVideoElement.prototype, 'addEventListener');
+      const removeSpy = vi.spyOn(HTMLVideoElement.prototype, 'removeEventListener');
+
+      try {
+        const { rerender } = render(
+          <ParticipantVideo
+            {...defaultProps}
+            isCurrentUser={true}
+            stream={mockStream}
+            isCameraOn={true}
+            mode="side"
+          />,
+        );
+
+        await waitFor(() => {
+          expect(addSpy.mock.calls.some(([eventName]) => String(eventName) === 'loadeddata')).toBe(
+            true,
+          );
+        });
+
+        rerender(
+          <ParticipantVideo
+            {...defaultProps}
+            isCurrentUser={true}
+            stream={mockStream}
+            isCameraOn={true}
+            mode="minimize"
+          />,
+        );
+
+        await waitFor(() => {
+          expect(
+            removeSpy.mock.calls.some(([eventName]) => String(eventName) === 'loadeddata'),
+          ).toBe(true);
+        });
+      } finally {
+        addSpy.mockRestore();
+        removeSpy.mockRestore();
+      }
+    });
+
     it('minimize 모드에서는 video 요소 없음', () => {
       render(
         <ParticipantVideo
@@ -189,6 +262,7 @@ describe('ParticipantVideo', () => {
           mode="minimize"
         />,
       );
+
       expect(document.querySelector('video')).not.toBeInTheDocument();
     });
   });
@@ -201,6 +275,7 @@ describe('ParticipantVideo', () => {
           isCurrentlyVisible={false}
         />,
       );
+
       const videoContainer = container.firstElementChild as HTMLElement;
       expect(videoContainer).toHaveStyle({ display: 'none' });
     });
@@ -215,6 +290,7 @@ describe('ParticipantVideo', () => {
           mode="side"
         />,
       );
+
       expect(screen.queryByTestId('icon-thumbs-up')).not.toBeInTheDocument();
     });
   });

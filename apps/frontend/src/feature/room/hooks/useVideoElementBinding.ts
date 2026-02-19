@@ -26,6 +26,7 @@ export function useVideoElementBinding({
   useEffect(() => {
     const videoElement = videoRef.current;
     if (!videoElement || mode === 'minimize') return;
+    let handleLoadedData: (() => void) | null = null;
 
     if (!activeStream || !isVideoEnabled) {
       if (videoElement.srcObject) {
@@ -42,14 +43,21 @@ export function useVideoElementBinding({
         logger.ui.debug(`[Video] 연결: 트랙 ${tracks.length}, readyState ${tracks[0].readyState}`);
         videoElement.srcObject = activeStream;
 
-        const handleLoadedData = () => {
-          videoElement.removeEventListener('loadeddata', handleLoadedData);
+        const onLoadedData = () => {
+          videoElement.removeEventListener('loadeddata', onLoadedData);
           videoElement.play().catch((error) => logger.ui.warn('[Video] 재생 실패', error));
           setShowOverlay(false);
         };
+        handleLoadedData = onLoadedData;
         videoElement.addEventListener('loadeddata', handleLoadedData);
       }
     }
+
+    return () => {
+      if (handleLoadedData) {
+        videoElement.removeEventListener('loadeddata', handleLoadedData);
+      }
+    };
   }, [activeStream, isVideoEnabled, mode, videoRef]);
 
   return { showOverlay };
