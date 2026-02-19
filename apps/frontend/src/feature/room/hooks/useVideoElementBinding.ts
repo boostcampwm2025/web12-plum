@@ -26,9 +26,32 @@ export function useVideoElementBinding({
   useEffect(() => {
     const videoElement = videoRef.current;
     if (!videoElement || mode === 'minimize') return;
-    let handleLoadedData: (() => void) | null = null;
+    let isDisposed = false;
+    const hideOverlay = () => {
+      if (!isDisposed) {
+        setShowOverlay(false);
+      }
+    };
+
+    const tryPlay = () => {
+      const playResult = videoElement.play();
+      if (playResult && typeof playResult.then === 'function') {
+        void playResult
+          .then(() => {
+            hideOverlay();
+          })
+          .catch((error) => logger.ui.warn('[Video] 재생 실패', error));
+        return;
+      }
+      hideOverlay();
+    };
+
+    const onLoadedData = () => {
+      tryPlay();
+    };
 
     if (!activeStream || !isVideoEnabled) {
+      videoElement.removeEventListener('loadeddata', onLoadedData);
       if (videoElement.srcObject) {
         videoElement.pause();
         videoElement.srcObject = null;
@@ -38,25 +61,23 @@ export function useVideoElementBinding({
 
     if (videoElement.srcObject !== activeStream) {
       const tracks = activeStream.getVideoTracks();
+      logger.ui.debug(
+        `[Video] 연결: 트랙 ${tracks.length}, readyState ${tracks[0]?.readyState ?? 'none'}`,
+      );
+      videoElement.srcObject = activeStream;
+      setShowOverlay(true);
+    }
 
-      if (tracks.length > 0 && tracks[0].readyState === 'live') {
-        logger.ui.debug(`[Video] 연결: 트랙 ${tracks.length}, readyState ${tracks[0].readyState}`);
-        videoElement.srcObject = activeStream;
+    videoElement.removeEventListener('loadeddata', onLoadedData);
+    videoElement.addEventListener('loadeddata', onLoadedData);
 
-        const onLoadedData = () => {
-          videoElement.removeEventListener('loadeddata', onLoadedData);
-          videoElement.play().catch((error) => logger.ui.warn('[Video] 재생 실패', error));
-          setShowOverlay(false);
-        };
-        handleLoadedData = onLoadedData;
-        videoElement.addEventListener('loadeddata', handleLoadedData);
-      }
+    if (videoElement.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+      tryPlay();
     }
 
     return () => {
-      if (handleLoadedData) {
-        videoElement.removeEventListener('loadeddata', handleLoadedData);
-      }
+      isDisposed = true;
+      videoElement.removeEventListener('loadeddata', onLoadedData);
     };
   }, [activeStream, isVideoEnabled, mode, videoRef]);
 

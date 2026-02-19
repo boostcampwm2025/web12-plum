@@ -179,6 +179,41 @@ describe('ParticipantVideo', () => {
       );
     });
 
+    it('minimize -> side 전환 시 srcObject가 정상 설정된다', async () => {
+      const nonLiveTrackStream: MediaStream = {
+        id: 'stream-not-live',
+        getTracks: () => [],
+        getVideoTracks: () => [{ readyState: 'ended' as MediaStreamTrackState }],
+      } as unknown as MediaStream;
+
+      const { rerender } = render(
+        <ParticipantVideo
+          {...defaultProps}
+          isCurrentUser={true}
+          stream={nonLiveTrackStream}
+          isCameraOn={true}
+          mode="minimize"
+        />,
+      );
+
+      expect(document.querySelector('video')).not.toBeInTheDocument();
+
+      rerender(
+        <ParticipantVideo
+          {...defaultProps}
+          isCurrentUser={true}
+          stream={nonLiveTrackStream}
+          isCameraOn={true}
+          mode="side"
+        />,
+      );
+
+      const videoElement = document.querySelector('video') as HTMLVideoElement;
+      await waitFor(() => {
+        expect(videoElement.srcObject).toBe(nonLiveTrackStream);
+      });
+    });
+
     it('스트림 없음 + 카메라 OFF 시 cam-disabled 아이콘 표시', () => {
       render(<ParticipantVideo {...defaultProps} />);
       expect(screen.getByTestId('icon-cam-disabled')).toBeInTheDocument();
