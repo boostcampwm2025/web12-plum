@@ -76,7 +76,7 @@ export function useRoomInit(handleInitialMedia: () => Promise<void>) {
 
       // 서버 URL 조회 및 소켓 연결
       const { data: serverData } = await roomApi.getRoomServer(roomId!);
-      await SocketClient.ensureConnected(serverData.serverUrl);
+      await SocketClient.connect(serverData.serverUrl);
 
       const rtpCapabilities = await joinRoom(roomId!, myInfo?.id || '');
 
@@ -84,7 +84,7 @@ export function useRoomInit(handleInitialMedia: () => Promise<void>) {
       await MediaConnectionService.initialize(rtpCapabilities);
 
       // 역할별 실시간 이벤트 핸들러 설정
-      await setupAllHandlers();
+      setupAllHandlers();
       await syncInteractionState(myInfo?.role ?? 'participant');
 
       // 기존 참가자 미디어 수신 및 내 미디어 송출 시작
