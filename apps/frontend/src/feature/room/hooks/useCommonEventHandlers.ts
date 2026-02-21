@@ -32,12 +32,12 @@ export function useCommonEventHandlers() {
    * - MediaConnectionService: Producer/Consumer 생성/종료, 미디어 상태 변경
    * - ChatService: 새 채팅 메시지
    */
-  const setupCommonHandlers = useCallback((): Promise<void>[] => {
+  const setupCommonHandlers = useCallback((): void => {
     // RoomService 이벤트 핸들러
     // - onUserJoined: 새 참가자 입장 시 participants 목록에 추가
     // - onRoomEnd: 발표자가 방 종료 시 roomEnded 상태 true로 변경
     // - onUserLeft: 참가자 퇴장 시 목록에서 제거 + 해당 참가자의 모든 스트림 정리
-    const roomTask = RoomService.setupEventHandlers({
+    RoomService.setupEventHandlers({
       onUserJoined: roomActions.addParticipant,
       onRoomEnd: () => roomActions.setRoomEnded(true),
       onUserLeft: (data) => {
@@ -62,7 +62,7 @@ export function useCommonEventHandlers() {
     // - onProducerClosed: 상대방이 미디어 송출 중지 -> Producer 목록에서 제거 + Consumer 정리
     // - onConsumerClosed: 서버에서 Consumer 강제 종료 시 -> remoteStreams에서 제거
     // - onMediaStateChanged: pause/resume 시 -> 스트림 제거 또는 재consume
-    const mediaTask = MediaConnectionService.setupMediaEventHandlers({
+    MediaConnectionService.setupMediaEventHandlers({
       onNewProducer: (data) => {
         roomActions.addProducer(data.participantId, data.type, data.producerId);
         if (data.type === 'audio' || data.type === 'screen') {
@@ -87,9 +87,7 @@ export function useCommonEventHandlers() {
     });
 
     // ChatService 이벤트 핸들러
-    const chatTask = ChatService.setupEventHandlers({ onNewChat: chatActions.addChat });
-
-    return [roomTask, mediaTask, chatTask];
+    ChatService.setupEventHandlers({ onNewChat: chatActions.addChat });
   }, [roomActions, mediaActions, chatActions, consumeRemoteProducer, stopConsuming]);
 
   /**

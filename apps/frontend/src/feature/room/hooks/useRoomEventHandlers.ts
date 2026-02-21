@@ -28,15 +28,19 @@ export function useRoomEventHandlers() {
    * 모든 이벤트 핸들러 등록
    *
    * - 공통 핸들러 + 역할별 핸들러를 병렬로 등록
-   * @param role 'presenter' | 'audience'
    */
-  const setupAllHandlers = useCallback(async () => {
-    const commonTasks = setupCommonHandlers();
-    const roleTasks = isPresenter ? setupPresenterHandlers() : setupAudienceHandlers();
-
-    await Promise.all([...commonTasks, ...roleTasks]);
+  const setupAllHandlers = useCallback(() => {
+    setupCommonHandlers();
+    if (isPresenter) setupPresenterHandlers();
+    else setupAudienceHandlers();
     logger.socket.debug(`[useRoomEventHandlers] 모든 (${myInfo?.role}) 핸들러 등록 완료`);
-  }, [setupCommonHandlers, setupPresenterHandlers, setupAudienceHandlers]);
+  }, [
+    setupCommonHandlers,
+    setupPresenterHandlers,
+    setupAudienceHandlers,
+    isPresenter,
+    myInfo?.role,
+  ]);
 
   /**
    * 컴포넌트 언마운트 시 모든 소켓 리스너 정리
@@ -49,14 +53,11 @@ export function useRoomEventHandlers() {
   useEffect(() => {
     return () => {
       removeCommonHandlers();
-      removePresenterHandlers();
-      removeAudienceHandlers();
-
       if (isPresenter) removePresenterHandlers();
       else removeAudienceHandlers();
       logger.socket.debug(`[useRoomEventHandlers] 모든 핸들러 정리 완료`);
     };
-  }, [isPresenter]);
+  }, [isPresenter, removeCommonHandlers, removePresenterHandlers, removeAudienceHandlers]);
 
   return { setupAllHandlers };
 }
