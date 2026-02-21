@@ -39,17 +39,15 @@ export class RoomService {
   }
 
   /** 방 관련 이벤트 리스너 등록 */
-  static async setupEventHandlers(handlers: RoomEventHandlers) {
+  static setupEventHandlers(handlers: RoomEventHandlers) {
     this.removeEventHandlers();
 
-    const results = await Promise.all([
+    this.unsubscribers = [
       SocketClient.on('user_joined', handlers.onUserJoined),
       SocketClient.on('user_left', handlers.onUserLeft),
       SocketClient.on('room_end', handlers.onRoomEnd),
       SocketClient.on('speaker_detected', handlers.onSpeakerDetected),
-    ]);
-
-    this.unsubscribers = results;
+    ];
   }
 
   /** 방 관련 이벤트 리스너 해제 */

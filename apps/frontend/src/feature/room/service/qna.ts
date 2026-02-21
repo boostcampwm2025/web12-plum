@@ -66,28 +66,24 @@ export class QnaService {
   }
 
   /** 발표자(Presenter) 전용 실시간 이벤트 구독 */
-  static async setupPresenterEventHandlers(handlers: PresenterEventHandlers) {
+  static setupPresenterEventHandlers(handlers: PresenterEventHandlers) {
     this.removeEventHandlersByGroup('presenter');
 
-    const results = await Promise.all([
+    this.unsubscribers.set('presenter', [
       SocketClient.on('update_qna_detail', handlers.onUpdateQnaDetail),
       SocketClient.on('qna_end_detail', handlers.onQnaEndDetail),
     ]);
-
-    this.unsubscribers.set('presenter', results);
   }
 
   /** 청중(Audience) 전용 실시간 이벤트 구독 */
-  static async setupAudienceEventHandlers(handlers: AudienceEventHandlers) {
+  static setupAudienceEventHandlers(handlers: AudienceEventHandlers) {
     this.removeEventHandlersByGroup('audience');
 
-    const results = await Promise.all([
+    this.unsubscribers.set('audience', [
       SocketClient.on('start_qna', handlers.onStartQna),
       SocketClient.on('update_qna', handlers.onUpdateQna),
       SocketClient.on('qna_end', handlers.onQnaEnd),
     ]);
-
-    this.unsubscribers.set('audience', results);
   }
 
   /** 특정 그룹의 이벤트 핸들러만 해제 */

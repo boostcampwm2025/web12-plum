@@ -1,4 +1,4 @@
-import type { ServerToClientEvents } from '@plum/shared-interfaces';
+import type { GestureType, ServerToClientEvents } from '@plum/shared-interfaces';
 
 import { logger } from '@/shared/lib/logger';
 import { SocketClient } from '@/shared/socket/socket';
@@ -31,8 +31,8 @@ export class InteractionService {
   ]);
 
   /** 제스처 액션 수행 요청 */
-  static async actionGesture() {
-    return await SocketClient.emitWithAck('action_gesture');
+  static async actionGesture(gesture: GestureType) {
+    return await SocketClient.emitWithAck('action_gesture', { gesture });
   }
 
   /** 활동 점수 랭킹 정보 조회 요청 */
@@ -41,28 +41,24 @@ export class InteractionService {
   }
 
   /** 발표자(Presenter) 전용 실시간 이벤트 구독 */
-  static async setupPresenterEventHandlers(handlers: PresenterEventHandlers) {
+  static setupPresenterEventHandlers(handlers: PresenterEventHandlers) {
     this.removeEventHandlersByGroup('presenter');
 
-    const results = await Promise.all([
+    this.unsubscribers.set('presenter', [
       SocketClient.on('update_gesture_status', handlers.onUpdateGestureStatus),
       SocketClient.on('presenter_rank_update', handlers.onPresenterRankUpdate),
     ]);
-
-    this.unsubscribers.set('presenter', results);
   }
 
   /** 청중(Audience) 전용 실시간 이벤트 구독 */
-  static async setupAudienceEventHandlers(handlers: AudienceEventHandlers) {
+  static setupAudienceEventHandlers(handlers: AudienceEventHandlers) {
     this.removeEventHandlersByGroup('audience');
 
-    const results = await Promise.all([
+    this.unsubscribers.set('audience', [
       SocketClient.on('update_gesture_status', handlers.onUpdateGestureStatus),
       SocketClient.on('score_update', handlers.onScoreUpdate),
       SocketClient.on('rank_update', handlers.onRankUpdate),
     ]);
-
-    this.unsubscribers.set('audience', results);
   }
 
   /** 특정 그룹의 이벤트 핸들러만 해제 */

@@ -30,12 +30,10 @@ export class ChatService {
   }
 
   /** 채팅 서비스 이벤트 핸들러 등록 */
-  static async setupEventHandlers(handlers: ChatEventHandlers) {
+  static setupEventHandlers(handlers: ChatEventHandlers) {
     this.removeAllEventHandlers();
 
-    const results = await Promise.all([SocketClient.on('new_chat', handlers.onNewChat)]);
-
-    this.unsubscribers = results;
+    this.unsubscribers = [SocketClient.on('new_chat', handlers.onNewChat)];
   }
 
   /** 등록된 모든 이벤트 핸들러 해제 */
