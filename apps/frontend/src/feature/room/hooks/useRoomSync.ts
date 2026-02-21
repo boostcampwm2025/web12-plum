@@ -61,18 +61,10 @@ export function useRoomSync() {
 
   /**
    * reconnect 이벤트 구독
-   *
-   * socket.io Manager의 reconnect 이벤트를 직접 구독하여
-   * 재연결 시점을 정확히 감지
+   * - SocketClient의 onReconnect 메서드를 사용하여 재연결 시 performSync가 호출되도록 설정
+   * - 컴포넌트 언마운트 시 구독 해제
    */
   useEffect(() => {
-    const socket = SocketClient.getSocket();
-    if (!socket) return;
-
-    socket.io.on('reconnect', performSync);
-
-    return () => {
-      socket.io.off('reconnect', performSync);
-    };
+    return SocketClient.onReconnect(performSync);
   }, [performSync]);
 }

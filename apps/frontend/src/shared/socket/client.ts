@@ -50,6 +50,7 @@ export class SocketClient {
     ServerToClientEvents[SocketEventNameFromServer],
     (...args: unknown[]) => void
   >();
+  private static reconnectHandlers = new Set<() => void>();
 
   /**
    * 소켓 인스턴스 접근
@@ -108,6 +109,16 @@ export class SocketClient {
   }
 
   /**
+   * 재연결 핸들러 등록
+   * - 소켓이 재연결될 때마다 등록된 핸들러가 호출됨
+   * - 반환된 함수는 핸들러 등록 취소 (off) 용도
+   */
+  static onReconnect(handler: () => void): () => void {
+    this.reconnectHandlers.add(handler);
+    return () => this.reconnectHandlers.delete(handler);
+  }
+
+  /**
    * 내부 이벤트 리스너 설정
    * - 연결 성공 시 이벤트 리스너 등록
    * - 중복 등록 방지 위해 기존 리스너 제거 후 새로 등록
@@ -149,6 +160,7 @@ export class SocketClient {
     this.instance.io.on('reconnect', () => {
       logger.socket.info('소켓 재연결 성공');
       this.setupInternalListeners();
+      this.reconnectHandlers.forEach((handler) => handler());
     });
 
     // 재연결 시도 모니터링
