@@ -108,6 +108,16 @@ export interface BreakQnaRequest {
   qnaId: string;
 }
 
+// 페이로드 없는 이벤트의 빈 요청 타입
+export type LeaveRoomRequest = Record<string, never>;
+export type BreakRoomRequest = Record<string, never>;
+export type GetPollRequest = Record<string, never>;
+export type GetActivePollRequest = Record<string, never>;
+export type GetQnaRequest = Record<string, never>;
+export type GetActiveQnaRequest = Record<string, never>;
+export type GetPresentationRequest = Record<string, never>;
+export type GetActivityScoreRankRequest = Record<string, never>;
+
 // 클라이언트에서 보낸 요청에 따라 발생하는 이벤트 페이로드
 
 export interface BaseResponse {
@@ -352,6 +362,8 @@ export interface PresenterScoreInfoPayload {
   lowest: RankItem | null;
 }
 
+export type RoomEndPayload = Record<string, never>;
+
 // 발화 감지 이벤트 페이로드
 export interface SpeakerDetectedPayload {
   participantId: string;
@@ -377,7 +389,7 @@ export interface ServerToClientEvents {
 
   update_gesture_status: (data: UpdateGestureStatusPayload) => void;
 
-  room_end: () => void;
+  room_end: (data: RoomEndPayload) => void;
 
   start_poll: (data: StartPollPayload) => void;
 
@@ -440,23 +452,23 @@ export interface ClientToServerEvents {
 
   get_producer: (data: GetProducerRequest, cb: (res: GetProducerResponse) => void) => void;
 
-  leave_room: (cb: (res: LeaveRoomResponse) => void) => void;
+  leave_room: (data: LeaveRoomRequest, cb: (res: LeaveRoomResponse) => void) => void;
 
   action_gesture: (data: ActionGestureRequest, cb: (res: ActionGestureResponse) => void) => void;
 
-  break_room: (cb: (res: BreakRoomResponse) => void) => void;
+  break_room: (data: BreakRoomRequest, cb: (res: BreakRoomResponse) => void) => void;
 
   create_poll: (data: CreatePollRequest, cb: (res: CreatePollResponse) => void) => void;
 
   create_qna: (data: CreateQnaRequest, cb: (res: CreateQnaResponse) => void) => void;
 
-  get_poll: (cb: (res: GetPollResponse) => void) => void;
+  get_poll: (data: GetPollRequest, cb: (res: GetPollResponse) => void) => void;
 
-  get_active_poll: (cb: (res: GetActivePollResponse) => void) => void;
+  get_active_poll: (data: GetActivePollRequest, cb: (res: GetActivePollResponse) => void) => void;
 
-  get_qna: (cb: (res: GetQnaResponse) => void) => void;
+  get_qna: (data: GetQnaRequest, cb: (res: GetQnaResponse) => void) => void;
 
-  get_active_qna: (cb: (res: GetActiveQnaResponse) => void) => void;
+  get_active_qna: (data: GetActiveQnaRequest, cb: (res: GetActiveQnaResponse) => void) => void;
 
   emit_poll: (data: EmitPollRequest, cb: (res: EmitPollResponse) => void) => void;
 
@@ -470,11 +482,17 @@ export interface ClientToServerEvents {
 
   break_qna: (data: BreakQnaRequest, cb: (res: BreakQnaResponse) => void) => void;
 
-  get_presentation: (cb: (res: GetPresentationResponse) => void) => void;
+  get_presentation: (
+    data: GetPresentationRequest,
+    cb: (res: GetPresentationResponse) => void,
+  ) => void;
 
   send_chat: (data: SendChatRequest, cb: (res: SendChatResponse) => void) => void;
 
   sync_chat: (data: SyncChatRequest, cb: (res: SyncChatResponse) => void) => void;
 
-  get_activity_score_rank: (cb: (res: GetActivityScoreRank) => void) => void;
+  get_activity_score_rank: (
+    data: GetActivityScoreRankRequest,
+    cb: (res: GetActivityScoreRank) => void,
+  ) => void;
 }
