@@ -587,7 +587,7 @@ describe('RoomGateway', () => {
       expect(updateSpy).toHaveBeenCalledWith(roomId, { status: 'ended' });
       expect(closeRouterSpy).toHaveBeenCalledWith(roomId);
       expect((gateway as any).server.to).toHaveBeenCalledWith(roomId);
-      expect((gateway as any).server.emit).toHaveBeenCalledWith('room_end');
+      expect((gateway as any).server.emit).toHaveBeenCalledWith('room_end', {});
       expect((gateway as any).server.in).toHaveBeenCalledWith(roomId);
       expect((gateway as any).server.socketsLeave).toHaveBeenCalledWith(roomId);
     });
