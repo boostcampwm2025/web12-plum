@@ -127,12 +127,12 @@ export class SocketClient {
 
     // 발신 로그 (클라이언트 -> 서버)
     this.instance.onAnyOutgoing((event, ...args) => {
-      logger.socket.debug(`[${String(event)}]`, args);
+      logger.socket.debug(`[${String(event)} / OUT]`, args);
     });
 
     // 수신 로그 (서버 -> 클라이언트)
     this.instance.onAny((event, ...args) => {
-      logger.socket.debug(`[${String(event)}]`, args);
+      logger.socket.debug(`[${String(event)} / IN]`, args);
     });
 
     // 연결 해제 모니터링
@@ -241,6 +241,7 @@ export class SocketClient {
     try {
       const socketWithTimeout = this.instance!.timeout(CONNECTION_TIMEOUT);
       const response = await (socketWithTimeout.emitWithAck as EmitWithAckType)(event, ...args);
+      logger.socket.debug(`[${String(event)} / ACK]`, response);
 
       // 서버 응답이 success: false인 경우 SocketError throw
       if (!isSuccessResponse<E>(response)) {
