@@ -1,7 +1,7 @@
 import type { GestureType, ServerToClientEvents } from '@plum/shared-interfaces';
 
 import { logger } from '@/shared/lib/logger';
-import { SocketClient } from '@/shared/socket/socket';
+import { SocketClient } from '@/shared/socket/client';
 
 /**
  * 발표자(Presenter) 이벤트 핸들러 인터페이스

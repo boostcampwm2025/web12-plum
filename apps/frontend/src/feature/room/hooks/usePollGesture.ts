@@ -5,8 +5,8 @@ import { useRoomUIStore } from '../stores/useRoomUIStore';
 import { useRoomStore } from '../stores/useRoomStore';
 import type { GestureHandler } from './useGestureHandlers';
 import { isNumericGesture, type NumericGesture } from './gestureCategory';
-import { SocketClient } from '@/shared/socket/socket';
 import { logger } from '@/shared/lib/logger';
+import { PollService } from '../service/poll';
 
 const POLL_GESTURE_MAP: Record<NumericGesture, number> = {
   one: 0,
@@ -50,7 +50,7 @@ export function usePollGestureHandler(): GestureHandler {
       const optionIndex = POLL_GESTURE_MAP[gesture];
       pollActions.setAudienceVotedOption(activePoll.id, optionIndex);
       try {
-        await SocketClient.emitWithAck('vote', {
+        await PollService.vote({
           pollId: activePoll.id,
           optionId: optionIndex,
           isGesture: true,

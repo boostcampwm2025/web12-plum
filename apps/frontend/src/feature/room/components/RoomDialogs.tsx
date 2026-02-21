@@ -9,7 +9,8 @@ import { usePollStore } from '../stores/usePollStore';
 import { useQnaStore } from '../stores/useQnaStore';
 import { logger } from '@/shared/lib/logger';
 import { useToastStore } from '@/store/useToastStore';
-import { SocketClient } from '@/shared/socket/socket';
+import { PollService } from '../service/poll';
+import { QnaService } from '../service/qna';
 
 export function RoomDialogs() {
   const activeDialog = useRoomUIStore((state) => state.activeDialog);
@@ -31,7 +32,7 @@ export function RoomDialogs() {
 
   const handleVote = async (pollId: string, optionId: number) => {
     try {
-      await SocketClient.emitWithAck('vote', { pollId, optionId, isGesture: false });
+      await PollService.vote({ pollId, optionId, isGesture: false });
     } catch (error) {
       logger.custom.error('[RoomDialogs] 투표 참여 실패', error);
       addToast({ type: 'error', title: '투표 참여에 실패했습니다.' });
@@ -40,7 +41,7 @@ export function RoomDialogs() {
 
   const handleAnswer = async (qnaId: string, text: string) => {
     try {
-      await SocketClient.emitWithAck('answer', { qnaId, text });
+      await QnaService.answer({ qnaId, text });
       qnaActions.setAnswered(qnaId, true);
     } catch (error) {
       logger.custom.error('[RoomDialogs] Q&A 답변 실패', error);

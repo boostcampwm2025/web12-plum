@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { SocketClient } from '@/shared/socket/socket';
+import { SocketClient } from '@/shared/socket/client';
 import { MediaConnectionService } from '@/mediasoup/mediaConnection.service';
 import { useSafeRoomId } from '@/shared/hooks/useSafeRoomId';
 import { roomApi } from '@/shared/api';

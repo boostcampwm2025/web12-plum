@@ -6,7 +6,7 @@ import type {
   ServerToClientEvents,
 } from '@plum/shared-interfaces';
 
-import { SocketClient } from '@/shared/socket/socket';
+import { SocketClient } from '@/shared/socket/client';
 
 /**
  * 발표자 투표 서비스 이벤트 핸들러 인터페이스

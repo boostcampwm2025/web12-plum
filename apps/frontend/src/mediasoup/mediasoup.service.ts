@@ -1,4 +1,4 @@
-import { SocketClient } from '@/shared/socket/socket';
+import { SocketClient } from '@/shared/socket/client';
 import type {
   CloseConsumerRequest,
   CloseProducerRequest,

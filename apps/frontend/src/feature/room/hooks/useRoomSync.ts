@@ -1,10 +1,11 @@
 import { useSafeRoomId } from '@/shared/hooks/useSafeRoomId';
-import { SocketClient } from '@/shared/socket/socket';
+import { SocketClient } from '@/shared/socket/client';
 import { useChatStore } from '../stores/useChatStore';
 import { useRoomJoin } from './useRoomJoin';
 import { useEffect, useCallback } from 'react';
 import { useRoomStore } from '../stores/useRoomStore';
 import { logger } from '@/shared/lib/logger';
+import { ChatService } from '../service/chat';
 
 /**
  * 소켓 재연결 시 방 상태를 동기화하는 훅
@@ -49,7 +50,7 @@ export function useRoomSync() {
       // 놓친 채팅 메시지 동기화
       const lastMessageId = chatActions.getLastMessageId();
       if (lastMessageId) {
-        const { messages } = await SocketClient.emitWithAck('sync_chat', { lastMessageId });
+        const { messages } = await ChatService.syncChat({ lastMessageId });
         messages?.forEach(chatActions.addChat);
       }
       logger.custom.debug('[useRoomSync] 재연결 및 데이터 동기화 완료');

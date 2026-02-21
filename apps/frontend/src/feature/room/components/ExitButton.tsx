@@ -6,13 +6,13 @@ import { Button } from '@/shared/components/Button';
 import { Modal } from '@/shared/components/Modal';
 import { Icon } from '@/shared/components/icon/Icon';
 import { logger } from '@/shared/lib/logger';
-import { SocketClient } from '@/shared/socket/socket';
 import { useSafeRoomId } from '@/shared/hooks/useSafeRoomId';
 import { useToastStore } from '@/store/useToastStore';
 
 import { useRoomStore } from '../stores/useRoomStore';
 import { useMediaCleanup } from '../hooks/useMediaCleanup';
 import { RoomButton } from './RoomButton';
+import { RoomService } from '../service/room';
 
 interface ExitConfirmModalProps {
   isModalOpen: boolean;
@@ -79,8 +79,8 @@ export function ExitConfirmModal({ isModalOpen, setIsModalOpen }: ExitConfirmMod
     try {
       logger.ui.info('[ExitButton] 강의실 퇴장 시작');
 
-      if (isPresenter) await SocketClient.emitWithAck('break_room');
-      else await SocketClient.emitWithAck('leave_room');
+      if (isPresenter) await RoomService.breakRoom();
+      else await RoomService.leaveRoom();
     } catch (error) {
       logger.ui.error('[ExitButton] 서버 퇴장 알림 실패:', error);
     } finally {

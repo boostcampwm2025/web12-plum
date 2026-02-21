@@ -11,7 +11,7 @@ import { useQnaStore } from '../stores/useQnaStore';
 import { logger } from '@/shared/lib/logger';
 import type { QnAFormValues } from '@/shared/constants/qna';
 import { useToastStore } from '@/store/useToastStore';
-import { SocketClient } from '@/shared/socket/socket';
+import { QnaService } from '../service/qna';
 
 export function QnaManagementTabs() {
   const [activeTab, setActiveTab] = useState<TabValue>('scheduled');
@@ -35,7 +35,7 @@ export function QnaManagementTabs() {
 
   const fetchQnas = useCallback(async () => {
     try {
-      const response = await SocketClient.emitWithAck('get_qna');
+      const response = await QnaService.getQna();
       qnaActions.hydrateFromQnas(response.qnas);
     } catch (error) {
       logger.socket.error('[QnaManagementTabs] Q&A 목록 조회 실패', error);
@@ -60,7 +60,7 @@ export function QnaManagementTabs() {
   const handleCreateQna = useCallback(
     async (data: QnAFormValues) => {
       try {
-        await SocketClient.emitWithAck('create_qna', data);
+        await QnaService.createQna(data);
         fetchQnas();
       } catch (error) {
         logger.socket.error('[QnaManagementTabs] Q&A 생성 실패', error);
@@ -73,7 +73,7 @@ export function QnaManagementTabs() {
   const handleStartQna = useCallback(
     async (qnaId: string) => {
       try {
-        await SocketClient.emitWithAck('emit_qna', { qnaId });
+        await QnaService.emitQna({ qnaId });
         setActiveTab('active');
         fetchQnas();
       } catch (error) {
@@ -87,7 +87,7 @@ export function QnaManagementTabs() {
   const handleBreakQna = useCallback(async () => {
     if (!activeQna) return;
     try {
-      const response = await SocketClient.emitWithAck('break_qna', { qnaId: activeQna.id });
+      const response = await QnaService.breakQna({ qnaId: activeQna.id });
       qnaActions.setCompletedFromEndDetail({
         qnaId: activeQna.id,
         title: activeQna.title,

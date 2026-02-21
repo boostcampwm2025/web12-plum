@@ -4,11 +4,11 @@ import { Icon } from '@/shared/components/icon/Icon';
 import { cn } from '@/shared/lib/utils';
 import { logger } from '@/shared/lib/logger';
 import { Button } from '@/shared/components/Button';
-import { SocketClient } from '@/shared/socket/socket';
 import { SocketError } from '@/shared/socket/error';
 
 import { useChatStore } from '../stores/useChatStore';
 import { SidePanelHeader, SidePanelContent } from './SidePanel';
+import { ChatService } from '../service/chat';
 
 const RATE_LIMIT_COOLDOWN = 3000;
 const MAX_CHAT_LENGTH = 60;
@@ -247,7 +247,7 @@ function ChatInput({ hasNewItems, newItemPreview, onScrollToBottom }: ChatInputP
     if (!trimmed || isRateLimited) return;
 
     try {
-      await SocketClient.emitWithAck('send_chat', { text: trimmed });
+      await ChatService.sendChat({ text: trimmed });
     } catch (error) {
       logger.custom.error('[ChatPanel] 채팅 전송 실패', error);
 

@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { logger } from '@/shared/lib/logger';
 import { PresentationFile } from '../types';
-import { SocketClient } from '@/shared/socket/socket';
+import { RoomService } from '../service/room';
 
 export function useRoomPresentation() {
   const [files, setFiles] = useState<PresentationFile[]>([]);
@@ -13,7 +13,7 @@ export function useRoomPresentation() {
     setError(null);
 
     try {
-      const response = await SocketClient.emitWithAck('get_presentation');
+      const response = await RoomService.getPresentation();
       const formattedFiles = response.files.map((f) => {
         // URL에서 마지막 경로 부분(ulid_filename.ext)만 추출
         const fullFileName = f.url.split('/').pop() || '';
