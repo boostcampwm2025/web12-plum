@@ -1,93 +1,89 @@
 import { ClientToServerEvents, ServerToClientEvents } from '@plum/shared-interfaces';
 import { Socket } from 'socket.io-client';
 
-// 공통 인터페이스가 지정된 소켓
+// 양방향 이벤트 타입이 지정된 socket.io 클라이언트 인스턴스
 export type TypedSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 
-// 소켓 이벤트 이름
+// 클라이언트 -> 서버 이벤트 이름 유니온
 export type SocketEventName = keyof ClientToServerEvents;
+
+// 서버 -> 클라이언트 이벤트 이름 유니온
 export type SocketEventNameFromServer = keyof ServerToClientEvents;
 
-// 서비스 도메인 지정 타입
-export type SocketDomain =
-  | 'room'
-  | 'media'
-  | 'poll'
-  | 'qna'
-  | 'gesture'
-  | 'presentation'
-  | 'rank'
-  | 'chat';
+// 이벤트 이름 E에 해당하는 ClientToServerEvents 함수 시그니처
+type ClientEventFn<E extends SocketEventName> = ClientToServerEvents[E];
+
+// ClientEventFn<E>의 매개변수 튜플
+type ClientEventParams<E extends SocketEventName> = Parameters<ClientEventFn<E>>;
 
 /**
- * 콜백에서 응답 타입 추출
- * (cb) => void | (data, cb) => void 에서 Response 타입 추출
+ * 이벤트 E의 서버 응답 중 성공(success: true) 브랜치 타입
+ * - ClientToServerEvents 콜백의 첫 번째 인자를 Extract로 좁힘
  */
-type ExtractResponse<T> = T extends (cb: (res: infer R) => void) => void
-  ? R
-  : // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    T extends (data: any, cb: (res: infer R) => void) => void
-    ? R
-    : never;
-
-/**
- * 이벤트에서 페이로드 추출
- * (cb) => void 일 때, void
- * (data, cb) => void 일 때, data
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type ExtractPayload<T> = T extends (cb: (res: any) => void) => void
-  ? void
-  : // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    T extends (data: infer P, cb: (res: any) => void) => void
-    ? P
-    : void;
-
-// 소켓 이벤트 페이로드 및 응답 타입
-export type SocketEventPayload<E extends SocketEventName> = ExtractPayload<ClientToServerEvents[E]>;
-export type SocketEventResponse<E extends SocketEventName> = ExtractResponse<
-  ClientToServerEvents[E]
-> & { success: boolean };
-
-// 성공 응답 타입 추출
 export type SocketSuccessResponse<E extends SocketEventName> = Extract<
-  SocketEventResponse<E>,
+  Parameters<ClientEventParams<E>[1]>[0],
   { success: true }
 >;
 
-// 실패 응답 타입 추출
+/**
+ * 이벤트 E의 서버 응답 중 실패(success: false) 브랜치 타입
+ * - SocketSuccessResponse와 반대로 Exclude로 필터링
+ */
 export type SocketFailResponse<E extends SocketEventName> = Exclude<
-  SocketEventResponse<E>,
+  Parameters<ClientEventParams<E>[1]>[0],
   { success: true }
 >;
 
-// 서버 이벤트 핸들러 및 페이로드 타입
-export type ServerEventHandler = ServerToClientEvents[SocketEventNameFromServer];
-export type SocketHandlerPayload<E extends SocketEventNameFromServer> = Parameters<
-  ServerToClientEvents[E]
->[0];
-
-// on 메서드 타입 단언
-export type SocketOnType = <E extends SocketEventNameFromServer>(
-  event: E,
-  listener: ServerToClientEvents[E],
+// ServerToClientEvents.on 메서드 시그니처 타입
+export type SocketOnType = (
+  event: SocketEventNameFromServer,
+  listener: ServerToClientEvents[SocketEventNameFromServer],
 ) => TypedSocket;
 
-// off 메서드 타입 단언
-export type SocketOffType = <E extends SocketEventNameFromServer>(
-  event: E,
-  listener?: ServerToClientEvents[E],
+// ServerToClientEvents.off 메서드 시그니처 타입
+export type SocketOffType = (
+  event: SocketEventNameFromServer,
+  listener?: ServerToClientEvents[SocketEventNameFromServer],
 ) => TypedSocket;
 
-// 페이로드 없는 이벤트 콜백 타입
-export type EmitWithCallbackNoPayload = <E extends SocketEventName>(
-  event: E,
-  callback: (response: SocketEventResponse<E>) => void,
-) => void;
+/**
+ * T가 정확히 Record<string, never>(빈 객체)인지 양방향 extends로 판별
+ * - 단방향 extends만으로는 서브타입을 잘못 판단할 수 있어 쌍방향 체크로 정확도 확보
+ * - payload 없는 소켓 이벤트를 선택적 매개변수로 처리하기 위해 사용
+ */
+type IsEmptyRecord<T> = [T] extends [Record<string, never>]
+  ? [Record<string, never>] extends [T]
+    ? true
+    : false
+  : false;
 
-// 페이로드 있는 이벤트 콜백 타입
-export type EmitWithCallbackWithPayload = <E extends SocketEventName>(
+/**
+ * emitWithAck 호출 시 data 인자 튜플 타입
+ * - data가 빈 객체(payload 없는 이벤트)이면 선택적(optional), 그 외엔 필수
+ * - 튜플로 정의해 스프레드 인자(...args)에 그대로 사용 가능
+ */
+export type EmitWithAckArgs<E extends SocketEventName> =
+  IsEmptyRecord<ClientEventParams<E>[0]> extends true
+    ? [data?: ClientEventParams<E>[0]]
+    : [data: ClientEventParams<E>[0]];
+
+/**
+ * socket.emitWithAck 커스텀 오버로드 타입
+ * - 이벤트별로 data 선택성이 다르므로 제네릭 조건부 타입 적용
+ * - 반환값은 서버 응답(success | fail 유니온)의 Promise
+ */
+export type EmitWithAckType = <E extends SocketEventName>(
   event: E,
-  data: SocketEventPayload<E>,
-  callback: (response: SocketEventResponse<E>) => void,
-) => void;
+  ...args: EmitWithAckArgs<E>
+) => Promise<Parameters<ClientEventParams<E>[1]>[0]>;
+
+/**
+ * 서버 응답이 성공인지 판별하는 type predicate
+ * - 제네릭 conditional type 내부에서는 discriminant로 자동 narrowing 불가
+ * - isSuccessResponse로 명시적으로 좁혀야 SocketSuccessResponse<E> 타입 보장
+ */
+export function isSuccessResponse<E extends SocketEventName>(
+  response: unknown,
+): response is SocketSuccessResponse<E> {
+  return (response as { success: boolean }).success === true;
+}
