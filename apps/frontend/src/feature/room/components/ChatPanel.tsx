@@ -5,7 +5,7 @@ import { cn } from '@/shared/lib/utils';
 import { logger } from '@/shared/lib/logger';
 import { Button } from '@/shared/components/Button';
 import { SocketClient } from '@/shared/socket/socket';
-import { isSocketFailResponse } from '@/shared/socket/guard';
+import { SocketError } from '@/shared/socket/error';
 
 import { useChatStore } from '../stores/useChatStore';
 import { SidePanelHeader, SidePanelContent } from './SidePanel';
@@ -251,7 +251,7 @@ function ChatInput({ hasNewItems, newItemPreview, onScrollToBottom }: ChatInputP
     } catch (error) {
       logger.custom.error('[ChatPanel] 채팅 전송 실패', error);
 
-      if (isSocketFailResponse<'send_chat'>(error) && !error.retryable) {
+      if (error instanceof SocketError && !(error as SocketError<'send_chat'>).response.retryable) {
         showChatToast('너무 많은 메시지를 보냈습니다. 잠시 후 다시 시도해주세요.');
         startRateLimitCooldown();
         return;
