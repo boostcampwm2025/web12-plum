@@ -135,6 +135,7 @@ export function useRoomInit(handleInitialMedia: () => Promise<void>) {
   useEffect(() => {
     return () => {
       cleanupMedia();
+      SocketClient.disconnect();
       chatActions.clear();
       pollActions.clear();
       roomActions.reset();
