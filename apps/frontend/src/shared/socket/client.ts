@@ -263,8 +263,8 @@ export class SocketClient {
       return response;
     } catch (error) {
       // 에러 로깅 및 래핑
-      const isTypeError = error instanceof Error;
-      const errorMessage = isTypeError ? error.message : String(error);
+      const isError = error instanceof Error;
+      const errorMessage = isError ? error.message : String(error);
       logger.socket.error(`[${String(event)}] ${errorMessage}`, { event, args });
 
       if (error instanceof SocketError) throw error;
