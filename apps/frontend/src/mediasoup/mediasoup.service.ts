@@ -72,17 +72,15 @@ export class MediasoupService {
   }
 
   /** 미디어 서비스 이벤트 핸들러 등록 */
-  static async setupEventHandlers(handlers: MediaEventHandlers) {
+  static setupEventHandlers(handlers: MediaEventHandlers) {
     this.removeEventHandlers();
 
-    const results = await Promise.all([
+    this.unsubscribers = [
       SocketClient.on('new_producer', handlers.onNewProducer),
       SocketClient.on('producer_closed', handlers.onProducerClosed),
       SocketClient.on('consumer_closed', handlers.onConsumerClosed),
       SocketClient.on('media_state_changed', handlers.onMediaStateChanged),
-    ]);
-
-    this.unsubscribers = results;
+    ];
   }
 
   /** 등록된 모든 미디어 이벤트 리스너 해제 */
