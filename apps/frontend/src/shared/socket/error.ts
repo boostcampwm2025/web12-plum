@@ -16,4 +16,9 @@ export class SocketError<E extends SocketEventName = SocketEventName> extends Er
     this.event = event;
     this.response = response;
   }
+
+  // 특정 이벤트 타입으로 좁히는 타입 가드
+  isEvent<T extends SocketEventName>(event: T): this is SocketError<T> {
+    return (this.event as SocketEventName) === event;
+  }
 }

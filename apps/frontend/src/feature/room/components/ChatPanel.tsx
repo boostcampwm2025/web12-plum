@@ -251,7 +251,7 @@ function ChatInput({ hasNewItems, newItemPreview, onScrollToBottom }: ChatInputP
     } catch (error) {
       logger.custom.error('[ChatPanel] 채팅 전송 실패', error);
 
-      if (error instanceof SocketError && !(error as SocketError<'send_chat'>).response.retryable) {
+      if (error instanceof SocketError && error.isEvent('send_chat') && !error.response.retryable) {
         showChatToast('너무 많은 메시지를 보냈습니다. 잠시 후 다시 시도해주세요.');
         startRateLimitCooldown();
         return;
