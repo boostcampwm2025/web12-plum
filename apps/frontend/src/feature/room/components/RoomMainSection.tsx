@@ -2,7 +2,8 @@ import { motion } from 'motion/react';
 import { Draggable } from './Draggable';
 import { ScreenShareBanner } from './ScreenShareBanner';
 import { ParticipantGrid } from './ParticipantGrid';
-import { ParticipantVideo, VideoDisplayMode } from './ParticipantVideo';
+import type { VideoDisplayMode } from './ParticipantVideo';
+import { MyParticipantVideo } from './MyParticipantVideo';
 import { ToastStack } from '@/shared/components/ToastStack';
 import { useStreamStore } from '@/store/useLocalStreamStore';
 import { useMediaStore } from '../stores/useMediaStore';
@@ -90,11 +91,10 @@ function MyVideo({
 
   return (
     <Draggable>
-      <ParticipantVideo
+      <MyParticipantVideo
         id={currentUser.id}
         name={currentUser.name}
         mode={videoMode}
-        isCurrentUser={true}
         onModeChange={onModeChange}
         stream={stream}
         isCameraOn={isCameraOn}

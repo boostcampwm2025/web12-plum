@@ -17,31 +17,45 @@ vi.mock('../stores/useMediaStore');
 vi.mock('../stores/useRoomStore');
 vi.mock('@/store/useLocalStreamStore');
 
-vi.mock('./ParticipantVideo', () => ({
-  ParticipantVideo: ({
+vi.mock('./MyParticipantVideo', () => ({
+  MyParticipantVideo: ({
     id,
     name,
     mode,
-    isCurrentUser,
     onModeChange,
+  }: {
+    id: string;
+    name: string;
+    mode: string;
+    onModeChange?: (mode: string) => void;
+  }) => (
+    <div
+      data-testid={`participant-video-${id}`}
+      data-mode={mode}
+      data-is-current-user={true}
+      onClick={() => onModeChange?.('pip')}
+    >
+      {name}
+    </div>
+  ),
+}));
+
+vi.mock('./RemoteParticipantVideo', () => ({
+  RemoteParticipantVideo: ({
+    id,
+    name,
     isCurrentlyVisible,
     shouldConsume,
   }: {
     id: string;
     name: string;
-    mode: string;
-    isCurrentUser?: boolean;
-    onModeChange?: (mode: string) => void;
     isCurrentlyVisible?: boolean;
     shouldConsume?: boolean;
   }) => (
     <div
       data-testid={`participant-video-${id}`}
-      data-mode={mode}
-      data-is-current-user={isCurrentUser}
       data-visible={isCurrentlyVisible}
       data-should-consume={shouldConsume}
-      onClick={() => isCurrentUser && onModeChange?.('pip')}
     >
       {name}
     </div>
