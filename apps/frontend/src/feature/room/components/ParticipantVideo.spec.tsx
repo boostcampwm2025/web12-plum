@@ -7,7 +7,7 @@ import { useMediaStore, type RemoteStream } from '../stores/useMediaStore';
 import { useGestureStore } from '../stores/useGestureStore';
 import { useRemoteMedia } from '../hooks/useRemoteMedia';
 import type { MediaType, ParticipantRole } from '@plum/shared-interfaces';
-import type { VideoDisplayMode } from './ParticipantVideo';
+import type { VideoDisplayMode } from '../types';
 
 interface MockMediaStoreState {
   remoteStreams: Map<string, RemoteStream>;

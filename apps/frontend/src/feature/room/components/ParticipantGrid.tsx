@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import type { VideoDisplayMode } from './ParticipantVideo';
+import type { VideoDisplayMode } from '../types';
 import { Icon } from '@/shared/components/icon/Icon';
 import { Button } from '@/shared/components/Button';
 import { useItemsPerPage } from '../hooks/useItemsPerPage';

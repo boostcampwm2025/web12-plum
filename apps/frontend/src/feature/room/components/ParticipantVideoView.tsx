@@ -7,7 +7,7 @@ import { Button } from '@/shared/components/Button';
 import { GESTURE_ICON_MAP } from '@/shared/constants/gesture';
 
 import { useGestureStore } from '../stores/useGestureStore';
-import type { VideoDisplayMode } from './ParticipantVideo';
+import type { VideoDisplayMode } from '../types';
 
 const VIDEO_HEIGHTS = {
   MINIMIZED: 36,

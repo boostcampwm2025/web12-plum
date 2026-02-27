@@ -11,3 +11,5 @@ export type MediaSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 export interface PresentationFile extends FileInfo {
   name: string;
 }
+
+export type VideoDisplayMode = 'minimize' | 'pip' | 'side';

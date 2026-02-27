@@ -2,7 +2,6 @@ import { motion } from 'motion/react';
 import { Draggable } from './Draggable';
 import { ScreenShareBanner } from './ScreenShareBanner';
 import { ParticipantGrid } from './ParticipantGrid';
-import type { VideoDisplayMode } from './ParticipantVideo';
 import { MyParticipantVideo } from './MyParticipantVideo';
 import { ToastStack } from '@/shared/components/ToastStack';
 import { useStreamStore } from '@/store/useLocalStreamStore';
@@ -13,6 +12,7 @@ import { useGestureRecognition } from '../hooks/useGestureRecognition';
 import { useGestureHandlers } from '../hooks/useGestureHandlers';
 import DodoReady from '@/assets/logo/dodo-ready.svg';
 import { useBackgroundEffectStore } from '../stores/useBackgroundEffectStore';
+import type { VideoDisplayMode } from '../types';
 
 /**
  * 화면공유 영상을 표시하는 컴포넌트

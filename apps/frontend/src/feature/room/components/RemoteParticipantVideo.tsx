@@ -1,10 +1,16 @@
+import { useRef } from 'react';
 import type { ParticipantRole } from '@plum/shared-interfaces';
 
-import { ParticipantVideo } from './ParticipantVideo';
+import type { VideoDisplayMode } from '../types';
+import { useParticipantVideoSubscription } from '../hooks/useParticipantVideoSubscription';
+import { useRemoteParticipantMediaState } from '../hooks/useRemoteParticipantMediaState';
+import { useVideoElementBinding } from '../hooks/useVideoElementBinding';
+import { ParticipantVideoView } from './ParticipantVideoView';
 
 interface RemoteParticipantVideoProps {
   id: string;
   name: string;
+  mode?: VideoDisplayMode;
   videoProducerId?: string;
   participantRole?: ParticipantRole;
   shouldConsume?: boolean;
@@ -15,22 +21,44 @@ interface RemoteParticipantVideoProps {
 export function RemoteParticipantVideo({
   id,
   name,
+  mode = 'side',
   videoProducerId,
   participantRole,
   shouldConsume = true,
   isCurrentlyVisible = true,
   isSpeaking = false,
 }: RemoteParticipantVideoProps) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const { activeStream, isVideoEnabled, isAudioMuted } = useRemoteParticipantMediaState({ id });
+
+  useParticipantVideoSubscription({
+    id,
+    name,
+    isCurrentUser: false,
+    videoProducerId,
+    participantRole,
+    shouldConsume,
+  });
+
+  const { showOverlay } = useVideoElementBinding({
+    videoRef,
+    mode,
+    activeStream,
+    isVideoEnabled,
+  });
+
   return (
-    <ParticipantVideo
+    <ParticipantVideoView
       id={id}
       name={name}
-      mode="side"
-      videoProducerId={videoProducerId}
-      participantRole={participantRole}
-      shouldConsume={shouldConsume}
+      mode={mode}
+      isCurrentUser={false}
+      isAudioMuted={isAudioMuted}
+      isVideoEnabled={isVideoEnabled}
       isCurrentlyVisible={isCurrentlyVisible}
       isSpeaking={isSpeaking}
+      showOverlay={showOverlay}
+      videoRef={videoRef}
     />
   );
 }

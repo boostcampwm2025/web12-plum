@@ -2,7 +2,7 @@
 
 import { logger } from '@/shared/lib/logger';
 
-import type { VideoDisplayMode } from '../components/ParticipantVideo';
+import type { VideoDisplayMode } from '../types';
 
 interface UseVideoElementBindingParams {
   videoRef: RefObject<HTMLVideoElement>;

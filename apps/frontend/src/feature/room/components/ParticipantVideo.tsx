@@ -1,12 +1,11 @@
-﻿import { memo, useRef } from 'react';
+﻿import { memo } from 'react';
 import type { ParticipantRole } from '@plum/shared-interfaces';
 
-import { useParticipantMediaState } from '../hooks/useParticipantMediaState';
-import { useParticipantVideoSubscription } from '../hooks/useParticipantVideoSubscription';
-import { useVideoElementBinding } from '../hooks/useVideoElementBinding';
-import { ParticipantVideoView } from './ParticipantVideoView';
+import type { VideoDisplayMode } from '../types';
+import { MyParticipantVideo } from './MyParticipantVideo';
+import { RemoteParticipantVideo } from './RemoteParticipantVideo';
 
-export type VideoDisplayMode = 'minimize' | 'pip' | 'side';
+export type { VideoDisplayMode } from '../types';
 
 export interface ParticipantVideoProps {
   id: string;
@@ -39,45 +38,31 @@ function ParticipantVideoComponent({
   isCurrentlyVisible = true,
   isSpeaking = false,
 }: ParticipantVideoProps) {
-  const videoRef = useRef<HTMLVideoElement>(null);
-
-  const { activeStream, isVideoEnabled, isAudioMuted } = useParticipantMediaState({
-    id,
-    isCurrentUser,
-    localStream,
-    localCameraOn,
-    localAudioMuted,
-  });
-
-  useParticipantVideoSubscription({
-    id,
-    name,
-    isCurrentUser,
-    videoProducerId,
-    participantRole,
-    shouldConsume,
-  });
-
-  const { showOverlay } = useVideoElementBinding({
-    videoRef,
-    mode,
-    activeStream,
-    isVideoEnabled,
-  });
+  if (isCurrentUser) {
+    return (
+      <MyParticipantVideo
+        id={id}
+        name={name}
+        mode={mode}
+        onModeChange={onModeChange}
+        stream={localStream ?? null}
+        isCameraOn={localCameraOn}
+        isAudioMuted={localAudioMuted}
+        isSpeaking={isSpeaking}
+      />
+    );
+  }
 
   return (
-    <ParticipantVideoView
+    <RemoteParticipantVideo
       id={id}
       name={name}
       mode={mode}
-      isCurrentUser={isCurrentUser}
-      onModeChange={onModeChange}
-      isAudioMuted={isAudioMuted}
-      isVideoEnabled={isVideoEnabled}
+      videoProducerId={videoProducerId}
+      participantRole={participantRole}
+      shouldConsume={shouldConsume}
       isCurrentlyVisible={isCurrentlyVisible}
       isSpeaking={isSpeaking}
-      showOverlay={showOverlay}
-      videoRef={videoRef}
     />
   );
 }
