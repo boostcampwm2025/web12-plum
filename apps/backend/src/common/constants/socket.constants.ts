@@ -2,7 +2,7 @@ import { CORS_CONFIG } from './cors.constants.js';
 
 export const SOCKET_NAMESPACE = 'session';
 
-export const SOCKET_TIMEOUT = 5;
+export const SOCKET_TIMEOUT = 30;
 
 // 세션 관련 Redis 키 TTL (초) - 서버 크래시 시 자동 정리용
 export const SESSION_TTL = 86400; // 24시간

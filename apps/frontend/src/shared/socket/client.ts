@@ -19,7 +19,8 @@ import {
 
 const CONNECTION_TIMEOUT = 5000; // 소켓 초기 연결 / ack 타임아웃 (ms)
 const RECONNECTION_DELAY = 300; // 재연결 시도 간격
-const RECONNECTION_DELAY_MAX = 3000; // 재연결 간격 상한
+const RANDOMIZATION_FACTOR = 0.5; // 재연결 시도 간격에 jitter를 적용하기 위한 랜덤화 비율
+const RECONNECTION_DELAY_MAX = 5000;
 
 /**
  * 소켓 클라이언트 옵션
@@ -36,7 +37,7 @@ const SOCKET_OPTIONS = {
   reconnection: true,
   reconnectionDelay: RECONNECTION_DELAY,
   reconnectionDelayMax: RECONNECTION_DELAY_MAX,
-  randomizationFactor: 0.3,
+  randomizationFactor: RANDOMIZATION_FACTOR,
   reconnectionAttempts: Infinity,
   autoConnect: false,
 };
