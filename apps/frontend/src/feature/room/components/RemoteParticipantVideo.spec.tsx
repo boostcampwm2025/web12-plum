@@ -1,39 +1,39 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { fireEvent } from '@testing-library/react';
 
-import { ParticipantVideo } from './ParticipantVideo';
-import { useMediaStore, RemoteStream } from '../stores/useMediaStore';
-import { useGestureStore } from '../stores/useGestureStore';
+import { RemoteParticipantVideo } from './RemoteParticipantVideo';
+import { useMediaStore, type RemoteStream } from '../stores/useMediaStore';
+import { useRoomStore } from '../stores/useRoomStore';
 import { useRemoteMedia } from '../hooks/useRemoteMedia';
 import type { MediaType, ParticipantRole } from '@plum/shared-interfaces';
-import type { VideoDisplayMode } from './ParticipantVideo';
 
-// 타입 정의
 interface MockMediaStoreState {
   remoteStreams: Map<string, RemoteStream>;
 }
 
-interface MockGestureState {
-  gestureProgress: {
-    gesture: string | null;
-    progress: number;
-  };
-}
-
 interface MockUseRemoteMediaReturn {
-  consumeRemoteProducer: (data: any) => Promise<void>;
+  consumeRemoteProducer: (data: unknown) => Promise<void>;
   consumeExistingProducers: () => Promise<void>;
   stopConsuming: (participantId: string, type: MediaType) => void;
 }
 
 vi.mock('../stores/useMediaStore', () => ({
   useMediaStore: vi.fn(),
+  selectRemoteVideoStreamByParticipant:
+    (participantId: string) =>
+    (state: MockMediaStoreState): MediaStream | null => {
+      for (const stream of state.remoteStreams.values()) {
+        if (stream.participantId === participantId && stream.type === 'video') {
+          return stream.stream;
+        }
+      }
+      return null;
+    },
 }));
 
-vi.mock('../stores/useGestureStore', () => ({
-  useGestureStore: vi.fn(),
+vi.mock('../stores/useRoomStore', () => ({
+  useRoomStore: vi.fn(),
 }));
 
 vi.mock('../hooks/useRemoteMedia', () => ({
@@ -56,10 +56,10 @@ vi.mock('@/shared/components/icon/Icon', () => ({
 }));
 
 const mockUseMediaStore = vi.mocked(useMediaStore);
-const mockUseGestureStore = vi.mocked(useGestureStore);
+const mockUseRoomStore = vi.mocked(useRoomStore);
 const mockUseRemoteMedia = vi.mocked(useRemoteMedia);
 
-describe('ParticipantVideo', () => {
+describe('RemoteParticipantVideo', () => {
   const mockConsumeRemoteProducer = vi.fn().mockResolvedValue(undefined);
   const mockConsumeExistingProducers = vi.fn().mockResolvedValue(undefined);
   const mockStopConsuming = vi.fn();
@@ -72,10 +72,9 @@ describe('ParticipantVideo', () => {
   const defaultProps = {
     id: 'participant-1',
     name: '호눅스',
-    mode: 'side' as VideoDisplayMode,
     videoProducerId: 'prod-123',
     participantRole: 'audience' as ParticipantRole,
-    isActive: true,
+    shouldConsume: true,
     isCurrentlyVisible: true,
   };
 
@@ -92,14 +91,15 @@ describe('ParticipantVideo', () => {
       selector({ remoteStreams: new Map<string, RemoteStream>() } as MockMediaStoreState),
     );
 
-    mockUseGestureStore.mockImplementation((selector: any) =>
-      selector({ gestureProgress: { gesture: null, progress: 0 } } as MockGestureState),
+    mockUseRoomStore.mockImplementation((selector: any) =>
+      selector({ participantAudioMuted: new Map() } as Parameters<typeof selector>[0]),
     );
   });
 
   describe('수신(Consume) 제어 로직', () => {
-    it('isActive가 true이면 consumeRemoteProducer 호출', async () => {
-      render(<ParticipantVideo {...defaultProps} />);
+    it('shouldConsume가 true이면 consumeRemoteProducer 호출', async () => {
+      render(<RemoteParticipantVideo {...defaultProps} />);
+
       await waitFor(() => {
         expect(mockConsumeRemoteProducer).toHaveBeenCalledWith(
           expect.objectContaining({
@@ -113,26 +113,29 @@ describe('ParticipantVideo', () => {
       });
     });
 
-    it('isActive가 false이면 stopConsuming 호출', () => {
+    it('shouldConsume가 false이면 stopConsuming 호출', () => {
       render(
-        <ParticipantVideo
+        <RemoteParticipantVideo
           {...defaultProps}
-          isActive={false}
+          shouldConsume={false}
         />,
       );
+
       expect(mockStopConsuming).toHaveBeenCalledWith(defaultProps.id, 'video');
     });
 
     it('언마운트 시 stopConsuming 호출', () => {
-      const { unmount } = render(<ParticipantVideo {...defaultProps} />);
+      const { unmount } = render(<RemoteParticipantVideo {...defaultProps} />);
       unmount();
+
       expect(mockStopConsuming).toHaveBeenCalledWith(defaultProps.id, 'video');
     });
   });
 
   describe('비디오 스트림 연결 및 렌더링', () => {
-    it('video 요소가 항상 렌더링된다 (side 모드)', () => {
-      render(<ParticipantVideo {...defaultProps} />);
+    it('video 요소가 렌더링된다 (기본 side 모드)', () => {
+      render(<RemoteParticipantVideo {...defaultProps} />);
+
       const videoElement = document.querySelector('video') as HTMLVideoElement;
       expect(videoElement).toBeInTheDocument();
       expect(videoElement.autoplay).toBe(true);
@@ -156,7 +159,7 @@ describe('ParticipantVideo', () => {
         selector({ remoteStreams: mockRemoteStreams } as MockMediaStoreState),
       );
 
-      render(<ParticipantVideo {...defaultProps} />);
+      render(<RemoteParticipantVideo {...defaultProps} />);
 
       const videoElement = document.querySelector('video') as HTMLVideoElement;
       await waitFor(
@@ -167,69 +170,29 @@ describe('ParticipantVideo', () => {
       );
     });
 
-    it('스트림 없음 + 카메라 OFF 시 cam-disabled 아이콘 표시', () => {
-      render(<ParticipantVideo {...defaultProps} />);
+    it('스트림 없음 시 cam-disabled 아이콘 표시', () => {
+      render(<RemoteParticipantVideo {...defaultProps} />);
       expect(screen.getByTestId('icon-cam-disabled')).toBeInTheDocument();
-    });
-
-    it('minimize 모드에서는 video 요소 없음', () => {
-      render(
-        <ParticipantVideo
-          {...defaultProps}
-          mode="minimize"
-        />,
-      );
-      expect(document.querySelector('video')).not.toBeInTheDocument();
     });
   });
 
   describe('가시성 제어', () => {
     it('isCurrentlyVisible=false 시 display: none', () => {
       const { container } = render(
-        <ParticipantVideo
+        <RemoteParticipantVideo
           {...defaultProps}
           isCurrentlyVisible={false}
         />,
       );
+
       const videoContainer = container.firstElementChild as HTMLElement;
       expect(videoContainer).toHaveStyle({ display: 'none' });
     });
   });
 
-  describe('제스처 프로그레스 오버레이', () => {
-    it('gesture 없을 때 오버레이 없음', () => {
-      render(
-        <ParticipantVideo
-          {...defaultProps}
-          isCurrentUser={true}
-          mode="side"
-        />,
-      );
-      expect(screen.queryByTestId('icon-thumbs-up')).not.toBeInTheDocument();
-    });
-  });
-
-  describe('모드별 UI 및 버튼 동작', () => {
-    it('minimize 모드에서 확대 버튼 + 클릭 동작', () => {
-      const onModeChange = vi.fn();
-      render(
-        <ParticipantVideo
-          {...defaultProps}
-          mode="minimize"
-          isCurrentUser={true}
-          onModeChange={onModeChange}
-        />,
-      );
-
-      expect(screen.getByLabelText('확대')).toBeInTheDocument();
-      expect(screen.getByTestId('icon-maximize')).toBeInTheDocument();
-
-      fireEvent.click(screen.getByLabelText('확대'));
-      expect(onModeChange).toHaveBeenCalledWith('pip');
-    });
-
-    it('이름이 모든 모드에서 표시', () => {
-      render(<ParticipantVideo {...defaultProps} />);
+  describe('표시 텍스트', () => {
+    it('이름이 표시된다', () => {
+      render(<RemoteParticipantVideo {...defaultProps} />);
       expect(screen.getByText('호눅스')).toBeInTheDocument();
     });
   });

@@ -17,28 +17,45 @@ vi.mock('../stores/useMediaStore');
 vi.mock('../stores/useRoomStore');
 vi.mock('@/store/useLocalStreamStore');
 
-vi.mock('./ParticipantVideo', () => ({
-  ParticipantVideo: ({
+vi.mock('./MyParticipantVideo', () => ({
+  MyParticipantVideo: ({
     id,
     name,
     mode,
-    isCurrentUser,
     onModeChange,
-    isCurrentlyVisible,
   }: {
     id: string;
     name: string;
     mode: string;
-    isCurrentUser?: boolean;
     onModeChange?: (mode: string) => void;
-    isCurrentlyVisible?: boolean;
   }) => (
     <div
       data-testid={`participant-video-${id}`}
       data-mode={mode}
-      data-is-current-user={isCurrentUser}
+      data-is-current-user={true}
+      onClick={() => onModeChange?.('pip')}
+    >
+      {name}
+    </div>
+  ),
+}));
+
+vi.mock('./RemoteParticipantVideo', () => ({
+  RemoteParticipantVideo: ({
+    id,
+    name,
+    isCurrentlyVisible,
+    shouldConsume,
+  }: {
+    id: string;
+    name: string;
+    isCurrentlyVisible?: boolean;
+    shouldConsume?: boolean;
+  }) => (
+    <div
+      data-testid={`participant-video-${id}`}
       data-visible={isCurrentlyVisible}
-      onClick={() => isCurrentUser && onModeChange?.('pip')}
+      data-should-consume={shouldConsume}
     >
       {name}
     </div>
@@ -167,6 +184,9 @@ describe('ParticipantGrid', () => {
     expect(p1).toHaveAttribute('data-visible', 'true');
     expect(p2).toHaveAttribute('data-visible', 'true');
     expect(p3).toHaveAttribute('data-visible', 'false');
+    expect(p1).toHaveAttribute('data-should-consume', 'true');
+    expect(p2).toHaveAttribute('data-should-consume', 'true');
+    expect(p3).toHaveAttribute('data-should-consume', 'true');
   });
 
   it('페이지네이션 버튼 활성화/비활성화 상태가 반영된다', () => {

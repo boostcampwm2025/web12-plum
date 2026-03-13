@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { ParticipantVideo, VideoDisplayMode } from './ParticipantVideo';
+import type { VideoDisplayMode } from '../types';
 import { Icon } from '@/shared/components/icon/Icon';
 import { Button } from '@/shared/components/Button';
 import { useItemsPerPage } from '../hooks/useItemsPerPage';
@@ -9,6 +9,8 @@ import { useStreamStore } from '@/store/useLocalStreamStore';
 import { MyInfo } from '../stores/useRoomStore';
 import { useBackgroundEffectStore } from '../stores/useBackgroundEffectStore';
 import { useRoomStore } from '../stores/useRoomStore';
+import { MyParticipantVideo } from './MyParticipantVideo';
+import { RemoteParticipantVideo } from './RemoteParticipantVideo';
 
 interface ParticipantGridProps {
   videoMode: VideoDisplayMode;
@@ -51,11 +53,10 @@ export function ParticipantGrid({ videoMode, currentUser, onModeChange }: Partic
         ref={containerRef}
         className="ml-4 flex h-full flex-col gap-3"
       >
-        <ParticipantVideo
+        <MyParticipantVideo
           id={currentUser.id}
           name={currentUser.name}
           mode="side"
-          isCurrentUser={true}
           onModeChange={onModeChange}
           stream={processedStream ?? localStream}
           isCameraOn={isCameraOn}
@@ -87,14 +88,13 @@ export function ParticipantGrid({ videoMode, currentUser, onModeChange }: Partic
             const videoProducerId = participant.producers.get('video');
 
             return (
-              <ParticipantVideo
+              <RemoteParticipantVideo
                 key={participant.id}
                 id={participant.id}
                 name={participant.name}
-                mode="side"
                 videoProducerId={videoProducerId}
                 participantRole={participant.role}
-                isActive={true}
+                shouldConsume={true}
                 isCurrentlyVisible={isCurrentlyVisible}
                 isSpeaking={activeSpeakerIds.has(participant.id)}
               />

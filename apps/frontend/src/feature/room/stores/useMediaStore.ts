@@ -58,6 +58,20 @@ const initialState: Omit<MediaState, 'actions'> = {
   remoteStreams: new Map(),
 };
 
+/**
+ * participantId 기준으로 remote video stream을 찾는 공용 selector
+ */
+export const selectRemoteVideoStreamByParticipant =
+  (participantId: string) =>
+  (state: Pick<MediaState, 'remoteStreams'>): MediaStream | null => {
+    for (const stream of state.remoteStreams.values()) {
+      if (stream.participantId === participantId && stream.type === 'video') {
+        return stream.stream;
+      }
+    }
+    return null;
+  };
+
 export const useMediaStore = create<MediaState>()(
   persist(
     (set, get) => ({
