@@ -12,7 +12,7 @@ import { logger } from '@/shared/lib/logger';
 import type { PollFormValues } from '@/shared/constants/poll';
 import type { Poll, Voter } from '@plum/shared-interfaces';
 import { useToastStore } from '@/store/useToastStore';
-import { SocketClient } from '@/shared/socket/socket';
+import { PollService } from '../service/poll';
 
 export function PollManagementTabs() {
   const [activeTab, setActiveTab] = useState<TabValue>('scheduled');
@@ -47,7 +47,7 @@ export function PollManagementTabs() {
   // 투표 목록 조회
   const fetchPolls = useCallback(async () => {
     try {
-      const response = await SocketClient.emitWithAck('get_poll');
+      const response = await PollService.getPoll();
       pollActions.hydrateFromPolls(response.polls);
     } catch (error) {
       logger.socket.error('[PollManagementTabs] 투표 목록 조회 실패', error);
@@ -73,7 +73,7 @@ export function PollManagementTabs() {
   const handleCreatePoll = useCallback(
     async (data: PollFormValues) => {
       try {
-        await SocketClient.emitWithAck('create_poll', data);
+        await PollService.createPoll(data);
         fetchPolls();
       } catch (error) {
         logger.socket.error('[PollManagementTabs] 투표 생성 실패', error);
@@ -88,7 +88,7 @@ export function PollManagementTabs() {
   const handleStartPoll = useCallback(
     async (pollId: string) => {
       try {
-        await SocketClient.emitWithAck('emit_poll', { pollId });
+        await PollService.emitPoll({ pollId });
         setActiveTab('active');
         fetchPolls();
       } catch (error) {
@@ -103,7 +103,7 @@ export function PollManagementTabs() {
   const handleBreakPoll = useCallback(async () => {
     if (!activePoll) return;
     try {
-      const response = await SocketClient.emitWithAck('break_poll', { pollId: activePoll.id });
+      const response = await PollService.breakPoll({ pollId: activePoll.id });
       pollActions.setCompletedFromEndDetail({ pollId: activePoll.id, options: response.options });
       setActiveTab('completed');
       fetchPolls();

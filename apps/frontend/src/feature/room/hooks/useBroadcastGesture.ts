@@ -4,7 +4,7 @@ import { useParams } from 'react-router';
 import { useRoomStore } from '../stores/useRoomStore';
 import { logger } from '@/shared/lib/logger';
 import type { GestureHandler } from './useGestureHandlers';
-import { SocketClient } from '@/shared/socket/socket';
+import { InteractionService } from '../service/interaction';
 
 export function useBroadcastGestureHandler(): GestureHandler {
   const { roomId } = useParams();
@@ -25,7 +25,7 @@ export function useBroadcastGestureHandler(): GestureHandler {
       }
 
       try {
-        await SocketClient.emitWithAck('action_gesture', { gesture });
+        await InteractionService.actionGesture(gesture);
       } catch (error) {
         logger.custom.error('[useBroadcastGesture] 제스처 전송 실패', error);
       }

@@ -6,7 +6,7 @@ import type {
   ServerToClientEvents,
 } from '@plum/shared-interfaces';
 
-import { SocketClient } from '@/shared/socket/socket';
+import { SocketClient } from '@/shared/socket/client';
 
 /**
  * 발표자 투표 서비스 이벤트 핸들러 인터페이스
@@ -66,28 +66,24 @@ export class PollService {
   }
 
   /** 발표자(Presenter) 전용 실시간 이벤트 구독 */
-  static async setupPresenterEventHandlers(handlers: PresenterEventHandlers) {
+  static setupPresenterEventHandlers(handlers: PresenterEventHandlers) {
     this.removeEventHandlersByGroup('presenter');
 
-    const results = await Promise.all([
+    this.unsubscribers.set('presenter', [
       SocketClient.on('update_poll_detail', handlers.onUpdatePollDetail),
       SocketClient.on('poll_end_detail', handlers.onPollEndDetail),
     ]);
-
-    this.unsubscribers.set('presenter', results);
   }
 
   /** 청중(Audience) 전용 실시간 이벤트 구독 */
-  static async setupAudienceEventHandlers(handlers: AudienceEventHandlers) {
+  static setupAudienceEventHandlers(handlers: AudienceEventHandlers) {
     this.removeEventHandlersByGroup('audience');
 
-    const results = await Promise.all([
+    this.unsubscribers.set('audience', [
       SocketClient.on('start_poll', handlers.onStartPoll),
       SocketClient.on('update_poll', handlers.onUpdatePoll),
       SocketClient.on('poll_end', handlers.onPollEnd),
     ]);
-
-    this.unsubscribers.set('audience', results);
   }
 
   /** 특정 그룹의 이벤트 핸들러만 해제 */

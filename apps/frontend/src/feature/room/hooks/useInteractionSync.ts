@@ -1,10 +1,12 @@
 import { useCallback } from 'react';
-import { SocketClient } from '@/shared/socket/socket';
 import { usePollStore } from '../stores/usePollStore';
 import { useQnaStore } from '../stores/useQnaStore';
 import { useRankStore } from '../stores/useRankStore';
 import { useRoomUIStore } from '../stores/useRoomUIStore';
 import { logger } from '@/shared/lib/logger';
+import { InteractionService } from '../service/interaction';
+import { PollService } from '../service/poll';
+import { QnaService } from '../service/qna';
 
 /**
  * 방 입장 시 상호작용 상태(투표, Q&A, 랭킹)를 서버와 동기화하는 훅
@@ -33,7 +35,7 @@ export function useInteractionSync() {
    */
   const syncActivePoll = useCallback(async () => {
     try {
-      const response = await SocketClient.emitWithAck('get_active_poll');
+      const response = await PollService.getActivePoll();
       if (!response.poll) return;
 
       pollActions.setActivePoll(response.poll);
@@ -58,7 +60,7 @@ export function useInteractionSync() {
    */
   const syncActiveQna = useCallback(async () => {
     try {
-      const response = await SocketClient.emitWithAck('get_active_qna');
+      const response = await QnaService.getActiveQna();
       if (!response.qna) return;
 
       qnaActions.setActiveQna(response.qna);
@@ -83,7 +85,7 @@ export function useInteractionSync() {
   const syncRankInfo = useCallback(
     async (role: string) => {
       try {
-        const response = await SocketClient.emitWithAck('get_activity_score_rank');
+        const response = await InteractionService.getActivityScoreRank();
         logger.socket.info('[useInteractionSync] 랭킹 정보 수신', { role, response });
 
         if (role === 'presenter') {

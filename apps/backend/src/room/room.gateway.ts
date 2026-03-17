@@ -763,7 +763,7 @@ export class RoomGateway implements OnGatewayConnection, OnGatewayDisconnect {
     await this.roomManagerService.updatePartial(roomId, { status: 'ended' });
 
     // 2. 모든 참가자에게 종료 알림
-    this.server.to(roomId).emit('room_end');
+    this.server.to(roomId).emit('room_end', {});
 
     // 3. 녹음 중단 (이 시점에서 STT 요약이 트리거됨)
     await this.recordService.stopAllRecording(roomId);

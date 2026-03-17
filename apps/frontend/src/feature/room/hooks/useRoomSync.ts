@@ -1,10 +1,11 @@
 import { useSafeRoomId } from '@/shared/hooks/useSafeRoomId';
-import { SocketClient } from '@/shared/socket/socket';
+import { SocketClient } from '@/shared/socket/client';
 import { useChatStore } from '../stores/useChatStore';
 import { useRoomJoin } from './useRoomJoin';
 import { useEffect, useCallback } from 'react';
 import { useRoomStore } from '../stores/useRoomStore';
 import { logger } from '@/shared/lib/logger';
+import { ChatService } from '../service/chat';
 
 /**
  * 소켓 재연결 시 방 상태를 동기화하는 훅
@@ -49,7 +50,7 @@ export function useRoomSync() {
       // 놓친 채팅 메시지 동기화
       const lastMessageId = chatActions.getLastMessageId();
       if (lastMessageId) {
-        const { messages } = await SocketClient.emitWithAck('sync_chat', { lastMessageId });
+        const { messages } = await ChatService.syncChat({ lastMessageId });
         messages?.forEach(chatActions.addChat);
       }
       logger.custom.debug('[useRoomSync] 재연결 및 데이터 동기화 완료');
@@ -60,18 +61,10 @@ export function useRoomSync() {
 
   /**
    * reconnect 이벤트 구독
-   *
-   * socket.io Manager의 reconnect 이벤트를 직접 구독하여
-   * 재연결 시점을 정확히 감지
+   * - SocketClient의 onReconnect 메서드를 사용하여 재연결 시 performSync가 호출되도록 설정
+   * - 컴포넌트 언마운트 시 구독 해제
    */
   useEffect(() => {
-    const socket = SocketClient.getSocket();
-    if (!socket) return;
-
-    socket.io.on('reconnect', performSync);
-
-    return () => {
-      socket.io.off('reconnect', performSync);
-    };
+    return SocketClient.onReconnect(performSync);
   }, [performSync]);
 }
