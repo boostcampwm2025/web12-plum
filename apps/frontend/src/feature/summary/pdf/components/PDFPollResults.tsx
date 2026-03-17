@@ -1,8 +1,8 @@
-import { View, Text, StyleSheet } from '@react-pdf/renderer';
 import type { Poll } from '@plum/shared-interfaces';
+import { StyleSheet, Text, View } from '@react-pdf/renderer';
 
-import { colors, styles } from '../styles';
 import { calculatePercentage } from '../../utils';
+import { colors, styles } from '../styles';
 
 const pollStyles = StyleSheet.create({
   pollCard: {

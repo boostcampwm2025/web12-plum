@@ -1,10 +1,10 @@
-import { create } from 'zustand';
 import type {
+  PresenterScoreInfoPayload,
   RankItem,
   RankUpdatePayload,
-  PresenterScoreInfoPayload,
   ScoreUpdatePayload,
 } from '@plum/shared-interfaces';
+import { create } from 'zustand';
 
 interface RankState {
   top: RankItem[];

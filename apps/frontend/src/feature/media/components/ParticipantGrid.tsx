@@ -1,15 +1,18 @@
 import { useRef } from 'react';
-import { Icon } from '@/shared/components/icon/Icon';
+
+import { MyInfo, useRoomStore } from '@/feature/room/stores/useRoomStore';
+import { VideoDisplayMode } from '@/feature/room/types';
+
 import { Button } from '@/shared/components/Button';
+import { Icon } from '@/shared/components/icon/Icon';
+import { useStreamStore } from '@/shared/stores/useLocalStreamStore';
+
 import { useItemsPerPage } from '../hooks/useItemsPerPage';
 import { useParticipantPagination } from '../hooks/useParticipantPagination';
-import { useStreamStore } from '@/shared/stores/useLocalStreamStore';
 import { useBackgroundEffectStore } from '../stores/useBackgroundEffectStore';
+import { useMediaStore } from '../stores/useMediaStore';
 import { MyParticipantVideo } from './MyParticipantVideo';
 import { RemoteParticipantVideo } from './RemoteParticipantVideo';
-import { VideoDisplayMode } from '@/feature/room/types';
-import { MyInfo, useRoomStore } from '@/feature/room/stores/useRoomStore';
-import { useMediaStore } from '../stores/useMediaStore';
 
 interface ParticipantGridProps {
   videoMode: VideoDisplayMode;

@@ -1,4 +1,5 @@
 import popMp3 from '@/assets/sounds/pop.mp3';
+
 import { useSoundStore } from '@/shared/stores/useSoundStore';
 
 const SOUND_SOURCES = {

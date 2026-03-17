@@ -1,14 +1,16 @@
 import { forwardRef, memo, useEffect, useRef } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
+
 import { Icon } from '@/shared/components/icon/Icon';
 import type { IconName } from '@/shared/components/icon/iconMap';
 import { cn } from '@/shared/lib/utils';
 import {
-  TOAST_TTL_MS,
   type Toast,
+  TOAST_TTL_MS,
   type ToastType,
   useToastStore,
 } from '@/shared/stores/useToastStore';
+
 import { GESTURE_BG_CLASS, GESTURE_ICON_MAP } from '../constants/gesture';
 
 const TOAST_ICON_MAP: Record<ToastType, IconName> = {

@@ -1,8 +1,9 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import '@testing-library/jest-dom';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { TimeLeft } from './TimeLeft';
+
+import '@testing-library/jest-dom';
 
 vi.mock('@/shared/components/icon/Icon', () => ({
   Icon: ({ name, size }: { name: string; size?: number }) => (

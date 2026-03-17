@@ -1,5 +1,3 @@
-import { create } from 'zustand';
-import { createJSONStorage, persist } from 'zustand/middleware';
 import type {
   MediaType,
   ParticipantPayload,
@@ -7,6 +5,8 @@ import type {
   UserJoinedPayload,
 } from '@plum/shared-interfaces';
 import { RtpCapabilities } from 'mediasoup-client/types';
+import { create } from 'zustand';
+import { createJSONStorage, persist } from 'zustand/middleware';
 
 export interface MyInfo {
   id: string;

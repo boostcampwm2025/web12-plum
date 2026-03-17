@@ -1,12 +1,14 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
-import '@testing-library/jest-dom';
-
-import { RemoteParticipantVideo } from './RemoteParticipantVideo';
-import { useMediaStore, type RemoteStream } from '../stores/useMediaStore';
-import { useRoomStore } from '@/feature/room/stores/useRoomStore';
-import { useRemoteMedia } from '../hooks/useRemoteMedia';
 import type { MediaType, ParticipantRole } from '@plum/shared-interfaces';
+import { render, screen, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { useRoomStore } from '@/feature/room/stores/useRoomStore';
+
+import { useRemoteMedia } from '../hooks/useRemoteMedia';
+import { type RemoteStream, useMediaStore } from '../stores/useMediaStore';
+import { RemoteParticipantVideo } from './RemoteParticipantVideo';
+
+import '@testing-library/jest-dom';
 
 interface MockMediaStoreState {
   remoteStreams: Map<string, RemoteStream>;

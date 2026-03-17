@@ -1,5 +1,7 @@
 import { memo, useEffect, useMemo, useRef } from 'react';
+
 import { logger } from '@/shared/lib/logger';
+
 import { useMediaStore } from '../stores/useMediaStore';
 
 /**

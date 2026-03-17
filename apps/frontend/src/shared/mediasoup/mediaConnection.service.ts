@@ -1,10 +1,10 @@
-import type { RtpCapabilities, Transport } from 'mediasoup-client/types';
 import type { MediaType } from '@plum/shared-interfaces';
+import type { RtpCapabilities, Transport } from 'mediasoup-client/types';
 
 import { logger } from '@/shared/lib/logger';
 
-import { MediasoupService, type MediaEventHandlers } from './mediasoup.service';
 import { MediasoupClient } from './client';
+import { type MediaEventHandlers, MediasoupService } from './mediasoup.service';
 
 type TransportDirection = 'send' | 'recv';
 

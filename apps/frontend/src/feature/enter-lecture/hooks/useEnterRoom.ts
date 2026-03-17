@@ -1,15 +1,16 @@
 import { useState } from 'react';
-import { RtpCapabilities } from 'mediasoup-client/types';
 import type {
   EnterLectureRequestBody,
   EnterRoomResponse,
   ParticipantRole,
 } from '@plum/shared-interfaces';
+import { RtpCapabilities } from 'mediasoup-client/types';
 
+import { useMediaStore } from '@/feature/media/stores/useMediaStore';
 import { Participant, useRoomStore } from '@/feature/room/stores/useRoomStore';
+
 import { roomApi } from '@/shared/api';
 import { logger } from '@/shared/lib/logger';
-import { useMediaStore } from '@/feature/media/stores/useMediaStore';
 
 /**
  * 응답 데이터를 기반으로 참가자 맵과 내 정보를 생성

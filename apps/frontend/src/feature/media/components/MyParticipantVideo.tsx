@@ -1,9 +1,10 @@
 import { useRef } from 'react';
 
+import { VideoDisplayMode } from '@/feature/room/types';
+
 import { useLocalParticipantMediaState } from '../hooks/useLocalParticipantMediaState';
 import { useVideoElementBinding } from '../hooks/useVideoElementBinding';
 import { ParticipantVideoView } from './ParticipantVideoView';
-import { VideoDisplayMode } from '@/feature/room/types';
 
 interface MyParticipantVideoProps {
   id: string;

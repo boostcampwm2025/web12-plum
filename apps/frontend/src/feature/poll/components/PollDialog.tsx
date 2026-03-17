@@ -1,10 +1,12 @@
-import { cn } from '@/shared/lib/utils';
-import { TimeLeft } from '@/shared/components/TimeLeft';
-import { usePollStore } from '../stores/usePollStore';
 import { useMemo } from 'react';
+
+import { TimeLeft } from '@/shared/components/TimeLeft';
 import { logger } from '@/shared/lib/logger';
-import { PollService } from '../services/poll';
+import { cn } from '@/shared/lib/utils';
 import { useToastStore } from '@/shared/stores/useToastStore';
+
+import { PollService } from '../services/poll';
+import { usePollStore } from '../stores/usePollStore';
 
 const getStartedAt = (startedAt?: string) => {
   const parsed = startedAt ? Date.parse(startedAt) : NaN;

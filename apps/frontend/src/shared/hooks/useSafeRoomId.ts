@@ -1,7 +1,9 @@
-import { ROUTES } from '@/app/routes/routes';
-import { useToastStore } from '@/shared/stores/useToastStore';
 import { useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router';
+
+import { ROUTES } from '@/app/routes/routes';
+
+import { useToastStore } from '@/shared/stores/useToastStore';
 
 interface UseSafeRoomIdOptions {
   fallbackPath?: string;

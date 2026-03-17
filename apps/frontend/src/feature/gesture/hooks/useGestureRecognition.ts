@@ -1,6 +1,8 @@
 import { useEffect, useRef } from 'react';
 import type { GestureType } from '@plum/shared-interfaces';
+
 import { logger } from '@/shared/lib/logger';
+
 import { useGestureStore } from '../stores/useGestureStore';
 
 type GestureRecognitionOptions = {

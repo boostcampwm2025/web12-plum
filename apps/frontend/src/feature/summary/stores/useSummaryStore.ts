@@ -1,5 +1,5 @@
-import { create } from 'zustand';
 import type { RoomSummary } from '@plum/shared-interfaces';
+import { create } from 'zustand';
 
 interface SummaryStoreState {
   summaryData: RoomSummary | null;

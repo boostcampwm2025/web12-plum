@@ -1,8 +1,10 @@
 import { useCallback } from 'react';
+
 import { logger } from '@/shared/lib/logger';
-import { useMediaStore } from '../stores/useMediaStore';
-import { useStreamStore } from '@/shared/stores/useLocalStreamStore';
 import { MediaConnectionService } from '@/shared/mediasoup/mediaConnection.service';
+import { useStreamStore } from '@/shared/stores/useLocalStreamStore';
+
+import { useMediaStore } from '../stores/useMediaStore';
 
 /**
  * 미디어 자원 해제 및 클린업을 담당하는 훅

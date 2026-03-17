@@ -1,4 +1,3 @@
-import { create } from 'zustand';
 import type {
   EndPollDetailPayload,
   Poll,
@@ -7,6 +6,7 @@ import type {
   UpdatePollStatusFullPayload,
   UpdatePollStatusSubPayload,
 } from '@plum/shared-interfaces';
+import { create } from 'zustand';
 
 export interface PollState {
   polls: Poll[];

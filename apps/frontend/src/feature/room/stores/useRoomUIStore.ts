@@ -1,5 +1,5 @@
-import { create } from 'zustand';
 import type { EndPollPayload } from '@plum/shared-interfaces';
+import { create } from 'zustand';
 
 export type Dialog = 'vote' | 'qna' | 'ranking';
 export type SidePanel = 'chat' | 'info' | 'menu';

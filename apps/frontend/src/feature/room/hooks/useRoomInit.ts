@@ -1,20 +1,21 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { useChatStore } from '@/feature/chat/stores/useChatStore';
+import { useMediaCleanup } from '@/feature/media/hooks/useMediaCleanup';
+import { useRemoteMedia } from '@/feature/media/hooks/useRemoteMedia';
 import { usePollStore } from '@/feature/poll/stores/usePollStore';
-import { SocketClient } from '@/shared/socket/client';
-import { MediaConnectionService } from '@/shared/mediasoup/mediaConnection.service';
-import { useSafeRoomId } from '@/shared/hooks/useSafeRoomId';
+
 import { roomApi } from '@/shared/api';
+import { useSafeRoomId } from '@/shared/hooks/useSafeRoomId';
 import { logger } from '@/shared/lib/logger';
+import { MediaConnectionService } from '@/shared/mediasoup/mediaConnection.service';
+import { SocketClient } from '@/shared/socket/client';
 
 import { useRoomStore } from '../stores/useRoomStore';
-import { useRoomEventHandlers } from './useRoomEventHandlers';
-import { useInteractionSync } from './useInteractionSync';
-import { useRoomJoin } from './useRoomJoin';
 import { useRoomUIStore } from '../stores/useRoomUIStore';
-import { useChatStore } from '@/feature/chat/stores/useChatStore';
-import { useRemoteMedia } from '@/feature/media/hooks/useRemoteMedia';
-import { useMediaCleanup } from '@/feature/media/hooks/useMediaCleanup';
+import { useInteractionSync } from './useInteractionSync';
+import { useRoomEventHandlers } from './useRoomEventHandlers';
+import { useRoomJoin } from './useRoomJoin';
 
 /**
  * 방 입장 시 전체 초기화 파이프라인을 실행하는 훅

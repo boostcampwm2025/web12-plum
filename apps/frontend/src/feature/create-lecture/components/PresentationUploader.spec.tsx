@@ -1,8 +1,11 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { PresentationUploader } from './PresentationUploader';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { useToastStore } from '@/shared/stores/useToastStore';
+
 import { PresentationError } from '../../../shared/hooks/usePresentation'; // 에러 클래스 임포트
+import { PresentationUploader } from './PresentationUploader';
+
 import '@testing-library/jest-dom';
 
 vi.mock('@/shared/stores/useToastStore', () => ({

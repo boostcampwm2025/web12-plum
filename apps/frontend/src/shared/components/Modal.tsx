@@ -1,10 +1,11 @@
-import { MouseEvent, useEffect, type ReactNode } from 'react';
+import { MouseEvent, type ReactNode, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 
+import { useEscapeKey } from '@/shared/hooks/useEscapeKey';
 import { cn } from '@/shared/lib/utils';
+
 import { Button } from './Button';
 import { Icon } from './icon/Icon';
-import { useEscapeKey } from '@/shared/hooks/useEscapeKey';
 
 /**
  * 모달 열림 시 body 스크롤 방지 기능을 제공하는 커스텀 훅

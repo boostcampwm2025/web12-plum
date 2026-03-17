@@ -1,11 +1,14 @@
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import type { GestureType } from '@plum/shared-interfaces';
+import { AnimatePresence, motion } from 'motion/react';
+
 import { RoomButton } from '@/feature/room/components/RoomButton';
+
 import { Button } from '@/shared/components/Button';
 import { Icon } from '@/shared/components/icon/Icon';
-import type { GestureType } from '@plum/shared-interfaces';
-import { useBroadcastGestureHandler } from '../hooks/useBroadcastGesture';
 import { GESTURE_ICON_MAP } from '@/shared/constants/gesture';
+
+import { useBroadcastGestureHandler } from '../hooks/useBroadcastGesture';
 
 const GESTURE_OPTIONS: { type: GestureType; label: string }[] = [
   { type: 'thumbs_up', label: '좋아요' },

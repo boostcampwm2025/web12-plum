@@ -1,6 +1,6 @@
-import { ApiError, type ApiClientConfig, type ApiResponse } from './types';
 import { logger } from '../lib/logger';
 import { defaultErrorHandler } from './errorHandler';
+import { type ApiClientConfig, ApiError, type ApiResponse } from './types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 

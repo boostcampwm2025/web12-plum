@@ -1,9 +1,11 @@
 import { useCallback } from 'react';
-import type { MediaType, NewProducerPayload, MediaKind } from '@plum/shared-interfaces';
+import type { MediaKind, MediaType, NewProducerPayload } from '@plum/shared-interfaces';
+
+import { useRoomStore } from '@/feature/room/stores/useRoomStore';
 
 import { logger } from '@/shared/lib/logger';
-import { useRoomStore } from '@/feature/room/stores/useRoomStore';
 import { MediaConnectionService } from '@/shared/mediasoup/mediaConnection.service';
+
 import { useMediaStore } from '../stores/useMediaStore';
 
 /**

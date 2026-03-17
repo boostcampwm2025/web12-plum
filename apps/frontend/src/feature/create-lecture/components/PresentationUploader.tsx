@@ -1,11 +1,11 @@
 import { ChangeEvent, useRef } from 'react';
 import { ALLOWED_FILE_EXTENSIONS_STRING } from '@plum/shared-interfaces';
 
-import { useDragAndDrop } from '@/shared/hooks/useDragAndDrop';
 import { Icon } from '@/shared/components/icon/Icon';
+import { useDragAndDrop } from '@/shared/hooks/useDragAndDrop';
+import { PresentationError } from '@/shared/hooks/usePresentation';
 import { cn } from '@/shared/lib/utils';
 import { useToastStore } from '@/shared/stores/useToastStore';
-import { PresentationError } from '@/shared/hooks/usePresentation';
 
 interface PresentationUploaderProps {
   addFile: (file: File) => void;

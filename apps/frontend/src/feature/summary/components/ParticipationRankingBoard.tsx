@@ -1,4 +1,5 @@
 import { Icon } from '@/shared/components/icon/Icon';
+
 import { calculatePercentage } from '../utils';
 
 /**

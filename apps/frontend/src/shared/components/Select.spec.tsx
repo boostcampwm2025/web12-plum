@@ -1,8 +1,10 @@
-import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import '@testing-library/jest-dom';
+import { describe, expect, it, vi } from 'vitest';
+
 import { Select, type SelectOption } from './Select';
+
+import '@testing-library/jest-dom';
 
 const mockOptions: SelectOption<string>[] = [
   { label: '옵션 1', value: 'option1' },

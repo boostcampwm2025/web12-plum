@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { Icon } from '@/shared/components/icon/Icon';
-import { cn } from '@/shared/lib/utils';
-import { logger } from '@/shared/lib/logger';
+
+import { SidePanelContent, SidePanelHeader } from '@/feature/room/components/SidePanel';
+
 import { Button } from '@/shared/components/Button';
+import { Icon } from '@/shared/components/icon/Icon';
+import { logger } from '@/shared/lib/logger';
+import { cn } from '@/shared/lib/utils';
 import { SocketError } from '@/shared/socket/error';
 
-import { useChatStore } from '../stores/useChatStore';
 import { ChatService } from '../services/chat';
-import { SidePanelContent, SidePanelHeader } from '@/feature/room/components/SidePanel';
+import { useChatStore } from '../stores/useChatStore';
 
 const RATE_LIMIT_COOLDOWN = 3000;
 const MAX_CHAT_LENGTH = 60;

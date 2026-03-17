@@ -1,10 +1,12 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import '@testing-library/jest-dom';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { MyParticipantVideo } from './MyParticipantVideo';
 import { useGestureStore } from '@/feature/gesture/stores/useGestureStore';
+
 import type { VideoDisplayMode } from '../types';
+import { MyParticipantVideo } from './MyParticipantVideo';
+
+import '@testing-library/jest-dom';
 
 interface MockGestureState {
   gestureProgress: {

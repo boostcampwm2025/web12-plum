@@ -1,11 +1,12 @@
 import { useRef } from 'react';
 import type { ParticipantRole } from '@plum/shared-interfaces';
 
+import { VideoDisplayMode } from '@/feature/room/types';
+
+import { useParticipantVideoSubscription } from '../hooks/useParticipantVideoSubscription';
 import { useRemoteParticipantMediaState } from '../hooks/useRemoteParticipantMediaState';
 import { useVideoElementBinding } from '../hooks/useVideoElementBinding';
 import { ParticipantVideoView } from './ParticipantVideoView';
-import { VideoDisplayMode } from '@/feature/room/types';
-import { useParticipantVideoSubscription } from '../hooks/useParticipantVideoSubscription';
 
 interface RemoteParticipantVideoProps {
   id: string;

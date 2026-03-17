@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet } from '@react-pdf/renderer';
+import { StyleSheet, Text, View } from '@react-pdf/renderer';
 
 import { colors } from '../styles';
 

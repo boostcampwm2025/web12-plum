@@ -1,5 +1,5 @@
-import { pdf } from '@react-pdf/renderer';
 import type { RoomSummary } from '@plum/shared-interfaces';
+import { pdf } from '@react-pdf/renderer';
 
 import { SummaryReportPDF } from './SummaryReportPDF';
 

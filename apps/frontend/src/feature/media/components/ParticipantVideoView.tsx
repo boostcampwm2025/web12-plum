@@ -1,12 +1,13 @@
 ﻿import type { RefObject } from 'react';
 import { motion } from 'motion/react';
 
-import { cn } from '@/shared/lib/utils';
-import { Icon } from '@/shared/components/icon/Icon';
-import { Button } from '@/shared/components/Button';
-import { GESTURE_ICON_MAP } from '@/shared/constants/gesture';
-import { VideoDisplayMode } from '@/feature/room/types';
 import { useGestureStore } from '@/feature/gesture/stores/useGestureStore';
+import { VideoDisplayMode } from '@/feature/room/types';
+
+import { Button } from '@/shared/components/Button';
+import { Icon } from '@/shared/components/icon/Icon';
+import { GESTURE_ICON_MAP } from '@/shared/constants/gesture';
+import { cn } from '@/shared/lib/utils';
 
 const VIDEO_HEIGHTS = {
   MINIMIZED: 36,

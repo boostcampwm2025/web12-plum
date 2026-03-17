@@ -1,6 +1,6 @@
+import type { MediaType } from '@plum/shared-interfaces';
 import { Device } from 'mediasoup-client';
 import type { Consumer, Producer, RtpCapabilities, Transport } from 'mediasoup-client/types';
-import type { MediaType } from '@plum/shared-interfaces';
 
 import { logger } from '@/shared/lib/logger';
 

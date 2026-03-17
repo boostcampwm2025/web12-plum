@@ -1,13 +1,13 @@
-import { Document, Page, View } from '@react-pdf/renderer';
 import type { RoomSummary } from '@plum/shared-interfaces';
+import { Document, Page, View } from '@react-pdf/renderer';
 
-import { styles } from './styles';
-import { registerFonts } from './registerFonts';
 import { PDFHeader } from './components/PDFHeader';
-import { PDFStatistics } from './components/PDFStatistics';
+import { PDFLectureSummary } from './components/PDFLectureSummary';
 import { PDFPollResults } from './components/PDFPollResults';
 import { PDFQnAResults } from './components/PDFQnAResults';
-import { PDFLectureSummary } from './components/PDFLectureSummary';
+import { PDFStatistics } from './components/PDFStatistics';
+import { registerFonts } from './registerFonts';
+import { styles } from './styles';
 
 registerFonts();
 

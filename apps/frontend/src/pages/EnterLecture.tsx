@@ -1,14 +1,17 @@
+import { useEffect } from 'react';
+import { useNavigate } from 'react-router';
+
+import { ROUTES } from '@/app/routes/routes';
+
 import { EnterLectureForm } from '@/feature/enter-lecture/components/EnterLectureForm';
 import { useLectureRoomInfo } from '@/feature/enter-lecture/hooks/useLectureRoomInfo';
+
 import { Footer } from '@/shared/components/Footer';
 import { Header } from '@/shared/components/Header';
-import { PageSubHeader } from '@/shared/components/PageSubHeader';
 import { Loading } from '@/shared/components/Loading';
+import { PageSubHeader } from '@/shared/components/PageSubHeader';
 import { useSafeRoomId } from '@/shared/hooks/useSafeRoomId';
-import { useNavigate } from 'react-router';
 import { useToastStore } from '@/shared/stores/useToastStore';
-import { useEffect } from 'react';
-import { ROUTES } from '@/app/routes/routes';
 
 /**
  * 강의실 입장 페이지 컴포넌트

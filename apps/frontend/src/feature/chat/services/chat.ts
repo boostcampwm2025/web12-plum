@@ -1,9 +1,10 @@
-import { SocketClient } from '@/shared/socket/client';
 import type {
   SendChatRequest,
-  SyncChatRequest,
   ServerToClientEvents,
+  SyncChatRequest,
 } from '@plum/shared-interfaces';
+
+import { SocketClient } from '@/shared/socket/client';
 
 /**
  * 채팅 서비스 이벤트 핸들러 인터페이스

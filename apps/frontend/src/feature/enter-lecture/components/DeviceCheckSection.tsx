@@ -1,16 +1,17 @@
 import { useController, useFormContext } from 'react-hook-form';
 import { EnterLectureRequestBody } from '@plum/shared-interfaces';
 
-import { cn } from '@/shared/lib/utils';
-import { FormField } from '@/shared/components/FormField';
-import { Icon } from '@/shared/components/icon/Icon';
 import {
   BackgroundEffectMode,
   useBackgroundEffectStore,
 } from '@/feature/media/stores/useBackgroundEffectStore';
 
-import { ENTER_LECTURE_KEYS } from '../schema';
+import { FormField } from '@/shared/components/FormField';
+import { Icon } from '@/shared/components/icon/Icon';
+import { cn } from '@/shared/lib/utils';
+
 import { useLocalMediaController } from '../hooks/useLocalMediaController';
+import { ENTER_LECTURE_KEYS } from '../schema';
 
 /**
  * 로컬 미디어 스트림 프리뷰 컴포넌트

@@ -1,10 +1,11 @@
 import { useCallback } from 'react';
 
-import { MediaConnectionService } from '@/shared/mediasoup/mediaConnection.service';
 import { logger } from '@/shared/lib/logger';
+import { MediaConnectionService } from '@/shared/mediasoup/mediaConnection.service';
 import { useStreamStore } from '@/shared/stores/useLocalStreamStore';
-import { useBackgroundEffect } from './useBackgroundEffect';
+
 import { useMediaStore } from '../stores/useMediaStore';
+import { useBackgroundEffect } from './useBackgroundEffect';
 
 /**
  * 로컬 미디어(카메라, 마이크, 화면공유)의 송출 및 제어를 담당하는 훅

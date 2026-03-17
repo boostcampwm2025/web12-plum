@@ -1,23 +1,21 @@
 import { useEffect } from 'react';
 import {
-  useFieldArray,
-  useForm,
   Controller,
-  FormProvider,
-  useFormContext,
   FieldArrayWithId,
+  FormProvider,
+  useFieldArray,
   UseFieldArrayRemove,
+  useForm,
+  useFormContext,
 } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 
-import { Modal } from '@/shared/components/Modal';
-import { FormField } from '@/shared/components/FormField';
 import { Button } from '@/shared/components/Button';
-import { Input } from '@/shared/components/Input';
+import { FormField } from '@/shared/components/FormField';
 import { Icon } from '@/shared/components/icon/Icon';
+import { Input } from '@/shared/components/Input';
+import { Modal } from '@/shared/components/Modal';
 import { Select } from '@/shared/components/Select';
-import { TIME_LIMIT_OPTIONS } from '@/shared/constants/timeLimit';
-import { logger } from '@/shared/lib/logger';
 import {
   MAX_POLL_OPTIONS,
   MIN_POLL_OPTIONS,
@@ -26,6 +24,8 @@ import {
   pollFormSchema,
   PollFormValues,
 } from '@/shared/constants/poll';
+import { TIME_LIMIT_OPTIONS } from '@/shared/constants/timeLimit';
+import { logger } from '@/shared/lib/logger';
 
 interface PollOptionItemProps {
   index: number;

@@ -1,7 +1,10 @@
 import type { RankItem } from '@plum/shared-interfaces';
-import { Icon } from '@/shared/components/icon/Icon';
-import { useRankStore } from '../stores/useRankStore';
+
 import { useRoomStore } from '@/feature/room/stores/useRoomStore';
+
+import { Icon } from '@/shared/components/icon/Icon';
+
+import { useRankStore } from '../stores/useRankStore';
 
 const RANK_COLORS = ['text-gold', 'text-silver', 'text-bronze'] as const;
 

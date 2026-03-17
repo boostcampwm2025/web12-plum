@@ -1,5 +1,5 @@
-import { useRef, useCallback, useEffect } from 'react';
 import type { MouseEvent as ReactMouseEvent } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 
 const MARGIN = 16;
 const SNAP_DURATION = 300;

@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { logger } from '@/shared/lib/logger';
+
 import camBackground from '@/assets/images/cam-background.png';
+
+import { logger } from '@/shared/lib/logger';
 import { useToastStore } from '@/shared/stores/useToastStore';
+
 import {
-  useBackgroundEffectStore,
   type BackgroundEffectMode,
+  useBackgroundEffectStore,
 } from '../stores/useBackgroundEffectStore';
 
 export const INFERENCE_FPS = 30;

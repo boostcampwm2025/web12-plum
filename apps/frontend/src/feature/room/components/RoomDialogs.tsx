@@ -1,11 +1,13 @@
 import { AnimatePresence, motion } from 'motion/react';
+
 import { PollDialog } from '@/feature/poll/components/PollDialog';
 import { QnaDialog } from '@/feature/qna/components/QnaDialog';
-import { Icon } from '@/shared/components/icon/Icon';
+import { RankingDialog } from '@/feature/rank/components/RankingDialog';
+
 import { Button } from '@/shared/components/Button';
+import { Icon } from '@/shared/components/icon/Icon';
 
 import { useRoomUIStore } from '../stores/useRoomUIStore';
-import { RankingDialog } from '@/feature/rank/components/RankingDialog';
 
 type DialogType = 'vote' | 'qna' | 'ranking';
 

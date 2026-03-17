@@ -1,13 +1,14 @@
-import { Routes, Route, Outlet } from 'react-router';
 import { useEffect, useState } from 'react';
-import { Home } from './pages/Home';
-import { EnterLecture } from './pages/EnterLecture';
+import { Outlet, Route, Routes } from 'react-router';
+
+import { ROUTES } from './app/routes/routes';
 import { CreateLecture } from './pages/CreateLecture';
+import { EnterLecture } from './pages/EnterLecture';
+import { Home } from './pages/Home';
 import { NotFound } from './pages/NotFound';
 import Room from './pages/Room';
-import { ROUTES } from './app/routes/routes';
-import { ToastStack } from './shared/components/ToastStack';
 import { Summary } from './pages/Summary';
+import { ToastStack } from './shared/components/ToastStack';
 
 /**
  * TODO: ToastStack를 전역으로 수정하기 전, 임시로 Layout 컴포넌트 생성

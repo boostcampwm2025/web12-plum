@@ -1,8 +1,9 @@
-import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import '@testing-library/jest-dom';
+import { describe, expect, it, vi } from 'vitest';
 
 import { RoomButton } from './RoomButton';
+
+import '@testing-library/jest-dom';
 
 vi.mock('@/shared/components/icon/Icon', () => ({
   Icon: ({ name, className }: { name: string; className?: string }) => (

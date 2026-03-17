@@ -1,8 +1,10 @@
 import { useCallback, useMemo } from 'react';
 import type { GestureType } from '@plum/shared-interfaces';
+
 import { usePollGestureHandler } from '@/feature/poll/hooks/usePollGesture';
+
+import { type GestureCategory, getGestureCategory } from '../lib/gestureCategory';
 import { useBroadcastGestureHandler } from './useBroadcastGesture';
-import { getGestureCategory, type GestureCategory } from '../lib/gestureCategory';
 
 export type GestureHandler = {
   canHandle: (gesture: GestureType) => boolean;

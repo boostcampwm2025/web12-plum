@@ -1,4 +1,3 @@
-import { create } from 'zustand';
 import type {
   Answer,
   EndQnaDetailPayload,
@@ -7,6 +6,7 @@ import type {
   UpdateQnaFullPayload,
   UpdateQnaSubPayload,
 } from '@plum/shared-interfaces';
+import { create } from 'zustand';
 
 export interface QnaState {
   qnas: Qna[];

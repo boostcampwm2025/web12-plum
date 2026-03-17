@@ -1,10 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import '@testing-library/jest-dom';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { QnaDialog } from './QnaDialog';
-import { useQnaStore } from '../stores/useQnaStore';
 import type { QnaState } from '../stores/useQnaStore';
+import { useQnaStore } from '../stores/useQnaStore';
+import { QnaDialog } from './QnaDialog';
+
+import '@testing-library/jest-dom';
 
 vi.mock('@/shared/components/icon/Icon', () => ({
   Icon: ({ name, size }: { name: string; size?: number }) => (

@@ -2,10 +2,11 @@ import { useEffect, useRef } from 'react';
 import { useFormContext, useWatch } from 'react-hook-form';
 import { EnterLectureRequestBody } from '@plum/shared-interfaces';
 
-import { logger } from '@/shared/lib/logger';
-import { useStreamStore } from '@/shared/stores/useLocalStreamStore';
 import { useBackgroundEffect } from '@/feature/media/hooks/useBackgroundEffect';
 import { useBackgroundEffectStore } from '@/feature/media/stores/useBackgroundEffectStore';
+
+import { logger } from '@/shared/lib/logger';
+import { useStreamStore } from '@/shared/stores/useLocalStreamStore';
 
 import { ENTER_LECTURE_KEYS } from '../schema';
 

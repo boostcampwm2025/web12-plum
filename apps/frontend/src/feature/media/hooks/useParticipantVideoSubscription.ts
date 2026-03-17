@@ -1,8 +1,9 @@
 ﻿import { useEffect } from 'react';
 import type { NewProducerPayload, ParticipantRole } from '@plum/shared-interfaces';
 
-import { logger } from '@/shared/lib/logger';
 import { useRemoteMedia } from '@/feature/media/hooks/useRemoteMedia';
+
+import { logger } from '@/shared/lib/logger';
 
 interface UseParticipantVideoSubscriptionParams {
   id: string;

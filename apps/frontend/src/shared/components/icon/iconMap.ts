@@ -1,17 +1,32 @@
+import type { ComponentType, SVGProps } from 'react';
+
 import iconsBreakdownRoom from '@/assets/icons/breakdown-room.svg?react';
-import iconsClap from '@/assets/icons/clap.svg?react';
-import iconsGraph from '@/assets/icons/graph.svg?react';
-import iconsQuestion from '@/assets/icons/question.svg?react';
-import iconsCamDisabled from '@/assets/icons/cam-disabled.svg?react';
 import iconsCam from '@/assets/icons/cam.svg?react';
+import iconsCamDisabled from '@/assets/icons/cam-disabled.svg?react';
 import iconsChat from '@/assets/icons/chat.svg?react';
-import iconsCheckBoxFilled from '@/assets/icons/check-box-filled.svg?react';
-import iconsCheckBox from '@/assets/icons/check-box.svg?react';
 import iconsCheck from '@/assets/icons/check.svg?react';
+import iconsCheckBox from '@/assets/icons/check-box.svg?react';
+import iconsCheckBoxFilled from '@/assets/icons/check-box-filled.svg?react';
 import iconsChevron from '@/assets/icons/chevron.svg?react';
+import iconsClap from '@/assets/icons/clap.svg?react';
 import iconsCopy from '@/assets/icons/copy.svg?react';
 import iconsDownload from '@/assets/icons/download.svg?react';
 import iconsExit from '@/assets/icons/exit.svg?react';
+import iconsCircleCheck from '@/assets/icons/gesture/circle-check.svg?react';
+import iconFour from '@/assets/icons/gesture/four.svg?react';
+import iconsHandRaise from '@/assets/icons/gesture/hand-raise.svg?react';
+import iconsGestureO from '@/assets/icons/gesture/o.svg?react';
+import iconOne from '@/assets/icons/gesture/one.svg?react';
+import iconThree from '@/assets/icons/gesture/three.svg?react';
+import iconsThumbsDown from '@/assets/icons/gesture/thumbs-down.svg?react';
+import iconsThumbsUp from '@/assets/icons/gesture/thumbs-up.svg?react';
+import iconsToastCheck from '@/assets/icons/gesture/toast-check.svg?react';
+import iconsToastExclamation from '@/assets/icons/gesture/toast-exclamation.svg?react';
+import iconsToastGesture from '@/assets/icons/gesture/toast-gesture.svg?react';
+import iconsToastInfo from '@/assets/icons/gesture/toast-info.svg?react';
+import iconTwo from '@/assets/icons/gesture/two.svg?react';
+import iconsGestureX from '@/assets/icons/gesture/x.svg?react';
+import iconsGraph from '@/assets/icons/graph.svg?react';
 import iconsInfo from '@/assets/icons/info.svg?react';
 import iconsInteraction from '@/assets/icons/interaction.svg?react';
 import iconsMaximize from '@/assets/icons/maximize.svg?react';
@@ -25,6 +40,7 @@ import iconsPencil from '@/assets/icons/pencil.svg?react';
 import iconsPip from '@/assets/icons/pip.svg?react';
 import iconsPlus from '@/assets/icons/plus.svg?react';
 import iconsQna from '@/assets/icons/qna.svg?react';
+import iconsQuestion from '@/assets/icons/question.svg?react';
 import iconsRanking from '@/assets/icons/ranking.svg?react';
 import iconsScreenShare from '@/assets/icons/screen-share.svg?react';
 import iconsSend from '@/assets/icons/send.svg?react';
@@ -39,23 +55,6 @@ import iconsUpload from '@/assets/icons/upload.svg?react';
 import iconsUsers from '@/assets/icons/users.svg?react';
 import iconsVote from '@/assets/icons/vote.svg?react';
 import iconsX from '@/assets/icons/x.svg?react';
-import iconsGestureO from '@/assets/icons/gesture/o.svg?react';
-import iconsGestureX from '@/assets/icons/gesture/x.svg?react';
-
-import iconsThumbsDown from '@/assets/icons/gesture/thumbs-down.svg?react';
-import iconsThumbsUp from '@/assets/icons/gesture/thumbs-up.svg?react';
-import iconsHandRaise from '@/assets/icons/gesture/hand-raise.svg?react';
-import iconsCircleCheck from '@/assets/icons/gesture/circle-check.svg?react';
-import iconOne from '@/assets/icons/gesture/one.svg?react';
-import iconTwo from '@/assets/icons/gesture/two.svg?react';
-import iconThree from '@/assets/icons/gesture/three.svg?react';
-import iconFour from '@/assets/icons/gesture/four.svg?react';
-import iconsToastCheck from '@/assets/icons/gesture/toast-check.svg?react';
-import iconsToastExclamation from '@/assets/icons/gesture/toast-exclamation.svg?react';
-import iconsToastGesture from '@/assets/icons/gesture/toast-gesture.svg?react';
-import iconsToastInfo from '@/assets/icons/gesture/toast-info.svg?react';
-
-import type { ComponentType, SVGProps } from 'react';
 
 export const iconMap = {
   'breakdown-room': iconsBreakdownRoom,

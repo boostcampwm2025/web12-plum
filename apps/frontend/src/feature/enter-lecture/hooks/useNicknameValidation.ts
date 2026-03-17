@@ -2,10 +2,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFormContext, useFormState, useWatch } from 'react-hook-form';
 
 import { roomApi } from '@/shared/api';
+import { useSafeRoomId } from '@/shared/hooks/useSafeRoomId';
 import { logger } from '@/shared/lib/logger';
 
 import { ENTER_LECTURE_KEYS, EnterLectureFormValues } from '../schema';
-import { useSafeRoomId } from '@/shared/hooks/useSafeRoomId';
 
 type CheckVariant = 'default' | 'success' | 'error';
 

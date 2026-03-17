@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
+
 import { logger } from '@/shared/lib/logger';
+
 import { useBackgroundEffectStore } from '../stores/useBackgroundEffectStore';
 import {
   INFERENCE_INTERVAL_MS,

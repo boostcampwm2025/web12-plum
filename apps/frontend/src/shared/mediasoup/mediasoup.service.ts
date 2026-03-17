@@ -1,11 +1,10 @@
-import { SocketClient } from '@/shared/socket/client';
 import type {
   CloseConsumerRequest,
   CloseProducerRequest,
   ConnectTransportRequest,
+  ConsumerClosedPayload,
   ConsumeRequest,
   ConsumeResumeRequest,
-  ConsumerClosedPayload,
   CreateTransportRequest,
   MediaStateChangedPayload,
   NewProducerPayload,
@@ -13,6 +12,8 @@ import type {
   ProduceRequest,
   ToggleMediaRequest,
 } from '@plum/shared-interfaces';
+
+import { SocketClient } from '@/shared/socket/client';
 
 /**
  * 미디어 서비스 이벤트 핸들러 인터페이스

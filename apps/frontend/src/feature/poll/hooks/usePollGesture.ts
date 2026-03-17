@@ -1,13 +1,14 @@
 import { useCallback, useMemo } from 'react';
 import type { GestureType } from '@plum/shared-interfaces';
+
+import { GestureHandler } from '@/feature/gesture/hooks/useGestureHandlers';
+import { isNumericGesture, NumericGesture } from '@/feature/gesture/lib/gestureCategory';
+import { PollService } from '@/feature/poll/services/poll';
 import { usePollStore } from '@/feature/poll/stores/usePollStore';
+import { useRoomStore } from '@/feature/room/stores/useRoomStore';
+import { useRoomUIStore } from '@/feature/room/stores/useRoomUIStore';
 
 import { logger } from '@/shared/lib/logger';
-import { PollService } from '@/feature/poll/services/poll';
-import { isNumericGesture, NumericGesture } from '@/feature/gesture/lib/gestureCategory';
-import { useRoomUIStore } from '@/feature/room/stores/useRoomUIStore';
-import { GestureHandler } from '@/feature/gesture/hooks/useGestureHandlers';
-import { useRoomStore } from '@/feature/room/stores/useRoomStore';
 
 const POLL_GESTURE_MAP: Record<NumericGesture, number> = {
   one: 0,

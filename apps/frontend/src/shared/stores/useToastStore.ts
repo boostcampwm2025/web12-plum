@@ -1,5 +1,5 @@
-import { create } from 'zustand';
 import type { GestureType } from '@plum/shared-interfaces';
+import { create } from 'zustand';
 
 export type ToastType = 'info' | 'success' | 'error' | 'gesture';
 

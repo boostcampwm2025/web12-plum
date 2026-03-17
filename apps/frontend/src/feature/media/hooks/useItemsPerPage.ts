@@ -1,4 +1,4 @@
-import { useState, useLayoutEffect, RefObject } from 'react';
+import { RefObject, useLayoutEffect, useState } from 'react';
 
 interface UseItemsPerPageConfig {
   buttonHeight: number;

@@ -1,27 +1,29 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { AnimatePresence, motion } from 'motion/react';
 import { logger } from '@sentry/react';
+import { AnimatePresence, motion } from 'motion/react';
 
+import { ROUTES } from '@/app/routes/routes';
+
+import { LectureSummaryTab } from '@/feature/summary/components/LectureSummaryTab';
+import { PollResultsTab } from '@/feature/summary/components/PollResultsTab';
+import { QnAResultsTab } from '@/feature/summary/components/QnAResultsTab';
+import { ReportDownload } from '@/feature/summary/components/ReportDownload';
+import { StatisticsTab } from '@/feature/summary/components/StatisticsTab';
+import { Tabs } from '@/feature/summary/components/Tabs';
+import { Tab } from '@/feature/summary/constants';
+import { useAiSummaryPolling } from '@/feature/summary/hooks/useAiSummaryPolling';
+import { useSummaryStore } from '@/feature/summary/stores/useSummaryStore';
+
+import { roomApi } from '@/shared/api/endpoints/room';
+import { AsyncBoundary } from '@/shared/components/AsyncBoundary';
+import { ErrorFallback } from '@/shared/components/ErrorFallback';
 import { Footer } from '@/shared/components/Footer';
 import { Header } from '@/shared/components/Header';
 import { PageSubHeader } from '@/shared/components/PageSubHeader';
-import { StatisticsTab } from '@/feature/summary/components/StatisticsTab';
-import { ReportDownload } from '@/feature/summary/components/ReportDownload';
-import { PollResultsTab } from '@/feature/summary/components/PollResultsTab';
-import { QnAResultsTab } from '@/feature/summary/components/QnAResultsTab';
-import { LectureSummaryTab } from '@/feature/summary/components/LectureSummaryTab';
-import { Tab } from '@/feature/summary/constants';
-import { Tabs } from '@/feature/summary/components/Tabs';
-import { AsyncBoundary } from '@/shared/components/AsyncBoundary';
-import { ErrorFallback } from '@/shared/components/ErrorFallback';
-import { roomApi } from '@/shared/api/endpoints/room';
+import { useSafeRoomId } from '@/shared/hooks/useSafeRoomId';
 import { formatSummaryAvailableUntil } from '@/shared/lib/date';
 import { useToastStore } from '@/shared/stores/useToastStore';
-import { useSummaryStore } from '@/feature/summary/stores/useSummaryStore';
-import { useAiSummaryPolling } from '@/feature/summary/hooks/useAiSummaryPolling';
-import { ROUTES } from '@/app/routes/routes';
-import { useSafeRoomId } from '@/shared/hooks/useSafeRoomId';
 
 /**
  * Summary 페이지 컴포넌트

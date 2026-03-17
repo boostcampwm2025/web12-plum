@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import confetti from 'canvas-confetti';
 
 import { useRoomUIStore } from '@/feature/room/stores/useRoomUIStore';
+
 import { Modal } from '@/shared/components/Modal';
 
 export function PollResultModal() {

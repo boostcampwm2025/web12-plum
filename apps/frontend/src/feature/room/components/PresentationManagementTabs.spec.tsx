@@ -1,9 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import '@testing-library/jest-dom';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { PresentationManagementTabs } from './PresentationManagementTabs';
 import { useRoomPresentation } from '../hooks/useRoomPresentation';
+import { PresentationManagementTabs } from './PresentationManagementTabs';
+
+import '@testing-library/jest-dom';
 
 // 훅 모킹
 vi.mock('../hooks/useRoomPresentation', () => ({

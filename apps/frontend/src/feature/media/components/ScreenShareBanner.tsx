@@ -1,4 +1,5 @@
 import { Button } from '@/shared/components/Button';
+
 import { useMediaStore } from '../stores/useMediaStore';
 
 interface ScreenShareBannerProps {

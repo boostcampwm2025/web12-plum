@@ -1,7 +1,8 @@
-﻿import { useEffect, useState, type RefObject } from 'react';
+﻿import { type RefObject, useEffect, useState } from 'react';
+
+import { VideoDisplayMode } from '@/feature/room/types';
 
 import { logger } from '@/shared/lib/logger';
-import { VideoDisplayMode } from '@/feature/room/types';
 
 interface UseVideoElementBindingParams {
   videoRef: RefObject<HTMLVideoElement>;

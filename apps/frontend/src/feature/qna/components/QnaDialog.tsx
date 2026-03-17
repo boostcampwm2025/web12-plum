@@ -1,10 +1,12 @@
 import { useMemo, useState } from 'react';
+
 import { Button } from '@/shared/components/Button';
 import { TimeLeft } from '@/shared/components/TimeLeft';
 import { logger } from '@/shared/lib/logger';
 import { useToastStore } from '@/shared/stores/useToastStore';
-import { useQnaStore } from '../stores/useQnaStore';
+
 import { QnaService } from '../services/qna';
+import { useQnaStore } from '../stores/useQnaStore';
 
 const getStartedAt = (startedAt?: string) => {
   const parsed = startedAt ? Date.parse(startedAt) : NaN;

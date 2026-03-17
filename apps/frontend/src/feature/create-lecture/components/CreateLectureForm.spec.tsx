@@ -1,13 +1,14 @@
-import { render, screen, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import userEvent from '@testing-library/user-event';
-import '@testing-library/jest-dom';
-
-import { CreateLectureForm } from './CreateLectureForm';
-import { useCreateRoom } from '../hooks/useCreateRoom';
 import { useNavigate } from 'react-router';
-import { useToastStore } from '../../../shared/stores/useToastStore';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { logger } from '../../../shared/lib/logger';
+import { useToastStore } from '../../../shared/stores/useToastStore';
+import { useCreateRoom } from '../hooks/useCreateRoom';
+import { CreateLectureForm } from './CreateLectureForm';
+
+import '@testing-library/jest-dom';
 
 vi.mock('../hooks/useCreateRoom');
 vi.mock('react-router', () => ({ useNavigate: vi.fn() }));

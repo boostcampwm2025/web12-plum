@@ -1,6 +1,6 @@
 import { Icon } from '@/shared/components/icon/Icon';
-import { useSummaryStore } from '../stores/useSummaryStore';
 
+import { useSummaryStore } from '../stores/useSummaryStore';
 import { ParticipationRankingBoard } from './ParticipationRankingBoard';
 
 interface OverallStatisticsProps {

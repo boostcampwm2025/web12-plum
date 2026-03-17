@@ -1,6 +1,6 @@
+import type { ChatMessage, EndQnaPayload } from '@plum/shared-interfaces';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import type { ChatMessage, EndQnaPayload } from '@plum/shared-interfaces';
 
 export type ChatMessageItem = ChatMessage & {
   type: 'chat';

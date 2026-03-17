@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+
 import { logger } from '@/shared/lib/logger';
 
 const DEFAULT_AUDIO_CONSTRAINTS = {

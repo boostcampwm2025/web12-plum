@@ -1,9 +1,9 @@
 import type {
+  BreakPollRequest,
   CreatePollRequest,
   EmitPollRequest,
-  VoteRequest,
-  BreakPollRequest,
   ServerToClientEvents,
+  VoteRequest,
 } from '@plum/shared-interfaces';
 
 import { SocketClient } from '@/shared/socket/client';

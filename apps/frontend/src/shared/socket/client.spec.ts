@@ -1,5 +1,6 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { io } from 'socket.io-client';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { SocketClient } from './client';
 import { SocketError } from './error';
 import { TypedSocket } from './types';

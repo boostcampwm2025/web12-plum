@@ -1,10 +1,10 @@
 import { useFormContext } from 'react-hook-form';
 
-import { FormField } from '@/shared/components/FormField';
 import { Button } from '@/shared/components/Button';
+import { FormField } from '@/shared/components/FormField';
 
-import { ENTER_LECTURE_KEYS, EnterLectureFormValues } from '../schema';
 import { useNicknameValidation } from '../hooks/useNicknameValidation';
+import { ENTER_LECTURE_KEYS, EnterLectureFormValues } from '../schema';
 
 /**
  * 닉네임 입력 및 중복 확인 섹션

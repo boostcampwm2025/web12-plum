@@ -1,6 +1,7 @@
-import { Participant, useRoomStore } from '@/feature/room/stores/useRoomStore';
-import { useMemo, useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useShallow } from 'zustand/shallow';
+
+import { Participant, useRoomStore } from '@/feature/room/stores/useRoomStore';
 
 const MAX_ITEMS = 5;
 

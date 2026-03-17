@@ -1,5 +1,6 @@
-import { SocketClient } from '@/shared/socket/client';
 import type { JoinRoomRequest, ServerToClientEvents } from '@plum/shared-interfaces';
+
+import { SocketClient } from '@/shared/socket/client';
 
 /**
  * 강의실 서비스 이벤트 핸들러 인터페이스

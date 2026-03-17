@@ -1,10 +1,13 @@
 import { useCallback, useMemo } from 'react';
-import type { GestureType } from '@plum/shared-interfaces';
 import { useParams } from 'react-router';
-import { useRoomStore } from '@/feature/room/stores/useRoomStore';
-import { logger } from '@/shared/lib/logger';
-import type { GestureHandler } from './useGestureHandlers';
+import type { GestureType } from '@plum/shared-interfaces';
+
 import { InteractionService } from '@/feature/room/services/interaction';
+import { useRoomStore } from '@/feature/room/stores/useRoomStore';
+
+import { logger } from '@/shared/lib/logger';
+
+import type { GestureHandler } from './useGestureHandlers';
 
 export function useBroadcastGestureHandler(): GestureHandler {
   const { roomId } = useParams();

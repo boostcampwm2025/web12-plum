@@ -1,15 +1,18 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import '@testing-library/jest-dom';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { ParticipantGrid } from './ParticipantGrid';
+import type { Participant } from '@/feature/room/stores/useRoomStore';
+import { useRoomStore } from '@/feature/room/stores/useRoomStore';
+
+import { useStreamStore } from '@/shared/stores/useLocalStreamStore';
+
 import { useItemsPerPage } from '../hooks/useItemsPerPage';
 import { useParticipantPagination } from '../hooks/useParticipantPagination';
 import { useMediaStore } from '../stores/useMediaStore';
-import { useRoomStore } from '@/feature/room/stores/useRoomStore';
-import { useStreamStore } from '@/shared/stores/useLocalStreamStore';
-import type { Participant } from '@/feature/room/stores/useRoomStore';
+import { ParticipantGrid } from './ParticipantGrid';
+
+import '@testing-library/jest-dom';
 
 vi.mock('../hooks/useItemsPerPage');
 vi.mock('../hooks/useParticipantPagination');

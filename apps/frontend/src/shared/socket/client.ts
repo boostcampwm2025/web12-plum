@@ -1,5 +1,5 @@
-import { io } from 'socket.io-client';
 import type { ServerToClientEvents } from '@plum/shared-interfaces';
+import { io } from 'socket.io-client';
 
 import { logger } from '@/shared/lib/logger';
 

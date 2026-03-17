@@ -1,16 +1,17 @@
-import { useNavigate } from 'react-router';
 import { useFormContext } from 'react-hook-form';
+import { useNavigate } from 'react-router';
 import { EnterLectureRequestBody } from '@plum/shared-interfaces';
 
 import { ROUTES } from '@/app/routes/routes';
+
 import { Button } from '@/shared/components/Button';
-import { cn } from '@/shared/lib/utils';
 import { useSafeRoomId } from '@/shared/hooks/useSafeRoomId';
+import { cn } from '@/shared/lib/utils';
 import { useToastStore } from '@/shared/stores/useToastStore';
 
-import { EnterLectureFormValues } from '../schema';
 import { useEnterRoom } from '../hooks/useEnterRoom';
 import { useNicknameValidation } from '../hooks/useNicknameValidation';
+import { EnterLectureFormValues } from '../schema';
 
 /**
  * 강의실 입장 제출 버튼

@@ -2,10 +2,10 @@ import { useCallback, useEffect } from 'react';
 
 import { logger } from '@/shared/lib/logger';
 
+import { useRoomStore } from '../stores/useRoomStore';
+import { useAudienceEventHandlers } from './useAudienceEventHandlers';
 import { useCommonEventHandlers } from './useCommonEventHandlers';
 import { usePresenterEventHandlers } from './usePresenterEventHandlers';
-import { useAudienceEventHandlers } from './useAudienceEventHandlers';
-import { useRoomStore } from '../stores/useRoomStore';
 
 /**
  * 실시간 이벤트 핸들러 오케스트레이터
