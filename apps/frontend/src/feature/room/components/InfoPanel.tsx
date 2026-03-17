@@ -5,13 +5,13 @@ import { Icon } from '@/shared/components/icon/Icon';
 import { Toggle } from '@/shared/components/Toggle';
 import { logger } from '@/shared/lib/logger';
 import { useRoomPresentation } from '../hooks/useRoomPresentation';
-import { useToastStore } from '@/store/useToastStore';
-import {
-  useBackgroundEffectStore,
-  type BackgroundEffectMode,
-} from '../stores/useBackgroundEffectStore';
-import { useSoundStore } from '@/store/useSoundStore';
+import { useToastStore } from '@/shared/stores/useToastStore';
+import { useSoundStore } from '@/shared/stores/useSoundStore';
 import { Select, type SelectOption } from '@/shared/components/Select';
+import {
+  BackgroundEffectMode,
+  useBackgroundEffectStore,
+} from '@/feature/media/stores/useBackgroundEffectStore';
 
 const BACKGROUND_EFFECT_OPTIONS: SelectOption<BackgroundEffectMode>[] = [
   { label: '블러', value: 'blur' },

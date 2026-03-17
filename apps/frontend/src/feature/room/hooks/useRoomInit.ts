@@ -1,20 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { usePollStore } from '@/feature/poll/stores/usePollStore';
 import { SocketClient } from '@/shared/socket/client';
-import { MediaConnectionService } from '@/mediasoup/mediaConnection.service';
+import { MediaConnectionService } from '@/shared/mediasoup/mediaConnection.service';
 import { useSafeRoomId } from '@/shared/hooks/useSafeRoomId';
 import { roomApi } from '@/shared/api';
 import { logger } from '@/shared/lib/logger';
 
-import { useChatStore } from '../stores/useChatStore';
-import { usePollStore } from '../stores/usePollStore';
 import { useRoomStore } from '../stores/useRoomStore';
 import { useRoomEventHandlers } from './useRoomEventHandlers';
 import { useInteractionSync } from './useInteractionSync';
-import { useRemoteMedia } from './useRemoteMedia';
-import { useMediaCleanup } from './useMediaCleanup';
 import { useRoomJoin } from './useRoomJoin';
 import { useRoomUIStore } from '../stores/useRoomUIStore';
+import { useChatStore } from '@/feature/chat/stores/useChatStore';
+import { useRemoteMedia } from '@/feature/media/hooks/useRemoteMedia';
+import { useMediaCleanup } from '@/feature/media/hooks/useMediaCleanup';
 
 /**
  * 방 입장 시 전체 초기화 파이프라인을 실행하는 훅

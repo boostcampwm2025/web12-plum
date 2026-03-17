@@ -2,8 +2,8 @@ import { useState, useMemo } from 'react';
 
 import { Button } from '@/shared/components/Button';
 import { Icon } from '@/shared/components/icon/Icon';
-import { useToastStore } from '@/store/useToastStore';
-import { useSummaryStore } from '../store/useSummaryStore';
+import { useToastStore } from '@/shared/stores/useToastStore';
+import { useSummaryStore } from '../stores/useSummaryStore';
 import { downloadSummaryReport } from '../pdf/useSummaryReportDownload';
 import { getRelativeTimelines } from '../utils';
 

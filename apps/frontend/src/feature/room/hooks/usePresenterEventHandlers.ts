@@ -1,14 +1,13 @@
 import { useCallback } from 'react';
 
-import { useToastStore } from '@/store/useToastStore';
+import { usePollStore } from '@/feature/poll/stores/usePollStore';
+import { useToastStore } from '@/shared/stores/useToastStore';
 
-import { usePollStore } from '../stores/usePollStore';
-import { useQnaStore } from '../stores/useQnaStore';
-import { useRankStore } from '../stores/useRankStore';
-
-import { PollService } from '../service/poll';
-import { QnaService } from '../service/qna';
-import { InteractionService } from '../service/interaction';
+import { InteractionService } from '../services/interaction';
+import { useQnaStore } from '@/feature/qna/stores/useQnaStore';
+import { QnaService } from '@/feature/qna/services/qna';
+import { PollService } from '@/feature/poll/services/poll';
+import { useRankStore } from '@/feature/rank/stores/useRankStore';
 
 /**
  * Presenter 전용 이벤트 핸들러

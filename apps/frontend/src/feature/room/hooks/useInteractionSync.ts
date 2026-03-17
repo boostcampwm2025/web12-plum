@@ -1,12 +1,12 @@
 import { useCallback } from 'react';
-import { usePollStore } from '../stores/usePollStore';
-import { useQnaStore } from '../stores/useQnaStore';
-import { useRankStore } from '../stores/useRankStore';
+import { usePollStore } from '@/feature/poll/stores/usePollStore';
 import { useRoomUIStore } from '../stores/useRoomUIStore';
 import { logger } from '@/shared/lib/logger';
-import { InteractionService } from '../service/interaction';
-import { PollService } from '../service/poll';
-import { QnaService } from '../service/qna';
+import { InteractionService } from '../services/interaction';
+import { useQnaStore } from '@/feature/qna/stores/useQnaStore';
+import { QnaService } from '@/feature/qna/services/qna';
+import { PollService } from '@/feature/poll/services/poll';
+import { useRankStore } from '@/feature/rank/stores/useRankStore';
 
 /**
  * 방 입장 시 상호작용 상태(투표, Q&A, 랭킹)를 서버와 동기화하는 훅

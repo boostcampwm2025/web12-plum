@@ -1,5 +1,5 @@
 import { usePresentation } from '@/shared/hooks/usePresentation';
-import { useToastStore } from '@/store/useToastStore';
+import { useToastStore } from '@/shared/stores/useToastStore';
 import { CreateRoomRequest } from '@plum/shared-interfaces';
 import { LECTURE_FORM_KEYS } from '../schema';
 import { FormField } from '@/shared/components/FormField';

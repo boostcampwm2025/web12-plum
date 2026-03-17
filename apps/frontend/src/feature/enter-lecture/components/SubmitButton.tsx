@@ -6,7 +6,7 @@ import { ROUTES } from '@/app/routes/routes';
 import { Button } from '@/shared/components/Button';
 import { cn } from '@/shared/lib/utils';
 import { useSafeRoomId } from '@/shared/hooks/useSafeRoomId';
-import { useToastStore } from '@/store/useToastStore';
+import { useToastStore } from '@/shared/stores/useToastStore';
 
 import { EnterLectureFormValues } from '../schema';
 import { useEnterRoom } from '../hooks/useEnterRoom';

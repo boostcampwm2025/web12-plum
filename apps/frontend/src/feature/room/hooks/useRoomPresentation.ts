@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { logger } from '@/shared/lib/logger';
 import { PresentationFile } from '../types';
-import { RoomService } from '../service/room';
+import { RoomService } from '../services/room';
 
 export function useRoomPresentation() {
   const [files, setFiles] = useState<PresentationFile[]>([]);

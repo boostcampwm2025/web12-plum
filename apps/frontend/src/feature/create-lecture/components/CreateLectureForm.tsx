@@ -6,15 +6,15 @@ import type { CreateRoomRequest } from '@plum/shared-interfaces';
 import { createLectureSchema } from '@plum/shared-interfaces';
 
 import { ROUTES } from '@/app/routes/routes';
-import { useToastStore } from '@/store/useToastStore';
+import { useToastStore } from '@/shared/stores/useToastStore';
 import { Button } from '@/shared/components/Button';
 import { cn } from '@/shared/lib/utils';
 import { logger } from '@/shared/lib/logger';
 import { getUserFriendlyError } from '@/shared/api';
 
 import { lectureFormDefaultValues } from '../schema';
-import { useActivityModalStore } from '../store/useActivityModalStore';
-import { useActivityDataStore } from '../store/useActivityDataStore';
+import { useActivityModalStore } from '../stores/useActivityModalStore';
+import { useActivityDataStore } from '../stores/useActivityDataStore';
 import { useCreateRoom } from '../hooks/useCreateRoom';
 import { ActivityModals } from './ActivityModals';
 import { PresentationSection } from './PresentationSection';

@@ -3,7 +3,7 @@ import type { CreateRoomRequest, CreateRoomResponse } from '@plum/shared-interfa
 import { roomApi } from '@/shared/api';
 import { logger } from '@/shared/lib/logger';
 import { useRoomStore } from '@/feature/room/stores/useRoomStore';
-import { useMediaStore } from '@/feature/room/stores/useMediaStore';
+import { useMediaStore } from '@/feature/media/stores/useMediaStore';
 
 interface UseCreateRoomReturn {
   createRoom: (data: CreateRoomRequest) => Promise<CreateRoomResponse>;

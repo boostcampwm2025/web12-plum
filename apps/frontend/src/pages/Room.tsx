@@ -1,19 +1,19 @@
 import { useEffect } from 'react';
 import { AsyncBoundary } from '@/shared/components/AsyncBoundary';
 import { ErrorFallback } from '@/shared/components/ErrorFallback';
-import { useToastStore } from '@/store/useToastStore';
+import { useToastStore } from '@/shared/stores/useToastStore';
 import { useRoomInit } from '@/feature/room/hooks/useRoomInit';
-import { useLocalMedia } from '@/feature/room/hooks/useLocalMedia';
 import { useRoomSync } from '@/feature/room/hooks/useRoomSync';
+import { PollResultModal } from '@/feature/poll/components/PollResultModal.tsx';
 
 import { RoomMenuBar } from '../feature/room/components/RoomMenuBar';
 import { RoomDialogs } from '../feature/room/components/RoomDialogs';
 import { RoomMainSection } from '../feature/room/components/RoomMainSection';
 import { RoomSideSection } from '../feature/room/components/RoomSideSection';
-import { RemoteAudioPlayer } from '../feature/room/components/RemoteAudioPlayer';
 import { RoomEndedModal } from '../feature/room/components/RoomEndedModal';
-import { PollResultModal } from '../feature/room/components/PollResultModal';
 import { RoomGuide } from '../feature/room/components/RoomGuide.tsx';
+import { RemoteAudioPlayer } from '@/feature/media/components/RemoteAudioPlayer.tsx';
+import { useLocalMedia } from '@/feature/media/hooks/useLocalMedia.ts';
 
 export default function Room() {
   const { addToast } = useToastStore((state) => state.actions);

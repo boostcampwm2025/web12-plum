@@ -6,12 +6,12 @@ import '@testing-library/jest-dom';
 import { CreateLectureForm } from './CreateLectureForm';
 import { useCreateRoom } from '../hooks/useCreateRoom';
 import { useNavigate } from 'react-router';
-import { useToastStore } from '../../../store/useToastStore';
+import { useToastStore } from '../../../shared/stores/useToastStore';
 import { logger } from '../../../shared/lib/logger';
 
 vi.mock('../hooks/useCreateRoom');
 vi.mock('react-router', () => ({ useNavigate: vi.fn() }));
-vi.mock('@/store/useToastStore', () => ({ useToastStore: vi.fn() }));
+vi.mock('@/shared/stores/useToastStore', () => ({ useToastStore: vi.fn() }));
 vi.mock('@/shared/lib/logger', () => ({
   logger: { ui: { error: vi.fn(), info: vi.fn() } },
 }));

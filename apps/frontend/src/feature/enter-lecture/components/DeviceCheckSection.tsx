@@ -7,7 +7,7 @@ import { Icon } from '@/shared/components/icon/Icon';
 import {
   BackgroundEffectMode,
   useBackgroundEffectStore,
-} from '@/feature/room/stores/useBackgroundEffectStore';
+} from '@/feature/media/stores/useBackgroundEffectStore';
 
 import { ENTER_LECTURE_KEYS } from '../schema';
 import { useLocalMediaController } from '../hooks/useLocalMediaController';

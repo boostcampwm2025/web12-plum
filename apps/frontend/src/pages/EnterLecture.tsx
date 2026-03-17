@@ -6,7 +6,7 @@ import { PageSubHeader } from '@/shared/components/PageSubHeader';
 import { Loading } from '@/shared/components/Loading';
 import { useSafeRoomId } from '@/shared/hooks/useSafeRoomId';
 import { useNavigate } from 'react-router';
-import { useToastStore } from '@/store/useToastStore';
+import { useToastStore } from '@/shared/stores/useToastStore';
 import { useEffect } from 'react';
 import { ROUTES } from '@/app/routes/routes';
 

@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { useRoomStore } from '../stores/useRoomStore';
-import { RoomService } from '../service/room';
+import { RoomService } from '../services/room';
 import { RtpCapabilities } from 'mediasoup-client/types';
 import { logger } from '@/shared/lib/logger';
 

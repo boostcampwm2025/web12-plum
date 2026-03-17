@@ -5,8 +5,8 @@ import { QnAFormValues } from '@/shared/constants/qna';
 import { PollModal } from '@/shared/components/PollModal';
 import { QnAModal } from '@/shared/components/QnAModal';
 
-import { useActivityDataStore } from '../store/useActivityDataStore';
-import { useActivityModalStore } from '../store/useActivityModalStore';
+import { useActivityDataStore } from '../stores/useActivityDataStore';
+import { useActivityModalStore } from '../stores/useActivityModalStore';
 
 /**
  * 투표 모달 컴포넌트

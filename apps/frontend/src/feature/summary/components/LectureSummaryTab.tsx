@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import type { Timelines } from '@plum/shared-interfaces';
 
-import { useSummaryStore } from '../store/useSummaryStore';
+import { useSummaryStore } from '../stores/useSummaryStore';
 import { formatTime, getRelativeTimelines } from '../utils';
 
 /**

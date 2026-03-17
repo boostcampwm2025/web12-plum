@@ -7,12 +7,12 @@ import { Modal } from '@/shared/components/Modal';
 import { Icon } from '@/shared/components/icon/Icon';
 import { logger } from '@/shared/lib/logger';
 import { useSafeRoomId } from '@/shared/hooks/useSafeRoomId';
-import { useToastStore } from '@/store/useToastStore';
+import { useToastStore } from '@/shared/stores/useToastStore';
 
 import { useRoomStore } from '../stores/useRoomStore';
-import { useMediaCleanup } from '../hooks/useMediaCleanup';
 import { RoomButton } from './RoomButton';
-import { RoomService } from '../service/room';
+import { RoomService } from '../services/room';
+import { useMediaCleanup } from '@/feature/media/hooks/useMediaCleanup';
 
 interface ExitConfirmModalProps {
   isModalOpen: boolean;

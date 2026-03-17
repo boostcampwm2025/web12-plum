@@ -9,7 +9,7 @@ import type {
 import { Participant, useRoomStore } from '@/feature/room/stores/useRoomStore';
 import { roomApi } from '@/shared/api';
 import { logger } from '@/shared/lib/logger';
-import { useMediaStore } from '@/feature/room/stores/useMediaStore';
+import { useMediaStore } from '@/feature/media/stores/useMediaStore';
 
 /**
  * 응답 데이터를 기반으로 참가자 맵과 내 정보를 생성

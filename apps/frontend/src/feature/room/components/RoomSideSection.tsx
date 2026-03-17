@@ -1,12 +1,12 @@
 import { AnimatePresence } from 'motion/react';
 import { useLocation } from 'react-router';
 import { SidePanel } from './SidePanel';
-import { ChatPanel } from './ChatPanel';
 import { InfoPanel } from './InfoPanel';
 import { MenuPanel } from './MenuPanel';
 import { useRoomUIStore } from '../stores/useRoomUIStore';
 import { cn } from '@/shared/lib/utils';
 import { buildJoinLink } from '@/shared/lib/roomLinks';
+import { ChatPanel } from '@/feature/chat/components/ChatPanel';
 
 export function RoomSideSection() {
   const location = useLocation();

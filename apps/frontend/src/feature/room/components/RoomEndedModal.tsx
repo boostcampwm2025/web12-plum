@@ -7,7 +7,7 @@ import { useSafeRoomId } from '@/shared/hooks/useSafeRoomId';
 import { Button } from '@/shared/components/Button';
 
 import { useRoomStore } from '../stores/useRoomStore';
-import { useMediaCleanup } from '../hooks/useMediaCleanup';
+import { useMediaCleanup } from '@/feature/media/hooks/useMediaCleanup';
 
 /**
  * 강의 종료 후 요약 페이지로 리다이렉트까지의 지연 시간 (초)

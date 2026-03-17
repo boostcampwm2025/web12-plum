@@ -2,8 +2,8 @@ import { FormField } from '@/shared/components/FormField';
 import { Button } from '@/shared/components/Button';
 import { Icon } from '@/shared/components/icon/Icon';
 
-import { useActivityModalStore } from '../store/useActivityModalStore';
-import { useActivityDataStore } from '../store/useActivityDataStore';
+import { useActivityModalStore } from '../stores/useActivityModalStore';
+import { useActivityDataStore } from '../stores/useActivityDataStore';
 
 interface ActivityItemProps {
   type: 'poll' | 'qna';
