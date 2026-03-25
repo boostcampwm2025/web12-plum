@@ -1,17 +1,20 @@
 import { useEffect } from 'react';
-import { SidePanelHeader, SidePanelContent } from './SidePanel';
+
+import {
+  BackgroundEffectMode,
+  useBackgroundEffectStore,
+} from '@/feature/media/stores/useBackgroundEffectStore';
+
 import { Button } from '@/shared/components/Button';
 import { Icon } from '@/shared/components/icon/Icon';
+import { Select, type SelectOption } from '@/shared/components/Select';
 import { Toggle } from '@/shared/components/Toggle';
 import { logger } from '@/shared/lib/logger';
+import { useSoundStore } from '@/shared/stores/useSoundStore';
+import { useToastStore } from '@/shared/stores/useToastStore';
+
 import { useRoomPresentation } from '../hooks/useRoomPresentation';
-import { useToastStore } from '@/store/useToastStore';
-import {
-  useBackgroundEffectStore,
-  type BackgroundEffectMode,
-} from '../stores/useBackgroundEffectStore';
-import { useSoundStore } from '@/store/useSoundStore';
-import { Select, type SelectOption } from '@/shared/components/Select';
+import { SidePanelContent, SidePanelHeader } from './SidePanel';
 
 const BACKGROUND_EFFECT_OPTIONS: SelectOption<BackgroundEffectMode>[] = [
   { label: '블러', value: 'blur' },

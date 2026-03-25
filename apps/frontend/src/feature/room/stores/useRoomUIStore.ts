@@ -1,5 +1,5 @@
-import { create } from 'zustand';
 import type { EndPollPayload } from '@plum/shared-interfaces';
+import { create } from 'zustand';
 
 export type Dialog = 'vote' | 'qna' | 'ranking';
 export type SidePanel = 'chat' | 'info' | 'menu';
@@ -8,7 +8,7 @@ interface RoomUIState {
   activeDialog: Dialog | null;
   activeSidePanel: SidePanel | null;
   pollResult: EndPollPayload | null;
-  setActiveDialog: (dialog: Dialog) => void;
+  setActiveDialog: (dialog: Dialog | null) => void;
   setActiveSidePanel: (panel: SidePanel) => void;
   setPollResult: (result: EndPollPayload | null) => void;
   reset: () => void;

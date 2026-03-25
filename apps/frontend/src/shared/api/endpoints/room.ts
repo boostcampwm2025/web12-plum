@@ -8,6 +8,7 @@ import type {
 } from '@plum/shared-interfaces';
 import { createLectureSchema } from '@plum/shared-interfaces';
 import type { z } from 'zod';
+
 import { apiClient } from '../client';
 import type { ApiResponse } from '../types';
 

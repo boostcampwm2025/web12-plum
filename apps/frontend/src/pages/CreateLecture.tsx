@@ -1,8 +1,8 @@
+import { CreateLectureForm } from '@/feature/create-lecture/components/CreateLectureForm';
+
 import { Footer } from '@/shared/components/Footer';
 import { Header } from '@/shared/components/Header';
 import { PageSubHeader } from '@/shared/components/PageSubHeader';
-
-import { CreateLectureForm } from '@/feature/create-lecture/components/CreateLectureForm';
 
 export const CreateLecture = () => {
   return (

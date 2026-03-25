@@ -1,18 +1,20 @@
-import { useState, useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { useNavigate } from 'react-router';
 
 import { ROUTES } from '@/app/routes/routes';
-import { Button } from '@/shared/components/Button';
-import { Modal } from '@/shared/components/Modal';
-import { Icon } from '@/shared/components/icon/Icon';
-import { logger } from '@/shared/lib/logger';
-import { useSafeRoomId } from '@/shared/hooks/useSafeRoomId';
-import { useToastStore } from '@/store/useToastStore';
 
+import { useMediaCleanup } from '@/feature/media/hooks/useMediaCleanup';
+
+import { Button } from '@/shared/components/Button';
+import { Icon } from '@/shared/components/icon/Icon';
+import { Modal } from '@/shared/components/Modal';
+import { useSafeRoomId } from '@/shared/hooks/useSafeRoomId';
+import { logger } from '@/shared/lib/logger';
+import { useToastStore } from '@/shared/stores/useToastStore';
+
+import { RoomService } from '../services/room';
 import { useRoomStore } from '../stores/useRoomStore';
-import { useMediaCleanup } from '../hooks/useMediaCleanup';
 import { RoomButton } from './RoomButton';
-import { RoomService } from '../service/room';
 
 interface ExitConfirmModalProps {
   isModalOpen: boolean;

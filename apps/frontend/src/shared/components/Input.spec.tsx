@@ -1,8 +1,10 @@
-import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import '@testing-library/jest-dom';
+import { describe, expect, it, vi } from 'vitest';
+
 import { Input } from './Input';
+
+import '@testing-library/jest-dom';
 
 describe('Input', () => {
   it('placeholder가 렌더링된다', () => {

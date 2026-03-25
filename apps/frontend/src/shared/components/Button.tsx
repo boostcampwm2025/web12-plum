@@ -1,7 +1,8 @@
 import { ComponentProps, ReactNode } from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
-import { cn } from '@/shared/lib/utils';
+
 import { Tooltip } from '@/shared/components/Tooltip';
+import { cn } from '@/shared/lib/utils';
 
 const buttonVariants = cva(
   'disable:cursor-not-allowed relative flex shrink-0 cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-lg font-bold transition-all duration-150 focus-visible:ring-2 focus-visible:outline-none',

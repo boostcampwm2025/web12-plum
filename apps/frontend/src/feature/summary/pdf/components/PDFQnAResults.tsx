@@ -1,5 +1,5 @@
-import { View, Text, StyleSheet } from '@react-pdf/renderer';
 import type { Qna } from '@plum/shared-interfaces';
+import { StyleSheet, Text, View } from '@react-pdf/renderer';
 
 import { colors, styles } from '../styles';
 

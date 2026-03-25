@@ -1,9 +1,5 @@
-import '@/app/styles/index.css';
 import { StrictMode, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
-import { Analytics } from '@vercel/analytics/react';
-import { SpeedInsights } from '@vercel/speed-insights/react';
-import * as Sentry from '@sentry/react';
 import {
   BrowserRouter,
   createRoutesFromChildren,
@@ -11,8 +7,13 @@ import {
   useLocation,
   useNavigationType,
 } from 'react-router';
+import * as Sentry from '@sentry/react';
+import { Analytics } from '@vercel/analytics/react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 
 import App from './App';
+
+import '@/app/styles/index.css';
 
 const isProduction = import.meta.env.VITE_MODE === 'production';
 

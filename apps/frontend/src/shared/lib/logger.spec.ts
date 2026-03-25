@@ -1,4 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach, type MockInstance } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } from 'vitest';
+
 import { logger } from './logger';
 
 describe('logger', () => {

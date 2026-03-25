@@ -1,8 +1,9 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Joyride, { ACTIONS, CallBackProps, EVENTS, STATUS } from 'react-joyride';
+
 import { useRoomStore } from '../stores/useRoomStore';
 import { useRoomUIStore } from '../stores/useRoomUIStore';
-import { audienceSteps, presenterSteps, type ExtendedStep } from './RoomGuide.steps.ts';
+import { audienceSteps, type ExtendedStep, presenterSteps } from './RoomGuide.steps.ts';
 
 const GUIDE_STORAGE_KEY = 'plum-room-guide-completed';
 

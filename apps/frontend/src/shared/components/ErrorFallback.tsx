@@ -1,6 +1,8 @@
 import { useNavigate } from 'react-router';
-import { Button } from './Button';
+
 import { ROUTES } from '@/app/routes/routes';
+
+import { Button } from './Button';
 
 interface ErrorFallbackProps {
   title?: string;

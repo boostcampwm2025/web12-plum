@@ -1,98 +1,79 @@
-import { AnimatePresence } from 'motion/react';
-import { useMemo } from 'react';
-import { Dialog as RoomDialog } from './Dialog';
+import { AnimatePresence, motion } from 'motion/react';
+
+import { PollDialog } from '@/feature/poll/components/PollDialog';
+import { QnaDialog } from '@/feature/qna/components/QnaDialog';
+import { RankingDialog } from '@/feature/rank/components/RankingDialog';
+
+import { Button } from '@/shared/components/Button';
+import { Icon } from '@/shared/components/icon/Icon';
+
 import { useRoomUIStore } from '../stores/useRoomUIStore';
-import { PollDialog } from './PollDialog';
-import { QnaDialog } from './QnaDialog';
-import { RankingDialog } from './RankingDialog';
-import { usePollStore } from '../stores/usePollStore';
-import { useQnaStore } from '../stores/useQnaStore';
-import { logger } from '@/shared/lib/logger';
-import { useToastStore } from '@/store/useToastStore';
-import { PollService } from '../service/poll';
-import { QnaService } from '../service/qna';
 
-export function RoomDialogs() {
-  const activeDialog = useRoomUIStore((state) => state.activeDialog);
-  const setActiveDialog = useRoomUIStore((state) => state.setActiveDialog);
-  const polls = usePollStore((state) => state.polls);
-  const audienceVotedOptionByPollId = usePollStore((state) => state.audienceVotedOptionByPollId);
-  const pollActions = usePollStore((state) => state.actions);
-  const qnas = useQnaStore((state) => state.qnas);
-  const answeredByQnaId = useQnaStore((state) => state.answeredByQnaId);
-  const qnaActions = useQnaStore((state) => state.actions);
-  const addToast = useToastStore((state) => state.actions.addToast);
+type DialogType = 'vote' | 'qna' | 'ranking';
 
-  const activePoll = useMemo(() => polls.find((poll) => poll.status === 'active'), [polls]);
-  const activeQna = useMemo(() => qnas.find((qna) => qna.status === 'active'), [qnas]);
-  const handleCloseDialog = () => setActiveDialog(activeDialog!);
-  const pollStartedAt = getStartedAt(activePoll?.startedAt);
-  const qnaStartedAt = getStartedAt(activeQna?.startedAt);
-  const selectedOptionId = activePoll ? (audienceVotedOptionByPollId[activePoll.id] ?? null) : null;
+interface DialogConfig {
+  title: string;
+  component: React.FC;
+}
 
-  const handleVote = async (pollId: string, optionId: number) => {
-    try {
-      await PollService.vote({ pollId, optionId, isGesture: false });
-    } catch (error) {
-      logger.custom.error('[RoomDialogs] 투표 참여 실패', error);
-      addToast({ type: 'error', title: '투표 참여에 실패했습니다.' });
-    }
-  };
+const DIALOG_CONFIGS: Record<DialogType, DialogConfig> = {
+  vote: { title: '투표', component: PollDialog },
+  qna: { title: 'Q&A', component: QnaDialog },
+  ranking: { title: '참여도 순위', component: RankingDialog },
+} as const;
 
-  const handleAnswer = async (qnaId: string, text: string) => {
-    try {
-      await QnaService.answer({ qnaId, text });
-      qnaActions.setAnswered(qnaId, true);
-    } catch (error) {
-      logger.custom.error('[RoomDialogs] Q&A 답변 실패', error);
-      addToast({ type: 'error', title: 'Q&A 답변에 실패했습니다.' });
-    }
-  };
+interface DialogProps {
+  config: DialogConfig;
+  onClose: () => void;
+}
 
+/**
+ * 강의실 내에서 투표, Q&A, 참여도 순위 등의 대화상자를 관리
+ */
+export function Dialog({ config, onClose }: DialogProps) {
   return (
-    <AnimatePresence>
-      {activeDialog === 'vote' && (
-        <RoomDialog
-          title="투표"
-          onClose={handleCloseDialog}
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 20 }}
+      className="absolute inset-x-0 bottom-22 z-50 mx-auto flex w-lg flex-col gap-4 rounded-2xl bg-gray-500 py-4 pr-4 pl-6 shadow-lg"
+    >
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-bold text-white">{config.title}</h2>
+        <Button
+          variant="icon"
+          onClick={onClose}
+          aria-label="닫기"
         >
-          <PollDialog
-            poll={activePoll}
-            startedAt={pollStartedAt}
-            onVote={handleVote}
-            selectedOptionId={selectedOptionId}
-            onSelectOption={(pollId, optionId) =>
-              pollActions.setAudienceVotedOption(pollId, optionId)
-            }
+          <Icon
+            name="x"
+            size={24}
           />
-        </RoomDialog>
-      )}
-      {activeDialog === 'qna' && (
-        <RoomDialog
-          title="Q&A"
-          onClose={handleCloseDialog}
-        >
-          <QnaDialog
-            qna={activeQna}
-            startedAt={qnaStartedAt}
-            onSubmit={handleAnswer}
-            isSubmitted={activeQna ? (answeredByQnaId[activeQna.id] ?? false) : false}
-          />
-        </RoomDialog>
-      )}
-      {activeDialog === 'ranking' && (
-        <RoomDialog
-          title="참여도 순위"
-          onClose={handleCloseDialog}
-        >
-          <RankingDialog />
-        </RoomDialog>
-      )}
-    </AnimatePresence>
+        </Button>
+      </div>
+      <config.component />
+    </motion.div>
   );
 }
 
-const getStartedAt = (startedAt?: string) => {
-  const parsed = startedAt ? Date.parse(startedAt) : NaN;
-  return Number.isNaN(parsed) ? Date.now() : parsed;
-};
+/**
+ * 강의실 내에서 투표, Q&A, 참여도 순위 등의 대화상자를 중앙에서 관리하는 컴포넌트
+ */
+export function RoomDialogs() {
+  const activeDialog = useRoomUIStore((state) => state.activeDialog) as DialogType | null;
+  const setActiveDialog = useRoomUIStore((state) => state.setActiveDialog);
+  if (!activeDialog) return null;
+
+  const config = DIALOG_CONFIGS[activeDialog];
+  if (!config) return null;
+
+  return (
+    <AnimatePresence>
+      <Dialog
+        key={activeDialog}
+        config={config}
+        onClose={() => setActiveDialog(null)}
+      />
+    </AnimatePresence>
+  );
+}

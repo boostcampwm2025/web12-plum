@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 
 test.describe('Plum App', () => {
   test('홈 페이지 메시지 표시', async ({ page }) => {

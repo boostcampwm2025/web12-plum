@@ -1,11 +1,14 @@
 import { useNavigate } from 'react-router';
 import { motion } from 'motion/react';
+
+import { ROUTES } from '@/app/routes/routes';
+
+import logoImg from '@/assets/logo/logo.svg';
+
+import { Button } from '@/shared/components/Button';
 import { Footer } from '@/shared/components/Footer';
 import { Header } from '@/shared/components/Header';
-import { Button } from '@/shared/components/Button';
-import { ROUTES } from '@/app/routes/routes';
 import { Icon } from '@/shared/components/icon/Icon';
-import logoImg from '@/assets/logo/logo.svg';
 
 const features = [
   {

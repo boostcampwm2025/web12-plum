@@ -1,9 +1,10 @@
-import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import '@testing-library/jest-dom';
+import { describe, expect, it, vi } from 'vitest';
 
-import { SidePanel, SidePanelHeader, SidePanelContent } from './SidePanel';
+import { SidePanel, SidePanelContent, SidePanelHeader } from './SidePanel';
+
+import '@testing-library/jest-dom';
 
 vi.mock('@/shared/components/icon/Icon', () => ({
   Icon: ({ name, size, className }: { name: string; size?: number; className?: string }) => (

@@ -1,9 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import '@testing-library/jest-dom';
-import { PollModal } from './PollModal';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { type PollFormValues } from '../constants/poll';
+import { PollModal } from './PollModal';
+
+import '@testing-library/jest-dom';
 
 describe('PollModal', () => {
   const mockOnClose = vi.fn();

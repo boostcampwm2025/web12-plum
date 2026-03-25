@@ -1,9 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import '@testing-library/jest-dom';
-import { QnAModal } from './QnAModal';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { type QnAFormValues } from '../constants/qna';
+import { QnAModal } from './QnAModal';
+
+import '@testing-library/jest-dom';
 
 describe('QnAModal', () => {
   const mockOnClose = vi.fn();

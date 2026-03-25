@@ -1,9 +1,10 @@
-import type { Answer } from '@plum/shared-interfaces';
 import { useState } from 'react';
+import type { Answer } from '@plum/shared-interfaces';
 
 import { Icon } from '@/shared/components/icon/Icon';
 import { cn } from '@/shared/lib/utils';
-import { useSummaryStore } from '../store/useSummaryStore';
+
+import { useSummaryStore } from '../stores/useSummaryStore';
 
 interface QnaAnswerItemProps {
   name: string;

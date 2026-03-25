@@ -298,11 +298,9 @@ pnpm dev
 │   │   └── src/
 │   │       ├── app/          # 앱 설정 (라우팅, 스타일)
 │   │       ├── assets/       # 이미지, 폰트 등 정적 자산
-│   │       ├── feature/      # 기능 단위 컴포넌트
-│   │       ├── mediasoup/    # MediaSoup WebRTC 클라이언트 설정
+│   │       ├── feature/      # 기능 단위 모듈 (components, hooks, stores, services)
 │   │       ├── pages/        # 라우트 페이지
-│   │       ├── shared/       # 공용 컴포넌트, API 클라이언트, 훅, 유틸리티
-│   │       ├── store/        # 전역 상태 관리 (Zustand)
+│   │       ├── shared/       # 공용 모듈 (components, hooks, lib, api, socket, mediasoup, stores)
 │   │       ├── types/        # TypeScript 타입 정의
 │   │       ├── App.tsx       # 루트 컴포넌트
 │   │       └── main.tsx      # 앱 진입점

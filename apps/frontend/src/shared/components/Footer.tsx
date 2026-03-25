@@ -1,7 +1,8 @@
 import { Link } from 'react-router';
 
-import logoImg from '@/assets/logo/logo.svg';
 import { ROUTES } from '@/app/routes/routes';
+
+import logoImg from '@/assets/logo/logo.svg';
 
 /**
  * 현재 연도 가져오기

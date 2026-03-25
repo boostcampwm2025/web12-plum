@@ -1,12 +1,12 @@
 import { useCallback } from 'react';
 
-import { PollFormValues } from '@/shared/constants/poll';
-import { QnAFormValues } from '@/shared/constants/qna';
 import { PollModal } from '@/shared/components/PollModal';
 import { QnAModal } from '@/shared/components/QnAModal';
+import { PollFormValues } from '@/shared/constants/poll';
+import { QnAFormValues } from '@/shared/constants/qna';
 
-import { useActivityDataStore } from '../store/useActivityDataStore';
-import { useActivityModalStore } from '../store/useActivityModalStore';
+import { useActivityDataStore } from '../stores/useActivityDataStore';
+import { useActivityModalStore } from '../stores/useActivityModalStore';
 
 /**
  * 투표 모달 컴포넌트

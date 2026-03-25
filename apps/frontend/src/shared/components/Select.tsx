@@ -1,19 +1,20 @@
 import {
-  useState,
-  useRef,
-  useId,
-  useCallback,
-  type KeyboardEvent,
   type CSSProperties,
+  type KeyboardEvent,
   type RefObject,
+  useCallback,
+  useId,
+  useRef,
+  useState,
 } from 'react';
 import { createPortal } from 'react-dom';
 import { cva, type VariantProps } from 'class-variance-authority';
-import { cn } from '@/shared/lib/utils';
+
 import { Icon } from '@/shared/components/icon/Icon';
+import { useDropdownPosition } from '@/shared/hooks/useDropdownPosition';
 import { useEscapeKey } from '@/shared/hooks/useEscapeKey';
 import { useOutsideClick } from '@/shared/hooks/useOutsideClick';
-import { useDropdownPosition } from '@/shared/hooks/useDropdownPosition';
+import { cn } from '@/shared/lib/utils';
 
 /**
  * Select 옵션 타입

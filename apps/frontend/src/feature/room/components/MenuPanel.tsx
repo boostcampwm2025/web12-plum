@@ -1,11 +1,14 @@
 import { useState } from 'react';
+
+import { PollManagementTabs } from '@/feature/poll/components/PollManagementTabs';
+import { QnaManagementTabs } from '@/feature/qna/components/QnaManagementTabs';
+
 import { Button } from '@/shared/components/Button';
 import { Icon } from '@/shared/components/icon/Icon';
 import type { IconName } from '@/shared/components/icon/iconMap';
-import { SidePanelHeader, SidePanelContent } from './SidePanel';
-import { PollManagementTabs } from './PollManagementTabs';
-import { QnaManagementTabs } from './QnaManagementTabs';
+
 import { PresentationManagementTabs } from './PresentationManagementTabs';
+import { SidePanelContent, SidePanelHeader } from './SidePanel';
 
 type SubPage = 'breakroom' | 'vote' | 'qna' | 'material' | 'participant';
 
@@ -16,12 +19,6 @@ const menuItems: {
   icon: IconName;
   guideTarget?: string;
 }[] = [
-  // {
-  //   id: 'breakroom',
-  //   label: '소강의실 관리',
-  //   description: '소강의실 생성 및 관리',
-  //   icon: 'breakdown-room',
-  // },
   {
     id: 'vote',
     label: '투표 관리',
@@ -43,12 +40,6 @@ const menuItems: {
     icon: 'download',
     guideTarget: 'menu-material',
   },
-  // {
-  //   id: 'participant',
-  //   label: '참가자 관리',
-  //   description: '참가자 권한 관리 및 강퇴',
-  //   icon: 'users',
-  // },
 ];
 
 interface MenuPanelProps {
@@ -107,11 +98,9 @@ export function MenuPanel({ onClose }: MenuPanelProps) {
               ))}
             </div>
           )}
-          {/* {subPage === 'breakroom' && <div>소강의실</div>} */}
           {subPage === 'vote' && <PollManagementTabs />}
           {subPage === 'qna' && <QnaManagementTabs />}
           {subPage === 'material' && <PresentationManagementTabs />}
-          {/* {subPage === 'participant' && <div>참가자 관리</div>} */}
         </div>
       </SidePanelContent>
     </>

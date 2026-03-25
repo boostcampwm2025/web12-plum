@@ -1,14 +1,14 @@
 import { useCallback } from 'react';
 
-import { MediaConnectionService } from '@/mediasoup/mediaConnection.service';
+import { ChatService } from '@/feature/chat/services/chat';
+import { useChatStore } from '@/feature/chat/stores/useChatStore';
+import { useRemoteMedia } from '@/feature/media/hooks/useRemoteMedia';
+import { useMediaStore } from '@/feature/media/stores/useMediaStore';
 
+import { MediaConnectionService } from '@/shared/mediasoup/mediaConnection.service';
+
+import { RoomService } from '../services/room';
 import { useRoomStore } from '../stores/useRoomStore';
-import { useMediaStore } from '../stores/useMediaStore';
-import { useChatStore } from '../stores/useChatStore';
-
-import { RoomService } from '../service/room';
-import { ChatService } from '../service/chat';
-import { useRemoteMedia } from './useRemoteMedia';
 
 /**
  * 공통 이벤트 핸들러 (모든 역할 공통)

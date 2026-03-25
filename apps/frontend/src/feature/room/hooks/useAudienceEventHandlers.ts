@@ -1,17 +1,17 @@
 import { useCallback } from 'react';
 
-import { useToastStore } from '@/store/useToastStore';
+import { useChatStore } from '@/feature/chat/stores/useChatStore';
+import { PollService } from '@/feature/poll/services/poll';
+import { usePollStore } from '@/feature/poll/stores/usePollStore';
+import { QnaService } from '@/feature/qna/services/qna';
+import { useQnaStore } from '@/feature/qna/stores/useQnaStore';
+import { useRankStore } from '@/feature/rank/stores/useRankStore';
+
 import { playSound } from '@/shared/lib/sound';
+import { useToastStore } from '@/shared/stores/useToastStore';
 
-import { usePollStore } from '../stores/usePollStore';
-import { useQnaStore } from '../stores/useQnaStore';
-import { useRankStore } from '../stores/useRankStore';
-import { useChatStore } from '../stores/useChatStore';
+import { InteractionService } from '../services/interaction';
 import { useRoomUIStore } from '../stores/useRoomUIStore';
-
-import { PollService } from '../service/poll';
-import { QnaService } from '../service/qna';
-import { InteractionService } from '../service/interaction';
 
 /**
  * Audience 전용 이벤트 핸들러

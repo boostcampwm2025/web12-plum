@@ -1,8 +1,10 @@
 import { useNavigate } from 'react-router';
+
+import { ROUTES } from '@/app/routes/routes';
+
+import { Button } from '@/shared/components/Button';
 import { Footer } from '@/shared/components/Footer';
 import { Header } from '@/shared/components/Header';
-import { Button } from '@/shared/components/Button';
-import { ROUTES } from '@/app/routes/routes';
 
 export function NotFound() {
   const navigate = useNavigate();

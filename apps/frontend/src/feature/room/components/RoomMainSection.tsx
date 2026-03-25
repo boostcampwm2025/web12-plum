@@ -1,18 +1,22 @@
-import { motion } from 'motion/react';
-import { Draggable } from './Draggable';
-import { ScreenShareBanner } from './ScreenShareBanner';
-import { ParticipantGrid } from './ParticipantGrid';
-import { MyParticipantVideo } from './MyParticipantVideo';
-import { ToastStack } from '@/shared/components/ToastStack';
-import { useStreamStore } from '@/store/useLocalStreamStore';
-import { useMediaStore } from '../stores/useMediaStore';
-import { MyInfo, useRoomStore } from '../stores/useRoomStore';
 import { useEffect, useRef, useState } from 'react';
-import { useGestureRecognition } from '../hooks/useGestureRecognition';
-import { useGestureHandlers } from '../hooks/useGestureHandlers';
+import { motion } from 'motion/react';
+
 import DodoReady from '@/assets/logo/dodo-ready.svg';
-import { useBackgroundEffectStore } from '../stores/useBackgroundEffectStore';
+
+import { useGestureHandlers } from '@/feature/gesture/hooks/useGestureHandlers';
+import { useGestureRecognition } from '@/feature/gesture/hooks/useGestureRecognition';
+import { MyParticipantVideo } from '@/feature/media/components/MyParticipantVideo';
+import { ParticipantGrid } from '@/feature/media/components/ParticipantGrid';
+import { ScreenShareBanner } from '@/feature/media/components/ScreenShareBanner';
+import { useBackgroundEffectStore } from '@/feature/media/stores/useBackgroundEffectStore';
+import { useMediaStore } from '@/feature/media/stores/useMediaStore';
+
+import { ToastStack } from '@/shared/components/ToastStack';
+import { useStreamStore } from '@/shared/stores/useLocalStreamStore';
+
+import { MyInfo, useRoomStore } from '../stores/useRoomStore';
 import type { VideoDisplayMode } from '../types';
+import { Draggable } from './Draggable';
 
 /**
  * 화면공유 영상을 표시하는 컴포넌트

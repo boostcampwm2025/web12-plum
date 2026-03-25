@@ -1,4 +1,5 @@
 import { ReactNode } from 'react';
+
 import { cn } from '@/shared/lib/utils';
 
 interface TooltipProps {

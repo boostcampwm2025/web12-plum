@@ -1,17 +1,20 @@
-import { motion } from 'motion/react';
 import { useEffect, useRef, useState } from 'react';
-import { cn } from '@/shared/lib/utils';
-import { RoomButton } from './RoomButton';
-import { GestureButton } from './GestureButton';
+import { motion } from 'motion/react';
+
+import { useChatStore } from '@/feature/chat/stores/useChatStore';
+import { GestureButton } from '@/feature/gesture/components/GestureButton';
+import { useMediaStore } from '@/feature/media/stores/useMediaStore';
+import { usePollStore } from '@/feature/poll/stores/usePollStore';
+import { useQnaStore } from '@/feature/qna/stores/useQnaStore';
+import { useRankStore } from '@/feature/rank/stores/useRankStore';
+
 import type { IconName } from '@/shared/components/icon/iconMap';
-import { useMediaStore } from '../stores/useMediaStore';
-import { useRoomUIStore } from '../stores/useRoomUIStore';
-import { usePollStore } from '../stores/usePollStore';
-import { useQnaStore } from '../stores/useQnaStore';
+import { cn } from '@/shared/lib/utils';
+
 import { useRoomStore } from '../stores/useRoomStore';
-import { useRankStore } from '../stores/useRankStore';
-import { useChatStore } from '../stores/useChatStore';
+import { useRoomUIStore } from '../stores/useRoomUIStore';
 import { ExitButton } from './ExitButton';
+import { RoomButton } from './RoomButton';
 
 interface MenuButton {
   icon: IconName;

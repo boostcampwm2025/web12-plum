@@ -1,10 +1,13 @@
-import { AnimatePresence, motion } from 'motion/react';
 import { useEffect } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
+
+import { PresentationFile } from '@/feature/room/types.ts';
+
 import { Button } from '@/shared/components/Button';
 import { Icon } from '@/shared/components/icon/Icon';
-import { useRoomPresentation } from '../hooks/useRoomPresentation';
-import { PresentationFile } from '@/feature/room/types.ts';
 import { formatFileSize } from '@/shared/lib/presentations.ts';
+
+import { useRoomPresentation } from '../hooks/useRoomPresentation';
 
 // TODO: file 업로드/업로드 중 취소/삭제 기능 추가
 export function PresentationManagementTabs() {

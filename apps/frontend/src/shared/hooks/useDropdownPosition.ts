@@ -1,4 +1,4 @@
-import { useState, useLayoutEffect, type RefObject } from 'react';
+import { type RefObject, useLayoutEffect, useState } from 'react';
 
 type DropdownPosition = 'bottom' | 'top';
 

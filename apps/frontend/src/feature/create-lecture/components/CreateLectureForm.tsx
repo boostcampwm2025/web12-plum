@@ -6,22 +6,23 @@ import type { CreateRoomRequest } from '@plum/shared-interfaces';
 import { createLectureSchema } from '@plum/shared-interfaces';
 
 import { ROUTES } from '@/app/routes/routes';
-import { useToastStore } from '@/store/useToastStore';
-import { Button } from '@/shared/components/Button';
-import { cn } from '@/shared/lib/utils';
-import { logger } from '@/shared/lib/logger';
-import { getUserFriendlyError } from '@/shared/api';
 
-import { lectureFormDefaultValues } from '../schema';
-import { useActivityModalStore } from '../store/useActivityModalStore';
-import { useActivityDataStore } from '../store/useActivityDataStore';
+import { getUserFriendlyError } from '@/shared/api';
+import { Button } from '@/shared/components/Button';
+import { logger } from '@/shared/lib/logger';
+import { cn } from '@/shared/lib/utils';
+import { useToastStore } from '@/shared/stores/useToastStore';
+
 import { useCreateRoom } from '../hooks/useCreateRoom';
+import { lectureFormDefaultValues } from '../schema';
+import { useActivityDataStore } from '../stores/useActivityDataStore';
+import { useActivityModalStore } from '../stores/useActivityModalStore';
 import { ActivityModals } from './ActivityModals';
-import { PresentationSection } from './PresentationSection';
 import { ActivitySection } from './ActivitySection';
 import { AgreementSection } from './AgreementSection';
 import { HostNameSection } from './HostNameSection';
 import { LectureNameSection } from './LectureNameSection';
+import { PresentationSection } from './PresentationSection';
 
 /**
  * 강의 생성 폼 제출 버튼 컴포넌트

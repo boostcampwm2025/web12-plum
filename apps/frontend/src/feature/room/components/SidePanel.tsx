@@ -1,7 +1,8 @@
-import { motion } from 'motion/react';
 import { ReactNode } from 'react';
-import { Icon } from '@/shared/components/icon/Icon';
+import { motion } from 'motion/react';
+
 import { Button } from '@/shared/components/Button';
+import { Icon } from '@/shared/components/icon/Icon';
 import { cn } from '@/shared/lib/utils';
 
 export interface SidePanelProps {

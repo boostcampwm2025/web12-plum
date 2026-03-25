@@ -1,4 +1,4 @@
-import { CreateRoomRequest, createLectureSchema } from '@plum/shared-interfaces';
+import { createLectureSchema, CreateRoomRequest } from '@plum/shared-interfaces';
 
 /**
  * 강의 생성 폼 키 배열

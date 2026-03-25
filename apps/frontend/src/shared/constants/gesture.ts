@@ -1,4 +1,5 @@
 import type { GestureType } from '@plum/shared-interfaces';
+
 import type { IconName } from '@/shared/components/icon/iconMap';
 
 export const GESTURE_ICON_MAP: Record<GestureType, IconName> = {

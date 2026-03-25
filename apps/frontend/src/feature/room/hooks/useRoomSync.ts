@@ -1,11 +1,14 @@
+import { useCallback, useEffect } from 'react';
+
+import { ChatService } from '@/feature/chat/services/chat';
+import { useChatStore } from '@/feature/chat/stores/useChatStore';
+
 import { useSafeRoomId } from '@/shared/hooks/useSafeRoomId';
-import { SocketClient } from '@/shared/socket/client';
-import { useChatStore } from '../stores/useChatStore';
-import { useRoomJoin } from './useRoomJoin';
-import { useEffect, useCallback } from 'react';
-import { useRoomStore } from '../stores/useRoomStore';
 import { logger } from '@/shared/lib/logger';
-import { ChatService } from '../service/chat';
+import { SocketClient } from '@/shared/socket/client';
+
+import { useRoomStore } from '../stores/useRoomStore';
+import { useRoomJoin } from './useRoomJoin';
 
 /**
  * 소켓 재연결 시 방 상태를 동기화하는 훅

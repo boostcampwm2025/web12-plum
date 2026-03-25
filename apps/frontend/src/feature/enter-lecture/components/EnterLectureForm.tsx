@@ -6,10 +6,10 @@ import {
   enterLectureFormSchema,
   EnterLectureFormValues,
 } from '../schema';
-import { LectureNameSection } from './LectureNameSection';
-import { NicknameSection } from './NicknameSection';
 import { AgreementSection } from './AgreementSection';
 import { DeviceCheckSection } from './DeviceCheckSection';
+import { LectureNameSection } from './LectureNameSection';
+import { NicknameSection } from './NicknameSection';
 import { SubmitButton } from './SubmitButton';
 
 interface EnterLectureFormProps {
