@@ -8,10 +8,6 @@
   <a href="https://github.com/boostcampwm2025/web12-plum/wiki">
     <img width="269" height="78" alt="image" src="https://github.com/user-attachments/assets/098ccc6d-c2d2-4db3-981b-69fee3ea702b" />
   </a>
-  <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
-  <a href="https://web12-plum-dev.vercel.app/">
-    <img width="261" height="78" alt="image" src="https://github.com/user-attachments/assets/31584581-40f0-4b23-b56e-c7c87f508e02" />
-  </a>
 </div>
 
 <div align="center">
@@ -347,7 +343,7 @@ pnpm dev
   
   <br />
 
-**[ 📖 프로젝트 위키 바로가기 ](https://github.com/boostcampwm2025/web12-plum/wiki) &nbsp; | &nbsp; [ 🚀 라이브 데모 체험하기 ](https://web12-plum-dev.vercel.app/)**
+**[ 📖 프로젝트 위키 바로가기 ](https://github.com/boostcampwm2025/web12-plum/wiki) &nbsp; | &nbsp; [ 🚀 라이브 데모 체험하기 ](https://web12-plum-dev.vercel.app/)** (배포 중지)
 
   <br />
   
